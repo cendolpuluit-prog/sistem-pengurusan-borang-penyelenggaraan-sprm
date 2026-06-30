@@ -460,6 +460,9 @@ tr:hover td{background:#f9fbff}
 /* MOBILE (≤768px) */
 @media(max-width:768px){
   .mobile-logout-btn{display:inline-flex!important}
+  /* Calendar scroll */
+  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px}
+  .cal-grid{min-width:360px}
   /* Layout */
   .app-wrap{flex-direction:column}
   .sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap}
@@ -1940,6 +1943,7 @@ tr:hover td{background:#f9fbff}
             <div class="leg"><div class="leg-dot" style="background:#fff9c4;border:1.5px solid #fb8c00"></div>Cuti Sekolah</div>
             <span v-if="canEditSchedule" class="text-sm text-muted" style="margin-left:auto">💡 Klik pada tarikh untuk tambah jadual</span>
           </div>
+          <div class="cal-scroll-wrap">
           <div class="cal-grid">
             <div class="cal-dh sun">Ahd</div>
             <div class="cal-dh">Isn</div>
@@ -1973,6 +1977,7 @@ tr:hover td{background:#f9fbff}
               </div>
             </template>
           </div>
+          </div><!-- /cal-scroll-wrap -->
           <!-- Month summary -->
           <div style="margin-top:16px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
             <div class="stat-card" v-for="proj in PROJECT_TYPES" :key="proj.val">
@@ -2701,9 +2706,13 @@ tr:hover td{background:#f9fbff}
     <div class="modal-box" style="max-width:420px">
       <h3>🔑 Reset Kata Laluan</h3>
       <p style="font-size:.85rem;color:#555;margin-bottom:6px">Pengguna: <strong>@{{resetPwModal.username}}</strong></p>
-      <div style="background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#795548;margin-bottom:16px;line-height:1.6">
-        ⚠️ Selepas disahkan, pengguna ini akan <b>dipaksa menukar kata laluan</b> semasa log masuk seterusnya.<br>
-        Kata laluan sedia ada masih boleh digunakan untuk log masuk buat masa ini.
+      <div v-if="resetPwModal.userEmail" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#1b5e20;margin-bottom:16px;line-height:1.6">
+        📧 Email reset kata laluan akan dihantar ke:<br>
+        <strong>{{resetPwModal.userEmail}}</strong><br><br>
+        Pengguna klik link dalam email → set kata laluan baru → log masuk seperti biasa.
+      </div>
+      <div v-else style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#b71c1c;margin-bottom:16px;line-height:1.6">
+        ⚠️ Pengguna ini tiada email berdaftar. Sila edit profil mereka dan masukkan email sebenar dahulu.
       </div>
       <p v-if="resetPwModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{resetPwModal.err}}</p>
       <div class="flex gap-8">
@@ -3515,7 +3524,7 @@ createApp({
     // ---- User management ----
     const allUsers = ref([]);
     const userModal = reactive({ show:false, editing:false, err:'', data:{ username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',phone:'',email:'' } });
-    const resetPwModal = reactive({ show:false, userId:'', username:'', err:'' });
+    const resetPwModal = reactive({ show:false, userId:'', username:'', userEmail:'', err:'' });
     const forcePwModal = reactive({ show:false, newPw:'', confirmPw:'', err:'' });
     const showResetNew = ref(false);
     const showResetConfirm = ref(false);
@@ -4177,6 +4186,7 @@ createApp({
     async function submitUser() {
       userModal.err='';
       if(!userModal.data.username||!userModal.data.name){ userModal.err='Username dan Nama wajib diisi.'; return; }
+      if(!userModal.editing && !userModal.data.email){ userModal.err='Email sebenar wajib diisi (untuk reset kata laluan).'; return; }
       if(!userModal.editing && !userModal.data.password){ userModal.err='Kata laluan wajib diisi.'; return; }
       loading.value=true;
       try {
@@ -4185,7 +4195,7 @@ createApp({
           const sec = firebase.initializeApp(FIREBASE_CONFIG, 'secondary_'+Date.now());
           const secAuth = sec.auth();
           const cred = await secAuth.createUserWithEmailAndPassword(
-            userModal.data.username+'@pm.admin', userModal.data.password
+            userModal.data.email, userModal.data.password
           );
           const uid = cred.user.uid;
           await secAuth.signOut();
@@ -4193,13 +4203,12 @@ createApp({
           // Save profile to Firestore
           await db.collection('users').doc(uid).set({
             username: userModal.data.username,
-            email: userModal.data.username+'@pm.admin',
+            email: userModal.data.email,
             name: userModal.data.name,
             role: userModal.data.role,
             jawatan: userModal.data.jawatan,
             jabatan: userModal.data.jabatan,
             phone: userModal.data.phone,
-            email: userModal.data.email,
             disabled: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
@@ -4247,19 +4256,28 @@ createApp({
       if(u.role==='superadmin'){ showToast('Tidak boleh reset kata laluan Superadmin.','error'); return; }
       resetPwModal.userId = u.id;
       resetPwModal.username = u.username;
+      resetPwModal.userEmail = u.email || '';
       resetPwModal.err = '';
       resetPwModal.show = true;
     }
 
     async function submitResetPw() {
       resetPwModal.err = '';
+      if(!resetPwModal.userEmail) {
+        resetPwModal.err = 'Pengguna ini tiada email berdaftar. Sila kemaskini profil mereka dahulu.';
+        return;
+      }
       try {
-        await db.collection('users').doc(resetPwModal.userId).update({ forcePwReset: true });
+        await auth.sendPasswordResetEmail(resetPwModal.userEmail, { url: window.location.origin + window.location.pathname });
         await logAudit('RESET_PASSWORD', resetPwModal.username);
         resetPwModal.show = false;
-        showToast(`Reset kata laluan berjaya. @${resetPwModal.username} perlu tukar kata laluan semasa log masuk seterusnya.`);
+        showToast(`✅ Email reset dihantar ke ${resetPwModal.userEmail}`, 'success');
       } catch(e) {
-        resetPwModal.err = 'Ralat: ' + e.message;
+        if(e.code === 'auth/user-not-found') {
+          resetPwModal.err = 'Akaun tidak dijumpai dalam sistem. Email mungkin tidak sepadan.';
+        } else {
+          resetPwModal.err = 'Ralat: ' + e.message;
+        }
       }
     }
 
