@@ -459,6 +459,7 @@ tr:hover td{background:#f9fbff}
 
 /* MOBILE (≤768px) */
 @media(max-width:768px){
+  .mobile-logout-btn{display:inline-flex!important}
   /* Layout */
   .app-wrap{flex-direction:column}
   .sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap}
@@ -775,6 +776,8 @@ tr:hover td{background:#f9fbff}
         </div>
         <!-- Dark mode toggle -->
         <button @click="darkMode=!darkMode" class="btn btn-outline btn-sm" style="padding:7px 10px">{{darkMode?'☀️':'🌙'}}</button>
+        <!-- Log Keluar — mobile only -->
+        <button v-if="authUser" @click="doLogout" class="btn btn-sm mobile-logout-btn" style="background:#c62828;color:#fff;border:none;padding:7px 12px;display:none">🚪 Keluar</button>
       </div>
     </div>
     <div class="content">
