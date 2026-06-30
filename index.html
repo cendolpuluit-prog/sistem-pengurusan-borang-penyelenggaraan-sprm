@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ms">
 <head>
 <meta charset="UTF-8">
@@ -492,6 +492,30 @@ tr:hover td{background:#f9fbff}
 
 <!-- TOAST -->
 <div v-if="toast.show" :class="['toast','toast-'+toast.type]">{{toast.msg}}</div>
+
+<!-- SESSION TIMEOUT WARNING -->
+<div v-if="sessionWarning.show" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:32px 36px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div style="font-size:2.2rem;margin-bottom:10px">⏱</div>
+    <div style="font-weight:700;font-size:1.05rem;color:#b71c1c;margin-bottom:8px">Sesi Hampir Tamat</div>
+    <div style="font-size:.88rem;color:#555;margin-bottom:18px;line-height:1.6">
+      Tiada aktiviti dikesan. Sesi akan ditamatkan secara automatik dalam<br>
+      <span style="font-size:1.6rem;font-weight:900;color:#b71c1c;display:block;margin:8px 0">{{sessionWarning.countdown}}s</span>
+    </div>
+    <button @click="extendSession" style="background:#003366;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:.92rem;font-weight:700;cursor:pointer;width:100%">
+      ✅ Teruskan Sesi
+    </button>
+  </div>
+</div>
+
+<!-- OFFLINE BANNER -->
+<div v-if="!isOnline" style="position:fixed;top:0;left:0;right:0;z-index:9999;background:#b71c1c;color:#fff;text-align:center;padding:7px 16px;font-size:.82rem;font-weight:600;letter-spacing:.02em">
+  ⚠ Tiada Sambungan Internet — Data disimpan tempatan &amp; akan disegerakkan semula apabila online.
+</div>
+<!-- PENDING WRITES INDICATOR -->
+<div v-if="isOnline && pendingWrites>0" style="position:fixed;top:0;left:0;right:0;z-index:9998;background:#e65100;color:#fff;text-align:center;padding:7px 16px;font-size:.82rem;font-weight:600">
+  ⏳ Menyegerakkan data ke pelayan... ({{pendingWrites}} operasi)
+</div>
 
 <!-- LOGIN -->
 <div v-if="!authUser" class="login-wrap">
@@ -2886,6 +2910,8 @@ createApp({
     const showSetup = ref(false);
     const setupMsg = ref('');
     const toast = reactive({show:false,msg:'',type:'success'});
+    const isOnline = ref(navigator.onLine);
+    const pendingWrites = ref(0);
     let db, auth;
 
     // ---- Equipment state ----
@@ -3182,11 +3208,11 @@ createApp({
         };
 
         if(teamModal.editing && teamModal.current?.id) {
-          await db.collection('teamAssignments').doc(teamModal.current.id).set(data, {merge:true});
+          await _fw(db.collection('teamAssignments').doc(teamModal.current.id).set(data, {merge:true}));
           const idx = teamAssignments.value.findIndex(t => t.id === teamModal.current.id);
           if(idx > -1) teamAssignments.value[idx] = { id: teamModal.current.id, ...data };
         } else {
-          const ref2 = await db.collection('teamAssignments').add(data);
+          const ref2 = await _fw(db.collection('teamAssignments').add(data));
           teamAssignments.value.push({ id: ref2.id, ...data });
         }
         teamModal.show = false;
@@ -3272,7 +3298,7 @@ createApp({
       if(!t?.id) return;
       if(!confirm('Padam penugasan Team ' + t.team + ' ini?')) return;
       try {
-        await db.collection('teamAssignments').doc(t.id).delete();
+        await _fw(db.collection('teamAssignments').doc(t.id).delete());
         teamAssignments.value = teamAssignments.value.filter(x => x.id !== t.id);
         teamModal.show = false;
         showToast('Penugasan dipadam.');
@@ -3533,7 +3559,7 @@ createApp({
             batch.set(db.collection('virSiteEquipment').doc(id), val);
           });
         }
-        await batch.commit();
+        await _fw(batch.commit());
         // Only mutate local state after Firestore write confirmed
         if(data.siteEquip) siteEquip.value = data.siteEquip;
         if(data.virSiteEquip) virSiteEquip.value = data.virSiteEquip;
@@ -3544,7 +3570,7 @@ createApp({
             const {id,...rest}=r;
             if(id) pmBatch.set(db.collection('pmRecords').doc(id), rest);
           });
-          await pmBatch.commit();
+          await _fw(pmBatch.commit());
           pmRecords.value = data.pmRecords;
         }
 
@@ -3788,7 +3814,7 @@ createApp({
     // ---- CM Status ----
     async function updateCMStatus(recordId, status) {
       try {
-        await db.collection('pmRecords').doc(recordId).update({ cmStatus: status });
+        await _fw(db.collection('pmRecords').doc(recordId).update({ cmStatus: status }));
         const idx = pmRecords.value.findIndex(r => r.id === recordId);
         if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: status };
         await logAudit('CM_STATUS_UPDATE', `${recordId} → ${status}`);
@@ -3812,7 +3838,7 @@ createApp({
       try {
         const batch = db.batch();
         ids.forEach(id => batch.update(db.collection('pmRecords').doc(id), { cmStatus: bulkCmStatus.value }));
-        await batch.commit();
+        await _fw(batch.commit());
         // update local state only after commit
         ids.forEach(id => {
           const idx = pmRecords.value.findIndex(r => r.id === id);
@@ -3825,10 +3851,67 @@ createApp({
       loading.value = false;
     }
 
+    // ---- Session Timeout (idle 5min, warn 10s before logout) ----
+    const SESSION_IDLE_MS = 5 * 60 * 1000; // 5 minutes
+    const SESSION_WARN_S  = 10;             // 10 second warning
+    const sessionWarning = reactive({ show: false, countdown: SESSION_WARN_S });
+    let _idleTimer = null;
+    let _warnTimer = null;
+
+    function _clearSessionTimers() {
+      clearTimeout(_idleTimer); _idleTimer = null;
+      clearInterval(_warnTimer); _warnTimer = null;
+    }
+
+    function _startSessionWarning() {
+      if(!authUser.value || sessionWarning.show) return;
+      sessionWarning.show = true;
+      sessionWarning.countdown = SESSION_WARN_S;
+      _warnTimer = setInterval(() => {
+        sessionWarning.countdown--;
+        if(sessionWarning.countdown <= 0) {
+          _clearSessionTimers();
+          sessionWarning.show = false;
+          doLogout();
+        }
+      }, 1000);
+    }
+
+    function _resetIdleTimer() {
+      if(sessionWarning.show) return; // ignore activity while warning is showing
+      clearTimeout(_idleTimer);
+      _idleTimer = setTimeout(_startSessionWarning, SESSION_IDLE_MS - SESSION_WARN_S * 1000);
+    }
+
+    function extendSession() {
+      clearInterval(_warnTimer); _warnTimer = null;
+      sessionWarning.show = false;
+      _resetIdleTimer();
+    }
+
+    // Start/stop idle tracking based on auth state
+    watch(authUser, (user) => {
+      if(user) {
+        const acts = ['mousemove','keydown','mousedown','touchstart','scroll','click'];
+        acts.forEach(e => window.addEventListener(e, _resetIdleTimer, { passive:true }));
+        _resetIdleTimer();
+      } else {
+        _clearSessionTimers();
+        sessionWarning.show = false;
+      }
+    });
+
     // ---- Toast helper ----
     function showToast(msg, type='success') {
       toast.show=true; toast.msg=msg; toast.type=type;
       setTimeout(()=>{toast.show=false;},3000);
+    }
+
+    // ---- Firestore write wrapper — tracks pending writes for UI indicator ----
+    async function _fw(promise) {
+      pendingWrites.value++;
+      try { return await promise; }
+      finally { pendingWrites.value--; }
     }
 
     // ---- Auth ----
@@ -3968,7 +4051,10 @@ createApp({
         teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()}));
         checkAutoBackup();
         buildNotifications();
-      } catch(e) { console.error(e); }
+      } catch(e) {
+        console.error(e);
+        showToast('Gagal memuatkan data: ' + e.message + '. Semak sambungan internet.', 'error');
+      }
       loading.value=false;
     }
 
@@ -4235,7 +4321,7 @@ createApp({
       try {
         const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
         const eq  = activeEquip();
-        await db.collection(col).doc(selSite.value.id).set(eq[selSite.value.id], { merge: true });
+        await _fw(db.collection(col).doc(selSite.value.id).set(eq[selSite.value.id], { merge: true }));
         showToast('Peralatan berjaya disimpan!');
       } catch(e){ showToast('Gagal simpan: '+e.message,'error'); }
       loading.value=false;
@@ -4317,7 +4403,7 @@ createApp({
         // Use a pre-generated ID so retry is idempotent — same ID = Firestore upsert, no duplicate
         if(!pm._draftId) pm._draftId = db.collection('pmRecords').doc().id;
         const docRef = db.collection('pmRecords').doc(pm._draftId);
-        await docRef.set(data);
+        await _fw(docRef.set(data));
         await logAudit(status==='submitted'?'BORANG_SUBMIT':'BORANG_DRAFT', pm.refNo||pm._draftId);
         showToast(status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!');
         await loadAll();
@@ -4334,7 +4420,7 @@ createApp({
       if(!confirm('Padam rekod PM ini?')) return;
       const rec = pmRecords.value.find(r=>r.id===id);
       try {
-        await db.collection('pmRecords').doc(id).delete();
+        await _fw(db.collection('pmRecords').doc(id).delete());
         pmRecords.value = pmRecords.value.filter(r=>r.id!==id);
         await logAudit('BORANG_DELETE', rec?.refNo||id);
         showToast('Rekod dipadam.');
@@ -5430,14 +5516,40 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
       auth = firebase.auth();
+
+      // Offline persistence — data cached locally, writes queued & auto-synced when back online
+      db.enablePersistence({ synchronizeTabs: true }).catch(e => {
+        if(e.code === 'failed-precondition') console.warn('Persistence: multiple tabs open');
+        else if(e.code === 'unimplemented') console.warn('Persistence: browser not supported');
+      });
+
+      // Track online/offline status
+      window.addEventListener('online',  () => { isOnline.value = true;  showToast('Sambungan pulih — data sedang disegerakkan.', 'success'); });
+      window.addEventListener('offline', () => { isOnline.value = false; showToast('Tiada sambungan internet. Data disimpan tempatan.', 'error'); });
+
       auth.onAuthStateChanged(async user=>{
         authUser.value = user;
-        if(user) await loadAll();
+        if(user) {
+          // Load profile on every session (login OR page refresh)
+          try {
+            const profileDoc = await db.collection('users').doc(user.uid).get();
+            if(profileDoc.exists) {
+              authProfile.value = { id: profileDoc.id, uid: user.uid, ...profileDoc.data() };
+            } else {
+              // Fallback: check USER_MAP by email (superadmin created before Firestore doc exists)
+              const builtIn = Object.values(USER_MAP).find(u => u.email === user.email);
+              if(builtIn) authProfile.value = { ...builtIn, uid: user.uid };
+            }
+          } catch(e) { console.warn('Profile load error:', e); }
+          await loadAll();
+        } else {
+          authProfile.value = null;
+        }
       });
     });
 
     return {
-      page, authUser, authProfile, loading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toast,
+      page, authUser, authProfile, loading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toast, isOnline, pendingWrites, sessionWarning, extendSession,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       currentProject, virSiteEquip,
       siteEquip, selSite, eqTab,
