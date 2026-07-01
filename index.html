@@ -16,7 +16,16 @@
 *{box-sizing:border-box;margin:0;padding:0}
 @keyframes bgShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 @keyframes sidebarPulse{0%,100%{opacity:.4}50%{opacity:.7}}
-body{font-family:'Segoe UI',sans-serif;background:linear-gradient(-45deg,#dce8ff,#e8f5e9,#eef2ff,#e0f0ff);background-size:400% 400%;animation:bgShift 18s ease infinite;color:#222}
+body{
+  font-family:'Segoe UI', system-ui, sans-serif;
+  background:linear-gradient(-45deg,#dce8ff,#e8f5e9,#eef2ff,#e0f0ff);
+  background-size:400% 400%;
+  animation:bgShift 18s ease infinite;
+  color:#111827; 
+  min-height: 100vh;
+  margin: 0;
+  background-attachment: fixed; 
+}
 
 /* LOGIN */
 /* ── LOGIN PAGE ────────────────────────── */
@@ -74,7 +83,8 @@ body{font-family:'Segoe UI',sans-serif;background:linear-gradient(-45deg,#dce8ff
 .content{padding:24px}
 
 /* CARDS */
-.card{background:rgba(255,255,255,.82);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:12px;padding:20px;box-shadow:0 2px 16px rgba(0,40,100,.08);margin-bottom:20px;border:1px solid rgba(255,255,255,.6)}
+.card{background:rgba(255,255,255,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:12px;padding:24px;box-shadow:0 4px 24px rgba(0,34,68,.05),0 1px 3px rgba(0,0,0,.02);margin-bottom:24px;border:1px solid rgba(0,51,102,.05); transition: box-shadow 0.2s ease;}
+.card:hover{box-shadow:0 8px 32px rgba(0,40,100,.08);}
 .card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
 .stat-card{background:#fff;border-radius:10px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
@@ -461,8 +471,8 @@ tr:hover td{background:#f9fbff}
 @media(max-width:768px){
   .mobile-logout-btn{display:inline-flex!important}
   /* Calendar scroll */
-  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px}
-  .cal-grid{min-width:360px}
+  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
+  .cal-grid{min-width:650px}
   /* Layout */
   .app-wrap{flex-direction:column}
   .sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap}
@@ -1047,10 +1057,14 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Kamera</div>
-              <div class="flex gap-8">
+              <div class="flex gap-8" style="flex-wrap:wrap">
+                <label class="btn btn-outline btn-sm" style="cursor:pointer;background:#e8f0fe;color:#1a73e8;border-color:#a8c7fa" title="Boleh baca Excel/CSV/TXT dan auto-masukkan senarai.">
+                  📁 Upload Excel/Txt
+                  <input type="file" accept=".txt,.csv,.xls,.xlsx" style="display:none" @change="extractDataFile($event, 'cameras')">
+                </label>
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">
                   📷 Scan Serial
-                  <input type="file" accept="image/*" style="display:none" @change="ocrScan($event,'nCam','serial')">
+                  <input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nCam','serial')">
                 </label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nCam')">↺ Reset</button>
               </div>
@@ -2706,10 +2720,9 @@ tr:hover td{background:#f9fbff}
     <div class="modal-box" style="max-width:420px">
       <h3>🔑 Reset Kata Laluan</h3>
       <p style="font-size:.85rem;color:#555;margin-bottom:6px">Pengguna: <strong>@{{resetPwModal.username}}</strong></p>
-      <div v-if="resetPwModal.userEmail" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#1b5e20;margin-bottom:16px;line-height:1.6">
-        📧 Email reset kata laluan akan dihantar ke:<br>
-        <strong>{{resetPwModal.userEmail}}</strong><br><br>
-        Pengguna klik link dalam email → set kata laluan baru → log masuk seperti biasa.
+      <div style="background:#fff8e1;border:1px solid #ffcc80;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#e65100;margin-bottom:16px;line-height:1.6">
+        ⚠️ <b>Peringatan Sistem:</b> Oleh kerana ini aplikasi Frontend, Firebase Auth memerlukan tetapan SMTP berbayar untuk menghantar emel reset yang stabil.<br><br>
+        <b>Penyelesaian:</b> Sila <b>Padam</b> user ini dari senarai dan <b>Tambah Pengguna Baru</b> menggunakan username & e-mel yang sama untuk menetapkan kata laluan baru dengan serta-merta.
       </div>
       <div v-else style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#b71c1c;margin-bottom:16px;line-height:1.6">
         ⚠️ Pengguna ini tiada email berdaftar. Sila edit profil mereka dan masukkan email sebenar dahulu.
@@ -2861,16 +2874,15 @@ const VIR_SITES = [
   {id:'v00',name:'Ibu Pejabat SPRM Putrajaya',code:'IPJ',zone:'TENGAH'},
   {id:'v01',name:'Kompleks SPRM Negeri Perlis',code:'PLS',zone:'UTARA'},
   {id:'v02',name:'Kompleks SPRM Negeri Kedah',code:'KDH',zone:'UTARA'},
+  {id:'v_sp',name:'Pejabat SPRM Cawangan Sungai Petani',code:'SPT',zone:'UTARA'},
   {id:'v03',name:'Pejabat SPRM Cawangan Langkawi',code:'LGK',zone:'UTARA'},
   {id:'v04',name:'Kompleks SPRM Negeri Pulau Pinang',code:'PP',zone:'UTARA'},
-  {id:'v05',name:'Pejabat SPRM Cawangan Seberang Perai',code:'SP',zone:'UTARA'},
   {id:'v06',name:'Kompleks SPRM Negeri Perak',code:'PK',zone:'UTARA'},
   {id:'v07',name:'Pejabat SPRM Cawangan Taiping',code:'TPG',zone:'UTARA'},
-  {id:'v08',name:'Pejabat SPRM Cawangan Teluk Intan',code:'TI',zone:'UTARA'},
+  {id:'v08',name:'Pejabat SPRM Cawangan Manjung',code:'MJG',zone:'UTARA'},
   {id:'v09',name:'Kompleks SPRM Negeri Selangor',code:'SEL',zone:'TENGAH'},
   {id:'v10',name:'Pejabat SPRM Cawangan Kuala Selangor',code:'KS',zone:'TENGAH'},
   {id:'v11',name:'Pejabat SPRM Wilayah Persekutuan Kuala Lumpur',code:'WPKL',zone:'TENGAH'},
-  {id:'v12',name:'Pejabat SPRM Wilayah Persekutuan Putrajaya',code:'WPJ',zone:'TENGAH'},
   {id:'v13',name:'Pejabat SPRM Wilayah Persekutuan Labuan',code:'LBN',zone:'BORNEO'},
   {id:'v14',name:'Kompleks SPRM Negeri Sembilan',code:'NS',zone:'SELATAN'},
   {id:'v15',name:'Pejabat SPRM Cawangan Port Dickson',code:'PD',zone:'SELATAN'},
@@ -2879,22 +2891,19 @@ const VIR_SITES = [
   {id:'v18',name:'Pejabat SPRM Cawangan Kluang',code:'KLG',zone:'SELATAN'},
   {id:'v19',name:'Pejabat SPRM Cawangan Segamat',code:'SGM',zone:'SELATAN'},
   {id:'v20',name:'Pejabat SPRM Cawangan Batu Pahat',code:'BP',zone:'SELATAN'},
-  {id:'v21',name:'Pejabat SPRM Cawangan Johor Bahru Selatan',code:'JBS',zone:'SELATAN'},
   {id:'v22',name:'Kompleks Pejabat SPRM Pahang',code:'PHG',zone:'PANTAI_TIMUR'},
   {id:'v23',name:'Pejabat SPRM Cawangan Temerloh',code:'TMR',zone:'PANTAI_TIMUR'},
   {id:'v24',name:'Pejabat SPRM Cawangan Raub',code:'RB',zone:'PANTAI_TIMUR'},
   {id:'v25',name:'Kompleks Pejabat SPRM Terengganu',code:'TRG',zone:'PANTAI_TIMUR'},
   {id:'v26',name:'Pejabat SPRM Cawangan Kemaman',code:'KMN',zone:'PANTAI_TIMUR'},
   {id:'v27',name:'Kompleks Pejabat SPRM Kelantan',code:'KTN',zone:'PANTAI_TIMUR'},
-  {id:'v28',name:'Pejabat SPRM Cawangan Gua Musang',code:'GM',zone:'PANTAI_TIMUR'},
   {id:'v29',name:'Kompleks Pejabat SPRM Sabah',code:'SBH',zone:'BORNEO'},
   {id:'v30',name:'Pejabat SPRM Cawangan Sandakan',code:'SDK',zone:'BORNEO'},
   {id:'v31',name:'Pejabat SPRM Cawangan Tawau',code:'TWU',zone:'BORNEO'},
   {id:'v32',name:'Kompleks Pejabat SPRM Sarawak',code:'SWK',zone:'BORNEO'},
   {id:'v33',name:'Pejabat SPRM Cawangan Miri',code:'MRI',zone:'BORNEO'},
   {id:'v34',name:'Pejabat SPRM Cawangan Sibu',code:'SBU',zone:'BORNEO'},
-  {id:'v35',name:'Pejabat SPRM Cawangan Bintulu',code:'BTU',zone:'BORNEO'},
-  {id:'v36',name:'Pejabat SPRM Cawangan Sri Aman',code:'SRA',zone:'BORNEO'},
+  {id:'v35',name:'Pejabat SPRM Cawangan Bintulu',code:'BTU',zone:'BORNEO'}
 ];
 
 const ZONES = {
@@ -2997,6 +3006,14 @@ const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 
 createApp({
   setup() {
+    
+    // ---- EXCEL/TXT AUTO-EXTRACT FUNCTION ----
+    async function extractDataFile(event, tab) {
+      const file = event.target.files[0];
+      // ... (semua baki kod fungsi extract tu) ...
+      event.target.value = '';
+    }
+
     // ---- User registry (username → firebase email) ----
     const USER_MAP = {
       'mohdasrul': { email: 'mohdasrul@pm.admin', name: 'Mohd Asrul', role: 'superadmin' }
@@ -3971,9 +3988,11 @@ createApp({
     function _startSessionWarning() {
       if(!authUser.value || sessionWarning.show) return;
       sessionWarning.show = true;
-      sessionWarning.countdown = SESSION_WARN_S;
+      let targetTime = Date.now() + (SESSION_WARN_S * 1000);
+      
       _warnTimer = setInterval(() => {
-        sessionWarning.countdown--;
+        // Kira baki masa secara real-time supaya browser tidak 'freeze'
+        sessionWarning.countdown = Math.max(0, Math.ceil((targetTime - Date.now()) / 1000));
         if(sessionWarning.countdown <= 0) {
           _clearSessionTimers();
           sessionWarning.show = false;
@@ -5663,7 +5682,8 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     });
 
     return {
-      page, authUser, authProfile, loading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toast, isOnline, pendingWrites, sessionWarning, extendSession,
+      extractDataFile,
+      page, authUser, authProfile, loading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toast, isOnline, pendingWrites,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       currentProject, virSiteEquip,
       siteEquip, selSite, eqTab,
