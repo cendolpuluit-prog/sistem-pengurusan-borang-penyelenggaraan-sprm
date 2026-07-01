@@ -2724,13 +2724,8 @@ tr:hover td{background:#f9fbff}
         ⚠️ <b>Peringatan Sistem:</b> Oleh kerana ini aplikasi Frontend, Firebase Auth memerlukan tetapan SMTP berbayar untuk menghantar emel reset yang stabil.<br><br>
         <b>Penyelesaian:</b> Sila <b>Padam</b> user ini dari senarai dan <b>Tambah Pengguna Baru</b> menggunakan username & e-mel yang sama untuk menetapkan kata laluan baru dengan serta-merta.
       </div>
-      <div v-else style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#b71c1c;margin-bottom:16px;line-height:1.6">
-        ⚠️ Pengguna ini tiada email berdaftar. Sila edit profil mereka dan masukkan email sebenar dahulu.
-      </div>
-      <p v-if="resetPwModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{resetPwModal.err}}</p>
       <div class="flex gap-8">
-        <button class="btn btn-outline" @click="resetPwModal.show=false">Batal</button>
-        <button class="btn btn-warning" @click="submitResetPw" :disabled="loading">{{loading?'Memproses...':'✅ Sahkan Reset'}}</button>
+        <button class="btn btn-outline" @click="resetPwModal.show=false">Tutup</button>
       </div>
     </div>
   </div>
@@ -3010,7 +3005,74 @@ createApp({
     // ---- EXCEL/TXT AUTO-EXTRACT FUNCTION ----
     async function extractDataFile(event, tab) {
       const file = event.target.files[0];
-      // ... (semua baki kod fungsi extract tu) ...
+      if(!file) return;
+      loading.value = true;
+      try {
+        const data = await file.arrayBuffer();
+        const wb = XLSX.read(data);
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, {defval: ''});
+        
+        let added = 0;
+        rows.forEach(row => {
+          const getVal = (keywords) => {
+            const key = Object.keys(row).find(k => keywords.some(kw => String(k).toLowerCase().replace(/[^a-z0-9]/g,'').includes(kw)));
+            return key ? String(row[key]) : '';
+          };
+          
+          ensureSite(selSite.value.id);
+          const eq = activeEquip()[selSite.value.id];
+          
+          const serial = getVal(['siri','serial','sn']);
+          const brand = getVal(['jenama','brand']);
+          const model = getVal(['model']);
+          
+          if(!serial && !model && !brand) return; // abai kalau tiada data langsung
+
+          if(tab === 'cameras') {
+            eq.cameras.push({
+              name: getVal(['nama','name','lokasi','location']) || 'Kamera',
+              ip: getVal(['ip','address']),
+              camType: getVal(['jenis','type']) || 'Indoor',
+              brand: brand, model: model, serial: serial
+            });
+            added++;
+          } else if(tab === 'nvr') {
+            eq.nvr.push({
+              name: getVal(['nama','name']) || 'NVR',
+              type: getVal(['jenis','type']) || 'NVR',
+              brand: brand, model: model, serial: serial, ip: getVal(['ip'])
+            });
+            added++;
+          } else if(tab === 'hdd') {
+            eq.hdd.push({
+              brand: brand, model: model, serial: serial,
+              capacity: getVal(['kapasiti','cap','saiz','size']),
+              config: getVal(['config','raid']) || 'RAID 5',
+              nvrRef: getVal(['nvr'])
+            });
+            added++;
+          } else if(tab === 'switch') {
+            eq.switches.push({
+              brand: brand, model: model, serial: serial,
+              ports: getVal(['port','bilangan'])
+            });
+            added++;
+          } else if(tab === 'alarm') {
+            eq.alarms.push({
+              name: getVal(['nama','name']) || 'Alarm System',
+              type: getVal(['jenis','type']) || 'SMS Power Alert',
+              brand: brand, model: model, serial: serial
+            });
+            added++;
+          }
+        });
+        if(added > 0) showToast(${added} rekod berjaya diekstrak & ditambah! Sila tekan SIMPAN SEMUA.);
+        else showToast('Tiada maklumat relevan (serial/model) dijumpai dlm fail.', 'error');
+      } catch(e) {
+        showToast('Gagal proses fail: ' + e.message, 'error');
+      }
+      loading.value = false;
       event.target.value = '';
     }
 
