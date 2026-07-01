@@ -74,6 +74,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05)}
 .topbar h3{font-size:1rem;color:#002244;font-weight:700}
 .content{padding:24px;min-width:0;max-width:100%}
+.app-footer{text-align:center;padding:16px 24px;font-size:.76rem;color:#8a95a8;border-top:1px solid rgba(0,51,102,.08)}
+.app-footer b{color:#5a6a85}
 
 /* CARDS */
 .card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s}
@@ -159,6 +161,15 @@ tr:hover td{background:#f9fbff}
 .toast-success{background:#198754}
 .toast-error{background:#dc3545}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
+
+/* WELCOME POPUP (login) */
+.welcome-popup-bg{position:fixed;inset:0;z-index:9997;background:rgba(0,20,10,.45);display:flex;align-items:center;justify-content:center;padding:20px;animation:slideIn .25s ease}
+.welcome-popup-card{position:relative;background:linear-gradient(160deg,#00281a 0%,#013a24 60%,#002855 100%);border:1px solid rgba(0,200,100,.3);border-radius:16px;padding:32px 30px 28px;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.welcome-popup-icon{font-size:2.2rem;margin-bottom:10px}
+.welcome-popup-card p{color:#e0f0ff;font-size:.85rem;line-height:1.7}
+.welcome-popup-card p b{color:#4dff99}
+.welcome-popup-close{position:absolute;top:10px;right:12px;background:none;border:none;color:rgba(255,255,255,.6);font-size:1.1rem;cursor:pointer;padding:4px}
+.welcome-popup-close:hover{color:#fff}
 
 /* PRINT */
 @media print{
@@ -371,7 +382,8 @@ tr:hover td{background:#f9fbff}
 @media print{
   .no-print{display:none!important}
   body{background:#fff!important;margin:0!important;padding:0!important}
-  #print-area{display:block!important;padding:0!important;width:100%!important}
+  #print-area{display:block!important;padding:0!important;width:100%!important;transform:none!important}
+  .pm-print-scale-outer{height:auto!important;overflow:visible!important}
   .pm-print{width:100%!important}
   .pm-preview-wrap{background:transparent!important;border:none!important;padding:0!important;margin:0!important;border-radius:0!important;box-shadow:none!important}
   .pm-preview-inner{background:transparent!important;border:none!important;padding:0!important;margin:0!important;box-shadow:none!important;border-radius:0!important;width:100%!important}
@@ -507,9 +519,12 @@ tr:hover td{background:#f9fbff}
   .hamburger-btn{display:inline-flex!important}
 
   /* Topbar */
-  .topbar{padding:10px 14px;flex-wrap:wrap;gap:8px}
+  .topbar{padding:10px 14px;flex-wrap:wrap;gap:8px;justify-content:center}
   .topbar h3{font-size:.88rem}
   .search-bar{width:100%;box-sizing:border-box}
+  /* Search box wraps onto its own full-width row on mobile — center it
+     instead of leaving it anchored to the left from its desktop margin. */
+  .topbar-search-wrap{flex:0 0 100%!important;max-width:min(360px,90vw)!important;margin:2px auto 0!important}
 
   /* Content */
   .content{padding:12px}
@@ -738,6 +753,15 @@ tr:hover td{background:#f9fbff}
 <!-- MAIN APP -->
 <div v-else class="app-wrap">
 
+  <!-- WELCOME POPUP (shown on fresh login, auto-hides after 10s) -->
+  <div v-if="welcomePopup" class="welcome-popup-bg no-print" @click.self="welcomePopup=false">
+    <div class="welcome-popup-card">
+      <button class="welcome-popup-close" @click="welcomePopup=false" title="Tutup">✕</button>
+      <div class="welcome-popup-icon">👋</div>
+      <p>Sistem ini dibangunkan oleh <b>Mohd Asrul Bin Adanan, Technical Engineer</b>, sebagai satu inisiatif untuk menyelaraskan dan melancarkan pengurusan kemaskini borang berkaitan projek Suruhanjaya Pencegahan Rasuah Malaysia (SPRM) bagi projek CCTV dan VIR.</p>
+    </div>
+  </div>
+
   <!-- SIDEBAR -->
   <nav class="sidebar">
     <div class="sidebar-brand">
@@ -802,7 +826,7 @@ tr:hover td{background:#f9fbff}
     <div class="sidebar-footer">
       <div>👤 {{authProfile?.name||authUser.email}}</div>
       <div style="font-size:.72rem;opacity:.6">{{authProfile?.role==='superadmin'?'⭐ Superadmin':'Staff'}}</div>
-      <button class="btn btn-sm" style="margin-top:8px;background:rgba(255,255,255,.15);color:#fff;border:none" @click="doLogout">Log Keluar</button>
+      <button class="btn btn-sm" style="margin-top:8px;background:rgba(255,255,255,.15);color:#fff;border:none" @click="confirmLogout">Log Keluar</button>
     </div>
   </nav>
 
@@ -810,7 +834,7 @@ tr:hover td{background:#f9fbff}
   <div class="main">
     <div class="topbar no-print">
       <h3>{{pageTitle}}</h3>
-      <div style="position:relative;flex:1;max-width:360px;margin:0 20px">
+      <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
         <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, tarikh..." style="font-size:.83rem;padding:7px 12px">
         <div v-if="showSearchResults && searchResults.length" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
           <div v-for="r in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
@@ -827,6 +851,28 @@ tr:hover td{background:#f9fbff}
       </div>
       <div class="flex gap-8" style="align-items:center">
         <span class="text-sm text-muted" style="white-space:nowrap">{{today}}</span>
+        <!-- Online users indicator -->
+        <div style="position:relative">
+          <button class="btn btn-outline btn-sm" @click="showOnlinePanel=!showOnlinePanel" style="position:relative;padding:7px 10px" title="Pengguna Online">
+            🟢
+            <span v-if="onlineUsers.length" style="position:absolute;top:-4px;right:-4px;background:#198754;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{onlineUsers.length>9?'9+':onlineUsers.length}}</span>
+          </button>
+          <div v-if="showOnlinePanel" style="position:absolute;right:0;top:calc(100% + 8px);width:280px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
+            <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0">
+              <span style="font-weight:700;font-size:.88rem;color:#002244">🟢 Pengguna Online ({{onlineUsers.length}})</span>
+            </div>
+            <div style="max-height:320px;overflow-y:auto">
+              <div v-if="!onlineUsers.length" style="padding:20px;text-align:center;color:#888;font-size:.83rem">Tiada pengguna lain online buat masa ini.</div>
+              <div v-for="u in onlineUsers" :key="u.id" style="padding:10px 16px;border-bottom:1px solid #f8f8f8;display:flex;align-items:center;gap:10px">
+                <span style="width:8px;height:8px;background:#198754;border-radius:50%;flex-shrink:0"></span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:.83rem;font-weight:600;color:#222">{{u.name||u.username}}</div>
+                  <div style="font-size:.72rem;color:#888">@{{u.username}} &nbsp;·&nbsp; {{u.role==='superadmin'?'Superadmin':u.role==='admin'?'Admin':'Staff'}}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <!-- Bell notifications -->
         <div style="position:relative">
           <button class="btn btn-outline btn-sm" @click="showNotifPanel=!showNotifPanel" style="position:relative;padding:7px 10px">
@@ -854,7 +900,7 @@ tr:hover td{background:#f9fbff}
         <!-- Dark mode toggle -->
         <button @click="darkMode=!darkMode" class="btn btn-outline btn-sm" style="padding:7px 10px">{{darkMode?'☀️':'🌙'}}</button>
         <!-- Log Keluar — mobile only -->
-        <button v-if="authUser" @click="doLogout" class="btn btn-sm mobile-logout-btn" style="background:#c62828;color:#fff;border:none;padding:7px 12px;display:none">🚪 Keluar</button>
+        <button v-if="authUser" @click="confirmLogout" class="btn btn-sm mobile-logout-btn" style="background:#c62828;color:#fff;border:none;padding:7px 12px;display:none">🚪 Keluar</button>
       </div>
     </div>
     <div class="content">
@@ -1161,6 +1207,7 @@ tr:hover td{background:#f9fbff}
           <div class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='switch'}" @click="eqTab='switch'">🔌 Network Switch ({{(selSiteEquip.switches||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='alarm'}" @click="eqTab='alarm'">🔔 Alarm SMS ({{(selSiteEquip.alarms||[]).length}})</div>
+          <div v-if="currentProject!=='vir'" class="tab" :class="{active:eqTab==='misc'}" @click="eqTab='misc'">📦 Lain-lain ({{(selSiteEquip.misc||[]).length}})</div>
         </div>
 
         <!-- CAMERAS TAB -->
@@ -1415,6 +1462,56 @@ tr:hover td{background:#f9fbff}
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.alarms||[]).length"><td colspan="7" class="empty">Tiada alarm.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- LAIN-LAIN PERALATAN TAB (CCTV only — Monitor/TV/PC/UPS/POE dll.) -->
+        <div v-if="eqTab==='misc' && currentProject!=='vir'">
+          <div class="card">
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Peralatan Lain-lain</div>
+              <div class="flex gap-8">
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nMISC','serial')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'misc')"></label>
+                <button class="btn btn-outline btn-sm" @click="resetForm('nMISC')">↺ Reset</button>
+              </div>
+            </div>
+            <div v-if="ocrState.active && ocrState.target==='nMISC'" class="mb-12">
+              <div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div>
+              <div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nMISC','serial',t)">{{t}}</span></div></div>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group"><label>Nama / Lokasi</label><input class="form-control" v-model="nMISC.name" placeholder="cth: Monitor Bilik Kawalan"></div>
+              <div class="form-group"><label>Kategori</label>
+                <input class="form-control" v-model="nMISC.category" list="miscCategoryList" placeholder="cth: Monitor">
+                <datalist id="miscCategoryList"><option v-for="c in MISC_CATEGORIES" :key="c" :value="c"></option></datalist>
+              </div>
+              <div class="form-group"><label>Brand</label><input class="form-control" v-model="nMISC.brand"></div>
+              <div class="form-group"><label>Model</label><input class="form-control" v-model="nMISC.model"></div>
+              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nMISC.serial"></div>
+            </div>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addMisc">{{equipEditIdx.misc!==null?'✓ Kemaskini Peralatan':'+ Tambah Peralatan'}}</button>
+              <button v-if="equipEditIdx.misc!==null" class="btn btn-outline" @click="cancelEditEquip('misc')">✕ Batal Edit</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Senarai Peralatan Lain-lain</div>
+            <div class="tbl-wrap">
+              <table class="equip-table">
+                <thead><tr><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
+                <tbody>
+                  <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="i" :class="{'highlight-row':equipEditIdx.misc===i}">
+                    <td>{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!(selSiteEquip.misc||[]).length"><td colspan="7" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1694,6 +1791,24 @@ tr:hover td{background:#f9fbff}
               </table>
             </div>
           </div>
+          <div class="card">
+            <div class="card-title">📦 Pemeriksaan Peralatan Lain-lain</div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Status</th><th>Nota</th></tr></thead>
+                <tbody>
+                  <tr v-for="(m,i) in pm.misc" :key="i">
+                    <td>{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td>{{m.brand}}</td>
+                    <td><input class="form-control" style="min-width:100px" v-model="m.model"></td>
+                    <td><input class="form-control" style="min-width:100px" v-model="m.serial"></td>
+                    <td><select class="status-sel" v-model="m.status" :class="m.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
+                    <td><input class="form-control" style="min-width:100px" v-model="m.nota" placeholder="nota..."></td>
+                  </tr>
+                  <tr v-if="!pm.misc.length"><td colspan="8" class="empty">Tiada peralatan lain-lain didaftar.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=3">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=5">Seterusnya →</button>
@@ -1888,9 +2003,10 @@ tr:hover td{background:#f9fbff}
 
         <!-- PREVIEW + PRINT AREA -->
         <div class="pm-preview-wrap">
-          <div class="pm-preview-label no-print">Pratonton Borang</div>
+          <div class="pm-preview-label no-print">Pratonton Borang <span v-if="pmPreviewScale<1" class="text-muted" style="font-weight:400;text-transform:none;letter-spacing:normal;font-size:.72rem">({{Math.round(pmPreviewScale*100)}}% — cubit skrin untuk zum)</span></div>
           <div class="pm-preview-inner">
-            <div id="print-area" class="pm-print">
+            <div class="pm-print-scale-outer" :style="pmPreviewScale<1 ? {height:(pmPreviewNaturalHeight*pmPreviewScale)+'px',overflow:'hidden'} : null">
+            <div id="print-area" class="pm-print" :style="pmPreviewScale<1 ? {width:PM_PREVIEW_DESIGN_WIDTH+'px',transform:'scale('+pmPreviewScale+')',transformOrigin:'top left'} : null">
 
           <!-- HEADER -->
           <div class="pm-corp-header">
@@ -2052,8 +2168,23 @@ tr:hover td{background:#f9fbff}
             </tbody>
           </table>
 
-          <!-- 6. SUPPORT -->
-          <div class="pm-section-hdr">6. &nbsp;PERALATAN SOKONGAN</div>
+          <!-- 6. LAIN-LAIN PERALATAN -->
+          <div class="pm-section-hdr">6. &nbsp;PERALATAN LAIN-LAIN</div>
+          <table class="pm-tbl">
+            <thead><tr><th style="width:5%">No.</th><th style="width:20%">Nama/Lokasi</th><th style="width:15%">Kategori</th><th style="width:13%">Brand</th><th style="width:15%">Model</th><th style="width:15%">No. Siri</th><th style="width:9%">Status</th><th style="width:8%">Nota</th></tr></thead>
+            <tbody>
+              <tr v-for="(m,i) in viewPM?.misc" :key="i">
+                <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td class="ctr">{{m.brand}}</td>
+                <td class="ctr">{{m.model}}</td><td class="ctr" style="font-family:monospace">{{m.serial}}</td>
+                <td :class="m.status==='Baik'?'ok':'no'">{{m.status}}</td>
+                <td>{{m.nota}}</td>
+              </tr>
+              <tr v-if="!viewPM?.misc?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod peralatan lain-lain</td></tr>
+            </tbody>
+          </table>
+
+          <!-- 7. SUPPORT -->
+          <div class="pm-section-hdr">7. &nbsp;PERALATAN SOKONGAN</div>
           <table class="pm-tbl">
             <thead><tr><th style="width:4%">No.</th><th>Perkara</th><th style="width:12%">Status</th><th>Nota</th></tr></thead>
             <tbody>
@@ -2112,6 +2243,7 @@ tr:hover td{background:#f9fbff}
           </div>
 
         </div><!-- /print-area -->
+            </div><!-- /pm-print-scale-outer -->
           </div><!-- /pm-preview-inner -->
         </div><!-- /pm-preview-wrap -->
 
@@ -2895,6 +3027,7 @@ tr:hover td{background:#f9fbff}
                   <option value="HDD">HDD</option>
                   <option value="Switch">Switch</option>
                   <option value="Alarm">Alarm</option>
+                  <option value="Lain-lain">Lain-lain</option>
                 </select>
                 <input class="form-control search-bar" v-model="assetSearch" placeholder="🔍 Cari site/brand/model/serial">
                 <button class="btn btn-success" @click="exportAssetRegister">📊 Export Excel</button>
@@ -3074,6 +3207,11 @@ tr:hover td{background:#f9fbff}
       <button class="btn btn-sm btn-outline" style="margin-left:auto;color:#fff;border-color:rgba(255,255,255,.4)" @click="compareList=[]">Batal</button>
     </div>
 
+    <!-- APP FOOTER -->
+    <div class="app-footer no-print">
+      Sistem ini dibangunkan dan diselenggara oleh <b>Mohd Asrul Bin Adanan</b>, Technical Engineer bagi pihak <b>Daya One Resources Sdn Bhd</b>.
+    </div>
+
   </div><!-- /main -->
 
   <!-- MODAL: RESET KATA LALUAN (superadmin) -->
@@ -3211,7 +3349,7 @@ const FIREBASE_CONFIG = {
 // ============================================================
 const SITES = [
   {id:'s01',name:'Kompleks SPRM Negeri Pulau Pinang',code:'PP',zone:'UTARA'},
-  {id:'s02',name:'Pejabat SPRM Cawangan Seberang Perai',code:'SP',zone:'UTARA'},
+  {id:'s02',name:'Pejabat SPRM Cawangan Seberang Perai',code:'SBP',zone:'UTARA'},
   {id:'s03',name:'Kompleks SPRM Negeri Perak',code:'PK',zone:'UTARA'},
   {id:'s04',name:'Pejabat SPRM Cawangan Kuala Selangor',code:'KS',zone:'TENGAH'},
   {id:'s05',name:'Pejabat SPRM Negeri Sembilan',code:'NS',zone:'SELATAN'},
@@ -3236,7 +3374,7 @@ const VIR_SITES = [
   {id:'v00',name:'Ibu Pejabat SPRM Putrajaya',code:'IPJ',zone:'TENGAH'},
   {id:'v01',name:'Kompleks SPRM Negeri Perlis',code:'PLS',zone:'UTARA'},
   {id:'v02',name:'Kompleks SPRM Negeri Kedah',code:'KDH',zone:'UTARA'},
-  {id:'v37',name:'Pejabat SPRM Cawangan Sungai Petani',code:'SGP',zone:'UTARA'},
+  {id:'v37',name:'Pejabat SPRM Cawangan Sungai Petani',code:'SP',zone:'UTARA'},
   {id:'v03',name:'Pejabat SPRM Cawangan Langkawi',code:'LGK',zone:'UTARA'},
   {id:'v04',name:'Kompleks SPRM Negeri Pulau Pinang',code:'PP',zone:'UTARA'},
   {id:'v06',name:'Kompleks SPRM Negeri Perak',code:'PK',zone:'UTARA'},
@@ -3382,6 +3520,13 @@ createApp({
     const loginShake = ref(false);
     function triggerShake(){ loginShake.value=true; setTimeout(()=>loginShake.value=false, 600); }
     const forgotPwModal = reactive({ show:false, username:'', loading:false, err:'', sent:false });
+    const welcomePopup = ref(false);
+    let _welcomePopupTimer = null;
+    function showWelcomePopup() {
+      welcomePopup.value = true;
+      clearTimeout(_welcomePopupTimer);
+      _welcomePopupTimer = setTimeout(() => { welcomePopup.value = false; }, 10000);
+    }
     const showSetup = ref(false);
     const setupMsg = ref('');
     const toast = reactive({show:false,msg:'',type:'success'});
@@ -3398,6 +3543,8 @@ createApp({
     const nHDD = reactive({brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:''});
     const nSW  = reactive({brand:'',model:'',serial:'',ports:''});
     const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert'});
+    const nMISC = reactive({name:'',category:'Monitor',brand:'',model:'',serial:''});
+    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
 
     // ---- PM form state ----
     // VIR checklist master — each item has label, okCell, nokCell (for Excel injection)
@@ -3453,7 +3600,7 @@ createApp({
       month: null, year: null,
       visitDate:'',
       // CCTV fields
-      cameras:[], nvr:[], hdd:[], switches:[], alarms:[],
+      cameras:[], nvr:[], hdd:[], switches:[], alarms:[], misc:[],
       support:[
         {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
         {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -4007,6 +4154,7 @@ createApp({
       nHDD:  {brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:''},
       nSW:   {brand:'',model:'',serial:'',ports:''},
       nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert'},
+      nMISC: {name:'',category:'Monitor',brand:'',model:'',serial:''},
     };
 
     // ---- Project split ----
@@ -4608,6 +4756,55 @@ createApp({
       _checkIdle();
     }
 
+    // ---- Presence (online-users indicator) ----
+    // No Realtime Database in this project, so no true onDisconnect hook —
+    // presence is approximated with a periodic heartbeat write to Firestore.
+    // A user is considered "online" if their lastSeen is within the last
+    // ONLINE_THRESHOLD_MS; if a tab is closed/crashes, the heartbeat simply
+    // stops and they age out as "offline" within that window.
+    const ONLINE_THRESHOLD_MS = 90 * 1000;
+    const HEARTBEAT_INTERVAL_MS = 45 * 1000;
+    let _heartbeatTimer = null;
+    async function _sendHeartbeat() {
+      if(!auth.currentUser) return;
+      try { await db.collection('users').doc(auth.currentUser.uid).update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }); } catch(e) {}
+      // Refresh the local user list too, so other users' presence (as seen
+      // by THIS client) doesn't go stale between page loads — allUsers is
+      // otherwise only fetched once at login.
+      try { await loadUsers(); } catch(e) {}
+    }
+    function _startHeartbeat() {
+      _sendHeartbeat();
+      clearInterval(_heartbeatTimer);
+      _heartbeatTimer = setInterval(_sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+    }
+    function _stopHeartbeat() { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+    watch(authUser, (user) => { if(user) _startHeartbeat(); else _stopHeartbeat(); });
+
+    function _isUserOnline(u) {
+      if(!u.lastSeen) return false;
+      const t = u.lastSeen.toDate ? u.lastSeen.toDate().getTime() : (u.lastSeen.seconds ? u.lastSeen.seconds*1000 : 0);
+      return !!t && (Date.now() - t) < ONLINE_THRESHOLD_MS;
+    }
+
+    const showOnlinePanel = ref(false);
+    // Role-based visibility: superadmin sees everyone online; admin sees
+    // online staff + themselves (not superadmin); staff sees online staff
+    // peers only (not admin/superadmin). Own entry excluded from the list.
+    const onlineUsers = computed(() => {
+      const myRole = authProfile.value?.role;
+      const myUsername = authProfile.value?.username;
+      let list = allUsers.value.filter(u => u.username !== myUsername && _isUserOnline(u));
+      if(myRole === 'superadmin') {
+        // no further filtering — sees all roles
+      } else if(myRole === 'admin') {
+        list = list.filter(u => u.role !== 'superadmin');
+      } else {
+        list = list.filter(u => u.role !== 'superadmin' && u.role !== 'admin');
+      }
+      return list;
+    });
+
     // ---- Toast helper ----
     function showToast(msg, type='success') {
       toast.show=true; toast.msg=msg; toast.type=type;
@@ -4644,10 +4841,19 @@ createApp({
         await auth.signInWithEmailAndPassword(email, loginPass.value);
         // Load profile from Firestore or fallback to USER_MAP
         if(builtIn) {
-          authProfile.value = { ...builtIn, name: builtIn.name||uid };
-          // Upsert superadmin profile in Firestore
+          // Only seed the initial profile doc on the very first-ever login —
+          // if it already exists, load it as-is. Previously this always
+          // overwrote name/role with the hardcoded USER_MAP default on
+          // EVERY login, silently reverting any edits the superadmin made
+          // via the Profile page (e.g. adding "Bin Adanan" to their name).
           const saUid = auth.currentUser.uid;
-          await db.collection('users').doc(saUid).set({ username:uid, email, name:builtIn.name, role:builtIn.role, disabled:false }, {merge:true});
+          const saDoc = await db.collection('users').doc(saUid).get();
+          if(saDoc.exists) {
+            authProfile.value = { id: saDoc.id, uid: saUid, ...saDoc.data() };
+          } else {
+            authProfile.value = { ...builtIn, name: builtIn.name||uid, uid: saUid };
+            await db.collection('users').doc(saUid).set({ username:uid, email, name:builtIn.name, role:builtIn.role, disabled:false }, {merge:true});
+          }
         } else {
           const snap = await db.collection('users').where('username','==',uid).limit(1).get();
           authProfile.value = { id: snap.docs[0].id, ...snap.docs[0].data() };
@@ -4656,6 +4862,8 @@ createApp({
         if(authProfile.value?.forcePwReset) {
           forcePwModal.newPw=''; forcePwModal.confirmPw=''; forcePwModal.err='';
           forcePwModal.show = true;
+        } else {
+          showWelcomePopup();
         }
       } catch(e) {
         if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') loginErr.value='Kata laluan tidak sah.';
@@ -4722,6 +4930,13 @@ createApp({
     // account already exists in Firebase Auth; manage its password from the
     // Firebase Console (Authentication > Users) instead of from this file.
 
+    // User-initiated logout only — asks for confirmation first. Auto-logout
+    // (session idle timeout) calls doLogout() directly and must NOT prompt,
+    // since the user isn't around to answer a confirm dialog.
+    function confirmLogout() {
+      if(confirm('Adakah anda pasti untuk keluar?')) doLogout();
+    }
+
     function doLogout() {
       auth.signOut();
       authProfile.value=null;
@@ -4734,7 +4949,7 @@ createApp({
 
     // ---- Reset form ----
     function resetForm(formName) {
-      const refs = { nCam, nNVR, nHDD, nSW, nALM };
+      const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
       if (ocrState.target === formName) { ocrState.active=false; ocrState.tokens=[]; }
       // Also drop any in-progress edit-in-place — otherwise the blanked
@@ -4767,7 +4982,7 @@ createApp({
     }
 
     function pickOcr(formName, field, value) {
-      const refs = { nCam, nNVR, nHDD, nSW, nALM };
+      const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC };
       refs[formName][field] = value;
       ocrState.active=false; ocrState.tokens=[];
       showToast('No. Siri dipilih: '+value);
@@ -4779,11 +4994,13 @@ createApp({
       nvr:      ['name','type','brand','model','serial','ip'],
       hdd:      ['brand','model','serial','capacity','config','nvrRef'],
       switches: ['brand','model','serial','ports'],
+      misc:     ['name','category','brand','model','serial'],
     };
     const IMPORT_HEADER_HINTS = {
       name:     ['name','nama','lokasi','location','channel','device','desc'],
       ip:       ['ip','alamat ip','ip address','ipaddress'],
       camType:  ['type','jenis','category'],
+      category: ['type','jenis','category','kategori'],
       brand:    ['brand','jenama','manufacturer','make'],
       model:    ['model','part no','part number'],
       serial:   ['serial','no siri','s/n','sn','serial no','serial number'],
@@ -4938,6 +5155,7 @@ createApp({
         if(kind === 'cameras' && !item.camType) item.camType = 'Indoor';
         if(kind === 'nvr' && !item.type) item.type = 'NVR';
         if(kind === 'hdd' && !item.config) item.config = 'RAID 5';
+        if(kind === 'misc' && !item.category) item.category = 'Monitor';
         list.push(item);
       });
       showToast(`${rows.length} rekod berjaya diimport! Jangan lupa klik "Simpan Peralatan".`);
@@ -4949,7 +5167,7 @@ createApp({
       loading.value=true;
       try {
         const eq = {};
-        SITES.forEach(s=>{ eq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[]}; });
+        SITES.forEach(s=>{ eq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; });
         const snap = await db.collection('siteEquipment').get();
         snap.forEach(doc=>{ eq[doc.id] = doc.data(); });
         siteEquip.value = eq;
@@ -4964,8 +5182,10 @@ createApp({
         const pmSnap = await db.collection('pmRecords').orderBy('createdAt','desc').get();
         pmRecords.value = pmSnap.docs.map(d=>({id:d.id,...d.data()}));
 
+        // All roles need the user list now (for the online-users indicator);
+        // audit log stays admin/superadmin-only since it's sensitive.
+        await loadUsers();
         if(['superadmin','admin'].includes(authProfile.value?.role)) {
-          await loadUsers();
           await loadAuditLogs();
         }
 
@@ -5231,22 +5451,22 @@ createApp({
       return currentProject.value === 'vir' ? virSiteEquip.value : siteEquip.value;
     }
     const selSiteEquip = computed(() => {
-      if(!selSite.value) return {cameras:[],nvr:[],hdd:[],switches:[],alarms:[]};
-      return activeEquip()[selSite.value.id] || {cameras:[],nvr:[],hdd:[],switches:[],alarms:[]};
+      if(!selSite.value) return {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      return activeEquip()[selSite.value.id] || {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
     });
 
     function ensureSite(id) {
       const eq = activeEquip();
-      if(!eq[id]) eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[]};
+      if(!eq[id]) eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
     }
 
     // ---- Edit-in-place for equipment rows (instead of delete + re-add) ----
-    const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null });
-    const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM' };
+    const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null, misc:null });
+    const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM', misc:'nMISC' };
     function editEquipItem(key, idx) {
       const item = (selSiteEquip.value[key]||[])[idx];
       if(!item) return;
-      const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM };
+      const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC };
       Object.assign(refs[key], item);
       equipEditIdx[key] = idx;
     }
@@ -5295,6 +5515,14 @@ createApp({
       else list.push({...nALM});
       Object.assign(nALM,{name:'',brand:'',model:'',serial:'',type:'SMS Power Alert'});
     }
+    function addMisc() {
+      if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
+      ensureSite(selSite.value.id);
+      const list = activeEquip()[selSite.value.id].misc;
+      if(equipEditIdx.misc !== null) { list[equipEditIdx.misc] = {...nMISC}; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
+      else list.push({...nMISC});
+      Object.assign(nMISC,{name:'',category:'Monitor',brand:'',model:'',serial:''});
+    }
     function removeItem(siteId, key, idx) {
       activeEquip()[siteId][key].splice(idx,1);
       if(equipEditIdx[key] === idx) cancelEditEquip(key); // was mid-edit on the row just deleted
@@ -5318,7 +5546,7 @@ createApp({
       pm.virItems = VIR_CHECKLIST_TEMPLATE.map(t=>({...t, status:'ok', nota:''}));
       pm.siteId=''; pm.siteName=''; pm.refNo=''; refNoSuffix.value='';
       pm.month=null; pm.year=null;
-      pm.visitDate=''; pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[];
+      pm.visitDate=''; pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
       pm.support=[
         {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
         {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -5352,6 +5580,7 @@ createApp({
       pm.hdd = (eq.hdd||[]).map(h=>({...h,download:'Ya',playback:'Ya',time:'Betul',status:'Baik'}));
       pm.switches = (eq.switches||[]).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = (eq.alarms||[]).map(a=>({...a,func:'Baik',status:'Baik'}));
+      pm.misc = (eq.misc||[]).map(m=>({...m,status:'Baik',nota:''}));
       pmStep.value=2;
     }
 
@@ -5403,7 +5632,7 @@ createApp({
             virItems: JSON.parse(JSON.stringify(pm.virItems)),
           } : {
             cameras:[...pm.cameras], nvr:[...pm.nvr], hdd:[...pm.hdd],
-            switches:[...pm.switches], alarms:[...pm.alarms],
+            switches:[...pm.switches], alarms:[...pm.alarms], misc:[...pm.misc],
             support:JSON.parse(JSON.stringify(pm.support)),
           })
         };
@@ -5423,6 +5652,40 @@ createApp({
     }
 
     function viewRecord(r) { viewPM.value=r; currentProject.value=r.project||'cctv'; page.value='pm-view'; }
+
+    // ---- Responsive print-preview scaling (mobile) ----
+    // The PM print/preview layout uses fixed-px, print-oriented columns
+    // designed for A4 paper width. Trying to make that CSS itself reflow on
+    // a narrow phone would make the on-screen preview stop matching what
+    // actually prints. Instead we render it at its natural print-design
+    // width and shrink the WHOLE thing down with a CSS transform — the same
+    // approach Word/Google Docs mobile use for page preview: exact WYSIWYG,
+    // just scaled, and the user can still pinch-zoom in for detail.
+    // @media print resets the transform (see #print-area print rule above)
+    // so actual printing is unaffected.
+    const PM_PREVIEW_DESIGN_WIDTH = 760;
+    const previewViewportWidth = ref(window.innerWidth);
+    window.addEventListener('resize', () => { previewViewportWidth.value = window.innerWidth; }, { passive:true });
+    const pmPreviewNaturalHeight = ref(0);
+    let _pmPreviewResizeObserver = null;
+    function _observePmPreviewHeight() {
+      const el = document.getElementById('print-area');
+      if(!el || typeof ResizeObserver === 'undefined') return;
+      if(_pmPreviewResizeObserver) _pmPreviewResizeObserver.disconnect();
+      _pmPreviewResizeObserver = new ResizeObserver(entries => {
+        for(const entry of entries) { pmPreviewNaturalHeight.value = entry.contentRect.height; }
+      });
+      _pmPreviewResizeObserver.observe(el);
+    }
+    const pmPreviewScale = computed(() => {
+      // ~64px accounts for the surrounding .content/.pm-preview-wrap/.pm-preview-inner padding
+      const avail = previewViewportWidth.value - 64;
+      if(avail >= PM_PREVIEW_DESIGN_WIDTH) return 1;
+      return Math.max(avail / PM_PREVIEW_DESIGN_WIDTH, 0.3);
+    });
+    watch(page, async (p) => {
+      if(p === 'pm-view') { await nextTick(); _observePmPreviewHeight(); }
+    });
 
     async function deleteRecord(id) {
       if(!confirm('Padam rekod PM ini?')) return;
@@ -5763,8 +6026,18 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         } else { children.push(emptyNote('Tiada rekod Alarm.')); }
         children.push(spacer());
 
-        // ── 6. Support ──
-        children.push(sectionHdr('6.  PERALATAN SOKONGAN'));
+        // ── 6. Lain-lain Peralatan ──
+        children.push(sectionHdr('6.  PERALATAN LAIN-LAIN'));
+        if (r.misc?.length) {
+          children.push(makeTable(
+            ['No.','Nama/Lokasi','Kategori','Brand','Model','No. Siri','Status','Nota'],
+            r.misc.map((m,i)=>[i+1,m.name,m.category,m.brand,m.model,m.serial,m.status,m.nota||''])
+          ));
+        } else { children.push(emptyNote('Tiada rekod Peralatan Lain-lain.')); }
+        children.push(spacer());
+
+        // ── 7. Support ──
+        children.push(sectionHdr('7.  PERALATAN SOKONGAN'));
         if (r.support?.length) {
           children.push(makeTable(
             ['No.','Perkara','Status','Nota'],
@@ -6510,6 +6783,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         (eq.hdd||[]).forEach(h => rows.push({ site:site.name, proj, cat:'HDD', name:h.nvrRef||'-', brand:h.brand||'-', model:h.model||'-', serial:h.serial||'-', extra:h.capacity||'-' }));
         (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch', name:'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:s.ports||'-' }));
         (eq.alarms||[]).forEach(a => rows.push({ site:site.name, proj, cat:'Alarm', name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
+        (eq.misc||[]).forEach(m => rows.push({ site:site.name, proj, cat:'Lain-lain', name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
       VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquip.value));
@@ -6738,7 +7012,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       currentProject, virSiteEquip,
       siteEquip, selSite, eqTab,
-      nCam, nNVR, nHDD, nSW, nALM,
+      nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
       pmRecords, viewPM, filterSite, filterYear, filterMaintType, filterPmNo,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
@@ -6753,7 +7027,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
       fmtDate,
-      doLogin, doLogout, initProfile, forgotPwModal, openForgotPw, submitForgotPw,
+      doLogin, doLogout, confirmLogout, initProfile, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser,
       resetPwModal, openResetPw, submitResetPw,
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
@@ -6761,12 +7035,13 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       showLoginPw, showPwNew, showPwConfirm,
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS,
-      openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm,
+      openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
       startNewPM, loadPMEquip, savePM, viewRecord, deleteRecord,
+      pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
@@ -6774,6 +7049,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       auditLogs, loadAuditLogs,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
+      showOnlinePanel, onlineUsers,
       laporanTempoh, laporanProject, laporanSite, laporanFiltered, printLaporan,
       laporanNotaSearch, laporanNotaStatus, laporanNotaItems,
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
