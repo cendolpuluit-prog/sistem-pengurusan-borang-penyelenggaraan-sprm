@@ -8,7 +8,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -779,6 +778,9 @@ tr:hover td{background:#f9fbff}
       </div>
       <div class="nav-item" :class="{active:page==='laporan'}" @click="page='laporan'">
         <span class="icon">📋</span> Laporan
+      </div>
+      <div class="nav-item" :class="{active:page==='laporan-lanjutan'}" @click="page='laporan-lanjutan'">
+        <span class="icon">📈</span> Laporan Lanjutan
       </div>
       <div class="nav-divider"></div>
       <div class="nav-item" :class="{active:page==='audit-log'}" @click="loadAuditLogs();page='audit-log'" v-if="['superadmin','admin'].includes(authProfile?.role)">
@@ -2546,7 +2548,7 @@ tr:hover td{background:#f9fbff}
 
         <div class="card">
           <div class="card-title">☁️ Auto-Backup Cloud (Max 3)</div>
-          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali seminggu dan disimpan di Firebase (Cloud Storage + Firestore) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan.</p>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali seminggu dan disimpan di Firestore (cloud) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan.</p>
           <button class="btn btn-outline btn-sm" @click="doAutoBackup" :disabled="loading" style="margin-bottom:14px">
             ⚡ Buat Auto-Backup Sekarang
           </button>
@@ -2851,6 +2853,148 @@ tr:hover td{background:#f9fbff}
             <div style="font-size:.8rem;color:#e65100"><b>{{lbPreview.noRecord}}</b> site tiada rekod bulan ini</div>
           </div>
           <div v-else style="margin-top:12px;font-size:.8rem;color:#aaa">Tiada rekod untuk bulan/projek yang dipilih. Laporan akan dijana dengan status kosong.</div>
+        </div>
+      </div>
+
+      <!-- ====== LAPORAN LANJUTAN ====== -->
+      <div v-if="page==='laporan-lanjutan'">
+        <div class="tabs no-print">
+          <div class="tab" :class="{active:reportTab==='inventori'}" @click="reportTab='inventori'">📦 Inventori Peralatan</div>
+          <div class="tab" :class="{active:reportTab==='sla'}" @click="reportTab='sla'">⏱ Trend Keterlambatan</div>
+          <div class="tab" :class="{active:reportTab==='kegagalan'}" @click="reportTab='kegagalan'">🔧 Analisis Kegagalan</div>
+          <div class="tab" :class="{active:reportTab==='isu'}" @click="reportTab='isu'">🔁 Isu Berulang</div>
+          <div class="tab" :class="{active:reportTab==='team'}" @click="reportTab='team'">👷 Prestasi Team</div>
+        </div>
+
+        <!-- Executive summary — always visible action -->
+        <div class="card" style="background:#f0f4ff">
+          <div class="flex justify-between items-center" style="flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-weight:700;color:#003366;font-size:.92rem">📄 Ringkasan Eksekutif (1 Halaman)</div>
+              <div class="text-sm text-muted">KPI utama + top 3 site bermasalah + top 3 isu berulang — untuk share pantas dengan pengurusan.</div>
+            </div>
+            <button class="btn btn-primary" @click="printExecutiveSummary">🖨️ Cetak Ringkasan Eksekutif</button>
+          </div>
+        </div>
+
+        <!-- TAB: INVENTORI PERALATAN -->
+        <div v-if="reportTab==='inventori'">
+          <div class="card">
+            <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
+              <div class="card-title" style="margin:0;border:none;padding:0">Inventori Peralatan Konsolidasi ({{assetRegister.length}} item)</div>
+              <div class="flex gap-8" style="flex-wrap:wrap">
+                <select class="form-control" style="width:120px" v-model="assetFilterProj">
+                  <option value="all">Semua Projek</option>
+                  <option value="CCTV">CCTV</option>
+                  <option value="VIR">VIR</option>
+                </select>
+                <select class="form-control" style="width:130px" v-model="assetFilterCat">
+                  <option value="all">Semua Kategori</option>
+                  <option value="Kamera">Kamera</option>
+                  <option value="NVR">NVR</option>
+                  <option value="HDD">HDD</option>
+                  <option value="Switch">Switch</option>
+                  <option value="Alarm">Alarm</option>
+                </select>
+                <input class="form-control search-bar" v-model="assetSearch" placeholder="🔍 Cari site/brand/model/serial">
+                <button class="btn btn-success" @click="exportAssetRegister">📊 Export Excel</button>
+              </div>
+            </div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r,i) in assetRegister" :key="i">
+                    <td>{{i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
+                    <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.serial}}</td><td>{{r.extra}}</td>
+                  </tr>
+                  <tr v-if="!assetRegister.length"><td colspan="9" class="empty">Tiada peralatan sepadan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: TREND KETERLAMBATAN -->
+        <div v-if="reportTab==='sla'">
+          <div class="card">
+            <div class="card-title">Trend Keterlambatan PM Ikut Site</div>
+            <p class="text-sm text-muted mb-12">Dikira dari selang hari antara setiap PM berturutan berbanding interval kontrak (CCTV {{PM_INTERVAL.cctv}} bulan / VIR {{PM_INTERVAL.vir}} bulan). "Bil. Lewat" = bilangan kitaran PM yang melebihi interval tersebut.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Site</th><th>Projek</th><th>Jumlah PM</th><th>Bil. Lewat</th><th>Purata Selang (hari)</th><th>Selang Terburuk (hari)</th></tr></thead>
+                <tbody>
+                  <tr v-for="s in slaTrend" :key="s.name" :class="{'highlight-row':s.breachCount>0}">
+                    <td><b>{{s.name}}</b></td><td>{{s.proj}}</td><td>{{s.pmCount}}</td>
+                    <td><span :class="'badge badge-'+(s.breachCount>0?'red':'green')">{{s.breachCount}}</span></td>
+                    <td>{{s.avgGap??'—'}}</td><td>{{s.worstGap??'—'}}</td>
+                  </tr>
+                  <tr v-if="!slaTrend.length"><td colspan="6" class="empty">Tiada data.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: ANALISIS KEGAGALAN (BRAND/MODEL) -->
+        <div v-if="reportTab==='kegagalan'">
+          <div class="card">
+            <div class="card-title">Analisis Kegagalan Ikut Brand &amp; Model</div>
+            <p class="text-sm text-muted mb-12">Dikira dari rekod CM (Corrective Maintenance) — bilangan peralatan brand/model tertentu yang direkodkan rosak. Berguna untuk keputusan procurement (elak brand/model kerap gagal).</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Brand &amp; Model</th><th>Bilangan Kegagalan</th></tr></thead>
+                <tbody>
+                  <tr v-for="(f,i) in failureByModel" :key="f.model">
+                    <td>{{i+1}}</td><td><b>{{f.model}}</b></td><td><span class="badge badge-red">{{f.count}}x</span></td>
+                  </tr>
+                  <tr v-if="!failureByModel.length"><td colspan="3" class="empty">Tiada kegagalan direkodkan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: ISU BERULANG -->
+        <div v-if="reportTab==='isu'">
+          <div class="card">
+            <div class="card-title">Analisis Isu Berulang</div>
+            <p class="text-sm text-muted mb-12">Diekstrak dari medan Nota/Catatan (format MASALAH/TINDAKAN/STATUS), dikumpul ikut teks masalah yang serupa. Hanya isu yang muncul &gt;1 kali dipaparkan.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Isu</th><th>Kekerapan</th><th>Site Terjejas</th></tr></thead>
+                <tbody>
+                  <tr v-for="(x,i) in recurringIssues" :key="x.text">
+                    <td>{{i+1}}</td><td>{{x.text}}</td><td><span class="badge badge-red">{{x.count}}x</span></td>
+                    <td style="font-size:.78rem;color:#666">{{x.sites.join(', ')}}</td>
+                  </tr>
+                  <tr v-if="!recurringIssues.length"><td colspan="4" class="empty">Tiada isu berulang dikesan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: PRESTASI TEAM -->
+        <div v-if="reportTab==='team'">
+          <div class="card">
+            <div class="card-title">Laporan Prestasi Team</div>
+            <p class="text-sm text-muted mb-12">"Kadar Siap" = peratus penugasan yang ada rekod PM/CM sepadan (dalam lingkungan 7 hari dari tarikh jadual) berbanding jumlah penugasan.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Team</th><th>Anggota</th><th>Jumlah Penugasan</th><th>Siap</th><th>Kadar Siap</th></tr></thead>
+                <tbody>
+                  <tr v-for="t in teamPerformance" :key="t.team">
+                    <td><span :class="['team-badge','badge-'+t.team]">{{t.team}}</span></td>
+                    <td style="font-size:.78rem">{{t.members.join(', ')||'—'}}</td>
+                    <td>{{t.assigned}}</td><td>{{t.completed}}</td>
+                    <td><span :class="'badge badge-'+(t.rate>=80?'green':t.rate>=50?'blue':'red')">{{t.rate}}%</span></td>
+                  </tr>
+                  <tr v-if="!teamPerformance.length"><td colspan="5" class="empty">Tiada penugasan direkodkan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -3243,7 +3387,7 @@ createApp({
     const toast = reactive({show:false,msg:'',type:'success'});
     const isOnline = ref(navigator.onLine);
     const pendingWrites = ref(0);
-    let db, auth, storage;
+    let db, auth;
 
     // ---- Equipment state ----
     const siteEquip = ref({});
@@ -3908,25 +4052,31 @@ createApp({
       showToast('Backup manual berjaya dimuat turun!');
     }
 
-    // Auto-backups are stored in the cloud (Firebase Storage holds the JSON
-    // blob, Firestore 'systemBackups' collection holds a lightweight index)
-    // so every admin sees the same backup list from any device/browser —
-    // NOT localStorage, which only lives on the one device/browser that
+    // Auto-backups live entirely in Firestore ('systemBackups' collection,
+    // JSON payload stored as a document field) — NOT Firebase Storage, which
+    // requires upgrading the project to the Blaze billing plan. NOT
+    // localStorage either, which only lives on the one device/browser that
     // created it and is wiped if that browser's cache/site-data is cleared.
+    // Trade-off: a single Firestore document is capped at ~1MiB, so very
+    // large datasets (many years of accumulated PM records) could eventually
+    // outgrow this — doAutoBackup() below guards against that and tells the
+    // admin to use manual file-download backup instead if it happens.
     const BACKUP_COLLECTION = 'systemBackups';
-    const BACKUP_STORAGE_PATH = 'auto-backups';
+    const BACKUP_MAX_BYTES = 900000; // stay safely under Firestore's ~1MiB document limit
 
     async function doAutoBackup() {
       const data = collectBackupData();
       try {
         const json = JSON.stringify(data);
-        const fileName = data.exportedAt.replace(/[:.]/g,'-') + '.json';
-        const storageRef = storage.ref(`${BACKUP_STORAGE_PATH}/${fileName}`);
-        await storageRef.putString(json, 'raw', { contentType: 'application/json' });
+        const sizeBytes = new Blob([json]).size;
+        if(sizeBytes > BACKUP_MAX_BYTES) {
+          showToast(`Data terlalu besar untuk auto-backup cloud (${(sizeBytes/1024).toFixed(0)}KB > had ~880KB). Sila guna "Backup Manual" (muat turun fail) sebagai gantinya.`, 'error');
+          return;
+        }
         await db.collection(BACKUP_COLLECTION).add({
           timestamp: data.exportedAt,
-          sizeBytes: json.length,
-          storagePath: `${BACKUP_STORAGE_PATH}/${fileName}`,
+          sizeBytes,
+          payload: json,
           type: 'auto',
           createdBy: authUser.value?.email || '',
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -3934,20 +4084,16 @@ createApp({
         // Enforce retention: keep only the newest MAX_AUTO_BACKUPS
         const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').get();
         const extras = snap.docs.slice(MAX_AUTO_BACKUPS);
-        for(const doc of extras) {
-          const d = doc.data();
-          try { await storage.ref(d.storagePath).delete(); } catch(e) {}
-          await doc.ref.delete();
-        }
+        for(const doc of extras) { await doc.ref.delete(); }
         localStorage.setItem(LAST_BACKUP_KEY, data.exportedAt); // local hint only, to avoid redundant checks this session
         await refreshAutoBackups();
-        showToast('Auto-backup berjaya disimpan ke cloud (Firebase).');
+        showToast('Auto-backup berjaya disimpan ke Firestore (cloud).');
       } catch(e) { showToast('Auto-backup gagal: '+e.message, 'error'); }
     }
 
     async function refreshAutoBackups() {
       const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').limit(MAX_AUTO_BACKUPS).get();
-      autoBackups.value = snap.docs.map(d => ({ id:d.id, timestamp:d.data().timestamp, size:d.data().sizeBytes, storagePath:d.data().storagePath }));
+      autoBackups.value = snap.docs.map(d => ({ id:d.id, timestamp:d.data().timestamp, size:d.data().sizeBytes }));
     }
 
     async function checkAutoBackup() {
@@ -3967,10 +4113,9 @@ createApp({
       if(!b) return;
       loading.value = true;
       try {
-        const url = await storage.ref(b.storagePath).getDownloadURL();
-        const res = await fetch(url);
-        const payload = await res.json();
-        applyRestore(payload);
+        const doc = await db.collection(BACKUP_COLLECTION).doc(b.id).get();
+        if(!doc.exists) { showToast('Backup tidak dijumpai.', 'error'); loading.value = false; return; }
+        applyRestore(JSON.parse(doc.data().payload));
       } catch(e) { showToast('Gagal muat backup: '+e.message, 'error'); }
       loading.value = false;
     }
@@ -3980,7 +4125,6 @@ createApp({
       const b = autoBackups.value[idx];
       if(!b) return;
       try {
-        await storage.ref(b.storagePath).delete();
         await db.collection(BACKUP_COLLECTION).doc(b.id).delete();
         await refreshAutoBackups();
         showToast('Backup dipadam.');
@@ -4057,7 +4201,7 @@ createApp({
       'pm-list': currentProject.value==='vir' ? 'Rekod VIR' : 'Rekod CCTV',
       'pm-view':'Lihat Rekod', 'jadual':'Jadual Penyelenggaraan',
       'user-mgmt':'Pengurusan Pengguna', profile:'Profil Saya', backup:'Backup & Restore',
-      'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'compare':'Perbandingan Borang'
+      'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang'
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
@@ -6348,6 +6492,171 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       setTimeout(()=>{ w.print(); },700);
     }
 
+    // ══════════════════════════════════════════════════════════════
+    // LAPORAN LANJUTAN — advanced reporting (replaces manual compile work)
+    // ══════════════════════════════════════════════════════════════
+    const reportTab = ref('inventori');
+
+    // ── 1. Laporan Inventori Peralatan (Asset Register) ──
+    const assetFilterProj = ref('all');
+    const assetFilterCat = ref('all');
+    const assetSearch = ref('');
+    const assetRegister = computed(() => {
+      const rows = [];
+      const pushSite = (site, proj, eqSrc) => {
+        const eq = eqSrc[site.id] || {};
+        (eq.cameras||[]).forEach(c => rows.push({ site:site.name, proj, cat:'Kamera', name:c.name||'-', brand:c.brand||'-', model:c.model||'-', serial:c.serial||'-', extra:c.ip||c.camType||'-' }));
+        (eq.nvr||[]).forEach(n => rows.push({ site:site.name, proj, cat:'NVR', name:n.name||'-', brand:n.brand||'-', model:n.model||'-', serial:n.serial||'-', extra:n.ip||n.type||'-' }));
+        (eq.hdd||[]).forEach(h => rows.push({ site:site.name, proj, cat:'HDD', name:h.nvrRef||'-', brand:h.brand||'-', model:h.model||'-', serial:h.serial||'-', extra:h.capacity||'-' }));
+        (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch', name:'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:s.ports||'-' }));
+        (eq.alarms||[]).forEach(a => rows.push({ site:site.name, proj, cat:'Alarm', name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
+      };
+      SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
+      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquip.value));
+      return rows.filter(r => {
+        if(assetFilterProj.value!=='all' && r.proj!==assetFilterProj.value) return false;
+        if(assetFilterCat.value!=='all' && r.cat!==assetFilterCat.value) return false;
+        const q = assetSearch.value.trim().toLowerCase();
+        if(q && !(r.site.toLowerCase().includes(q)||r.brand.toLowerCase().includes(q)||r.model.toLowerCase().includes(q)||r.serial.toLowerCase().includes(q))) return false;
+        return true;
+      });
+    });
+    function exportAssetRegister() {
+      const rows = assetRegister.value.map((r,i) => ({
+        '#': i+1, Site: r.site, Projek: r.proj, Kategori: r.cat, 'Nama/Jenis': r.name,
+        Brand: r.brand, Model: r.model, 'No. Siri': r.serial, 'Maklumat Tambahan': r.extra,
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventori Peralatan');
+      XLSX.writeFile(wb, `inventori_peralatan_${new Date().toISOString().slice(0,10)}.xlsx`);
+    }
+
+    // ── 2. Trend Keterlambatan (SLA breach history) ──
+    function _slaGapsForSite(site, proj) {
+      const intervalDays = PM_INTERVAL[proj] * 30.44;
+      const recs = pmRecords.value.filter(r => r.siteId===site.id && (r.maintType||'PM')!=='CM')
+        .map(r => ({ ...r, _d: r.visitDate ? new Date(r.visitDate) : (r.year&&r.month ? new Date(r.year, r.month-1, 1) : null) }))
+        .filter(r => r._d).sort((a,b) => a._d - b._d);
+      const gaps = [];
+      for(let i=1; i<recs.length; i++) {
+        const days = Math.round((recs[i]._d - recs[i-1]._d) / 86400000);
+        gaps.push({ from:recs[i-1]._d, to:recs[i]._d, days, breach: days > intervalDays });
+      }
+      return { count: recs.length, gaps };
+    }
+    const slaTrend = computed(() => {
+      const build = (list, proj) => list.map(s => {
+        const { count, gaps } = _slaGapsForSite(s, proj);
+        const breaches = gaps.filter(g => g.breach);
+        return {
+          name: s.name, proj: proj.toUpperCase(), pmCount: count,
+          breachCount: breaches.length,
+          avgGap: gaps.length ? Math.round(gaps.reduce((s,g)=>s+g.days,0)/gaps.length) : null,
+          worstGap: gaps.length ? Math.max(...gaps.map(g=>g.days)) : null,
+        };
+      });
+      return [...build(SITES,'cctv'), ...build(VIR_SITES,'vir')].sort((a,b) => b.breachCount - a.breachCount);
+    });
+
+    // ── 3. Ringkasan Eksekutif (1 halaman, print) ──
+    function printExecutiveSummary() {
+      const yr = new Date().getFullYear();
+      const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
+      const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
+      const totalOverdue = overdueSortedCctv.value.length + overdueSortedVir.value.length;
+      const openCm = pmRecords.value.filter(r=>r.maintType==='CM' && (r.cmStatus==='open'||!r.cmStatus)).length;
+      const worst = slaTrend.value.slice(0,3);
+      const topIssues = recurringIssues.value.slice(0,3);
+      const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ringkasan Eksekutif ${yr}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5px;color:#1a1a1a;padding:26px 30px}
+.hdr{text-align:center;border-bottom:3px solid #003366;padding-bottom:12px;margin-bottom:18px}
+.hdr .co{font-size:15px;font-weight:900;color:#003366}
+.hdr h1{font-size:19px;font-weight:900;color:#003366;margin:8px 0 4px}
+.hdr .sub{font-size:10px;color:#888}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.kpi{border-radius:10px;padding:14px 8px;text-align:center;border:1.5px solid #dde4ef;background:#f8faff}
+.kpi .n{font-size:24px;font-weight:900}
+.kpi .l{font-size:8.5px;color:#666;text-transform:uppercase;margin-top:4px}
+.section-title{font-size:12px;font-weight:800;color:#003366;border-left:4px solid #003366;padding-left:8px;margin:18px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:9.5px}
+thead tr{background:#003366;color:#fff}
+th{padding:6px 8px;text-align:left}
+td{padding:5px 8px;border-bottom:1px solid #eaecf2}
+.footer{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;font-size:8.5px;color:#aaa;text-align:center}
+@media print{@page{margin:12mm;size:A4}}
+</style></head><body>
+<div class="hdr"><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>RINGKASAN EKSEKUTIF PENYELENGGARAAN</h1><div class="sub">SPRM — CCTV &amp; VIR &nbsp;|&nbsp; ${genDate}</div></div>
+<div class="kpi-grid">
+  <div class="kpi"><div class="n" style="color:${cctvCompliance>=75?'#1b5e20':cctvCompliance>=45?'#e65100':'#b71c1c'}">${cctvCompliance}</div><div class="l">Skor CCTV</div></div>
+  <div class="kpi"><div class="n" style="color:${virCompliance>=75?'#1b5e20':virCompliance>=45?'#e65100':'#b71c1c'}">${virCompliance}</div><div class="l">Skor VIR</div></div>
+  <div class="kpi"><div class="n" style="color:#b71c1c">${totalOverdue}</div><div class="l">Site Lampau PM</div></div>
+  <div class="kpi"><div class="n" style="color:#e65100">${openCm}</div><div class="l">CM Terbuka</div></div>
+</div>
+<div class="section-title">⚠ Site Paling Kerap Lewat (Trend Keterlambatan)</div>
+<table><thead><tr><th>Site</th><th>Projek</th><th>Bil. Lewat</th><th>Purata Selang (hari)</th></tr></thead>
+<tbody>${worst.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.proj}</td><td>${s.breachCount}</td><td>${s.avgGap??'—'}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:#aaa">Tiada data</td></tr>'}</tbody></table>
+<div class="section-title">🔁 Isu Paling Kerap Berulang</div>
+<table><thead><tr><th>Isu</th><th>Kekerapan</th><th>Bil. Site Terjejas</th></tr></thead>
+<tbody>${topIssues.map(x=>`<tr><td>${esc(x.text)}</td><td>${x.count}</td><td>${x.sites.length}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:#aaa">Tiada data</td></tr>'}</tbody></table>
+<div class="footer">Dijana automatik oleh Sistem PM-CCTV-SPRM pada ${new Date().toLocaleString('ms-MY')}</div>
+</body></html>`;
+      const w = window.open('','_blank','width=850,height=900');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(html); w.document.close(); w.focus();
+      setTimeout(()=>{ w.print(); }, 600);
+    }
+
+    // ── 4. Analisis Kegagalan ikut Brand/Model ──
+    const failureByModel = computed(() => {
+      const map = {};
+      const bump = (brand, model) => { const k = (brand||'Tidak diketahui')+' — '+(model||'Tidak diketahui'); map[k]=(map[k]||0)+1; };
+      pmRecords.value.filter(r=>r.maintType==='CM').forEach(r => {
+        (r.cameras||[]).forEach(c => { if(c.icam==='Tidak'||c.display==='Rosak') bump(c.brand,c.model); });
+        (r.nvr||[]).forEach(n => { if(n.asmOp==='Tidak'||n.status==='Tidak') bump(n.brand,n.model); });
+        (r.hdd||[]).forEach(h => { if(h.status==='Tidak') bump(h.brand,h.model); });
+        (r.switches||[]).forEach(s => { if(s.portStatus==='Tidak'||s.status==='Tidak') bump(s.brand,s.model); });
+      });
+      return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([model,count])=>({model,count}));
+    });
+
+    // ── 5. Analisis Isu Berulang ──
+    const recurringIssues = computed(() => {
+      const map = {};
+      pmRecords.value.forEach(r => {
+        _parseNota(r.notaCatatan).forEach(item => {
+          const key = (item.masalah||'').trim().toLowerCase();
+          if(!key || key.length < 4) return;
+          if(!map[key]) map[key] = { text: item.masalah.trim(), count:0, sites:new Set() };
+          map[key].count++;
+          if(r.siteName) map[key].sites.add(r.siteName);
+        });
+      });
+      return Object.values(map).filter(x=>x.count>1).sort((a,b)=>b.count-a.count)
+        .map(x => ({ ...x, sites:[...x.sites] }));
+    });
+
+    // ── 6. Laporan Prestasi Team ──
+    const teamPerformance = computed(() => {
+      const perTeam = {};
+      teamAssignments.value.forEach(t => {
+        const team = t.team;
+        if(!team) return;
+        if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, members:new Set() };
+        perTeam[team].assigned++;
+        (t.members||[]).forEach(m => perTeam[team].members.add(m.name));
+        const tDate = t.date ? new Date(t.date) : null;
+        const hasRecord = tDate && pmRecords.value.some(r => r.siteId===t.siteId && r.visitDate && Math.abs(new Date(r.visitDate) - tDate) <= 7*86400000);
+        if(hasRecord) perTeam[team].completed++;
+      });
+      return Object.values(perTeam)
+        .map(x => ({ ...x, members:[...x.members], rate: x.assigned ? Math.round(x.completed/x.assigned*100) : 0 }))
+        .sort((a,b) => b.assigned - a.assigned);
+    });
+
     // ── Feature 6: Compare ──
     const compareList = ref([]);
     const compareMode = ref(false);
@@ -6391,7 +6700,6 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
       auth = firebase.auth();
-      storage = firebase.storage();
 
       // Offline persistence — data cached locally, writes queued & auto-synced when back online
       db.enablePersistence({ synchronizeTabs: true }).catch(e => {
@@ -6473,6 +6781,8 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
       healthCountCctv, healthCountVir, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
+      reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister,
+      slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance,
       mobileNavOpen,
       darkMode,
       setTimeout
