@@ -8,24 +8,18 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://unpkg.com/docx@8/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-@keyframes bgShift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 @keyframes sidebarPulse{0%,100%{opacity:.4}50%{opacity:.7}}
-body{
-  font-family:'Segoe UI', system-ui, sans-serif;
-  background:linear-gradient(-45deg,#dce8ff,#e8f5e9,#eef2ff,#e0f0ff);
-  background-size:400% 400%;
-  animation:bgShift 18s ease infinite;
-  color:#111827; 
-  min-height: 100vh;
-  margin: 0;
-  background-attachment: fixed; 
-}
+html,body{overflow-x:hidden;max-width:100%}
+body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;background-image:radial-gradient(#c3cfe0 1px,transparent 1px);background-size:22px 22px;color:#1a2333}
 
 /* LOGIN */
 /* ── LOGIN PAGE ────────────────────────── */
@@ -61,7 +55,7 @@ body{
 .login-divider:before,.login-divider:after{content:'';flex:1;height:1px;background:rgba(0,180,100,.25)}
 
 /* LAYOUT */
-.app-wrap{display:flex;min-height:100vh}
+.app-wrap{display:flex;min-height:100vh;max-width:100vw}
 .sidebar{width:240px;background:linear-gradient(170deg,#001225 0%,#002855 55%,#003a1f 100%);color:#fff;display:flex;flex-direction:column;flex-shrink:0;box-shadow:3px 0 24px rgba(0,0,0,.28);position:relative;overflow:hidden}
 .sidebar::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px);background-size:22px 22px;pointer-events:none;z-index:0}
 .sidebar::after{content:'';position:absolute;top:-80px;left:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(0,180,100,.13) 0%,transparent 70%);animation:sidebarPulse 5s ease-in-out infinite;pointer-events:none;z-index:0}
@@ -77,18 +71,19 @@ body{
 .nav-item.active{background:linear-gradient(90deg,rgba(0,160,80,.25),rgba(0,80,180,.15));border-left-color:#4dff99}
 .nav-item .icon{font-size:1.1rem;width:20px;text-align:center}
 .sidebar-footer{padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:.8rem;opacity:.7}
-.main{flex:1;overflow-y:auto}
-.topbar{background:rgba(255,255,255,.75);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,51,102,.1);position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.main{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0}
+.topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05)}
 .topbar h3{font-size:1rem;color:#002244;font-weight:700}
-.content{padding:24px}
+.content{padding:24px;min-width:0;max-width:100%}
 
 /* CARDS */
-.card{background:rgba(255,255,255,.95);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-radius:12px;padding:24px;box-shadow:0 4px 24px rgba(0,34,68,.05),0 1px 3px rgba(0,0,0,.02);margin-bottom:24px;border:1px solid rgba(0,51,102,.05); transition: box-shadow 0.2s ease;}
-.card:hover{box-shadow:0 8px 32px rgba(0,40,100,.08);}
-.card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px}
+.card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s}
+.card:hover{box-shadow:0 6px 26px rgba(0,40,100,.1)}
+.card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px;padding-left:10px;border-left:3px solid #003366;position:relative}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
-.stat-card{background:#fff;border-radius:10px;padding:16px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.stat-card .num{font-size:2rem;font-weight:700;color:#003366}
+.stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);transition:transform .15s,box-shadow .15s}
+.stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,40,100,.12)}
+.stat-card .num{font-size:2rem;font-weight:800;color:#003366}
 .stat-card .lbl{font-size:.8rem;color:#888;margin-top:4px}
 
 /* TABLE */
@@ -113,18 +108,18 @@ tr:hover td{background:#f9fbff}
 .form-row-3{grid-template-columns:1fr 1fr 1fr}
 
 /* BUTTONS */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:6px;font-size:.87rem;font-weight:600;cursor:pointer;border:none;transition:.15s}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:7px;font-size:.87rem;font-weight:600;cursor:pointer;border:none;transition:.15s}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.btn-primary{background:#003366;color:#fff}
-.btn-primary:hover:not(:disabled){background:#004488}
-.btn-success{background:#198754;color:#fff}
-.btn-success:hover:not(:disabled){background:#157347}
-.btn-danger{background:#dc3545;color:#fff}
-.btn-danger:hover:not(:disabled){background:#bb2d3b}
-.btn-warning{background:#fd7e14;color:#fff}
-.btn-warning:hover:not(:disabled){background:#e8680a}
+.btn-primary{background:linear-gradient(135deg,#003366,#004d8c);color:#fff;box-shadow:0 2px 10px rgba(0,51,102,.25)}
+.btn-primary:hover:not(:disabled){background:linear-gradient(135deg,#004488,#0060b3);box-shadow:0 4px 14px rgba(0,51,102,.35);transform:translateY(-1px)}
+.btn-success{background:#198754;color:#fff;box-shadow:0 2px 10px rgba(25,135,84,.25)}
+.btn-success:hover:not(:disabled){background:#157347;transform:translateY(-1px)}
+.btn-danger{background:#dc3545;color:#fff;box-shadow:0 2px 10px rgba(220,53,69,.25)}
+.btn-danger:hover:not(:disabled){background:#bb2d3b;transform:translateY(-1px)}
+.btn-warning{background:#fd7e14;color:#fff;box-shadow:0 2px 10px rgba(253,126,20,.25)}
+.btn-warning:hover:not(:disabled){background:#e8680a;transform:translateY(-1px)}
 .btn-outline{background:#fff;color:#003366;border:1.5px solid #003366}
-.btn-outline:hover{background:#f0f4ff}
+.btn-outline:hover{background:#f0f4ff;transform:translateY(-1px)}
 .btn-sm{padding:5px 12px;font-size:.8rem}
 .btn-icon{padding:6px 10px;font-size:.9rem}
 
@@ -471,8 +466,8 @@ tr:hover td{background:#f9fbff}
 @media(max-width:768px){
   .mobile-logout-btn{display:inline-flex!important}
   /* Calendar scroll */
-  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -14px;padding:0 14px}
-  .cal-grid{min-width:650px}
+  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px}
+  .cal-grid{min-width:360px}
   /* Layout */
   .app-wrap{flex-direction:column}
   .sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap}
@@ -532,13 +527,20 @@ tr:hover td{background:#f9fbff}
   /* PM form */
   .pm-sign-wrap{grid-template-columns:1fr}
 
-  /* Calendar */
-  .cal-wrap{padding:14px 10px}
-  .cal-cell{min-height:64px;padding:4px 3px}
-  .cal-dh{font-size:.68rem;padding:7px 0}
+  /* Calendar — shrink to fit device width instead of forcing horizontal
+     scroll, and let pill/chip text wrap instead of being clipped so every
+     assignment is fully readable on a phone. */
+  .cal-wrap{padding:14px 6px}
+  .cal-scroll-wrap{overflow-x:visible;margin:0 -6px;padding:0 6px}
+  .cal-grid{min-width:0}
+  .cal-cell{min-height:auto;padding:3px 2px;overflow:visible}
+  .cal-dh{font-size:.62rem;padding:6px 0}
+  .cal-dn{width:20px;height:20px;font-size:.7rem}
   .ev-pill{font-size:.65rem;padding:1px 4px}
-  .cal-legend{gap:8px}
-  .leg{font-size:.72rem}
+  .team-pill,.holiday-chip{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25;font-size:.62rem;padding:2px 4px}
+  .cal-add-btn{width:15px;height:15px;font-size:.68rem;line-height:15px}
+  .cal-legend{gap:6px 10px}
+  .leg{font-size:.7rem}
   .cal-month-title{font-size:.95rem}
 
   /* Profile */
@@ -569,10 +571,14 @@ tr:hover td{background:#f9fbff}
   .stat-card .num{font-size:1.4rem}
 
   /* Calendar ultra-compact */
-  .cal-cell{min-height:48px;padding:3px 2px}
-  .cal-dh{font-size:.62rem;padding:5px 0}
+  .cal-wrap{padding:10px 4px}
+  .cal-cell{min-height:auto;padding:2px 1px}
+  .cal-dh{font-size:.58rem;padding:5px 0}
+  .cal-dn{width:18px;height:18px;font-size:.65rem}
   .ev-pill{font-size:.6rem;padding:1px 3px}
+  .team-pill,.holiday-chip{font-size:.58rem;padding:1px 3px}
   .cal-month-title{font-size:.88rem}
+  .cal-header .btn{padding:6px 10px;font-size:.75rem}
 
   /* Modal full-height on tiny screens */
   .modal{max-height:95vh}
@@ -1057,14 +1063,14 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Kamera</div>
-              <div class="flex gap-8" style="flex-wrap:wrap">
-                <label class="btn btn-outline btn-sm" style="cursor:pointer;background:#e8f0fe;color:#1a73e8;border-color:#a8c7fa" title="Boleh baca Excel/CSV/TXT dan auto-masukkan senarai.">
-                  📁 Upload Excel/Txt
-                  <input type="file" accept=".txt,.csv,.xls,.xlsx" style="display:none" @change="extractDataFile($event, 'cameras')">
-                </label>
+              <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">
                   📷 Scan Serial
                   <input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nCam','serial')">
+                </label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">
+                  📄 Import Fail
+                  <input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'cameras')">
                 </label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nCam')">↺ Reset</button>
               </div>
@@ -1126,7 +1132,8 @@ tr:hover td{background:#f9fbff}
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah NVR / Extension</div>
               <div class="flex gap-8">
-                <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" style="display:none" @change="ocrScan($event,'nNVR','serial')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nNVR','serial')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'nvr')"></label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nNVR')">↺ Reset</button>
               </div>
             </div>
@@ -1179,7 +1186,7 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Hard Disk</div>
-              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" style="display:none" @change="ocrScan($event,'nHDD','serial')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nHDD')">↺ Reset</button></div>
+              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nHDD','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'hdd')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nHDD')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nHDD'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nHDD','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
@@ -1216,7 +1223,7 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Network Switch</div>
-              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" style="display:none" @change="ocrScan($event,'nSW','serial')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nSW')">↺ Reset</button></div>
+              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nSW','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'switches')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nSW')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nSW'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nSW','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
@@ -1630,6 +1637,12 @@ tr:hover td{background:#f9fbff}
                 <option value="">Semua Jenis</option>
                 <option value="PM">PM Sahaja</option>
                 <option value="CM">CM Sahaja</option>
+              </select>
+              <select class="form-control" style="width:110px" v-model="filterPmNo" title="Tapis ikut Penyelenggaraan Ke-">
+                <option value="">Semua PM Ke</option>
+                <option value="1">PM 1 Sahaja</option>
+                <option value="2">PM 2 Sahaja</option>
+                <option value="3">PM 3 Sahaja</option>
               </select>
               <button v-if="batchSelected.length" class="btn btn-danger btn-sm" @click="printBatch">🖨️ Print ({{batchSelected.length}})</button>
             </div>
@@ -2361,8 +2374,8 @@ tr:hover td{background:#f9fbff}
         </div>
 
         <div class="card">
-          <div class="card-title">🔄 Auto-Backup Tempatan (Max 3)</div>
-          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali seminggu dan disimpan dalam peranti ini (localStorage). Hanya 3 terkini disimpan.</p>
+          <div class="card-title">☁️ Auto-Backup Cloud (Max 3)</div>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali seminggu dan disimpan di Firebase (Cloud Storage + Firestore) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan.</p>
           <button class="btn btn-outline btn-sm" @click="doAutoBackup" :disabled="loading" style="margin-bottom:14px">
             ⚡ Buat Auto-Backup Sekarang
           </button>
@@ -2394,6 +2407,38 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
 
+      <!-- ====== IMPORT EQUIPMENT FILE PREVIEW MODAL ====== -->
+      <div v-if="importState.show" class="modal-bg" @click.self="importState.show=false">
+        <div class="modal" style="max-width:900px">
+          <h3>📄 Semak Data Import ({{importState.rows.length}} rekod dikesan)</h3>
+          <div v-if="importState.loading" class="empty">⏳ Menganalisa fail...</div>
+          <p v-else-if="importState.err" style="color:#c62828;font-size:.85rem;margin-bottom:12px">{{importState.err}}</p>
+          <div v-if="!importState.loading && importState.rows.length" class="tbl-wrap" style="max-height:50vh">
+            <table class="equip-table">
+              <thead>
+                <tr>
+                  <th style="width:30px"></th>
+                  <th v-for="k in IMPORT_FIELD_KEYS[importState.kind]" :key="k">{{k}}</th>
+                  <th style="width:40px"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(r,i) in importState.rows" :key="i">
+                  <td><input type="checkbox" v-model="r._include"></td>
+                  <td v-for="k in IMPORT_FIELD_KEYS[importState.kind]" :key="k"><input class="form-control" style="padding:5px 8px;font-size:.78rem" v-model="r[k]"></td>
+                  <td><button class="btn btn-danger btn-sm btn-icon" @click="removeImportRow(i)">🗑</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="text-sm text-muted mb-12" style="margin-top:10px">Semak &amp; betulkan data jika perlu sebelum import. Hanya baris bertanda ✓ akan ditambah.</p>
+          <div class="flex gap-8" style="margin-top:10px">
+            <button class="btn btn-primary" :disabled="importState.loading || !importState.rows.length" @click="confirmImportRows">✓ Import {{importState.rows.filter(r=>r._include).length}} Rekod</button>
+            <button class="btn btn-outline" @click="importState.show=false">Batal</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== ADD/EDIT USER MODAL ====== -->
       <div v-if="userModal.show" class="modal-bg" @click.self="userModal.show=false">
         <div class="modal">
@@ -2414,6 +2459,7 @@ tr:hover td{background:#f9fbff}
             <div class="form-group"><label>No. Telefon</label><input class="form-control" v-model="userModal.data.phone" placeholder="cth: 0123456789"></div>
             <div class="form-group"><label>Emel</label><input class="form-control" v-model="userModal.data.email" placeholder="cth: ahmad@example.com" type="email"></div>
           </div>
+          <p v-if="userModal.editing" class="text-sm text-muted mb-12" style="background:#fff8e1;border-radius:6px;padding:8px 12px">⚠️ Menukar emel di sini <b>hanya</b> mengemaskini profil dalam sistem — emel log masuk sebenar di Firebase Authentication TIDAK berubah. Jika emel log masuk sebenar silap/lapuk, tukar terus di Firebase Console (Authentication → Users), kemudian padankan semula emel di sini.</p>
           <p v-if="userModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{userModal.err}}</p>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="userModal.show=false">Batal</button>
@@ -2720,12 +2766,18 @@ tr:hover td{background:#f9fbff}
     <div class="modal-box" style="max-width:420px">
       <h3>🔑 Reset Kata Laluan</h3>
       <p style="font-size:.85rem;color:#555;margin-bottom:6px">Pengguna: <strong>@{{resetPwModal.username}}</strong></p>
-      <div style="background:#fff8e1;border:1px solid #ffcc80;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#e65100;margin-bottom:16px;line-height:1.6">
-        ⚠️ <b>Peringatan Sistem:</b> Oleh kerana ini aplikasi Frontend, Firebase Auth memerlukan tetapan SMTP berbayar untuk menghantar emel reset yang stabil.<br><br>
-        <b>Penyelesaian:</b> Sila <b>Padam</b> user ini dari senarai dan <b>Tambah Pengguna Baru</b> menggunakan username & e-mel yang sama untuk menetapkan kata laluan baru dengan serta-merta.
+      <div v-if="resetPwModal.userEmail" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#1b5e20;margin-bottom:16px;line-height:1.6">
+        📧 Email reset kata laluan akan dihantar ke:<br>
+        <strong>{{resetPwModal.userEmail}}</strong><br><br>
+        Pengguna klik link dalam email → set kata laluan baru → log masuk seperti biasa.
       </div>
+      <div v-else style="background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#b71c1c;margin-bottom:16px;line-height:1.6">
+        ⚠️ Pengguna ini tiada email berdaftar. Sila edit profil mereka dan masukkan email sebenar dahulu.
+      </div>
+      <p v-if="resetPwModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{resetPwModal.err}}</p>
       <div class="flex gap-8">
-        <button class="btn btn-outline" @click="resetPwModal.show=false">Tutup</button>
+        <button class="btn btn-outline" @click="resetPwModal.show=false">Batal</button>
+        <button class="btn btn-warning" @click="submitResetPw" :disabled="loading">{{loading?'Memproses...':'✅ Sahkan Reset'}}</button>
       </div>
     </div>
   </div>
@@ -2869,7 +2921,7 @@ const VIR_SITES = [
   {id:'v00',name:'Ibu Pejabat SPRM Putrajaya',code:'IPJ',zone:'TENGAH'},
   {id:'v01',name:'Kompleks SPRM Negeri Perlis',code:'PLS',zone:'UTARA'},
   {id:'v02',name:'Kompleks SPRM Negeri Kedah',code:'KDH',zone:'UTARA'},
-  {id:'v_sp',name:'Pejabat SPRM Cawangan Sungai Petani',code:'SPT',zone:'UTARA'},
+  {id:'v37',name:'Pejabat SPRM Cawangan Sungai Petani',code:'SGP',zone:'UTARA'},
   {id:'v03',name:'Pejabat SPRM Cawangan Langkawi',code:'LGK',zone:'UTARA'},
   {id:'v04',name:'Kompleks SPRM Negeri Pulau Pinang',code:'PP',zone:'UTARA'},
   {id:'v06',name:'Kompleks SPRM Negeri Perak',code:'PK',zone:'UTARA'},
@@ -2898,7 +2950,7 @@ const VIR_SITES = [
   {id:'v32',name:'Kompleks Pejabat SPRM Sarawak',code:'SWK',zone:'BORNEO'},
   {id:'v33',name:'Pejabat SPRM Cawangan Miri',code:'MRI',zone:'BORNEO'},
   {id:'v34',name:'Pejabat SPRM Cawangan Sibu',code:'SBU',zone:'BORNEO'},
-  {id:'v35',name:'Pejabat SPRM Cawangan Bintulu',code:'BTU',zone:'BORNEO'}
+  {id:'v35',name:'Pejabat SPRM Cawangan Bintulu',code:'BTU',zone:'BORNEO'},
 ];
 
 const ZONES = {
@@ -2909,8 +2961,7 @@ const ZONES = {
   BORNEO:       { label:'Borneo',       states:'Sabah · Sarawak · Labuan' },
 };
 
-const BACKUP_KEY      = 'pm_sprm_autobackups';
-const LAST_BACKUP_KEY = 'pm_sprm_last_backup';
+const LAST_BACKUP_KEY = 'pm_sprm_last_backup'; // local hint only (avoid redundant Firestore checks within the same browser session)
 const MAX_AUTO_BACKUPS = 3;
 
 const MONTHS = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
@@ -3001,86 +3052,10 @@ const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 
 createApp({
   setup() {
-    
-    // ---- EXCEL/TXT AUTO-EXTRACT FUNCTION ----
-    async function extractDataFile(event, tab) {
-      const file = event.target.files[0];
-      if(!file) return;
-      loading.value = true;
-      try {
-        const data = await file.arrayBuffer();
-        const wb = XLSX.read(data);
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, {defval: ''});
-        
-        let added = 0;
-        rows.forEach(row => {
-          const getVal = (keywords) => {
-            const key = Object.keys(row).find(k => keywords.some(kw => String(k).toLowerCase().replace(/[^a-z0-9]/g,'').includes(kw)));
-            return key ? String(row[key]) : '';
-          };
-          
-          ensureSite(selSite.value.id);
-          const eq = activeEquip()[selSite.value.id];
-          
-          const serial = getVal(['siri','serial','sn']);
-          const brand = getVal(['jenama','brand']);
-          const model = getVal(['model']);
-          
-          if(!serial && !model && !brand) return; // abai kalau tiada data langsung
-
-          if(tab === 'cameras') {
-            eq.cameras.push({
-              name: getVal(['nama','name','lokasi','location']) || 'Kamera',
-              ip: getVal(['ip','address']),
-              camType: getVal(['jenis','type']) || 'Indoor',
-              brand: brand, model: model, serial: serial
-            });
-            added++;
-          } else if(tab === 'nvr') {
-            eq.nvr.push({
-              name: getVal(['nama','name']) || 'NVR',
-              type: getVal(['jenis','type']) || 'NVR',
-              brand: brand, model: model, serial: serial, ip: getVal(['ip'])
-            });
-            added++;
-          } else if(tab === 'hdd') {
-            eq.hdd.push({
-              brand: brand, model: model, serial: serial,
-              capacity: getVal(['kapasiti','cap','saiz','size']),
-              config: getVal(['config','raid']) || 'RAID 5',
-              nvrRef: getVal(['nvr'])
-            });
-            added++;
-          } else if(tab === 'switch') {
-            eq.switches.push({
-              brand: brand, model: model, serial: serial,
-              ports: getVal(['port','bilangan'])
-            });
-            added++;
-          } else if(tab === 'alarm') {
-            eq.alarms.push({
-              name: getVal(['nama','name']) || 'Alarm System',
-              type: getVal(['jenis','type']) || 'SMS Power Alert',
-              brand: brand, model: model, serial: serial
-            });
-            added++;
-          }
-        });
-        if(added > 0) showToast(${added} rekod berjaya diekstrak & ditambah! Sila tekan SIMPAN SEMUA.);
-        else showToast('Tiada maklumat relevan (serial/model) dijumpai dlm fail.', 'error');
-      } catch(e) {
-        showToast('Gagal proses fail: ' + e.message, 'error');
-      }
-      loading.value = false;
-      event.target.value = '';
-    }
-
     // ---- User registry (username → firebase email) ----
     const USER_MAP = {
       'mohdasrul': { email: 'mohdasrul@pm.admin', name: 'Mohd Asrul', role: 'superadmin' }
     };
-    const SA_PASS = 'A$rul2026';
 
     const page = ref('dashboard');
     const authUser = ref(null);
@@ -3096,7 +3071,7 @@ createApp({
     const toast = reactive({show:false,msg:'',type:'success'});
     const isOnline = ref(navigator.onLine);
     const pendingWrites = ref(0);
-    let db, auth;
+    let db, auth, storage;
 
     // ---- Equipment state ----
     const siteEquip = ref({});
@@ -3531,6 +3506,15 @@ createApp({
 
     function openJadual(){ page.value='jadual'; }
 
+    // Escapes user-supplied text before it's concatenated into raw HTML
+    // strings for the print/document.write windows (prevents stored XSS via
+    // free-text fields like Nota/Catatan, names, refNo, etc).
+    function esc(v){
+      return String(v==null?'':v).replace(/[&<>"']/g, ch => ({
+        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+      }[ch]));
+    }
+
     function printJadual(){
       const monthName = MONTHS[calMonth.value];
       const year = calYear.value;
@@ -3539,14 +3523,14 @@ createApp({
       const teamColors = {A:'#e53935',B:'#1e88e5',C:'#43a047',D:'#fb8c00',E:'#8e24aa',F:'#00acc1',G:'#6d4c41'};
 
       const teamRows = teams.length ? teams.map(t => {
-        const members = (t.members||[]).map(m=>m.name).join(', ') || '—';
+        const members = esc((t.members||[]).map(m=>m.name).join(', ') || '—');
         const bc = teamColors[t.team]||'#555';
         return `<tr>
           <td>${fmtDate(t.date)}</td>
-          <td style="text-align:center"><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${bc};color:#fff;font-weight:700;font-size:8pt;line-height:20px;text-align:center">${t.team}</span></td>
-          <td>${t.maintType||'PM'}</td>
-          <td>${t.project||'—'}</td>
-          <td>${t.siteName||'—'}</td>
+          <td style="text-align:center"><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${bc};color:#fff;font-weight:700;font-size:8pt;line-height:20px;text-align:center">${esc(t.team)}</span></td>
+          <td>${esc(t.maintType||'PM')}</td>
+          <td>${esc(t.project||'—')}</td>
+          <td>${esc(t.siteName||'—')}</td>
           <td>${members}</td>
         </tr>`;
       }).join('') : '<tr><td colspan="6" style="text-align:center;color:#888;padding:12px">Tiada penugasan untuk bulan ini.</td></tr>';
@@ -3593,6 +3577,7 @@ createApp({
       </body></html>`;
 
       const w = window.open('','_blank','width=900,height=700');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(html);
       w.document.close();
       w.focus();
@@ -3641,6 +3626,7 @@ createApp({
       currentProject.value = proj;
       filterSite.value = '';
       filterYear.value = '';
+      filterPmNo.value = '';
       page.value = 'pm-list';
     }
     function openBackup() { page.value = 'backup'; }
@@ -3671,43 +3657,83 @@ createApp({
       showToast('Backup manual berjaya dimuat turun!');
     }
 
-    function doAutoBackup() {
+    // Auto-backups are stored in the cloud (Firebase Storage holds the JSON
+    // blob, Firestore 'systemBackups' collection holds a lightweight index)
+    // so every admin sees the same backup list from any device/browser —
+    // NOT localStorage, which only lives on the one device/browser that
+    // created it and is wiped if that browser's cache/site-data is cleared.
+    const BACKUP_COLLECTION = 'systemBackups';
+    const BACKUP_STORAGE_PATH = 'auto-backups';
+
+    async function doAutoBackup() {
       const data = collectBackupData();
-      let list = [];
-      try { list = JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]'); } catch(e){}
-      list.unshift({ timestamp: data.exportedAt, payload: data });
-      list = list.slice(0, MAX_AUTO_BACKUPS);
-      localStorage.setItem(BACKUP_KEY, JSON.stringify(list));
-      localStorage.setItem(LAST_BACKUP_KEY, data.exportedAt);
-      autoBackups.value = list.map(b=>({timestamp:b.timestamp,size:JSON.stringify(b.payload).length}));
-      showToast('Auto-backup berjaya disimpan.');
+      try {
+        const json = JSON.stringify(data);
+        const fileName = data.exportedAt.replace(/[:.]/g,'-') + '.json';
+        const storageRef = storage.ref(`${BACKUP_STORAGE_PATH}/${fileName}`);
+        await storageRef.putString(json, 'raw', { contentType: 'application/json' });
+        await db.collection(BACKUP_COLLECTION).add({
+          timestamp: data.exportedAt,
+          sizeBytes: json.length,
+          storagePath: `${BACKUP_STORAGE_PATH}/${fileName}`,
+          type: 'auto',
+          createdBy: authUser.value?.email || '',
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        // Enforce retention: keep only the newest MAX_AUTO_BACKUPS
+        const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').get();
+        const extras = snap.docs.slice(MAX_AUTO_BACKUPS);
+        for(const doc of extras) {
+          const d = doc.data();
+          try { await storage.ref(d.storagePath).delete(); } catch(e) {}
+          await doc.ref.delete();
+        }
+        localStorage.setItem(LAST_BACKUP_KEY, data.exportedAt); // local hint only, to avoid redundant checks this session
+        await refreshAutoBackups();
+        showToast('Auto-backup berjaya disimpan ke cloud (Firebase).');
+      } catch(e) { showToast('Auto-backup gagal: '+e.message, 'error'); }
     }
 
-    function checkAutoBackup() {
-      const last = localStorage.getItem(LAST_BACKUP_KEY);
-      if(!last || Date.now() - new Date(last).getTime() > 7*24*60*60*1000) {
-        doAutoBackup();
-      }
-      let list = [];
-      try { list = JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]'); } catch(e){}
-      autoBackups.value = list.map(b=>({timestamp:b.timestamp,size:JSON.stringify(b.payload).length}));
+    async function refreshAutoBackups() {
+      const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').limit(MAX_AUTO_BACKUPS).get();
+      autoBackups.value = snap.docs.map(d => ({ id:d.id, timestamp:d.data().timestamp, size:d.data().sizeBytes, storagePath:d.data().storagePath }));
     }
 
-    function loadLocalBackup(idx) {
-      let list = [];
-      try { list = JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]'); } catch(e){}
-      if(!list[idx]) return;
-      applyRestore(list[idx].payload);
+    async function checkAutoBackup() {
+      try {
+        const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').limit(1).get();
+        const last = snap.docs[0]?.data()?.timestamp;
+        if(!last || Date.now() - new Date(last).getTime() > 7*24*60*60*1000) {
+          await doAutoBackup();
+        } else {
+          await refreshAutoBackups();
+        }
+      } catch(e) { console.warn('checkAutoBackup error:', e); }
     }
 
-    function deleteLocalBackup(idx) {
+    async function loadLocalBackup(idx) {
+      const b = autoBackups.value[idx];
+      if(!b) return;
+      loading.value = true;
+      try {
+        const url = await storage.ref(b.storagePath).getDownloadURL();
+        const res = await fetch(url);
+        const payload = await res.json();
+        applyRestore(payload);
+      } catch(e) { showToast('Gagal muat backup: '+e.message, 'error'); }
+      loading.value = false;
+    }
+
+    async function deleteLocalBackup(idx) {
       if(!confirm('Padam backup ini?')) return;
-      let list = [];
-      try { list = JSON.parse(localStorage.getItem(BACKUP_KEY)||'[]'); } catch(e){}
-      list.splice(idx,1);
-      localStorage.setItem(BACKUP_KEY, JSON.stringify(list));
-      autoBackups.value = list.map(b=>({timestamp:b.timestamp,size:JSON.stringify(b.payload).length}));
-      showToast('Backup dipadam.');
+      const b = autoBackups.value[idx];
+      if(!b) return;
+      try {
+        await storage.ref(b.storagePath).delete();
+        await db.collection(BACKUP_COLLECTION).doc(b.id).delete();
+        await refreshAutoBackups();
+        showToast('Backup dipadam.');
+      } catch(e) { showToast('Gagal padam backup: '+e.message, 'error'); }
     }
 
     function restoreFromFile(evt) {
@@ -3769,6 +3795,7 @@ createApp({
     const filterSite = ref('');
     const filterYear = ref('');
     const filterMaintType = ref('');
+    const filterPmNo = ref('');
 
     // ---- Computed ----
     const pageTitle = computed(() => ({
@@ -3799,6 +3826,7 @@ createApp({
       if(filterSite.value && r.siteId!==filterSite.value) return false;
       if(filterYear.value && r.year!=filterYear.value) return false;
       if(filterMaintType.value && (r.maintType||'PM')!==filterMaintType.value) return false;
+      if(filterPmNo.value && Number(r.pmNo)!==Number(filterPmNo.value)) return false;
       return true;
     }));
 
@@ -4036,25 +4064,43 @@ createApp({
     }
 
     // ---- Session Timeout (idle 5min, warn 10s before logout) ----
+    // Wall-clock based (not just a scheduled setTimeout): browsers throttle/
+    // freeze JS timers on background tabs (especially mobile), so a plain
+    // setTimeout can silently stop firing while the app is minimised and
+    // never catch up. We instead persist the last-activity timestamp and
+    // re-check real elapsed time whenever the page becomes visible again,
+    // on focus, and on load/refresh — so idle logout is enforced even after
+    // the tab was backgrounded or the browser was reopened.
     const SESSION_IDLE_MS = 5 * 60 * 1000; // 5 minutes
     const SESSION_WARN_S  = 10;             // 10 second warning
+    const LAST_ACTIVITY_KEY = 'pm_sprm_last_activity';
     const sessionWarning = reactive({ show: false, countdown: SESSION_WARN_S });
     let _idleTimer = null;
     let _warnTimer = null;
+    let _checkTimer = null;
+    const _SESSION_ACTS = ['mousemove','keydown','mousedown','touchstart','scroll','click'];
 
     function _clearSessionTimers() {
       clearTimeout(_idleTimer); _idleTimer = null;
       clearInterval(_warnTimer); _warnTimer = null;
+      clearInterval(_checkTimer); _checkTimer = null;
+    }
+
+    function _recordActivity() {
+      try { localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now())); } catch(e) {}
+    }
+
+    function _lastActivity() {
+      const v = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
+      return v || Date.now();
     }
 
     function _startSessionWarning() {
       if(!authUser.value || sessionWarning.show) return;
       sessionWarning.show = true;
-      let targetTime = Date.now() + (SESSION_WARN_S * 1000);
-      
+      sessionWarning.countdown = SESSION_WARN_S;
       _warnTimer = setInterval(() => {
-        // Kira baki masa secara real-time supaya browser tidak 'freeze'
-        sessionWarning.countdown = Math.max(0, Math.ceil((targetTime - Date.now()) / 1000));
+        sessionWarning.countdown--;
         if(sessionWarning.countdown <= 0) {
           _clearSessionTimers();
           sessionWarning.show = false;
@@ -4063,10 +4109,31 @@ createApp({
       }, 1000);
     }
 
+    // Re-evaluates real elapsed idle time (wall-clock) instead of trusting a
+    // single scheduled setTimeout — called on activity, on visibility/focus
+    // regain, and periodically as a safety net.
+    function _checkIdle() {
+      if(!authUser.value || sessionWarning.show) return;
+      const idleFor = Date.now() - _lastActivity();
+      if(idleFor >= SESSION_IDLE_MS) {
+        _clearSessionTimers();
+        doLogout();
+        return;
+      }
+      const remaining = SESSION_IDLE_MS - idleFor;
+      if(remaining <= SESSION_WARN_S * 1000) {
+        _startSessionWarning();
+      } else {
+        clearTimeout(_idleTimer);
+        _idleTimer = setTimeout(_checkIdle, remaining - SESSION_WARN_S * 1000);
+      }
+    }
+
     function _resetIdleTimer() {
       if(sessionWarning.show) return; // ignore activity while warning is showing
+      _recordActivity();
       clearTimeout(_idleTimer);
-      _idleTimer = setTimeout(_startSessionWarning, SESSION_IDLE_MS - SESSION_WARN_S * 1000);
+      _idleTimer = setTimeout(_checkIdle, SESSION_IDLE_MS - SESSION_WARN_S * 1000);
     }
 
     function extendSession() {
@@ -4078,14 +4145,31 @@ createApp({
     // Start/stop idle tracking based on auth state
     watch(authUser, (user) => {
       if(user) {
-        const acts = ['mousemove','keydown','mousedown','touchstart','scroll','click'];
-        acts.forEach(e => window.addEventListener(e, _resetIdleTimer, { passive:true }));
+        // On login AND on page refresh (persisted Firebase session), check
+        // whether the user was already idle too long before starting fresh.
+        const idleFor = Date.now() - _lastActivity();
+        if(idleFor >= SESSION_IDLE_MS) { doLogout(); return; }
+        _SESSION_ACTS.forEach(e => window.addEventListener(e, _resetIdleTimer, { passive:true }));
+        document.addEventListener('visibilitychange', _onVisibilityRegain);
+        window.addEventListener('focus', _onVisibilityRegain);
+        // Safety net: re-check elapsed time every 15s in case a scheduled
+        // timer got throttled without a visibilitychange/focus event firing.
+        _checkTimer = setInterval(_checkIdle, 15000);
         _resetIdleTimer();
       } else {
         _clearSessionTimers();
         sessionWarning.show = false;
+        _SESSION_ACTS.forEach(e => window.removeEventListener(e, _resetIdleTimer));
+        document.removeEventListener('visibilitychange', _onVisibilityRegain);
+        window.removeEventListener('focus', _onVisibilityRegain);
+        try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch(e) {}
       }
     });
+
+    function _onVisibilityRegain() {
+      if(document.visibilityState && document.visibilityState !== 'visible') return;
+      _checkIdle();
+    }
 
     // ---- Toast helper ----
     function showToast(msg, type='success') {
@@ -4144,22 +4228,10 @@ createApp({
       loading.value=false;
     }
 
-    async function initSuperAdmin() {
-      loading.value=true; setupMsg.value='';
-      try {
-        const profile = USER_MAP['mohdasrul'];
-        await auth.createUserWithEmailAndPassword(profile.email, SA_PASS);
-        await auth.signOut();
-        setupMsg.value = '✅ Akaun Superadmin berjaya didaftar! Sila log masuk.';
-      } catch(e) {
-        if(e.code==='auth/email-already-in-use'){
-          setupMsg.value = 'ℹ️ Akaun sudah wujud. Terus log masuk.';
-        } else {
-          setupMsg.value = '❌ Gagal: '+e.message;
-        }
-      }
-      loading.value=false;
-    }
+    // NOTE: one-off superadmin bootstrap removed — it hardcoded a plaintext
+    // password in client source (viewable via "view source"). The superadmin
+    // account already exists in Firebase Auth; manage its password from the
+    // Firebase Console (Authentication > Users) instead of from this file.
 
     function doLogout() {
       auth.signOut();
@@ -4205,6 +4277,177 @@ createApp({
       refs[formName][field] = value;
       ocrState.active=false; ocrState.tokens=[];
       showToast('No. Siri dipilih: '+value);
+    }
+
+    // ---- Bulk import from txt/csv/xlsx/pdf (auto-detect + auto-sort columns) ----
+    const IMPORT_FIELD_KEYS = {
+      cameras:  ['name','ip','camType','brand','model','serial'],
+      nvr:      ['name','type','brand','model','serial','ip'],
+      hdd:      ['brand','model','serial','capacity','config','nvrRef'],
+      switches: ['brand','model','serial','ports'],
+    };
+    const IMPORT_HEADER_HINTS = {
+      name:     ['name','nama','lokasi','location','channel','device','desc'],
+      ip:       ['ip','alamat ip','ip address','ipaddress'],
+      camType:  ['type','jenis','category'],
+      brand:    ['brand','jenama','manufacturer','make'],
+      model:    ['model','part no','part number'],
+      serial:   ['serial','no siri','s/n','sn','serial no','serial number'],
+      capacity: ['capacity','kapasiti','size'],
+      config:   ['config','configuration','konfigurasi','raid'],
+      nvrRef:   ['nvr','nvr ref','nvr berkaitan'],
+      ports:    ['port','ports','bilangan port'],
+    };
+    const importState = reactive({ show:false, kind:'', loading:false, err:'', rows:[] });
+
+    function _emptyRow(kind) {
+      const row = { _include: true };
+      IMPORT_FIELD_KEYS[kind].forEach(k => row[k] = '');
+      return row;
+    }
+
+    // Header-based mapping for tabular data (xlsx/csv) — matches column
+    // headers against known field-name synonyms (English/Malay).
+    function _mapHeaderRow(headerRow, kind) {
+      const map = {}; // colIndex -> fieldKey
+      headerRow.forEach((h, i) => {
+        const hv = String(h||'').toLowerCase().trim();
+        if(!hv) return;
+        for(const key of IMPORT_FIELD_KEYS[kind]) {
+          if(map[i]) break;
+          const hints = IMPORT_HEADER_HINTS[key] || [];
+          if(hints.some(hint => hv.includes(hint))) { map[i] = key; break; }
+        }
+      });
+      return map;
+    }
+
+    // Heuristic classifier for free-text lines / unmapped columns: figures
+    // out which loose text values are an IP, a brand, a serial-like code,
+    // vs a free-text name/model, without relying on column position.
+    function _autoClassifyFields(fields, kind) {
+      const row = _emptyRow(kind);
+      const ipRe = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+      const serialRe = /^[A-Za-z0-9][A-Za-z0-9\-]{4,19}$/;
+      const leftover = [];
+      fields.forEach(f => {
+        const v = String(f==null?'':f).trim();
+        if(!v) return;
+        if('ip' in row && !row.ip && ipRe.test(v)) { row.ip = v; return; }
+        const brandHit = BRANDS.find(b => v.toLowerCase() === b.toLowerCase() || v.toLowerCase().includes(b.toLowerCase().split(' ')[0].toLowerCase()));
+        if('brand' in row && !row.brand && brandHit && v.length < 30) { row.brand = brandHit; return; }
+        if('serial' in row && !row.serial && serialRe.test(v) && /\d/.test(v) && /[A-Za-z]/.test(v)) { row.serial = v; return; }
+        if('ports' in row && !row.ports && /^\d+\s*port/i.test(v)) { row.ports = v; return; }
+        if('capacity' in row && !row.capacity && /^\d+(\.\d+)?\s*(TB|GB)$/i.test(v)) { row.capacity = v; return; }
+        leftover.push(v);
+      });
+      leftover.sort((a,b) => b.length - a.length);
+      if('name' in row && leftover.length) row.name = leftover.shift();
+      if('model' in row && leftover.length) row.model = leftover.shift();
+      if(!('name' in row) && 'brand' in row && !row.brand && leftover.length) row.brand = leftover.shift();
+      return row;
+    }
+
+    function _rowsFromTable(aoa, kind) {
+      if(!aoa.length) return [];
+      const headerMap = _mapHeaderRow(aoa[0], kind);
+      const mappedCols = Object.keys(headerMap).length;
+      const dataRows = aoa.slice(1).filter(r => r.some(c => String(c||'').trim()));
+      if(mappedCols >= 2) {
+        return dataRows.map(r => {
+          const row = _emptyRow(kind);
+          Object.entries(headerMap).forEach(([idx, key]) => { row[key] = String(r[idx]==null?'':r[idx]).trim(); });
+          return row;
+        });
+      }
+      // Weak/no header — fall back to per-row auto-classification.
+      return aoa.filter(r => r.some(c => String(c||'').trim())).map(r => _autoClassifyFields(r, kind));
+    }
+
+    function _rowsFromFreeText(text, kind) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      return lines.map(line => {
+        const fields = line.split(/\t|,|;|\s{2,}|\|/).map(f => f.trim()).filter(Boolean);
+        return _autoClassifyFields(fields.length > 1 ? fields : [line], kind);
+      }).filter(row => Object.keys(row).some(k => k!=='_include' && row[k]));
+    }
+
+    async function _readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result);
+        fr.onerror = reject;
+        fr.readAsArrayBuffer(file);
+      });
+    }
+
+    async function _extractPdfText(file) {
+      if(window['pdfjsLib'] && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      }
+      const buf = await _readFileAsArrayBuffer(file);
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      let text = '';
+      for(let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const content = await page.getTextContent();
+        text += content.items.map(it => it.str).join(' ') + '\n';
+      }
+      return text;
+    }
+
+    async function importEquipFile(event, kind) {
+      const file = event.target.files[0];
+      event.target.value = '';
+      if(!file) return;
+      importState.kind = kind; importState.err = ''; importState.loading = true; importState.rows = [];
+      importState.show = true;
+      try {
+        const ext = file.name.split('.').pop().toLowerCase();
+        let rows = [];
+        if(ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+          const buf = await _readFileAsArrayBuffer(file);
+          const wb = XLSX.read(buf, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
+          rows = _rowsFromTable(aoa, kind);
+        } else if(ext === 'pdf') {
+          const text = await _extractPdfText(file);
+          rows = _rowsFromFreeText(text, kind);
+        } else if(ext === 'txt') {
+          const text = await file.text();
+          rows = _rowsFromFreeText(text, kind);
+        } else {
+          importState.err = 'Format fail tidak disokong. Guna .txt, .csv, .xlsx atau .pdf.';
+          importState.loading = false;
+          return;
+        }
+        if(!rows.length) { importState.err = 'Tiada data dapat diekstrak daripada fail ini.'; }
+        importState.rows = rows;
+      } catch(e) {
+        importState.err = 'Gagal baca fail: ' + e.message;
+      }
+      importState.loading = false;
+    }
+
+    function removeImportRow(idx) { importState.rows.splice(idx, 1); }
+
+    function confirmImportRows() {
+      const kind = importState.kind;
+      const rows = importState.rows.filter(r => r._include);
+      if(!rows.length) { showToast('Tiada rekod dipilih untuk import.', 'error'); return; }
+      ensureSite(selSite.value.id);
+      const list = activeEquip()[selSite.value.id][kind];
+      rows.forEach(r => {
+        const item = {};
+        IMPORT_FIELD_KEYS[kind].forEach(k => item[k] = r[k] || '');
+        if(kind === 'cameras' && !item.camType) item.camType = 'Indoor';
+        if(kind === 'nvr' && !item.type) item.type = 'NVR';
+        if(kind === 'hdd' && !item.config) item.config = 'RAID 5';
+        list.push(item);
+      });
+      showToast(`${rows.length} rekod berjaya diimport! Jangan lupa klik "Simpan Peralatan".`);
+      importState.show = false; importState.rows = [];
     }
 
     // ---- Load data ----
@@ -4264,8 +4507,19 @@ createApp({
       userModal.show=true;
     }
 
+    // Client-side gate only — true enforcement MUST live in Firestore Security
+    // Rules (restrict writes to /users/{id} and role field to admin/superadmin),
+    // since anyone can call these functions directly from devtools.
+    function isAdminRole(){ return ['superadmin','admin'].includes(authProfile.value?.role); }
+
     async function submitUser() {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       userModal.err='';
+      userModal.data.email = (userModal.data.email||'').trim();
+      // Must match doLogin()'s lookup exactly (.trim().toLowerCase()) or the
+      // Firestore username query returns empty and the new account can never
+      // log in even with the correct password.
+      userModal.data.username = (userModal.data.username||'').trim().toLowerCase();
       if(!userModal.data.username||!userModal.data.name){ userModal.err='Username dan Nama wajib diisi.'; return; }
       if(!userModal.editing && !userModal.data.email){ userModal.err='Email sebenar wajib diisi (untuk reset kata laluan).'; return; }
       if(!userModal.editing && !userModal.data.password){ userModal.err='Kata laluan wajib diisi.'; return; }
@@ -4315,6 +4569,7 @@ createApp({
     }
 
     async function toggleFreeze(u) {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const newState = !u.disabled;
       try {
         await db.collection('users').doc(u.id).update({ disabled: newState });
@@ -4324,6 +4579,7 @@ createApp({
     }
 
     async function deleteUser(u) {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(u.role==='superadmin'){ showToast('Tidak boleh padam akaun Superadmin.','error'); return; }
       if(!confirm(`Padam pengguna @${u.username}? Tindakan ini tidak boleh dibatalkan.`)) return;
       try {
@@ -4344,6 +4600,7 @@ createApp({
 
     async function submitResetPw() {
       resetPwModal.err = '';
+      resetPwModal.userEmail = (resetPwModal.userEmail||'').trim();
       if(!resetPwModal.userEmail) {
         resetPwModal.err = 'Pengguna ini tiada email berdaftar. Sila kemaskini profil mereka dahulu.';
         return;
@@ -4352,7 +4609,15 @@ createApp({
         await auth.sendPasswordResetEmail(resetPwModal.userEmail, { url: window.location.origin + window.location.pathname });
         await logAudit('RESET_PASSWORD', resetPwModal.username);
         resetPwModal.show = false;
-        showToast(`✅ Email reset dihantar ke ${resetPwModal.userEmail}`, 'success');
+        // NOTE: Firebase sends this with NO error even if the email doesn't
+        // match any Auth account, when "Email Enumeration Protection" is on
+        // in the Firebase project (a security setting to stop attackers
+        // probing which emails are registered). So "success" here does not
+        // guarantee delivery — if the email never arrives (check spam AND
+        // ask IT to check server-side quarantine), verify in Firebase
+        // Console > Authentication > Users that this exact email address is
+        // the one actually attached to the account.
+        showToast(`✅ Permintaan reset dihantar ke ${resetPwModal.userEmail}. Jika emel tidak sampai dalam beberapa minit, sila sahkan emel ini wujud tepat sama di Firebase Console > Authentication > Users.`, 'success');
       } catch(e) {
         if(e.code === 'auth/user-not-found') {
           resetPwModal.err = 'Akaun tidak dijumpai dalam sistem. Email mungkin tidak sepadan.';
@@ -4573,6 +4838,18 @@ createApp({
       }
       loading.value=true;
       try {
+        // Re-check against live Firestore data right before writing (the
+        // computed check above only looks at the locally cached pmRecords,
+        // which is stale between two concurrent submissions).
+        if(pm.refNo) {
+          const dupSnap = await db.collection('pmRecords').where('refNo','==',pm.refNo).limit(1).get();
+          const dupDoc = dupSnap.docs[0];
+          if(dupDoc && dupDoc.id !== pm._draftId) {
+            showToast(`No. rujukan "${pm.refNo}" sudah wujud. Sila guna nombor lain.`, 'error');
+            loading.value=false;
+            return;
+          }
+        }
         const isVir = currentProject.value === 'vir';
         const data = {
           project: isVir ? 'vir' : 'cctv',
@@ -4629,6 +4906,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 
     // ---- EXPORT EXCEL (template injection) ----
     function exportExcel() {
+      if(!viewPM.value) return;
       const r = viewPM.value;
       const tick = '√';
       const wb = XLSX.read(TEMPLATE_B64, { type: 'base64' });
@@ -5035,6 +5313,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const styles = [...document.querySelectorAll('style,link[rel="stylesheet"]')]
         .map(s => s.outerHTML).join('\n');
       const w = window.open('','_blank','width=900,height=700');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(`<!DOCTYPE html><html lang="ms"><head>
         <meta charset="UTF-8"><title>Borang PM</title>
         ${styles}
@@ -5053,9 +5332,11 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     function buildNotifications() {
       const list = [];
       const now = Date.now();
-      // Overdue sites (>6 months no PM)
+      // Overdue sites (no PM within their project's interval)
       overdueList.value.forEach(s => {
-        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body:'Lebih 6 bulan tiada penyelenggaraan', time: now, read:false, action:'sites' });
+        const isVir = VIR_SITES.some(v => v.id === s.id);
+        const months = isVir ? PM_INTERVAL.vir : PM_INTERVAL.cctv;
+        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body:`Lebih ${months} bulan tiada penyelenggaraan`, time: now, read:false, action:'sites' });
       });
       // CM records open >14 days
       pmRecords.value.forEach(r => {
@@ -5203,12 +5484,12 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const pmCount = recs.filter(r=>(r.maintType||'PM')!=='CM').length;
       const cmCount = recs.filter(r=>r.maintType==='CM').length;
       const siteCount = new Set(recs.map(r=>r.siteId)).size;
-      const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${r.refNo||'—'}</td><td>${r.siteName||'—'}</td><td>${r.visitDate||(r.month?MONTHS[r.month-1]+' '+r.year:'—')}</td><td>${r.maintType||'PM'}</td><td>${(r.project||'cctv').toUpperCase()}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
+      const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.refNo||'—')}</td><td>${esc(r.siteName||'—')}</td><td>${esc(r.visitDate||(r.month?MONTHS[r.month-1]+' '+r.year:'—'))}</td><td>${esc(r.maintType||'PM')}</td><td>${esc((r.project||'cctv').toUpperCase())}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
       const notaRows = laporanNotaItems.value;
       const notaHtml = notaRows.length ? notaRows.map((row,i)=>{
         const stBg = /selesai/i.test(row.status)?'#e8f5e9':/pending/i.test(row.status)?'#fff8e1':'#e3f2fd';
         const stColor = /selesai/i.test(row.status)?'#1b5e20':/pending/i.test(row.status)?'#e65100':'#0d47a1';
-        return `<tr><td>${i+1}</td><td>${row.siteName}</td><td>${row.visitDate}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#1b5e20'};font-weight:700">${row.maintType}</td><td>${row.masalah||'—'}</td><td>${row.tindakan||'—'}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${row.status||'—'}</span></td></tr>`;
+        return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.visitDate)}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#1b5e20'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
       }).join('') : '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:12px">Tiada data nota yang mengandungi format MASALAH/TINDAKAN/STATUS</td></tr>';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Penyelenggaraan</title>
 <style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.co{font-size:13px;font-weight:800;color:#006633}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
@@ -5222,6 +5503,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 <div class="footer">Laporan dijana pada ${new Date().toLocaleString('ms-MY')} oleh sistem PM-CCTV-SPRM</div>
 </body></html>`;
       const w = window.open('','_blank','width=1000,height=750');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(html); w.document.close(); w.focus();
       setTimeout(()=>{ w.print(); }, 700);
     }
@@ -5337,12 +5619,12 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         const notaItems = siteRecs.flatMap(r => _parseNota(r.notaCatatan));
         const notaHtml = notaItems.length ? notaItems.map(n =>
           `<div style="margin:2px 0;font-size:9px;color:#333;padding:3px 6px;background:#fffde7;border-left:2px solid #f9a825;border-radius:2px">` +
-          `${n.masalah ? '<b>M:</b> '+n.masalah : ''}${n.tindakan ? ' &nbsp;<b>T:</b> '+n.tindakan : ''}` +
-          `${n.status ? ' &nbsp;<span style="color:'+(/selesai/i.test(n.status)?'#2e7d32':'#e65100')+'"><b>['+n.status+']</b></span>' : ''}</div>`
+          `${n.masalah ? '<b>M:</b> '+esc(n.masalah) : ''}${n.tindakan ? ' &nbsp;<b>T:</b> '+esc(n.tindakan) : ''}` +
+          `${n.status ? ' &nbsp;<span style="color:'+(/selesai/i.test(n.status)?'#2e7d32':'#e65100')+'"><b>['+esc(n.status)+']</b></span>' : ''}</div>`
         ).join('') : '<div style="font-size:9px;color:#bbb;padding:2px 6px">—</div>';
         return `<tr>
           <td style="text-align:center">${i+1}</td>
-          <td><b>${s.name}</b></td>
+          <td><b>${esc(s.name)}</b></td>
           <td style="text-align:center">${pmRecs.length || '—'}</td>
           <td style="text-align:center">${cmRecs.length || '—'}</td>
           <td style="text-align:center">${fmtLatest}</td>
@@ -5370,10 +5652,10 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         const stColor = /selesai/i.test(row.status) ? '#1b5e20' : /pending/i.test(row.status) ? '#e65100' : '#555';
         return `<tr>
           <td style="text-align:center">${idx+1}</td>
-          <td>${row.siteName||'—'}</td>
-          <td>${row.masalah||'—'}</td>
-          <td>${row.tindakan||'—'}</td>
-          <td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700">${row.status||'—'}</span></td>
+          <td>${esc(row.siteName||'—')}</td>
+          <td>${esc(row.masalah||'—')}</td>
+          <td>${esc(row.tindakan||'—')}</td>
+          <td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:6px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td>
         </tr>`;
       }).join('') : `<tr><td colspan="5" style="text-align:center;color:#bbb;padding:8px">Tiada isu CM direkodkan dalam nota catatan bulan ini</td></tr>`;
 
@@ -5488,6 +5770,7 @@ ${allIssues.length > 0 ? `
 </body></html>`;
 
       const w = window.open('', '_blank', 'width=1000,height=750');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(html);
       w.document.close();
       w.focus();
@@ -5551,11 +5834,11 @@ ${allIssues.length > 0 ? `
         const bar = `<div style="background:#e0e0e0;border-radius:3px;height:7px;width:80px;display:inline-block;vertical-align:middle"><div style="background:${levelColor(s.level)};height:7px;border-radius:3px;width:${Math.min(s.pct,100)}%"></div></div>`;
         return `<tr>
           <td style="text-align:center;color:#999">${i+1}</td>
-          <td><b>${s.name}</b></td>
+          <td><b>${esc(s.name)}</b></td>
           <td style="text-align:center">${s.pmCount} / ${s.expected} &nbsp;${bar}&nbsp; <span style="font-size:9px;color:${levelColor(s.level)}">${s.pct}%</span></td>
           <td style="text-align:center">${s.cmCount||'—'}</td>
           <td style="text-align:center"><span style="background:${levelBg(s.level)};color:${levelColor(s.level)};padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700">${s.score}pt ${levelText(s.level)}</span></td>
-          <td style="font-size:9px;color:#555">${s.pmMonths}</td>
+          <td style="font-size:9px;color:#555">${esc(s.pmMonths)}</td>
         </tr>`;
       }).join('');
 
@@ -5569,7 +5852,7 @@ ${allIssues.length > 0 ? `
       const issueRows = issueHighlights.length ? issueHighlights.map((row,i) => {
         const stColor = /selesai/i.test(row.status)?'#1b5e20':/pending/i.test(row.status)?'#e65100':'#555';
         const stBg = /selesai/i.test(row.status)?'#e8f5e9':/pending/i.test(row.status)?'#fff8e1':'#f5f5f5';
-        return `<tr><td style="text-align:center">${i+1}</td><td>${row.siteName}</td><td>${row.masalah||'—'}</td><td>${row.tindakan||'—'}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:6px;font-size:8.5px;font-weight:700">${row.status||'—'}</span></td></tr>`;
+        return `<tr><td style="text-align:center">${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:6px;font-size:8.5px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
       }).join('') : '<tr><td colspan="5" style="text-align:center;color:#bbb;padding:8px">Tiada isu direkodkan dalam nota catatan</td></tr>';
 
       const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
@@ -5664,6 +5947,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
 </body></html>`;
 
       const w = window.open('','_blank','width=1050,height=780');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(html); w.document.close(); w.focus();
       setTimeout(()=>{ w.print(); },700);
     }
@@ -5680,7 +5964,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       { key:'month', label:'Bulan' },
       { key:'year', label:'Tahun' },
       { key:'maintType', label:'Jenis PM' },
-      { key:'pmKe', label:'PM Ke' },
+      { key:'pmNo', label:'PM Ke' },
       { key:'contractorName', label:'Nama Kontraktor' },
     ];
 
@@ -5711,6 +5995,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
       auth = firebase.auth();
+      storage = firebase.storage();
 
       // Offline persistence — data cached locally, writes queued & auto-synced when back online
       db.enablePersistence({ synchronizeTabs: true }).catch(e => {
@@ -5744,14 +6029,13 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     });
 
     return {
-      extractDataFile,
-      page, authUser, authProfile, loading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toast, isOnline, pendingWrites,
+      page, authUser, authProfile, loading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toast, isOnline, pendingWrites, sessionWarning, extendSession,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       currentProject, virSiteEquip,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate,
-      pmRecords, viewPM, filterSite, filterYear, filterMaintType,
+      pmRecords, viewPM, filterSite, filterYear, filterMaintType, filterPmNo,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR,
@@ -5764,13 +6048,14 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
       fmtDate,
-      doLogin, doLogout, initSuperAdmin, initProfile,
+      doLogin, doLogout, initProfile,
       allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser,
       resetPwModal, openResetPw, submitResetPw,
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
       profileEdit, pwChange, saveProfile, changePassword, uploadPhoto,
       showLoginPw, showPwNew, showPwConfirm,
       ocrState, ocrScan, pickOcr, resetForm,
+      importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm,
       removeItem, saveSiteEquip,
       openSites, openPMList, openBackup,
