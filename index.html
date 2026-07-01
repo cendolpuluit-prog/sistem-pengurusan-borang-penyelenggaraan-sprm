@@ -156,8 +156,18 @@ tr:hover td{background:#f9fbff}
 .status-ok{color:#1e7e34;font-weight:600}
 .status-no{color:#c62828;font-weight:600}
 
-/* TOAST */
-.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:600;z-index:999;animation:slideIn .3s ease}
+/* SKELETON LOADING */
+@keyframes skelPulse{0%,100%{opacity:.55}50%{opacity:1}}
+.skel{background:linear-gradient(90deg,#e8edf5 25%,#f2f5fa 37%,#e8edf5 63%);background-size:400% 100%;border-radius:8px;animation:skelPulse 1.4s ease-in-out infinite}
+.skel-stat{height:76px;border-radius:10px}
+.skel-line{height:14px;border-radius:4px;margin-bottom:10px}
+.skel-block{border-radius:10px}
+.dark-mode .skel{background:linear-gradient(90deg,#21262d 25%,#2a3038 37%,#21262d 63%);background-size:400% 100%}
+
+/* TOAST — stacked queue so rapid successive actions don't clobber each
+   other's message before it's readable */
+.toast-stack{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column-reverse;gap:10px;max-width:calc(100vw - 32px)}
+.toast{padding:12px 20px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:600;animation:slideIn .3s ease}
 .toast-success{background:#198754}
 .toast-error{background:#dc3545}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
@@ -486,6 +496,23 @@ tr:hover td{background:#f9fbff}
 .dark-mode .tbl-wrap{background:transparent}
 .dark-mode select option{background:#161b22;color:#e0e0e0}
 
+/* Dark mode — coverage for components added after the initial dark-mode pass */
+.dark-mode .dropdown-panel{background:#161b22!important;border-color:#30363d!important}
+.dark-mode .dropdown-panel *{color:#e0e0e0!important}
+.dark-mode .dropdown-panel .text-muted{color:#8b949e!important}
+.dark-mode .app-footer{color:#8b949e;border-top-color:rgba(255,255,255,.08)}
+.dark-mode .app-footer b{color:#90caf9}
+.dark-mode .overdue-item.lvl-red{background:#3a1a1a!important;border-color:#5a2a2a!important}
+.dark-mode .overdue-item.lvl-yellow{background:#3a3316!important;border-color:#5a4d20!important}
+.dark-mode .overdue-item .oi-name{color:#e0e0e0}
+.dark-mode .overdue-item .oi-days{color:#8b949e}
+.dark-mode .overdue-group-label{color:#8b949e}
+.dark-mode .health-summary-card{background:#161b22!important;border-color:#30363d!important}
+.dark-mode .pm-mobile-card{background:#161b22!important;border-color:#30363d!important}
+.dark-mode .pmc-site{color:#e0e0e0}
+.dark-mode .pmc-meta{color:#8b949e}
+.dark-mode .pmc-ref{color:#90caf9}
+
 /* ── RESPONSIVE ── */
 
 /* TABLET (≤1024px) */
@@ -595,7 +622,8 @@ tr:hover td{background:#f9fbff}
   .compare-bar{left:0}
 
   /* Toast */
-  .toast{left:16px;right:16px;bottom:16px;text-align:center}
+  .toast-stack{left:16px;right:16px;bottom:16px}
+  .toast{text-align:center}
 }
 
 /* SMALL PHONE (≤480px) */
@@ -642,7 +670,9 @@ tr:hover td{background:#f9fbff}
 <div id="app">
 
 <!-- TOAST -->
-<div v-if="toast.show" :class="['toast','toast-'+toast.type]">{{toast.msg}}</div>
+<div class="toast-stack">
+  <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]">{{t.msg}}</div>
+</div>
 
 <!-- SESSION TIMEOUT WARNING -->
 <div v-if="sessionWarning.show" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center">
@@ -836,7 +866,7 @@ tr:hover td{background:#f9fbff}
       <h3>{{pageTitle}}</h3>
       <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
         <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, tarikh..." style="font-size:.83rem;padding:7px 12px">
-        <div v-if="showSearchResults && searchResults.length" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
+        <div v-if="showSearchResults && searchResults.length" class="dropdown-panel" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
           <div v-for="r in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
             <template v-if="r._kind==='site'">
               <div style="font-weight:700;font-size:.85rem;color:#002244">🏢 {{r.name}}</div>
@@ -857,7 +887,7 @@ tr:hover td{background:#f9fbff}
             🟢
             <span v-if="onlineUsers.length" style="position:absolute;top:-4px;right:-4px;background:#198754;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{onlineUsers.length>9?'9+':onlineUsers.length}}</span>
           </button>
-          <div v-if="showOnlinePanel" style="position:absolute;right:0;top:calc(100% + 8px);width:280px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
+          <div v-if="showOnlinePanel" class="dropdown-panel" style="position:absolute;right:0;top:calc(100% + 8px);width:280px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
             <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0">
               <span style="font-weight:700;font-size:.88rem;color:#002244">🟢 Pengguna Online ({{onlineUsers.length}})</span>
             </div>
@@ -879,7 +909,7 @@ tr:hover td{background:#f9fbff}
             🔔
             <span v-if="unreadCount>0" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{unreadCount>9?'9+':unreadCount}}</span>
           </button>
-          <div v-if="showNotifPanel" style="position:absolute;right:0;top:calc(100% + 8px);width:340px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
+          <div v-if="showNotifPanel" class="dropdown-panel" style="position:absolute;right:0;top:calc(100% + 8px);width:340px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
             <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center">
               <span style="font-weight:700;font-size:.88rem;color:#002244">Notifikasi</span>
               <button class="btn btn-sm" style="font-size:.75rem;padding:3px 8px;color:#006633;background:none;border:none;cursor:pointer" @click="markAllRead">Tandakan semua dibaca</button>
@@ -906,7 +936,19 @@ tr:hover td{background:#f9fbff}
     <div class="content">
 
       <!-- ====== DASHBOARD ====== -->
-      <div v-if="page==='dashboard'">
+      <!-- DASHBOARD SKELETON (shown while initial data load is in-flight) -->
+      <div v-if="page==='dashboard' && initialLoading" class="skeleton-wrap">
+        <div class="stat-grid" style="margin-bottom:24px">
+          <div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div>
+        </div>
+        <div class="stat-grid" style="margin-bottom:24px">
+          <div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div>
+        </div>
+        <div class="card"><div class="skel skel-line" style="width:40%"></div><div class="skel skel-block" style="height:80px;margin-top:12px"></div></div>
+        <div class="card"><div class="skel skel-line" style="width:30%"></div><div class="skel skel-line"></div><div class="skel skel-line"></div><div class="skel skel-line" style="width:70%"></div></div>
+      </div>
+
+      <div v-if="page==='dashboard' && !initialLoading">
 
         <!-- CCTV STATS -->
         <div style="font-size:.75rem;font-weight:700;letter-spacing:.1em;color:#005599;text-transform:uppercase;margin-bottom:8px">📹 Projek CCTV SPRM</div>
@@ -1258,6 +1300,7 @@ tr:hover td{background:#f9fbff}
                 <input v-else class="form-control" v-model="nCam.model" placeholder="cth: WV-SF335, QNV-8080R">
               </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addCamera">{{equipEditIdx.cameras!==null?'✓ Kemaskini Kamera':'+ Tambah Kamera'}}</button>
@@ -1319,6 +1362,7 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nNVR.serial"></div>
               <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nNVR.ip"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addNVR">{{equipEditIdx.nvr!==null?'✓ Kemaskini NVR':'+ Tambah NVR'}}</button>
@@ -1354,14 +1398,31 @@ tr:hover td{background:#f9fbff}
             </div>
             <div v-if="ocrState.active && ocrState.target==='nHDD'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nHDD','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
-              <div class="form-group"><label>Brand</label><input class="form-control" v-model="nHDD.brand" placeholder="cth: Western Digital"></div>
-              <div class="form-group"><label>Model</label><input class="form-control" v-model="nHDD.model" placeholder="cth: WD20PURZ"></div>
+              <div class="form-group"><label>Brand</label>
+                <select class="form-control" v-model="nHDD.brand" @change="nHDD.model=''">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="b in HDD_BRANDS" :key="b">{{b}}</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Model</label>
+                <select v-if="nHDD.brand && HDD_MODELS[nHDD.brand] && HDD_MODELS[nHDD.brand].length" class="form-control" v-model="nHDD.model">
+                  <option value="">-- Pilih Model --</option>
+                  <option v-for="m in HDD_MODELS[nHDD.brand]" :key="m">{{m}}</option>
+                </select>
+                <input v-else class="form-control" v-model="nHDD.model" placeholder="cth: WD20PURZ">
+              </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nHDD.serial"></div>
-              <div class="form-group"><label>Kapasiti</label><input class="form-control" v-model="nHDD.capacity" placeholder="cth: 2TB"></div>
+              <div class="form-group"><label>Kapasiti</label>
+                <select class="form-control" v-model="nHDD.capacity">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="c in HDD_CAPACITIES" :key="c">{{c}}</option>
+                </select>
+              </div>
               <div class="form-group"><label>Konfigurasi</label>
                 <select class="form-control" v-model="nHDD.config"><option>RAID 5</option><option>RAID 1</option><option>Single</option><option>JBOD</option></select>
               </div>
               <div class="form-group"><label>NVR Berkaitan</label><input class="form-control" v-model="nHDD.nvrRef" placeholder="cth: NVR 1"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nHDD.installDate"></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addHDD">{{equipEditIdx.hdd!==null?'✓ Kemaskini HDD':'+ Tambah HDD'}}</button>
@@ -1397,10 +1458,22 @@ tr:hover td{background:#f9fbff}
             </div>
             <div v-if="ocrState.active && ocrState.target==='nSW'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nSW','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
-              <div class="form-group"><label>Brand</label><input class="form-control" v-model="nSW.brand" placeholder="cth: Panasonic"></div>
-              <div class="form-group"><label>Model</label><input class="form-control" v-model="nSW.model" placeholder="cth: S24GPWR"></div>
+              <div class="form-group"><label>Brand</label>
+                <select class="form-control" v-model="nSW.brand" @change="nSW.model=''">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="b in SWITCH_BRANDS" :key="b">{{b}}</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Model</label>
+                <select v-if="nSW.brand && SWITCH_MODELS[nSW.brand] && SWITCH_MODELS[nSW.brand].length" class="form-control" v-model="nSW.model">
+                  <option value="">-- Pilih Model --</option>
+                  <option v-for="m in SWITCH_MODELS[nSW.brand]" :key="m">{{m}}</option>
+                </select>
+                <input v-else class="form-control" v-model="nSW.model" placeholder="cth: TL-SG1016PE">
+              </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addSwitch">{{equipEditIdx.switches!==null?'✓ Kemaskini Switch':'+ Tambah Switch'}}</button>
@@ -1442,6 +1515,7 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nALM.type"><option>SMS Power Alert</option><option>SMS iNotifi</option><option>iNotifi Appliance</option></select>
               </div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nALM.installDate"></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addAlarm">{{equipEditIdx.alarms!==null?'✓ Kemaskini Alarm':'+ Tambah Alarm'}}</button>
@@ -1486,12 +1560,16 @@ tr:hover td{background:#f9fbff}
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama / Lokasi</label><input class="form-control" v-model="nMISC.name" placeholder="cth: Monitor Bilik Kawalan"></div>
               <div class="form-group"><label>Kategori</label>
-                <input class="form-control" v-model="nMISC.category" list="miscCategoryList" placeholder="cth: Monitor">
-                <datalist id="miscCategoryList"><option v-for="c in MISC_CATEGORIES" :key="c" :value="c"></option></datalist>
+                <select class="form-control" v-model="nMISC.category">
+                  <option v-for="c in MISC_CATEGORIES" :key="c">{{c}}</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="nMISC.category==='Lain-lain'" class="form-control" v-model="nMISC.categoryCustom" placeholder="Nyatakan kategori" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Brand</label><input class="form-control" v-model="nMISC.brand"></div>
               <div class="form-group"><label>Model</label><input class="form-control" v-model="nMISC.model"></div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nMISC.serial"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addMisc">{{equipEditIdx.misc!==null?'✓ Kemaskini Peralatan':'+ Tambah Peralatan'}}</button>
@@ -1581,6 +1659,13 @@ tr:hover td{background:#f9fbff}
                 <option :value="1">PM 1</option>
                 <option :value="2">PM 2</option>
                 <option :value="3">PM 3</option>
+              </select>
+            </div>
+            <div class="form-group" v-if="pm.maintType==='CM'">
+              <label>Punca Kerosakan</label>
+              <select class="form-control" v-model="pm.rootCause">
+                <option value="">-- Pilih Punca --</option>
+                <option v-for="c in ROOT_CAUSE_CATEGORIES" :key="c">{{c}}</option>
               </select>
             </div>
             <div class="form-group" v-if="currentProject==='vir'"><label>No. Bilik VIR</label><input class="form-control" v-model="pm.virRoomNo" placeholder="cth: NO.1"></div>
@@ -1896,6 +1981,7 @@ tr:hover td{background:#f9fbff}
                 <option value="3">PM 3 Sahaja</option>
               </select>
               <button v-if="batchSelected.length" class="btn btn-danger btn-sm" @click="printBatch">🖨️ Print ({{batchSelected.length}})</button>
+              <button v-if="batchSelected.length" class="btn btn-success btn-sm" @click="exportBatchExcel">📊 Excel ({{batchSelected.length}})</button>
             </div>
           </div>
           <!-- Bulk CM action bar -->
@@ -2996,6 +3082,11 @@ tr:hover td{background:#f9fbff}
           <div class="tab" :class="{active:reportTab==='kegagalan'}" @click="reportTab='kegagalan'">🔧 Analisis Kegagalan</div>
           <div class="tab" :class="{active:reportTab==='isu'}" @click="reportTab='isu'">🔁 Isu Berulang</div>
           <div class="tab" :class="{active:reportTab==='team'}" @click="reportTab='team'">👷 Prestasi Team</div>
+          <div class="tab" :class="{active:reportTab==='trend'}" @click="reportTab='trend'">📈 Trend Tahunan</div>
+          <div class="tab" :class="{active:reportTab==='tindakan'}" @click="reportTab='tindakan'">🛠️ Jenis Tindakan</div>
+          <div class="tab" :class="{active:reportTab==='resolusi'}" @click="reportTab='resolusi'">⏳ Masa Selesai</div>
+          <div class="tab" :class="{active:reportTab==='punca'}" @click="reportTab='punca'">🎯 Punca Kerosakan</div>
+          <div class="tab" :class="{active:reportTab==='jangkahayat'}" @click="reportTab='jangkahayat'">📅 Jangka Hayat</div>
         </div>
 
         <!-- Executive summary — always visible action -->
@@ -3124,6 +3215,98 @@ tr:hover td{background:#f9fbff}
                     <td><span :class="'badge badge-'+(t.rate>=80?'green':t.rate>=50?'blue':'red')">{{t.rate}}%</span></td>
                   </tr>
                   <tr v-if="!teamPerformance.length"><td colspan="5" class="empty">Tiada penugasan direkodkan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: TREND TAHUNAN -->
+        <div v-if="reportTab==='trend'">
+          <div class="card">
+            <div class="card-title">Trend Tahunan PM vs CM</div>
+            <p class="text-sm text-muted mb-12">Merentasi semua tahun dalam rekod (bukan setakat beberapa bulan terkini) — nisbah CM yang meningkat dari tahun ke tahun boleh jadi signal infrastruktur makin uzur.</p>
+            <div class="chart-wrap" style="height:320px"><canvas id="chart-year-trend"></canvas></div>
+          </div>
+        </div>
+
+        <!-- TAB: JENIS TINDAKAN -->
+        <div v-if="reportTab==='tindakan'">
+          <div class="card">
+            <div class="card-title">Analisis Jenis Tindakan</div>
+            <p class="text-sm text-muted mb-12">Dikelaskan secara automatik dari teks TINDAKAN dalam nota (kata kunci: ganti/tukar, crimp/kabel, reset/konfigurasi, bersih/cuci, firmware/software). Jawapan terus untuk soalan "apa jenis kerja paling kerap dibuat".</p>
+            <div class="form-row form-row-2">
+              <div class="chart-wrap" style="height:280px"><canvas id="chart-tindakan"></canvas></div>
+              <div class="tbl-wrap">
+                <table>
+                  <thead><tr><th>Jenis Tindakan</th><th>Kekerapan</th></tr></thead>
+                  <tbody>
+                    <tr v-for="x in tindakanBreakdown" :key="x.label"><td>{{x.label}}</td><td><span class="badge badge-blue">{{x.count}}x</span></td></tr>
+                    <tr v-if="!tindakanBreakdown.length"><td colspan="2" class="empty">Tiada data tindakan dikesan.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: MASA SELESAI (TIME-TO-RESOLUTION) -->
+        <div v-if="reportTab==='resolusi'">
+          <div class="card">
+            <div class="card-title">Masa Purata Selesaikan Isu (CM)</div>
+            <p class="text-sm text-muted mb-12">Dikira dari tarikh rekod CM dibuka sehingga status ditukar ke "Selesai". Hanya rekod yang dah ditandakan selesai LEPAS ciri ini ditambah akan ada data (rekod lama tiada timestamp "selesai").</p>
+            <div class="stat-grid" style="margin-bottom:16px">
+              <div class="stat-card"><div class="num">{{resolutionTimeData.overallAvg??'—'}}</div><div class="lbl">Purata Hari (Keseluruhan)</div></div>
+              <div class="stat-card"><div class="num">{{resolutionTimeData.resolvedCount}}</div><div class="lbl">Rekod Dianalisis</div></div>
+            </div>
+            <div class="chart-wrap" style="height:280px" v-if="resolutionTimeData.rows.length"><canvas id="chart-resolution"></canvas></div>
+            <div class="tbl-wrap" style="margin-top:12px">
+              <table>
+                <thead><tr><th>Site</th><th>Bil. Selesai</th><th>Purata Hari</th><th>Terburuk (Hari)</th></tr></thead>
+                <tbody>
+                  <tr v-for="s in resolutionTimeData.rows" :key="s.site"><td>{{s.site}}</td><td>{{s.count}}</td><td>{{s.avgDays}}</td><td>{{s.worstDays}}</td></tr>
+                  <tr v-if="!resolutionTimeData.rows.length"><td colspan="4" class="empty">Tiada data — belum ada rekod CM ditandakan selesai sejak ciri ini aktif.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: PUNCA KEROSAKAN -->
+        <div v-if="reportTab==='punca'">
+          <div class="card">
+            <div class="card-title">Analisis Punca Kerosakan (CM)</div>
+            <p class="text-sm text-muted mb-12">Dari medan "Punca Kerosakan" yang dipilih semasa borang CM diisi. Hanya rekod yang dibuat LEPAS ciri ini ditambah akan ada data.</p>
+            <div class="form-row form-row-2">
+              <div class="chart-wrap" style="height:280px"><canvas id="chart-root-cause"></canvas></div>
+              <div class="tbl-wrap">
+                <table>
+                  <thead><tr><th>Punca</th><th>Kekerapan</th></tr></thead>
+                  <tbody>
+                    <tr v-for="x in rootCauseBreakdown" :key="x.label"><td>{{x.label}}</td><td><span class="badge badge-red">{{x.count}}x</span></td></tr>
+                    <tr v-if="!rootCauseBreakdown.length"><td colspan="2" class="empty">Tiada data punca kerosakan dikesan.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: JANGKA HAYAT PERALATAN -->
+        <div v-if="reportTab==='jangkahayat'">
+          <div class="card">
+            <div class="card-title">Peralatan Hampir/Lepas Jangka Hayat (&gt;{{EQUIPMENT_LIFESPAN_YEARS}} Tahun)</div>
+            <p class="text-sm text-muted mb-12">Dikira dari "Tarikh Pasang" yang direkodkan semasa tambah peralatan. Peralatan tanpa tarikh pasang direkod tidak akan muncul di sini — cadangan proaktif ganti peralatan sebelum ia betul-betul rosak.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>Tarikh Pasang</th><th>Umur (Tahun)</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r,i) in equipmentLifespan" :key="i" class="highlight-row">
+                    <td>{{i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
+                    <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.installDate}}</td>
+                    <td><span class="badge badge-red">{{r.ageYears}} tahun</span></td>
+                  </tr>
+                  <tr v-if="!equipmentLifespan.length"><td colspan="9" class="empty">Tiada peralatan lepas {{EQUIPMENT_LIFESPAN_YEARS}} tahun (atau tarikh pasang belum direkodkan untuk peralatan sedia ada).</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3501,6 +3684,40 @@ const NVR_MODELS = {
   'Lain-lain': [],
 };
 
+// Surveillance/NAS-grade HDD brands & models available in the Malaysian
+// market over roughly the last 5 years (2020-2025).
+const HDD_BRANDS = ['Western Digital','Seagate','Toshiba','Lain-lain'];
+const HDD_MODELS = {
+  'Western Digital': [
+    'WD10PURZ','WD20PURZ','WD30PURZ','WD40PURZ','WD60PURZ','WD80PURZ','WD100PURZ','WD121PURZ','WD140PURZ',
+    'WD8001PURP','WD101PURP','WD121PURP','WD141PURP','WD180PURP',
+  ],
+  'Seagate': [
+    'ST1000VX005','ST2000VX015','ST3000VX015','ST4000VX016','ST6000VX001','ST8000VX010',
+    'ST10000VE0008','ST12000VE001','ST16000VE002','ST18000VE002','ST20000VE002',
+  ],
+  'Toshiba': [
+    'HDWT840UZSVA','HDWT860UZSVA','HDWT880UZSVA','HDWT31AUZSVA','MG08ACA16TE','MG09ACA18TE',
+  ],
+  'Lain-lain': [],
+};
+const HDD_CAPACITIES = ['500GB','1TB','2TB','3TB','4TB','6TB','8TB','10TB','12TB','14TB','16TB','18TB','20TB','Lain-lain'];
+
+// PoE/network switch brands & models commonly used by CCTV integrators over
+// roughly the last 5 years (2020-2025).
+const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Lain-lain'];
+const SWITCH_MODELS = {
+  'Hikvision': ['DS-3E1318P-EI/M (16-Port PoE)','DS-3E0326P-E/M (24-Port PoE)','DS-3E1526P-EI (24-Port PoE)','DS-3E0510HP-E (8-Port PoE)'],
+  'Dahua': ['PFS3220-16ET-135 (16-Port PoE)','PFS4218-16GT-135 (16-Port PoE)','PFS3110-8ET-96 (8-Port PoE)','PFS4226-24GT-360 (24-Port PoE)'],
+  'TP-Link': ['TL-SG1016PE (16-Port PoE)','TL-SG1024P (24-Port PoE)','TL-SG2210P (8-Port PoE)','TL-SX3016F','Omada TL-SG3210XHP-M2'],
+  'D-Link': ['DGS-1210-28P (24-Port PoE)','DGS-1100-24P (24-Port PoE)','DGS-1210-10P (8-Port PoE)'],
+  'Cisco': ['Catalyst 9200L','SG350-28P','CBS350-24P-4G','Catalyst 2960-X'],
+  'Ubiquiti': ['UniFi Switch USW-24-PoE','USW-48-PoE','USW-Pro-24-PoE','USW-Flex'],
+  'Netgear': ['GS728TP','GS752TP','M4250-26G4F-PoE+'],
+  'Uniview': ['NSW2010-8P-2T-IN (8-Port PoE)','NSW2020-16P-2T-DIN (16-Port PoE)'],
+  'Lain-lain': [],
+};
+
 const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 
 createApp({
@@ -3514,6 +3731,7 @@ createApp({
     const authUser = ref(null);
     const authProfile = ref(null);
     const loading = ref(false);
+    const initialLoading = ref(true); // true until loadAll() completes for the first time this session
     const loginUser = ref('');
     const loginPass = ref('');
     const loginErr = ref('');
@@ -3529,7 +3747,8 @@ createApp({
     }
     const showSetup = ref(false);
     const setupMsg = ref('');
-    const toast = reactive({show:false,msg:'',type:'success'});
+    const toasts = reactive([]);
+    let _toastIdSeq = 0;
     const isOnline = ref(navigator.onLine);
     const pendingWrites = ref(0);
     let db, auth;
@@ -3538,13 +3757,14 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:''});
-    const nNVR = reactive({name:'',type:'NVR',brand:'',model:'',serial:'',ip:''});
-    const nHDD = reactive({brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:''});
-    const nSW  = reactive({brand:'',model:'',serial:'',ports:''});
-    const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert'});
-    const nMISC = reactive({name:'',category:'Monitor',brand:'',model:'',serial:''});
+    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:'',installDate:''});
+    const nNVR = reactive({name:'',type:'NVR',brand:'',model:'',serial:'',ip:'',installDate:''});
+    const nHDD = reactive({brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''});
+    const nSW  = reactive({brand:'',model:'',serial:'',ports:'',installDate:''});
+    const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:''});
+    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
+    const ROOT_CAUSE_CATEGORIES = ['Litup/Bekalan Kuasa','Cuaca/Petir','Kabel Rosak','Vandalism/Kerosakan Fizikal','Umur Peralatan','Software/Firmware','Lain-lain'];
 
     // ---- PM form state ----
     // VIR checklist master — each item has label, okCell, nokCell (for Excel injection)
@@ -3610,7 +3830,7 @@ createApp({
       ],
       // VIR fields
       virRoomNo:'', virItems:[],
-      maintType:'', pmNo:null,
+      maintType:'', pmNo:null, rootCause:'',
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
       clientName:'', clientJawatan:'', clientTarikh:'',
@@ -3917,6 +4137,7 @@ createApp({
           teamAssignments.value.push({ id: ref2.id, ...data });
         }
         teamModal.show = false;
+        await logAudit('TEAM_ASSIGN_SAVE', `Team ${data.team} — ${data.siteName} (${data.date})`);
         showToast('Penugasan team berjaya disimpan!');
       } catch(e) { teamModal.err = 'Gagal: ' + e.message; }
       loading.value = false;
@@ -4002,6 +4223,7 @@ createApp({
         await _fw(db.collection('teamAssignments').doc(t.id).delete());
         teamAssignments.value = teamAssignments.value.filter(x => x.id !== t.id);
         teamModal.show = false;
+        await logAudit('TEAM_ASSIGN_DELETE', `Team ${t.team} — ${t.siteName} (${t.date})`);
         showToast('Penugasan dipadam.');
       } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
     }
@@ -4056,6 +4278,16 @@ createApp({
         '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
       }[ch]));
     }
+
+    // ---- Lightweight format validation (IP / email / phone) ----
+    // Fields stay free-text (some legitimate entries don't fit a strict
+    // pattern), but obviously malformed input is rejected before save.
+    const IP_RE = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const PHONE_RE = /^[0-9+\-\s()]{7,15}$/;
+    function isValidIp(v){ return !v || IP_RE.test(String(v).trim()); }
+    function isValidEmail(v){ return !v || EMAIL_RE.test(String(v).trim()); }
+    function isValidPhone(v){ return !v || PHONE_RE.test(String(v).trim()); }
 
     function printJadual(){
       const monthName = MONTHS[calMonth.value];
@@ -4149,12 +4381,12 @@ createApp({
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:''},
-      nNVR:  {name:'',type:'NVR',brand:'',model:'',serial:'',ip:''},
-      nHDD:  {brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:''},
-      nSW:   {brand:'',model:'',serial:'',ports:''},
-      nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert'},
-      nMISC: {name:'',category:'Monitor',brand:'',model:'',serial:''},
+      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:'',installDate:''},
+      nNVR:  {name:'',type:'NVR',brand:'',model:'',serial:'',ip:'',installDate:''},
+      nHDD:  {brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''},
+      nSW:   {brand:'',model:'',serial:'',ports:'',installDate:''},
+      nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:''},
+      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''},
     };
 
     // ---- Project split ----
@@ -4532,6 +4764,28 @@ createApp({
       setTimeout(() => { batchPrintMode.value = false; }, 500);
     }
 
+    function exportBatchExcel() {
+      if(!batchPrintRecords.value.length) return;
+      const rows = batchPrintRecords.value.map((r,i) => ({
+        '#': i+1,
+        'No. Rujukan': r.refNo||'-',
+        Site: r.siteName||'-',
+        Projek: (r.project||'cctv').toUpperCase(),
+        Bulan: r.month?MONTHS[r.month-1]:'-',
+        Tahun: r.year||'-',
+        'Tarikh Penyelenggaraan': r.visitDate||'-',
+        Jenis: r.maintType||'PM',
+        'Status CM': r.maintType==='CM' ? (r.cmStatus==='resolved'?'Selesai':r.cmStatus==='in-progress'?'Dalam Proses':'Terbuka') : '-',
+        Status: r.status==='submitted'?'Submitted':'Draft',
+        Kamera: r.cameras?.length||0,
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Rekod PM');
+      XLSX.writeFile(wb, `rekod_pm_batch_${new Date().toISOString().slice(0,10)}.xlsx`);
+      showToast(`${rows.length} rekod berjaya di-export ke Excel!`);
+    }
+
     // ---- Audit Log ----
     const auditLogs = ref([]);
 
@@ -4611,9 +4865,13 @@ createApp({
     // ---- CM Status ----
     async function updateCMStatus(recordId, status) {
       try {
-        await _fw(db.collection('pmRecords').doc(recordId).update({ cmStatus: status }));
+        // Track resolvedAt only the moment status first becomes 'resolved' —
+        // used for the Time-to-Resolution report (createdAt -> resolvedAt).
+        const updates = { cmStatus: status };
+        if(status === 'resolved') updates.resolvedAt = firebase.firestore.FieldValue.serverTimestamp();
+        await _fw(db.collection('pmRecords').doc(recordId).update(updates));
         const idx = pmRecords.value.findIndex(r => r.id === recordId);
-        if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: status };
+        if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: status, ...(status==='resolved' ? {resolvedAt:{seconds:Math.floor(Date.now()/1000)}} : {}) };
         await logAudit('CM_STATUS_UPDATE', `${recordId} → ${status}`);
         showToast('Status CM dikemaskini!');
       } catch(e) { showToast('Gagal kemaskini status CM: '+e.message, 'error'); }
@@ -4634,12 +4892,14 @@ createApp({
       loading.value = true;
       try {
         const batch = db.batch();
-        ids.forEach(id => batch.update(db.collection('pmRecords').doc(id), { cmStatus: bulkCmStatus.value }));
+        const bulkUpdates = { cmStatus: bulkCmStatus.value };
+        if(bulkCmStatus.value === 'resolved') bulkUpdates.resolvedAt = firebase.firestore.FieldValue.serverTimestamp();
+        ids.forEach(id => batch.update(db.collection('pmRecords').doc(id), bulkUpdates));
         await _fw(batch.commit());
         // update local state only after commit
         ids.forEach(id => {
           const idx = pmRecords.value.findIndex(r => r.id === id);
-          if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: bulkCmStatus.value };
+          if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: bulkCmStatus.value, ...(bulkCmStatus.value==='resolved' ? {resolvedAt:{seconds:Math.floor(Date.now()/1000)}} : {}) };
         });
         await logAudit('BULK_CM_STATUS', `${ids.length} rekod → ${bulkCmStatus.value}`);
         showToast(`${ids.length} rekod CM dikemaskini kepada "${statusLabel}"`);
@@ -4807,8 +5067,12 @@ createApp({
 
     // ---- Toast helper ----
     function showToast(msg, type='success') {
-      toast.show=true; toast.msg=msg; toast.type=type;
-      setTimeout(()=>{toast.show=false;},3000);
+      const id = ++_toastIdSeq;
+      toasts.push({ id, msg, type });
+      setTimeout(() => {
+        const idx = toasts.findIndex(t => t.id === id);
+        if(idx > -1) toasts.splice(idx, 1);
+      }, 3000);
     }
 
     // ---- Firestore write wrapper — tracks pending writes for UI indicator ----
@@ -5199,6 +5463,7 @@ createApp({
         showToast('Gagal memuatkan data: ' + e.message + '. Semak sambungan internet.', 'error');
       }
       loading.value=false;
+      initialLoading.value=false;
     }
 
     // ---- User Management ----
@@ -5237,6 +5502,8 @@ createApp({
       if(!userModal.data.username||!userModal.data.name){ userModal.err='Username dan Nama wajib diisi.'; return; }
       if(!userModal.editing && !userModal.data.email){ userModal.err='Email sebenar wajib diisi (untuk reset kata laluan).'; return; }
       if(!userModal.editing && !userModal.data.password){ userModal.err='Kata laluan wajib diisi.'; return; }
+      if(!isValidEmail(userModal.data.email)){ userModal.err='Format emel tidak sah.'; return; }
+      if(!isValidPhone(userModal.data.phone)){ userModal.err='Format no. telefon tidak sah.'; return; }
       loading.value=true;
       try {
         if(!userModal.editing) {
@@ -5261,6 +5528,7 @@ createApp({
             disabled: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
+          await logAudit('USER_CREATE', userModal.data.username);
           showToast('Pengguna berjaya didaftarkan!');
         } else {
           // Edit existing user
@@ -5272,6 +5540,7 @@ createApp({
             phone: userModal.data.phone,
             email: userModal.data.email,
           });
+          await logAudit('USER_EDIT', userModal.data.username);
           showToast('Maklumat pengguna dikemaskini!');
         }
         userModal.show=false;
@@ -5288,6 +5557,7 @@ createApp({
       try {
         await db.collection('users').doc(u.id).update({ disabled: newState });
         u.disabled = newState;
+        await logAudit(newState?'USER_FREEZE':'USER_UNFREEZE', u.username);
         showToast(newState?'Akaun telah di-freeze.':'Akaun telah diaktifkan semula.');
       } catch(e) { showToast('Gagal kemaskini status: ' + e.message, 'error'); }
     }
@@ -5299,6 +5569,7 @@ createApp({
       try {
         await db.collection('users').doc(u.id).delete();
         allUsers.value = allUsers.value.filter(x=>x.id!==u.id);
+        await logAudit('USER_DELETE', u.username);
         showToast('Pengguna dipadam.');
       } catch(e) { showToast('Gagal padam pengguna: ' + e.message, 'error'); }
     }
@@ -5374,6 +5645,8 @@ createApp({
     }
 
     async function saveProfile() {
+      if(!isValidEmail(profileEdit.email)){ showToast('Format emel tidak sah.','error'); return; }
+      if(!isValidPhone(profileEdit.phone)){ showToast('Format no. telefon tidak sah.','error'); return; }
       loading.value=true;
       try {
         const uid = auth.currentUser.uid;
@@ -5468,6 +5741,16 @@ createApp({
       if(!item) return;
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC };
       Object.assign(refs[key], item);
+      if(key === 'misc') {
+        // Saved category may be a free-text custom value that isn't in
+        // MISC_CATEGORIES — reflect that as "Lain-lain" + the custom text.
+        if(item.category && !MISC_CATEGORIES.includes(item.category)) {
+          nMISC.category = 'Lain-lain';
+          nMISC.categoryCustom = item.category;
+        } else {
+          nMISC.categoryCustom = '';
+        }
+      }
       equipEditIdx[key] = idx;
     }
     function cancelEditEquip(key) {
@@ -5477,6 +5760,7 @@ createApp({
 
     function addCamera() {
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
+      if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
       if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...nCam}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
@@ -5485,6 +5769,7 @@ createApp({
     }
     function addNVR() {
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
+      if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
       if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...nNVR}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
@@ -5519,9 +5804,11 @@ createApp({
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
-      if(equipEditIdx.misc !== null) { list[equipEditIdx.misc] = {...nMISC}; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
-      else list.push({...nMISC});
-      Object.assign(nMISC,{name:'',category:'Monitor',brand:'',model:'',serial:''});
+      const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
+      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, installDate:nMISC.installDate };
+      if(equipEditIdx.misc !== null) { list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
+      else list.push(item);
+      Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''});
     }
     function removeItem(siteId, key, idx) {
       activeEquip()[siteId][key].splice(idx,1);
@@ -5533,6 +5820,7 @@ createApp({
         const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
         const eq  = activeEquip();
         await _fw(db.collection(col).doc(selSite.value.id).set(eq[selSite.value.id], { merge: true }));
+        await logAudit('EQUIPMENT_UPDATE', selSite.value?.name || selSite.value?.id);
         showToast('Peralatan berjaya disimpan!');
       } catch(e){ showToast('Gagal simpan: '+e.message,'error'); }
       loading.value=false;
@@ -5554,7 +5842,7 @@ createApp({
         {key:'kabel',label:'Kabel dan Aksesori Rangkaian',status:'Baik',nota:''},
         {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
       ];
-      pm.maintType=''; pm.pmNo=null;
+      pm.maintType=''; pm.pmNo=null; pm.rootCause='';
       pm.notaCatatan = '';
       pm.contractorName=''; pm.contractorJawatan=''; pm.contractorTarikh='';
       pm.clientName=''; pm.clientJawatan=''; pm.clientTarikh='';
@@ -5619,7 +5907,7 @@ createApp({
           project: isVir ? 'vir' : 'cctv',
           siteId:pm.siteId, siteName:pm.siteName, refNo:pm.refNo,
           month:pm.month, year:pm.year, visitDate:pm.visitDate,
-          maintType: pm.maintType||'PM', pmNo: pm.pmNo||1,
+          maintType: pm.maintType||'PM', pmNo: pm.pmNo||1, rootCause: pm.maintType==='CM' ? (pm.rootCause||'') : '',
           contractorName:pm.contractorName, contractorJawatan:pm.contractorJawatan, contractorTarikh:pm.contractorTarikh,
           clientName:pm.clientName, clientJawatan:pm.clientJawatan, clientTarikh:pm.clientTarikh,
           client2Name:pm.client2Name, client2Jawatan:pm.client2Jawatan, client2Tarikh:pm.client2Tarikh,
@@ -6931,6 +7219,175 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         .sort((a,b) => b.assigned - a.assigned);
     });
 
+    // ── 7. Trend Tahunan PM vs CM (multi-year, bukan setakat beberapa bulan) ──
+    function _recDate(r) {
+      return r.visitDate ? new Date(r.visitDate) : (r.year ? new Date(r.year, (r.month||1)-1, 1) : null);
+    }
+    const yearTrendData = computed(() => {
+      const years = [...new Set(pmRecords.value.map(r => { const d = _recDate(r); return d ? d.getFullYear() : null; }).filter(Boolean))].sort((a,b) => a-b);
+      const pmByYear = years.map(y => pmRecords.value.filter(r => { const d = _recDate(r); return d && d.getFullYear()===y && (r.maintType||'PM')!=='CM'; }).length);
+      const cmByYear = years.map(y => pmRecords.value.filter(r => { const d = _recDate(r); return d && d.getFullYear()===y && r.maintType==='CM'; }).length);
+      return { years, pmByYear, cmByYear };
+    });
+    let _chartYearTrend = null;
+    function _initYearTrendChart() {
+      if(_chartYearTrend) { _chartYearTrend.destroy(); _chartYearTrend = null; }
+      const el = document.getElementById('chart-year-trend');
+      if(!el) return;
+      const { years, pmByYear, cmByYear } = yearTrendData.value;
+      _chartYearTrend = new Chart(el, { type:'bar', data:{
+        labels: years,
+        datasets:[
+          { label:'PM', data:pmByYear, backgroundColor:'rgba(0,100,50,0.75)', borderRadius:4 },
+          { label:'CM', data:cmByYear, backgroundColor:'rgba(183,28,28,0.75)', borderRadius:4 },
+        ]
+      }, options:{ responsive:true, interaction:{mode:'index',intersect:false}, plugins:{ legend:{position:'top'}, tooltip:{enabled:true} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }});
+    }
+
+    // ── 8. Analisis Jenis Tindakan (keyword classifier on TINDAKAN text) ──
+    const ACTION_CATEGORIES = [
+      { label:'Ganti/Tukar Peralatan', keywords:['ganti','tukar','replace','baru dipasang','pasang baru'] },
+      { label:'Baiki/Crimp Kabel', keywords:['crimp','kabel','wiring','utp','rg59','sambung','cable'] },
+      { label:'Reset/Konfigurasi Semula', keywords:['reset','konfigurasi','configuration','setting','setup','format'] },
+      { label:'Bersih/Cuci Peralatan', keywords:['bersih','cuci','habuk','dust','vacuum'] },
+      { label:'Kemaskini Firmware/Software', keywords:['firmware','software','update','upgrade','patch'] },
+    ];
+    function _classifyTindakan(text) {
+      const t = (text||'').toLowerCase();
+      if(!t.trim()) return null;
+      for(const cat of ACTION_CATEGORIES) { if(cat.keywords.some(k => t.includes(k))) return cat.label; }
+      return 'Lain-lain';
+    }
+    const tindakanBreakdown = computed(() => {
+      const map = {};
+      pmRecords.value.forEach(r => {
+        _parseNota(r.notaCatatan).forEach(item => {
+          const cat = _classifyTindakan(item.tindakan);
+          if(!cat) return;
+          map[cat] = (map[cat]||0) + 1;
+        });
+      });
+      return Object.entries(map).sort((a,b) => b[1]-a[1]).map(([label,count]) => ({ label, count }));
+    });
+    let _chartTindakan = null;
+    function _initTindakanChart() {
+      if(_chartTindakan) { _chartTindakan.destroy(); _chartTindakan = null; }
+      const el = document.getElementById('chart-tindakan');
+      if(!el) return;
+      const data = tindakanBreakdown.value;
+      const palette = ['#003366','#c62828','#e65100','#1b5e20','#4a148c','#888'];
+      _chartTindakan = new Chart(el, { type:'doughnut', data:{
+        labels: data.map(d=>d.label),
+        datasets:[{ data: data.map(d=>d.count), backgroundColor: data.map((_,i)=>palette[i%palette.length]), borderWidth:2 }]
+      }, options:{ responsive:true, plugins:{ legend:{position:'bottom'}, tooltip:{callbacks:{label:ctx=>{
+        const total = data.reduce((s,d)=>s+d.count,0);
+        return `${ctx.label}: ${ctx.parsed} (${total?Math.round(ctx.parsed/total*100):0}%)`;
+      }}} } }});
+    }
+
+    // ── 9. Masa Purata Selesaikan Isu (Time-to-Resolution) ──
+    function _toMillis(ts) {
+      if(!ts) return null;
+      if(ts.toDate) return ts.toDate().getTime();
+      if(ts.seconds) return ts.seconds*1000;
+      return null;
+    }
+    const resolutionTimeData = computed(() => {
+      const resolved = pmRecords.value.filter(r => r.maintType==='CM' && r.cmStatus==='resolved' && r.resolvedAt && r.createdAt);
+      const perSite = {};
+      resolved.forEach(r => {
+        const opened = _toMillis(r.createdAt), closed = _toMillis(r.resolvedAt);
+        if(!opened || !closed || closed < opened) return;
+        const days = (closed - opened) / 86400000;
+        const key = r.siteName || r.siteId || 'Unknown';
+        if(!perSite[key]) perSite[key] = { site:key, days:[] };
+        perSite[key].days.push(days);
+      });
+      const rows = Object.values(perSite).map(s => ({
+        site: s.site, count: s.days.length,
+        avgDays: Math.round((s.days.reduce((a,b)=>a+b,0)/s.days.length)*10)/10,
+        worstDays: Math.round(Math.max(...s.days)*10)/10,
+      })).sort((a,b) => b.avgDays - a.avgDays);
+      const allDays = resolved.map(r => (_toMillis(r.resolvedAt)-_toMillis(r.createdAt))/86400000).filter(d=>d>=0);
+      const overallAvg = allDays.length ? Math.round((allDays.reduce((a,b)=>a+b,0)/allDays.length)*10)/10 : null;
+      return { rows, overallAvg, resolvedCount: resolved.length };
+    });
+    let _chartResolution = null;
+    function _initResolutionChart() {
+      if(_chartResolution) { _chartResolution.destroy(); _chartResolution = null; }
+      const el = document.getElementById('chart-resolution');
+      if(!el) return;
+      const rows = resolutionTimeData.value.rows.slice(0, 10);
+      _chartResolution = new Chart(el, { type:'bar', data:{
+        labels: rows.map(r=>r.site),
+        datasets:[{ label:'Purata Hari', data: rows.map(r=>r.avgDays), backgroundColor:'rgba(0,51,102,0.75)', borderRadius:4 }]
+      }, options:{ indexAxis:'y', responsive:true, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true}} }});
+    }
+
+    // ── 10. Analisis Punca Kerosakan (Root Cause) ──
+    const rootCauseBreakdown = computed(() => {
+      const map = {};
+      pmRecords.value.filter(r => r.maintType==='CM' && r.rootCause).forEach(r => {
+        map[r.rootCause] = (map[r.rootCause]||0) + 1;
+      });
+      return Object.entries(map).sort((a,b) => b[1]-a[1]).map(([label,count]) => ({ label, count }));
+    });
+    let _chartRootCause = null;
+    function _initRootCauseChart() {
+      if(_chartRootCause) { _chartRootCause.destroy(); _chartRootCause = null; }
+      const el = document.getElementById('chart-root-cause');
+      if(!el) return;
+      const data = rootCauseBreakdown.value;
+      const palette = ['#c62828','#e65100','#003366','#4a148c','#1b5e20','#00838f','#888'];
+      _chartRootCause = new Chart(el, { type:'pie', data:{
+        labels: data.map(d=>d.label),
+        datasets:[{ data: data.map(d=>d.count), backgroundColor: data.map((_,i)=>palette[i%palette.length]), borderWidth:2 }]
+      }, options:{ responsive:true, plugins:{ legend:{position:'bottom'} } }});
+    }
+
+    // ── 11. Jangka Hayat Peralatan (equipment install-date age report) ──
+    const EQUIPMENT_LIFESPAN_YEARS = 5;
+    const equipmentLifespan = computed(() => {
+      const rows = [];
+      const now = Date.now();
+      const pushSite = (site, proj, eqSrc) => {
+        const eq = eqSrc[site.id] || {};
+        const cats = [
+          ['cameras','Kamera'],['nvr','NVR'],['hdd','HDD'],['switches','Switch'],['alarms','Alarm'],['misc','Lain-lain'],
+        ];
+        cats.forEach(([key,label]) => {
+          (eq[key]||[]).forEach(item => {
+            if(!item.installDate) return;
+            const ageYears = (now - new Date(item.installDate).getTime()) / (365.25*86400000);
+            if(ageYears >= EQUIPMENT_LIFESPAN_YEARS) {
+              rows.push({ site:site.name, proj, cat:label, name:item.name||item.nvrRef||'-', brand:item.brand||'-', model:item.model||'-', serial:item.serial||'-', installDate:item.installDate, ageYears: Math.round(ageYears*10)/10 });
+            }
+          });
+        });
+      };
+      SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
+      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquip.value));
+      return rows.sort((a,b) => b.ageYears - a.ageYears);
+    });
+
+    // Init/destroy Laporan Lanjutan charts based on active tab
+    function _destroyReportLanjutanCharts() {
+      [_chartYearTrend,_chartTindakan,_chartResolution,_chartRootCause].forEach(c => { if(c) c.destroy(); });
+      _chartYearTrend = _chartTindakan = _chartResolution = _chartRootCause = null;
+    }
+    function _initReportLanjutanCharts() {
+      if(reportTab.value === 'trend') _initYearTrendChart();
+      else if(reportTab.value === 'tindakan') _initTindakanChart();
+      else if(reportTab.value === 'resolusi') _initResolutionChart();
+      else if(reportTab.value === 'punca') _initRootCauseChart();
+    }
+    watch(reportTab, async () => {
+      if(page.value === 'laporan-lanjutan') { _destroyReportLanjutanCharts(); await nextTick(); _initReportLanjutanCharts(); }
+    });
+    watch(page, async (p) => {
+      if(p === 'laporan-lanjutan') { await nextTick(); _initReportLanjutanCharts(); }
+    });
+
     // ── Feature 6: Compare ──
     const compareList = ref([]);
     const compareMode = ref(false);
@@ -7008,8 +7465,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     return {
-      page, authUser, authProfile, loading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toast, isOnline, pendingWrites, sessionWarning, extendSession,
+      page, authUser, authProfile, loading, initialLoading, loginUser, loginPass, loginErr, loginShake, showSetup, setupMsg, toasts, isOnline, pendingWrites, sessionWarning, extendSession,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES,
@@ -7045,7 +7503,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       exportExcel, exportExcelVIR, exportDOCX, exportPDF,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
-      batchSelected, batchPrintMode, batchPrintRecords, printBatch,
+      batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
       auditLogs, loadAuditLogs,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
@@ -7059,6 +7517,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister,
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance,
+      yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
+      EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES,
       mobileNavOpen,
       darkMode,
       setTimeout
