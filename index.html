@@ -213,6 +213,31 @@ tr:hover td{background:#f9fbff}
 /* OVERDUE ALERT */
 .overdue-alert{background:rgba(220,53,69,.07);border:1.5px solid rgba(220,53,69,.25);border-radius:10px;padding:14px 18px;margin-bottom:16px}
 .overdue-alert-title{color:#dc3545;font-weight:700;font-size:.88rem;margin-bottom:10px}
+.overdue-group-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 6px;color:#555}
+.overdue-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:.15s;margin-bottom:6px;border:1px solid transparent}
+.overdue-item:hover{transform:translateX(3px);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.overdue-item.lvl-red{background:#fff5f5;border-color:#ef9a9a}
+.overdue-item.lvl-yellow{background:#fffde7;border-color:#ffcc80}
+.overdue-item .oi-name{font-size:.84rem;font-weight:600;color:#222}
+.overdue-item .oi-days{font-size:.74rem;color:#888}
+.overdue-item .oi-action{font-size:.72rem;padding:3px 10px;pointer-events:none}
+.health-summary-card{cursor:pointer;padding:14px 16px;border-radius:10px;transition:.15s;border:1px solid rgba(0,51,102,.08)}
+.health-summary-card:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,40,100,.1)}
+
+/* PM RECORDS — MOBILE CARD LIST (shown instead of the wide table on phones) */
+.pm-mobile-cards{display:none}
+.pm-mobile-card{background:#fff;border:1px solid #eee;border-radius:10px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.pmc-top{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.pmc-ref{flex:1;font-size:.92rem;color:#002244}
+.pmc-site{font-size:.85rem;color:#333;margin-bottom:6px;font-weight:600}
+.pmc-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:.75rem;color:#777;margin-bottom:8px}
+.pmc-cm{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pmc-actions{display:flex;gap:8px}
+.pmc-actions .btn{flex:1;justify-content:center;padding:7px 8px;font-size:.78rem}
+@media(max-width:768px){
+  .pm-mobile-cards{display:block}
+  .pm-desktop-table{display:none}
+}
 
 /* Misc */
 .empty{text-align:center;color:#aaa;padding:40px;font-size:.9rem}
@@ -355,7 +380,6 @@ tr:hover td{background:#f9fbff}
   .pm-corp-header{width:100%!important;display:grid!important;grid-template-columns:110px 1fr 110px!important;box-sizing:border-box}
   .pm-corp-info{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
   .pm-sign-wrap{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr 1fr!important;box-sizing:border-box}
-  .pm-summary-row{width:100%!important;box-sizing:border-box}
   .pm-tbl{table-layout:fixed!important;width:100%!important;border-collapse:collapse!important}
   .pm-tbl td{word-break:break-all!important;overflow-wrap:break-word!important;max-width:0!important}
   .pm-tbl th{word-break:break-word!important;overflow-wrap:break-word!important;max-width:0!important}
@@ -395,12 +419,15 @@ tr:hover td{background:#f9fbff}
 .pm-tbl .ok{color:#155724;font-weight:bold;text-align:center}
 .pm-tbl .no{color:#721c24;font-weight:bold;text-align:center}
 .pm-tbl .ctr{text-align:center}
-.pm-summary-row{display:flex;gap:16px;font-size:8.5pt;margin:4px 0 8px;padding:4px 8px;background:#f0f9f0;border-left:3px solid #006633}
+.pm-cam-summary{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:3px}
+.pm-cam-chip{display:inline-flex;align-items:center;gap:3px;background:#f0f9f0;border:1px solid #b2d8b2;border-radius:4px;padding:2px 8px;font-size:8.5pt;color:#333}
+.pm-cam-chip b{color:#006633}
+.pm-cam-total{margin-left:auto;font-weight:bold;color:#006633;font-size:9.5pt;background:#e0f2e0;border:1px solid #006633;border-radius:4px;padding:2px 10px}
 .pm-sign-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
 .pm-sign-box{border:1px solid #006633;padding:10px 12px}
 .pm-sign-box h4{font-size:9pt;color:#006633;margin-bottom:6px;font-weight:bold;border-bottom:1px solid #b2d8b2;padding-bottom:4px}
 .pm-sign-box p{font-size:8.5pt;margin:2px 0;color:#333}
-.pm-sign-box .sig-space{height:40px;border-bottom:1px dashed #999;margin:8px 0 4px}
+.pm-sign-box .sig-space{height:140px;border-bottom:1px dashed #999;margin:8px 0 4px}
 .pm-footer{margin-top:10px;padding-top:6px;border-top:2px solid #006633;font-size:8pt;color:#555;display:flex;justify-content:space-between}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
 .pm-no-box{width:22px;height:22px;border:1.5px solid #333;display:inline-flex;align-items:center;justify-content:center;font-size:9pt;font-weight:700;border-radius:3px;color:#333}
@@ -782,11 +809,17 @@ tr:hover td{background:#f9fbff}
     <div class="topbar no-print">
       <h3>{{pageTitle}}</h3>
       <div style="position:relative;flex:1;max-width:360px;margin:0 20px">
-        <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari no. rujukan, site, tarikh..." style="font-size:.83rem;padding:7px 12px">
+        <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, tarikh..." style="font-size:.83rem;padding:7px 12px">
         <div v-if="showSearchResults && searchResults.length" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
-          <div v-for="r in searchResults" :key="r.id" @mousedown="viewRecord(r);globalSearch='';showSearchResults=false" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
-            <div style="font-weight:700;font-size:.85rem;color:#002244">{{r.refNo||'-'}}</div>
-            <div style="font-size:.75rem;color:#666">{{r.siteName}} &nbsp;·&nbsp; {{r.visitDate||(r.month?MONTHS[r.month-1]:'—')+' '+r.year}}</div>
+          <div v-for="r in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
+            <template v-if="r._kind==='site'">
+              <div style="font-weight:700;font-size:.85rem;color:#002244">🏢 {{r.name}}</div>
+              <div style="font-size:.75rem;color:#666">Site {{r.proj==='vir'?'VIR':'CCTV'}} — klik untuk urus peralatan</div>
+            </template>
+            <template v-else>
+              <div style="font-weight:700;font-size:.85rem;color:#002244">📋 {{r.refNo||'-'}}</div>
+              <div style="font-size:.75rem;color:#666">{{r.siteName}} &nbsp;·&nbsp; {{r.visitDate||(r.month?MONTHS[r.month-1]:'—')+' '+r.year}}</div>
+            </template>
           </div>
         </div>
       </div>
@@ -861,15 +894,62 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
 
-        <!-- OVERDUE ALERT -->
-        <div class="overdue-alert" v-if="overdueList.length">
-          <div class="overdue-alert-title">⚠ Site PM Lampau — CCTV &gt;4 Bulan / VIR &gt;6 Bulan</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            <span v-for="s in overdueList" :key="s.id" class="badge badge-red" style="font-size:.78rem">
-              ⚠ {{s.name}}
-              <span v-if="siteNextPmMap[s.id]?.daysSince" style="opacity:.8;font-weight:400"> ({{siteNextPmMap[s.id].daysSince}}h)</span>
-            </span>
+        <!-- SITE HEALTH SCORE SUMMARY -->
+        <div class="card">
+          <div class="card-title">🩺 Skor Kesihatan Site</div>
+          <div class="form-row form-row-2">
+            <div class="health-summary-card" style="background:#f0f4ff" @click="openSites('cctv')">
+              <div style="font-size:.75rem;font-weight:700;color:#003366;text-transform:uppercase;margin-bottom:8px">📹 CCTV ({{SITES.length}} site)</div>
+              <div class="flex gap-12" style="font-size:.85rem;flex-wrap:wrap">
+                <span style="color:#1b5e20;font-weight:700">{{healthCountCctv.green}} Baik</span>
+                <span style="color:#f57c00;font-weight:700">{{healthCountCctv.yellow}} Sederhana</span>
+                <span style="color:#b71c1c;font-weight:700">{{healthCountCctv.red}} Kritikal</span>
+              </div>
+            </div>
+            <div class="health-summary-card" style="background:#fff6ee" @click="openSites('vir')">
+              <div style="font-size:.75rem;font-weight:700;color:#7a2e00;text-transform:uppercase;margin-bottom:8px">🖥️ VIR ({{VIR_SITES.length}} site)</div>
+              <div class="flex gap-12" style="font-size:.85rem;flex-wrap:wrap">
+                <span style="color:#1b5e20;font-weight:700">{{healthCountVir.green}} Baik</span>
+                <span style="color:#f57c00;font-weight:700">{{healthCountVir.yellow}} Sederhana</span>
+                <span style="color:#b71c1c;font-weight:700">{{healthCountVir.red}} Kritikal</span>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <!-- OVERDUE ALERT -->
+        <div class="overdue-alert" v-if="overdueSortedCctv.length || overdueSortedVir.length">
+          <div class="overdue-alert-title">⚠ Site PM Lampau — klik site untuk terus mula borang PM</div>
+
+          <template v-if="overdueSortedCctv.length">
+            <div class="overdue-group-label">📹 CCTV — lebih {{PM_INTERVAL.cctv}} bulan tiada PM</div>
+            <div v-for="s in (overdueExpandCctv?overdueSortedCctv:overdueSortedCctv.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
+              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
+              <span class="oi-name">⚠ {{s.name}}</span>
+              <span class="flex gap-8 items-center">
+                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
+                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
+              </span>
+            </div>
+            <button v-if="overdueSortedCctv.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" style="margin-bottom:10px" @click="overdueExpandCctv=!overdueExpandCctv">
+              {{overdueExpandCctv?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedCctv.length+')'}}
+            </button>
+          </template>
+
+          <template v-if="overdueSortedVir.length">
+            <div class="overdue-group-label">🖥️ VIR — lebih {{PM_INTERVAL.vir}} bulan tiada PM</div>
+            <div v-for="s in (overdueExpandVir?overdueSortedVir:overdueSortedVir.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
+              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
+              <span class="oi-name">⚠ {{s.name}}</span>
+              <span class="flex gap-8 items-center">
+                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
+                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
+              </span>
+            </div>
+            <button v-if="overdueSortedVir.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" @click="overdueExpandVir=!overdueExpandVir">
+              {{overdueExpandVir?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedVir.length+')'}}
+            </button>
+          </template>
         </div>
         <!-- APPROACHING WARNING -->
         <div v-if="approachingList.length" style="background:rgba(255,152,0,.08);border:1.5px solid rgba(255,152,0,.3);border-radius:10px;padding:12px 18px;margin-bottom:16px">
@@ -1130,17 +1210,23 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
             </div>
-            <button class="btn btn-primary" @click="addCamera">+ Tambah Kamera</button>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addCamera">{{equipEditIdx.cameras!==null?'✓ Kemaskini Kamera':'+ Tambah Kamera'}}</button>
+              <button v-if="equipEditIdx.cameras!==null" class="btn btn-outline" @click="cancelEditEquip('cameras')">✕ Batal Edit</button>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Senarai Kamera</div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Padam</th></tr></thead>
+                <thead><tr><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="i">
+                  <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="i" :class="{'highlight-row':equipEditIdx.cameras===i}">
                     <td>{{i+1}}</td><td>{{c.name}}</td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.serial}}</td>
-                    <td><button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)">🗑</button></td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)" title="Padam">🗑</button>
+                    </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.cameras||[]).length"><td colspan="8" class="empty">Tiada kamera. Tambah di atas.</td></tr>
                 </tbody>
@@ -1185,17 +1271,23 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nNVR.serial"></div>
               <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nNVR.ip"></div>
             </div>
-            <button class="btn btn-primary" @click="addNVR">+ Tambah NVR</button>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addNVR">{{equipEditIdx.nvr!==null?'✓ Kemaskini NVR':'+ Tambah NVR'}}</button>
+              <button v-if="equipEditIdx.nvr!==null" class="btn btn-outline" @click="cancelEditEquip('nvr')">✕ Batal Edit</button>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Senarai NVR</div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Padam</th></tr></thead>
+                <thead><tr><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="i">
+                  <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="i" :class="{'highlight-row':equipEditIdx.nvr===i}">
                     <td>{{i+1}}</td><td>{{n.name}}</td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td>
-                    <td><button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)">🗑</button></td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
+                    </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.nvr||[]).length"><td colspan="8" class="empty">Tiada NVR.</td></tr>
                 </tbody>
@@ -1222,17 +1314,23 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group"><label>NVR Berkaitan</label><input class="form-control" v-model="nHDD.nvrRef" placeholder="cth: NVR 1"></div>
             </div>
-            <button class="btn btn-primary" @click="addHDD">+ Tambah HDD</button>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addHDD">{{equipEditIdx.hdd!==null?'✓ Kemaskini HDD':'+ Tambah HDD'}}</button>
+              <button v-if="equipEditIdx.hdd!==null" class="btn btn-outline" @click="cancelEditEquip('hdd')">✕ Batal Edit</button>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Senarai Hard Disk</div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Config</th><th>NVR</th><th>Padam</th></tr></thead>
+                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Config</th><th>NVR</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(h,i) in selSiteEquip.hdd||[]" :key="i">
+                  <tr v-for="(h,i) in selSiteEquip.hdd||[]" :key="i" :class="{'highlight-row':equipEditIdx.hdd===i}">
                     <td>{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.config}}</td><td>{{h.nvrRef}}</td>
-                    <td><button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',i)">🗑</button></td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',i)" title="Padam">🗑</button>
+                    </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.hdd||[]).length"><td colspan="8" class="empty">Tiada HDD.</td></tr>
                 </tbody>
@@ -1255,17 +1353,23 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
             </div>
-            <button class="btn btn-primary" @click="addSwitch">+ Tambah Switch</button>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addSwitch">{{equipEditIdx.switches!==null?'✓ Kemaskini Switch':'+ Tambah Switch'}}</button>
+              <button v-if="equipEditIdx.switches!==null" class="btn btn-outline" @click="cancelEditEquip('switches')">✕ Batal Edit</button>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Senarai Network Switch</div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Padam</th></tr></thead>
+                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="i">
+                  <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="i" :class="{'highlight-row':equipEditIdx.switches===i}">
                     <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}}</td><td>{{s.serial}}</td><td>{{s.ports}}</td>
-                    <td><button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)">🗑</button></td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
+                    </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.switches||[]).length"><td colspan="6" class="empty">Tiada switch.</td></tr>
                 </tbody>
@@ -1290,17 +1394,23 @@ tr:hover td{background:#f9fbff}
                 <select class="form-control" v-model="nALM.type"><option>SMS Power Alert</option><option>SMS iNotifi</option><option>iNotifi Appliance</option></select>
               </div>
             </div>
-            <button class="btn btn-primary" @click="addAlarm">+ Tambah Alarm</button>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addAlarm">{{equipEditIdx.alarms!==null?'✓ Kemaskini Alarm':'+ Tambah Alarm'}}</button>
+              <button v-if="equipEditIdx.alarms!==null" class="btn btn-outline" @click="cancelEditEquip('alarms')">✕ Batal Edit</button>
+            </div>
           </div>
           <div class="card">
             <div class="card-title">Senarai Alarm</div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Padam</th></tr></thead>
+                <thead><tr><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="i">
+                  <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="i" :class="{'highlight-row':equipEditIdx.alarms===i}">
                     <td>{{i+1}}</td><td>{{a.name}}</td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td>
-                    <td><button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)">🗑</button></td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
+                    </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.alarms||[]).length"><td colspan="7" class="empty">Tiada alarm.</td></tr>
                 </tbody>
@@ -1338,6 +1448,7 @@ tr:hover td{background:#f9fbff}
                 <input class="form-control" v-model="refNoSuffix" placeholder="001" :style="refNoPrefix?'border-radius:0 4px 4px 0;flex:1;min-width:60px':''" :disabled="!pm.siteId" :title="!pm.siteId?'Pilih site dahulu':''">
               </div>
               <small v-if="refNoDuplicate" style="color:#c62828;font-size:.75rem;font-weight:600">⚠️ No. rujukan <b>{{pm.refNo}}</b> sudah wujud dalam rekod. Sila guna nombor lain.</small>
+              <small v-else-if="refNoGapWarning" style="color:#e65100;font-size:.75rem;font-weight:600">⚠️ No. <b>{{nextRefNoSuggestion}}</b> untuk site ini belum digunakan — guna <b>{{refNoSuffix}}</b> akan tinggalkan gap. Cadangan seterusnya: <b>{{nextRefNoSuggestion}}</b>.</small>
               <small v-else-if="pm.refNo" style="color:#006633;font-size:.75rem">No. Rujukan: <b>{{pm.refNo}}</b></small>
               <small v-else-if="!pm.siteId" style="color:#888;font-size:.75rem">Pilih site dahulu untuk jana no. rujukan</small>
             </div>
@@ -1685,7 +1796,8 @@ tr:hover td{background:#f9fbff}
             </span>
           </div>
 
-          <div class="tbl-wrap">
+          <!-- Desktop table -->
+          <div class="tbl-wrap pm-desktop-table">
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
@@ -1723,6 +1835,39 @@ tr:hover td{background:#f9fbff}
                 <tr v-if="!filteredPM.length"><td colspan="10" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
+          </div>
+
+          <!-- Mobile card list -->
+          <div class="pm-mobile-cards">
+            <div v-for="r in filteredPM" :key="r.id" class="pm-mobile-card">
+              <div class="pmc-top">
+                <input type="checkbox" :value="r.id" v-model="batchSelected">
+                <b class="pmc-ref">{{r.refNo||'-'}}</b>
+                <span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span>
+              </div>
+              <div class="pmc-site">{{r.siteName}}</div>
+              <div class="pmc-meta">
+                <span>📅 {{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</span>
+                <span>🛠 {{r.visitDate||'-'}}</span>
+                <span>📷 {{r.cameras?.length||0}} unit</span>
+              </div>
+              <div v-if="r.maintType==='CM'" class="pmc-cm">
+                <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')">
+                  {{r.cmStatus==='resolved'?'Selesai':r.cmStatus==='in-progress'?'Dalam Proses':'Terbuka'}}
+                </span>
+                <select class="form-control" style="font-size:.78rem;flex:1" @change="updateCMStatus(r.id,$event.target.value)" :value="r.cmStatus||'open'">
+                  <option value="open">Terbuka</option>
+                  <option value="in-progress">Dalam Proses</option>
+                  <option value="resolved">Selesai</option>
+                </select>
+              </div>
+              <div class="pmc-actions">
+                <button class="btn btn-sm btn-outline" @click="viewRecord(r)">👁 Lihat</button>
+                <button class="btn btn-sm" :style="compareList.includes(r.id)?'background:#f59e0b;color:#fff':'background:#e8f0ff;color:#003366'" @click="toggleCompare(r.id)">⚖️ Banding</button>
+                <button class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
+              </div>
+            </div>
+            <div v-if="!filteredPM.length" class="empty">Tiada rekod.</div>
           </div>
         </div>
       </div>
@@ -1775,6 +1920,16 @@ tr:hover td{background:#f9fbff}
               <span class="pm-no-boxes">
                 <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
               </span>
+            </div>
+            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir'">
+              <b>Rumusan Kamera:</b>
+              <div class="pm-cam-summary">
+                <span class="pm-cam-chip">Indoor: <b>{{viewPM?.cameras?.filter(c=>c.camType==='Indoor').length||0}}</b></span>
+                <span class="pm-cam-chip">Outdoor: <b>{{viewPM?.cameras?.filter(c=>c.camType==='Outdoor').length||0}}</b></span>
+                <span class="pm-cam-chip">IR Cam: <b>{{viewPM?.cameras?.filter(c=>c.camType==='IR Cam').length||0}}</b></span>
+                <span class="pm-cam-chip">PTZ: <b>{{viewPM?.cameras?.filter(c=>c.camType==='PTZ').length||0}}</b></span>
+                <span class="pm-cam-total">JUMLAH KAMERA: {{viewPM?.cameras?.length||0}} unit</span>
+              </div>
             </div>
           </div>
 
@@ -1831,13 +1986,6 @@ tr:hover td{background:#f9fbff}
               <tr v-if="!viewPM?.cameras?.length"><td colspan="9" class="ctr" style="padding:8px;color:#888">Tiada rekod kamera</td></tr>
             </tbody>
           </table>
-          <div class="pm-summary-row">
-            <span>Indoor: <b>{{viewPM?.cameras?.filter(c=>c.camType==='Indoor').length||0}}</b></span>
-            <span>Outdoor: <b>{{viewPM?.cameras?.filter(c=>c.camType==='Outdoor').length||0}}</b></span>
-            <span>IR Cam: <b>{{viewPM?.cameras?.filter(c=>c.camType==='IR Cam').length||0}}</b></span>
-            <span>PTZ: <b>{{viewPM?.cameras?.filter(c=>c.camType==='PTZ').length||0}}</b></span>
-            <span style="margin-left:auto;font-weight:bold">JUMLAH KAMERA: {{viewPM?.cameras?.length||0}} unit</span>
-          </div>
 
           <!-- 2. NVR -->
           <div class="pm-section-hdr">2. &nbsp;NETWORK VIDEO RECORDER (NVR)</div>
@@ -3196,6 +3344,34 @@ createApp({
       pm.refNo = refNoPrefix.value ? refNoPrefix.value + refNoSuffix.value : '';
     });
 
+    // Auto-suggest the next sequential ref-no suffix for the selected site
+    // (scoped to site+project+year, matching refNoPrefix), so the field
+    // starts pre-filled with the correct next number instead of relying on
+    // the user to manually track "what's the last one I used". Prevents
+    // gaps like 001 -> 003 (skipping 002) that only get caught after the
+    // fact, if at all — the duplicate check alone only stops re-using an
+    // already-taken number, it doesn't stop skipping ahead.
+    const nextRefNoSuggestion = computed(() => {
+      const prefix = refNoPrefix.value;
+      if(!prefix) return '001';
+      const nums = pmRecords.value
+        .filter(r => r.refNo && r.refNo.startsWith(prefix))
+        .map(r => parseInt(r.refNo.slice(prefix.length), 10))
+        .filter(n => !isNaN(n));
+      const next = (nums.length ? Math.max(...nums) : 0) + 1;
+      return String(next).padStart(3, '0');
+    });
+    watch(() => pm.siteId, () => {
+      if(pm.siteId) refNoSuffix.value = nextRefNoSuggestion.value;
+    });
+    const refNoGapWarning = computed(() => {
+      if(!refNoSuffix.value || refNoDuplicate.value) return false;
+      const entered = parseInt(refNoSuffix.value, 10);
+      const expected = parseInt(nextRefNoSuggestion.value, 10);
+      if(isNaN(entered) || isNaN(expected)) return false;
+      return entered > expected;
+    });
+
     // ---- Local draft-recovery autosave for the in-progress PM form ----
     // The multi-step wizard (cameras/nvr/hdd/switches/alarms/support etc.)
     // only lives in Vue memory until the user reaches the last step and
@@ -3910,18 +4086,36 @@ createApp({
       return [...years].sort((a,b)=>b-a);
     });
 
-    // ---- Global Search ----
+    // ---- Global Search (sites + PM records, mixed results) ----
     const globalSearch = ref('');
     const showSearchResults = ref(false);
     const searchResults = computed(() => {
       const q = globalSearch.value.trim().toLowerCase();
       if(q.length < 2) return [];
-      return pmRecords.value.filter(r => {
+      const siteMatches = [
+        ...SITES.map(s => ({ ...s, _proj:'cctv' })),
+        ...VIR_SITES.map(s => ({ ...s, _proj:'vir' })),
+      ].filter(s => s.name.toLowerCase().includes(q) || (s.code||'').toLowerCase().includes(q))
+        .slice(0, 5)
+        .map(s => ({ _kind:'site', id:'site-'+s.id, siteId:s.id, name:s.name, proj:s._proj }));
+      const recordMatches = pmRecords.value.filter(r => {
         return (r.refNo||'').toLowerCase().includes(q)
           || (r.siteName||'').toLowerCase().includes(q)
           || (r.visitDate||'').toLowerCase().includes(q);
-      }).slice(0, 8);
+      }).slice(0, 8).map(r => ({ _kind:'record', ...r }));
+      return [...siteMatches, ...recordMatches];
     });
+
+    function handleSearchResultClick(item) {
+      globalSearch.value = ''; showSearchResults.value = false;
+      if(item._kind === 'site') {
+        currentProject.value = item.proj;
+        const site = (item.proj==='vir'?VIR_SITES:SITES).find(s=>s.id===item.siteId);
+        if(site) openSiteEquip(site);
+      } else {
+        viewRecord(item);
+      }
+    }
 
     // ---- Overdue Map (CCTV=4 bulan, VIR=6 bulan, PM only) ----
     const PM_INTERVAL = { cctv: 4, vir: 6 }; // months
@@ -4008,6 +4202,30 @@ createApp({
       VIR_SITES.forEach(s => calc(s, 'vir'));
       return scores;
     });
+
+    const healthCountCctv = computed(() => {
+      const c = { green:0, yellow:0, red:0 };
+      SITES.forEach(s => { const l = siteHealthScores.value[s.id]?.level; if(l) c[l]++; });
+      return c;
+    });
+    const healthCountVir = computed(() => {
+      const c = { green:0, yellow:0, red:0 };
+      VIR_SITES.forEach(s => { const l = siteHealthScores.value[s.id]?.level; if(l) c[l]++; });
+      return c;
+    });
+
+    // ---- Dashboard: overdue widget (sorted by urgency, split per project) ----
+    const OVERDUE_DASH_LIMIT = 5;
+    const overdueExpandCctv = ref(false);
+    const overdueExpandVir = ref(false);
+    function _overdueSorted(siteList) {
+      return siteList
+        .filter(s => overdueMap.value[s.id])
+        .map(s => ({ ...s, daysSince: siteNextPmMap.value[s.id]?.daysSince ?? null, level: siteHealthScores.value[s.id]?.level || 'red' }))
+        .sort((a,b) => (b.daysSince ?? -1) - (a.daysSince ?? -1));
+    }
+    const overdueSortedCctv = computed(() => _overdueSorted(SITES));
+    const overdueSortedVir = computed(() => _overdueSorted(VIR_SITES));
 
     // ---- Batch Print ----
     const batchSelected = ref([]);
@@ -4328,7 +4546,14 @@ createApp({
           if(!snap.empty) email = snap.docs[0].data().email || null;
         }
         if(email) {
-          await auth.sendPasswordResetEmail(email, { url: window.location.origin + window.location.pathname });
+          // No custom continueUrl — that requires the exact hosting domain
+          // to be pre-registered in Firebase Console > Authentication >
+          // Authorized domains, and fails hard (auth/unauthorized-continue-
+          // uri) otherwise. Skipping it means Firebase just uses its own
+          // default reset page, which always works regardless of what
+          // domain/URL currently hosts this app (Netlify, custom domain,
+          // preview deploys, etc).
+          await auth.sendPasswordResetEmail(email);
         }
         // Always show the same neutral success state whether or not the
         // username/email was actually found — avoids leaking which
@@ -4368,6 +4593,11 @@ createApp({
       const refs = { nCam, nNVR, nHDD, nSW, nALM };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
       if (ocrState.target === formName) { ocrState.active=false; ocrState.tokens=[]; }
+      // Also drop any in-progress edit-in-place — otherwise the blanked
+      // form would overwrite the row being edited with empty values the
+      // next time the (still-labelled "Kemaskini") button is clicked.
+      const equipKey = Object.keys(EQUIP_KEY_TO_FORM).find(k => EQUIP_KEY_TO_FORM[k] === formName);
+      if (equipKey) equipEditIdx[equipKey] = null;
     }
 
     // ---- OCR ----
@@ -4726,7 +4956,10 @@ createApp({
         return;
       }
       try {
-        await auth.sendPasswordResetEmail(resetPwModal.userEmail, { url: window.location.origin + window.location.pathname });
+        // No custom continueUrl — see note in submitForgotPw(): it requires
+        // the exact hosting domain to be pre-authorized in Firebase Console
+        // and fails hard otherwise (auth/unauthorized-continue-uri).
+        await auth.sendPasswordResetEmail(resetPwModal.userEmail);
         await logAudit('RESET_PASSWORD', resetPwModal.username);
         resetPwModal.show = false;
         // NOTE: Firebase sends this with NO error even if the email doesn't
@@ -4863,38 +5096,64 @@ createApp({
       if(!eq[id]) eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[]};
     }
 
+    // ---- Edit-in-place for equipment rows (instead of delete + re-add) ----
+    const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null });
+    const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM' };
+    function editEquipItem(key, idx) {
+      const item = (selSiteEquip.value[key]||[])[idx];
+      if(!item) return;
+      const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM };
+      Object.assign(refs[key], item);
+      equipEditIdx[key] = idx;
+    }
+    function cancelEditEquip(key) {
+      equipEditIdx[key] = null;
+      resetForm(EQUIP_KEY_TO_FORM[key]);
+    }
+
     function addCamera() {
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
       ensureSite(selSite.value.id);
-      activeEquip()[selSite.value.id].cameras.push({...nCam});
+      const list = activeEquip()[selSite.value.id].cameras;
+      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...nCam}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
+      else list.push({...nCam});
       Object.assign(nCam,{name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:''});
     }
     function addNVR() {
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
       ensureSite(selSite.value.id);
-      activeEquip()[selSite.value.id].nvr.push({...nNVR});
+      const list = activeEquip()[selSite.value.id].nvr;
+      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...nNVR}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
+      else list.push({...nNVR});
       Object.assign(nNVR,{name:'',type:'NVR',brand:'',model:'',serial:'',ip:''});
     }
     function addHDD() {
       if(!nHDD.brand){showToast('Sila masukkan brand HDD','error');return;}
       ensureSite(selSite.value.id);
-      activeEquip()[selSite.value.id].hdd.push({...nHDD});
+      const list = activeEquip()[selSite.value.id].hdd;
+      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...nHDD}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
+      else list.push({...nHDD});
       Object.assign(nHDD,{brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:''});
     }
     function addSwitch() {
       if(!nSW.brand){showToast('Sila masukkan brand switch','error');return;}
       ensureSite(selSite.value.id);
-      activeEquip()[selSite.value.id].switches.push({...nSW});
+      const list = activeEquip()[selSite.value.id].switches;
+      if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...nSW}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
+      else list.push({...nSW});
       Object.assign(nSW,{brand:'',model:'',serial:'',ports:''});
     }
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
       ensureSite(selSite.value.id);
-      activeEquip()[selSite.value.id].alarms.push({...nALM});
+      const list = activeEquip()[selSite.value.id].alarms;
+      if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...nALM}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
+      else list.push({...nALM});
       Object.assign(nALM,{name:'',brand:'',model:'',serial:'',type:'SMS Power Alert'});
     }
     function removeItem(siteId, key, idx) {
       activeEquip()[siteId][key].splice(idx,1);
+      if(equipEditIdx[key] === idx) cancelEditEquip(key); // was mid-edit on the row just deleted
     }
     async function saveSiteEquip() {
       loading.value=true;
@@ -4950,6 +5209,17 @@ createApp({
       pm.switches = (eq.switches||[]).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = (eq.alarms||[]).map(a=>({...a,func:'Baik',status:'Baik'}));
       pmStep.value=2;
+    }
+
+    // Jump straight into a pre-filled new-PM form for a given site — used by
+    // the dashboard overdue widget and notification bell so "site lampau"
+    // alerts are an actual one-click action, not just a passive display.
+    function startNewPMForSite(siteId) {
+      const isVir = VIR_SITES.some(v => v.id === siteId);
+      startNewPM(isVir ? 'vir' : 'cctv');
+      pm.siteId = siteId;
+      loadPMEquip();
+      showNotifPanel.value = false;
     }
 
     async function savePM(status) {
@@ -5458,7 +5728,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       overdueList.value.forEach(s => {
         const isVir = VIR_SITES.some(v => v.id === s.id);
         const months = isVir ? PM_INTERVAL.vir : PM_INTERVAL.cctv;
-        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body:`Lebih ${months} bulan tiada penyelenggaraan`, time: now, read:false, action:'sites' });
+        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body:`Lebih ${months} bulan tiada penyelenggaraan — klik untuk mula PM`, time: now, read:false, action:'sites', siteId: s.id });
       });
       // CM records open >14 days
       pmRecords.value.forEach(r => {
@@ -5485,6 +5755,10 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 
     function handleNotifClick(n) {
       n.read = true;
+      if(n.type === 'overdue' && n.siteId) {
+        startNewPMForSite(n.siteId);
+        return;
+      }
       showNotifPanel.value = false;
       if(n.action) page.value = n.action;
     }
@@ -6157,7 +6431,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       currentProject, virSiteEquip,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM,
-      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate,
+      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
       pmRecords, viewPM, filterSite, filterYear, filterMaintType, filterPmNo,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, totalCameras, totalVirCameras, pmThisYear,
@@ -6180,13 +6454,13 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm,
-      removeItem, saveSiteEquip,
+      removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
       startNewPM, loadPMEquip, savePM, viewRecord, deleteRecord,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF,
-      globalSearch, showSearchResults, searchResults,
+      globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch,
       auditLogs, loadAuditLogs,
@@ -6197,6 +6471,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
       yirYear, printYearInReview,
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
+      healthCountCctv, healthCountVir, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       mobileNavOpen,
       darkMode,
