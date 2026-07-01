@@ -277,7 +277,7 @@ tr:hover td{background:#f9fbff}
 .cal-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px}
 .leg{display:flex;align-items:center;gap:6px;font-size:.78rem;color:#555}
 .leg-dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);border:1px solid #e0e0e0;border-radius:8px;overflow:hidden}
+.cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border:1px solid #e0e0e0;border-radius:8px;overflow:hidden}
 .cal-dh{background:#003366;color:#fff;text-align:center;padding:9px 0;font-size:.78rem;font-weight:600;letter-spacing:.03em}
 .cal-dh.sun{background:#1a5276}
 .cal-dh.sat{background:#1a5276}
@@ -465,9 +465,6 @@ tr:hover td{background:#f9fbff}
 /* MOBILE (≤768px) */
 @media(max-width:768px){
   .mobile-logout-btn{display:inline-flex!important}
-  /* Calendar scroll */
-  .cal-scroll-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -10px;padding:0 10px}
-  .cal-grid{min-width:360px}
   /* Layout */
   .app-wrap{flex-direction:column}
   .sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap}
@@ -674,6 +671,7 @@ tr:hover td{background:#f9fbff}
         <span v-if="loading" class="login-spin">⟳</span>
         <span v-else>LOG MASUK</span>
       </button>
+      <button type="button" @click="openForgotPw" style="background:none;border:none;color:#5aaf7a;font-size:.78rem;cursor:pointer;text-align:center;padding:2px;text-decoration:underline;text-underline-offset:2px">Lupa kata laluan?</button>
     </div>
 
     <!-- Footer -->
@@ -682,6 +680,31 @@ tr:hover td{background:#f9fbff}
       <p style="font-size:.72rem;font-weight:700;color:#5aaf7a;margin:0 0 2px">Mohd Asrul bin Adanan &mdash; Technical Engineer</p>
       <p style="font-size:.7rem;color:#3a6650;margin:0 0 8px">bagi pihak <strong style="color:#4d9966">Daya One Resources Sdn. Bhd.</strong></p>
       <p style="font-size:.66rem;color:#1e3d2a;margin:0">© 2026 Hak Cipta Terpelihara</p>
+    </div>
+  </div>
+
+  <!-- FORGOT PASSWORD MODAL -->
+  <div v-if="forgotPwModal.show" class="modal-bg" @click.self="forgotPwModal.show=false">
+    <div class="modal" style="max-width:420px">
+      <h3>🔑 Lupa Kata Laluan</h3>
+      <template v-if="!forgotPwModal.sent">
+        <p class="text-sm text-muted mb-12">Masukkan ID Pengguna kau. Pautan reset kata laluan akan dihantar ke emel yang berdaftar dengan akaun tersebut.</p>
+        <div class="form-group">
+          <label>ID Pengguna</label>
+          <input class="form-control" v-model="forgotPwModal.username" placeholder="cth: ahmad123" @keyup.enter="submitForgotPw" autocomplete="username">
+        </div>
+        <p v-if="forgotPwModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{forgotPwModal.err}}</p>
+        <div class="flex gap-8">
+          <button class="btn btn-outline" @click="forgotPwModal.show=false">Batal</button>
+          <button class="btn btn-primary" @click="submitForgotPw" :disabled="forgotPwModal.loading">{{forgotPwModal.loading?'Menghantar...':'Hantar Pautan Reset'}}</button>
+        </div>
+      </template>
+      <template v-else>
+        <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:14px 16px;font-size:.85rem;color:#1b5e20;line-height:1.6;margin-bottom:16px">
+          ✅ Jika ID pengguna tersebut wujud dalam sistem, pautan reset kata laluan telah dihantar ke emel berdaftar. Sila semak Inbox dan folder Spam/Junk.
+        </div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" @click="forgotPwModal.show=false">Tutup</button>
+      </template>
     </div>
   </div>
 </div>
@@ -3066,6 +3089,7 @@ createApp({
     const loginErr = ref('');
     const loginShake = ref(false);
     function triggerShake(){ loginShake.value=true; setTimeout(()=>loginShake.value=false, 600); }
+    const forgotPwModal = reactive({ show:false, username:'', loading:false, err:'', sent:false });
     const showSetup = ref(false);
     const setupMsg = ref('');
     const toast = reactive({show:false,msg:'',type:'success'});
@@ -3171,6 +3195,57 @@ createApp({
     watch([() => pm.siteId, refNoSuffix], () => {
       pm.refNo = refNoPrefix.value ? refNoPrefix.value + refNoSuffix.value : '';
     });
+
+    // ---- Local draft-recovery autosave for the in-progress PM form ----
+    // The multi-step wizard (cameras/nvr/hdd/switches/alarms/support etc.)
+    // only lives in Vue memory until the user reaches the last step and
+    // clicks Simpan Draft/Submit. If the browser crashes, the tab is closed,
+    // the connection drops, or the device sleeps mid-form, all that unsaved
+    // progress would otherwise vanish with no way to recover it. This mirrors
+    // it into localStorage (debounced) while the form is open, and offers to
+    // restore it the next time the app loads.
+    const PM_DRAFT_KEY = 'pm_sprm_form_draft';
+    let _pmDraftTimer = null;
+    function _savePmDraftLocal() {
+      try {
+        localStorage.setItem(PM_DRAFT_KEY, JSON.stringify({
+          pm: pm, pmStep: pmStep.value, project: currentProject.value, savedAt: Date.now(),
+        }));
+      } catch(e) {}
+    }
+    function clearPmDraftLocal() {
+      try { localStorage.removeItem(PM_DRAFT_KEY); } catch(e) {}
+    }
+    watch([pm, pmStep], () => {
+      if(page.value !== 'new-pm') return;
+      clearTimeout(_pmDraftTimer);
+      _pmDraftTimer = setTimeout(_savePmDraftLocal, 800);
+    }, { deep: true });
+
+    // Called once after login/app load — offers to resume an unfinished
+    // form left over from a session that never reached Submit/Save Draft.
+    function checkPmDraftRecovery() {
+      let raw;
+      try { raw = localStorage.getItem(PM_DRAFT_KEY); } catch(e) { return; }
+      if(!raw) return;
+      let draft;
+      try { draft = JSON.parse(raw); } catch(e) { clearPmDraftLocal(); return; }
+      // Ignore stale drafts older than 14 days to avoid resurrecting very old junk
+      if(!draft.savedAt || Date.now() - draft.savedAt > 14*24*60*60*1000) { clearPmDraftLocal(); return; }
+      const hasContent = draft.pm && (draft.pm.siteId || draft.pm.refNo || (draft.pm.cameras||[]).length || (draft.pm.nvr||[]).length || (draft.pm.virItems||[]).some(i=>i.nota));
+      if(!hasContent) { clearPmDraftLocal(); return; }
+      const when = new Date(draft.savedAt).toLocaleString('ms-MY');
+      const siteLabel = draft.pm.siteName || draft.pm.refNo || '(site belum dipilih)';
+      if(confirm(`Ada borang PM belum siap dari sesi lepas (${siteLabel}, disimpan ${when}) — kemungkinan tak sempat disubmit sebab sambungan/tab terputus.\n\nNak sambung borang ni semula?`)) {
+        currentProject.value = draft.project || 'cctv';
+        Object.assign(pm, draft.pm);
+        pmStep.value = draft.pmStep || 1;
+        page.value = 'new-pm';
+        showToast('Draft borang dipulihkan.');
+      } else {
+        clearPmDraftLocal();
+      }
+    }
 
     const refNoDuplicate = computed(() => {
       if(!pm.refNo || !refNoSuffix.value) return false;
@@ -4228,6 +4303,51 @@ createApp({
       loading.value=false;
     }
 
+    // ---- Forgot Password (self-service, from login page) ----
+    function openForgotPw() {
+      forgotPwModal.username = loginUser.value || '';
+      forgotPwModal.err = ''; forgotPwModal.sent = false; forgotPwModal.loading = false;
+      forgotPwModal.show = true;
+    }
+
+    async function submitForgotPw() {
+      forgotPwModal.err = '';
+      const uid = (forgotPwModal.username||'').trim().toLowerCase();
+      if(!uid) { forgotPwModal.err = 'Sila masukkan ID pengguna.'; return; }
+      forgotPwModal.loading = true;
+      try {
+        // Same lookup pattern as doLogin() (username → registered email),
+        // reused here pre-auth — the login flow already depends on Firestore
+        // rules allowing this unauthenticated username lookup.
+        const builtIn = USER_MAP[uid];
+        let email = null;
+        if(builtIn) {
+          email = builtIn.email;
+        } else {
+          const snap = await db.collection('users').where('username','==',uid).limit(1).get();
+          if(!snap.empty) email = snap.docs[0].data().email || null;
+        }
+        if(email) {
+          await auth.sendPasswordResetEmail(email, { url: window.location.origin + window.location.pathname });
+        }
+        // Always show the same neutral success state whether or not the
+        // username/email was actually found — avoids leaking which
+        // usernames exist in the system to whoever is on the login page.
+        forgotPwModal.sent = true;
+      } catch(e) {
+        if(e.code === 'auth/user-not-found') {
+          forgotPwModal.sent = true; // stay neutral, don't reveal non-existence
+        } else if(e.code === 'auth/too-many-requests') {
+          forgotPwModal.err = 'Terlalu banyak percubaan. Sila cuba lagi sebentar.';
+        } else if(e.code === 'auth/network-request-failed' || !navigator.onLine) {
+          forgotPwModal.err = 'Tiada sambungan internet. Sila cuba semula.';
+        } else {
+          forgotPwModal.err = 'Ralat: ' + e.message;
+        }
+      }
+      forgotPwModal.loading = false;
+    }
+
     // NOTE: one-off superadmin bootstrap removed — it hardcoded a plaintext
     // password in client source (viewable via "view source"). The superadmin
     // account already exists in Firebase Auth; manage its password from the
@@ -4789,6 +4909,7 @@ createApp({
 
     // ---- PM Form ----
     function startNewPM(proj) {
+      clearPmDraftLocal();
       if(proj) currentProject.value = proj;
       pm.virRoomNo='';
       pm.virItems = VIR_CHECKLIST_TEMPLATE.map(t=>({...t, status:'ok', nota:''}));
@@ -4878,6 +4999,7 @@ createApp({
         await _fw(docRef.set(data));
         await logAudit(status==='submitted'?'BORANG_SUBMIT':'BORANG_DRAFT', pm.refNo||pm._draftId);
         showToast(status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!');
+        clearPmDraftLocal(); // Firestore now holds the authoritative copy — local recovery draft no longer needed
         await loadAll();
         viewPM.value = {id:pm._draftId,...data};
         pm._draftId = null; // clear so next new form gets fresh ID
@@ -6022,6 +6144,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
             }
           } catch(e) { console.warn('Profile load error:', e); }
           await loadAll();
+          checkPmDraftRecovery();
         } else {
           authProfile.value = null;
         }
@@ -6048,7 +6171,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
       fmtDate,
-      doLogin, doLogout, initProfile,
+      doLogin, doLogout, initProfile, forgotPwModal, openForgotPw, submitForgotPw,
       allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser,
       resetPwModal, openResetPw, submitResetPw,
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
