@@ -1341,7 +1341,7 @@ tr:hover td{background:#f9fbff}
                 <input v-else class="form-control" v-model="nCam.model" placeholder="cth: WV-SF335, QNV-8080R">
                 <input v-if="nCam.model==='Lain-lain'" class="form-control" v-model="nCam.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
+              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
             </div>
             <div class="flex gap-8">
@@ -1408,7 +1408,7 @@ tr:hover td{background:#f9fbff}
                 <input v-else class="form-control" v-model="nNVR.model" placeholder="cth: WJ-ND400A">
                 <input v-if="nNVR.model==='Lain-lain'" class="form-control" v-model="nNVR.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nNVR.serial"></div>
+              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"></div>
               <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nNVR.ip"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
             </div>
@@ -1465,7 +1465,7 @@ tr:hover td{background:#f9fbff}
                 <input v-else class="form-control" v-model="nHDD.model" placeholder="cth: WD20PURZ">
                 <input v-if="nHDD.model==='Lain-lain'" class="form-control" v-model="nHDD.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nHDD.serial"></div>
+              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nHDD.serial"></div>
               <div class="form-group"><label>Kapasiti</label>
                 <select class="form-control" v-model="nHDD.capacity">
                   <option value="">-- Pilih --</option>
@@ -1531,7 +1531,7 @@ tr:hover td{background:#f9fbff}
                 <input v-else class="form-control" v-model="nSW.model" placeholder="cth: TL-SG1016PE">
                 <input v-if="nSW.model==='Lain-lain'" class="form-control" v-model="nSW.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nSW.serial"></div>
+              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
             </div>
@@ -1578,7 +1578,7 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="nALM.name" placeholder="cth: GSM SMS Controller-Alarm S130"></div>
               <div class="form-group"><label>Brand</label><input class="form-control" v-model="nALM.brand"></div>
               <div class="form-group"><label>Model</label><input class="form-control" v-model="nALM.model"></div>
-              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nALM.serial"></div>
+              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.serial"></div>
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nALM.type"><option>SMS Power Alert</option><option>SMS iNotifi</option><option>iNotifi Appliance</option></select>
               </div>
@@ -1639,7 +1639,7 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group"><label>Brand</label><input class="form-control" v-model="nMISC.brand"></div>
               <div class="form-group"><label>Model</label><input class="form-control" v-model="nMISC.model"></div>
-              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nMISC.serial"></div>
+              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
             </div>
             <div class="flex gap-8">
@@ -6581,7 +6581,6 @@ createApp({
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
       if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       if(!nCam.model){showToast('Sila masukkan model kamera','error');return;}
-      if(!nCam.serial){showToast('Sila masukkan No. Siri kamera','error');return;}
       const resolved = _resolveBrandModel(nCam);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
@@ -6597,7 +6596,6 @@ createApp({
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       if(!nNVR.model){showToast('Sila masukkan model NVR','error');return;}
-      if(!nNVR.serial){showToast('Sila masukkan No. Siri NVR','error');return;}
       const resolved = _resolveBrandModel(nNVR);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
@@ -6612,7 +6610,6 @@ createApp({
     function addHDD() {
       if(!nHDD.brand){showToast('Sila masukkan brand HDD','error');return;}
       if(!nHDD.model){showToast('Sila masukkan model HDD','error');return;}
-      if(!nHDD.serial){showToast('Sila masukkan No. Siri HDD','error');return;}
       const resolved = _resolveBrandModel(nHDD);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].hdd;
@@ -6627,7 +6624,6 @@ createApp({
     function addSwitch() {
       if(!nSW.brand){showToast('Sila masukkan brand switch','error');return;}
       if(!nSW.model){showToast('Sila masukkan model switch','error');return;}
-      if(!nSW.serial){showToast('Sila masukkan No. Siri switch','error');return;}
       const resolved = _resolveBrandModel(nSW);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].switches;
@@ -6642,7 +6638,6 @@ createApp({
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
       if(!nALM.model){showToast('Sila masukkan model alarm','error');return;}
-      if(!nALM.serial){showToast('Sila masukkan No. Siri alarm','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].alarms;
       const dup = _findDupConflict('alarms', list, nALM, equipEditIdx.alarms);
@@ -6654,7 +6649,6 @@ createApp({
     function addMisc() {
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
       if(!nMISC.model){showToast('Sila masukkan model peralatan','error');return;}
-      if(!nMISC.serial){showToast('Sila masukkan No. Siri peralatan','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
       const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
