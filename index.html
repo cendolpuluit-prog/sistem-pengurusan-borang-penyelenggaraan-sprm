@@ -5585,11 +5585,17 @@ createApp({
           logger: m => { if(m.status==='recognizing text') ocrState.progress=Math.round(m.progress*100); }
         });
         const raw = result.data.text;
-        // Extract tokens: alphanumeric strings 4+ chars, likely serial numbers
+        const ipTokenRe = /^(?:\d{1,3}\.){3}\d{1,3}$/;
+        const macTokenRe = /^[0-9A-Fa-f]{2}(?:[:-]?[0-9A-Fa-f]{2}){5}$/;
+        // Extract tokens: alphanumeric strings 4+ chars, likely serial numbers.
+        // A serial is never a full IP or MAC address, so drop tokens shaped
+        // like either — keeps the pick-list free of obviously-irrelevant
+        // clutter from the same photo (e.g. a MAC sticker next to the S/N).
         const tokens = [...new Set(
           raw.split(/[\s\n\r,;:|\/\\()\[\]{}<>]+/)
              .map(t => t.trim().replace(/[^A-Za-z0-9\-_.]/g,''))
              .filter(t => t.length >= 4)
+             .filter(t => !ipTokenRe.test(t) && !(macTokenRe.test(t) && (t.match(/[:-]/g)||[]).length >= 3))
         )];
         ocrState.tokens = tokens;
       } catch(e) { showToast('OCR gagal: '+e.message,'error'); }
@@ -5703,7 +5709,13 @@ createApp({
       // strip it out of the field afterwards so it doesn't pollute name/model.
       const ipEmbedRe = /(?:\d{1,3}\.){3}\d{1,3}/;
       // No field for MAC in this data model — strip it out too, same reason.
-      const macEmbedRe = /[0-9A-Fa-f]{2}(?:[:-][0-9A-Fa-f]{2}){5}/;
+      // Separators are optional/lenient (not strictly required between every
+      // pair) because OCR frequently drops or merges one hyphen, e.g. reading
+      // "A4-18-84-08-5C-42" as "A4-18-84-08-5C42" — a strict 6-groups-with-
+      // hyphens match would miss that and let the mangled MAC fall through
+      // to the serial-number check below (which happily accepts any
+      // alphanumeric-with-hyphens string), wrongly landing it as a serial.
+      const macEmbedRe = /[0-9A-Fa-f]{2}(?:[:-]?[0-9A-Fa-f]{2}){5}/;
       const serialRe = /^[A-Za-z0-9][A-Za-z0-9\-]{4,19}$/;
       const leftover = [];
       fields.forEach(f => {
@@ -5716,22 +5728,43 @@ createApp({
             v = (v.slice(0,m.index) + v.slice(m.index+m[0].length)).trim();
           }
         }
+        // Require most (not all) of the 5 separators to actually be present
+        // — tolerates 1-2 OCR-dropped hyphens (the real bug) without being
+        // so loose that it swallows an unrelated 12-character alphanumeric
+        // serial number that has no hyphens at all.
         const macM = v.match(macEmbedRe);
-        if(macM) v = (v.slice(0,macM.index) + v.slice(macM.index+macM[0].length)).trim();
+        if(macM && (macM[0].match(/[:-]/g)||[]).length >= 3) {
+          v = (v.slice(0,macM.index) + v.slice(macM.index+macM[0].length)).trim();
+        }
         // Drop stray OCR noise glyphs (misread bullets/table borders) stuck
         // to the edges of the remaining text, e.g. "#172.16.0.17..." → "".
-        v = v.replace(/^[#*|=»«•·\-–—\s]+/, '').replace(/[#*|=»«•·\-–—\s]+$/, '').trim();
+        v = v.replace(/^[#*|=»«•·~¥\-–—\s]+/, '').replace(/[#*|=»«•·~¥\-–—\s]+$/, '').trim();
         if(!v) return;
         const brandHit = BRANDS.find(b => v.toLowerCase() === b.toLowerCase() || v.toLowerCase().includes(b.toLowerCase().split(' ')[0].toLowerCase()));
         if('brand' in row && !row.brand && brandHit && v.length < 30) { row.brand = brandHit; return; }
         if('serial' in row && !row.serial && serialRe.test(v) && /\d/.test(v) && /[A-Za-z]/.test(v)) { row.serial = v; return; }
         if('ports' in row && !row.ports && /^\d+\s*port/i.test(v)) { row.ports = v; return; }
         if('capacity' in row && !row.capacity && /^\d+(\.\d+)?\s*(TB|GB)$/i.test(v)) { row.capacity = v; return; }
+        // Generic status/result words from a source table's own Status
+        // column — no field for these here, and if a poorly-split row
+        // leaves this as the only leftover value, it's far better to leave
+        // Name blank than to confidently fill it with "Done"/"OK".
+        if(/^(done|ok|good|bad|active|inactive|offline|online|complete|completed|pending|fail|failed|error|n\/a|na)$/i.test(v)) return;
         leftover.push(v);
       });
       leftover.sort((a,b) => b.length - a.length);
+      // If exactly one leftover value matches a known model/product-line
+      // keyword (e.g. "FLEXIDOME outdoor 3100i" → Bosch), that's a much
+      // stronger signal that it's the Model than "it happens to be the
+      // longest string" — a source table's column order (e.g. Type before
+      // Name) doesn't always match this form's Name-then-Model convention,
+      // so length alone gets this backwards more often than not.
+      if('model' in row && !row.model) {
+        const modelIdx = leftover.findIndex(v => _brandFromModelText(v));
+        if(modelIdx > -1) row.model = leftover.splice(modelIdx, 1)[0];
+      }
       if('name' in row && leftover.length) row.name = leftover.shift();
-      if('model' in row && leftover.length) row.model = leftover.shift();
+      if('model' in row && !row.model && leftover.length) row.model = leftover.shift();
       if(!('name' in row) && 'brand' in row && !row.brand && leftover.length) row.brand = leftover.shift();
       return _fillBrandFromModel(row);
     }
@@ -5786,16 +5819,42 @@ createApp({
     // side-by-side in a screenshot stay in separate cells instead of being
     // mashed into one blob of text.
     function _wordsToRows(lines) {
-      return (lines || []).map(line => {
+      return (lines || [])
+        // Low-confidence lines are almost always visual noise this
+        // particular scan couldn't really read (watermarks, glare,
+        // screenshot-of-a-screenshot artifacts) rather than genuine faint
+        // table text — drop them before they can become a fake "peralatan"
+        // entry. Real printed table rows typically score well above this.
+        .filter(line => line.confidence == null || line.confidence >= 30)
+        .map(line => {
         const words = (line.words || []).filter(w => w.text && w.text.trim());
         if(!words.length) return null;
-        const avgW = words.reduce((s, w) => s + (w.bbox.x1 - w.bbox.x0), 0) / words.length;
-        const gapThresh = Math.max(avgW * 1.8, 20);
+        if(words.length === 1) return [words[0].text.trim()];
+        // A real column boundary shows up as an outlier-large gap between
+        // words compared to normal same-phrase word spacing (e.g. the gap
+        // between "5MP" and the next column's "PD/D/08" is much bigger than
+        // the gap between "PD/D/08" and "Pantri" that sit in the same
+        // column). A table row commonly has SEVERAL such column gaps of
+        // different sizes (IP→MAC, MAC→Type, Type→Name, Name→Status all
+        // differ), so picking only the single largest jump collapses all
+        // but the widest gap into one blob. Instead, sort the gaps and find
+        // the FIRST point where they jump meaningfully larger than the
+        // tight same-phrase spacing seen so far — everything at or above
+        // that point is treated as a column break.
+        const gaps = [];
+        for(let i = 1; i < words.length; i++) gaps.push(words[i].bbox.x0 - words[i-1].bbox.x1);
+        const sorted = [...gaps].sort((a,b) => a-b);
+        let splitAt = Infinity;
+        for(let i = 1; i < sorted.length; i++) {
+          const prev = sorted[i-1], cur = sorted[i];
+          if(cur - prev > 8 && cur > prev * 1.6) { splitAt = cur; break; }
+        }
+        const gapThresh = splitAt; // Infinity (no split) if no confident boundary found
         const cells = [[words[0]]];
         for(let i = 1; i < words.length; i++) {
-          const prev = words[i - 1], w = words[i];
-          if(w.bbox.x0 - prev.bbox.x1 > gapThresh) cells.push([w]);
-          else cells[cells.length - 1].push(w);
+          const gap = words[i].bbox.x0 - words[i-1].bbox.x1;
+          if(gap >= gapThresh) cells.push([words[i]]);
+          else cells[cells.length - 1].push(words[i]);
         }
         return cells.map(c => c.map(w => w.text).join(' ').trim());
       }).filter(Boolean);
@@ -6281,7 +6340,11 @@ createApp({
     function toggleEquipSelectAll(kind) {
       const list = selSiteEquip.value[kind]||[];
       if(isEquipAllSelected(kind)) equipSelected[kind].clear();
-      else equipSelected[kind] = new Set(list.map(it => it._uid));
+      // Mutate the existing reactive Set in place (clear + re-add) rather
+      // than replacing it with a new Set instance — avoids any doubt about
+      // whether a plain property reassignment on a reactive object is
+      // picked up by every dependent effect.
+      else { equipSelected[kind].clear(); list.forEach(it => equipSelected[kind].add(it._uid)); }
     }
     function bulkDeleteEquip(kind) {
       const sel = equipSelected[kind];
@@ -6416,7 +6479,7 @@ createApp({
       const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
-      else { item._uid = _genId(); list.push(item); }
+      else { item._uid = _genId(); list.push(item); showToast('Peralatan berjaya ditambah!'); }
       Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''});
     }
     function removeItem(siteId, key, idx) {
