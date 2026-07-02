@@ -1329,15 +1329,17 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Brand</label>
                 <select class="form-control" v-model="nCam.brand" @change="nCam.model=''">
                   <option value="">-- Pilih --</option>
-                  <option v-for="b in BRANDS" :key="b">{{b}}</option>
+                  <option v-for="b in brandOptionsFor('BRANDS')" :key="b">{{b}}</option>
                 </select>
+                <input v-if="nCam.brand==='Lain-lain'" class="form-control" v-model="nCam.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Model</label>
-                <select v-if="nCam.brand && CAMERA_MODELS[nCam.brand] && CAMERA_MODELS[nCam.brand].length" class="form-control" v-model="nCam.model">
+                <select v-if="nCam.brand && nCam.brand!=='Lain-lain'" class="form-control" v-model="nCam.model">
                   <option value="">-- Pilih Model --</option>
-                  <option v-for="m in CAMERA_MODELS[nCam.brand]" :key="m">{{m}}</option>
+                  <option v-for="m in modelOptionsFor('cameras', nCam.brand)" :key="m">{{m}}</option>
                 </select>
                 <input v-else class="form-control" v-model="nCam.model" placeholder="cth: WV-SF335, QNV-8080R">
+                <input v-if="nCam.model==='Lain-lain'" class="form-control" v-model="nCam.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
@@ -1394,15 +1396,17 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Brand</label>
                 <select class="form-control" v-model="nNVR.brand">
                   <option value="">-- Pilih --</option>
-                  <option v-for="b in BRANDS" :key="b">{{b}}</option>
+                  <option v-for="b in brandOptionsFor('BRANDS')" :key="b">{{b}}</option>
                 </select>
+                <input v-if="nNVR.brand==='Lain-lain'" class="form-control" v-model="nNVR.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Model</label>
-                <select v-if="nNVR.brand && NVR_MODELS[nNVR.brand] && NVR_MODELS[nNVR.brand].length" class="form-control" v-model="nNVR.model">
+                <select v-if="nNVR.brand && nNVR.brand!=='Lain-lain'" class="form-control" v-model="nNVR.model">
                   <option value="">-- Pilih Model --</option>
-                  <option v-for="m in NVR_MODELS[nNVR.brand]" :key="m">{{m}}</option>
+                  <option v-for="m in modelOptionsFor('nvr', nNVR.brand)" :key="m">{{m}}</option>
                 </select>
                 <input v-else class="form-control" v-model="nNVR.model" placeholder="cth: WJ-ND400A">
+                <input v-if="nNVR.model==='Lain-lain'" class="form-control" v-model="nNVR.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nNVR.serial"></div>
               <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nNVR.ip"></div>
@@ -1449,15 +1453,17 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Brand</label>
                 <select class="form-control" v-model="nHDD.brand" @change="nHDD.model=''">
                   <option value="">-- Pilih --</option>
-                  <option v-for="b in HDD_BRANDS" :key="b">{{b}}</option>
+                  <option v-for="b in brandOptionsFor('HDD_BRANDS')" :key="b">{{b}}</option>
                 </select>
+                <input v-if="nHDD.brand==='Lain-lain'" class="form-control" v-model="nHDD.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Model</label>
-                <select v-if="nHDD.brand && HDD_MODELS[nHDD.brand] && HDD_MODELS[nHDD.brand].length" class="form-control" v-model="nHDD.model">
+                <select v-if="nHDD.brand && nHDD.brand!=='Lain-lain'" class="form-control" v-model="nHDD.model">
                   <option value="">-- Pilih Model --</option>
-                  <option v-for="m in HDD_MODELS[nHDD.brand]" :key="m">{{m}}</option>
+                  <option v-for="m in modelOptionsFor('hdd', nHDD.brand)" :key="m">{{m}}</option>
                 </select>
                 <input v-else class="form-control" v-model="nHDD.model" placeholder="cth: WD20PURZ">
+                <input v-if="nHDD.model==='Lain-lain'" class="form-control" v-model="nHDD.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nHDD.serial"></div>
               <div class="form-group"><label>Kapasiti</label>
@@ -1513,15 +1519,17 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Brand</label>
                 <select class="form-control" v-model="nSW.brand" @change="nSW.model=''">
                   <option value="">-- Pilih --</option>
-                  <option v-for="b in SWITCH_BRANDS" :key="b">{{b}}</option>
+                  <option v-for="b in brandOptionsFor('SWITCH_BRANDS')" :key="b">{{b}}</option>
                 </select>
+                <input v-if="nSW.brand==='Lain-lain'" class="form-control" v-model="nSW.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Model</label>
-                <select v-if="nSW.brand && SWITCH_MODELS[nSW.brand] && SWITCH_MODELS[nSW.brand].length" class="form-control" v-model="nSW.model">
+                <select v-if="nSW.brand && nSW.brand!=='Lain-lain'" class="form-control" v-model="nSW.model">
                   <option value="">-- Pilih Model --</option>
-                  <option v-for="m in SWITCH_MODELS[nSW.brand]" :key="m">{{m}}</option>
+                  <option v-for="m in modelOptionsFor('switches', nSW.brand)" :key="m">{{m}}</option>
                 </select>
                 <input v-else class="form-control" v-model="nSW.model" placeholder="cth: TL-SG1016PE">
+                <input v-if="nSW.model==='Lain-lain'" class="form-control" v-model="nSW.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
@@ -3711,6 +3719,7 @@ const CAMERA_MODELS = {
     'WV-S22700-V2L','WV-S21300-V2','WV-S32402-F2L','WV-S32404-F2',
     'WV-X86401-Z2','WV-B2110','WV-B6410','WV-SC588',
     'WV-NS202A','WV-NW484S','WV-NW964',
+    'Lain-lain',
   ],
   'Hanwha (Samsung)': [
     'QND-6012R','QND-6022R','QND-6032R','QND-6072R','QND-6082R','QND-7010R','QND-7080R',
@@ -3731,6 +3740,7 @@ const CAMERA_MODELS = {
     'PNV-A9081R','PNV-A6081R','PNV-A6081R-E','PNV-9080R',
     'PND-A6081RV','PND-A6081RF','PND-9080R',
     'ANV-L6022R','ANO-L6022R',
+    'Lain-lain',
   ],
   'Bosch': [
     'NDN-733V03-P','NDN-733V09-IP','NDN-921V03-P','NDN-932V03-IP','NDN-932V09-IP',
@@ -3745,6 +3755,8 @@ const CAMERA_MODELS = {
     'NDP-5512-Z12','NDP-7512-Z30','NDS-5703-F360LE',
     'MIC-550IR','MIC-7230-Z30','MIC-7522-Z30B',
     'FLEXIDOME IP outdoor 4000i','FLEXIDOME IP outdoor 5000i','FLEXIDOME IP indoor 5000i',
+    'DINION 3100i IR','FLEXIDOME outdoor 3100i IR',
+    'Lain-lain',
   ],
   'Hikvision': [
     'DS-2CD1023G0-I','DS-2CD1043G0-I','DS-2CD1H23G0-IZ',
@@ -3765,6 +3777,7 @@ const CAMERA_MODELS = {
     'DS-2CD2H43G2-IZS','DS-2CD2H83G2-IZS',
     'DS-2DE4225IW-DE','DS-2DE4425IW-DE','DS-2DE4425IWG-E','DS-2DE4A425IWG-E',
     'DS-2DE7230IW-AE','DS-2DE7425IW-AE',
+    'Lain-lain',
   ],
   'Dahua': [
     'DH-IPC-HDW1230S','DH-IPC-HDW1431S','DH-IPC-HDW1531S',
@@ -3788,6 +3801,7 @@ const CAMERA_MODELS = {
     'DH-SD22204T-GN','DH-SD22404T-GN','DH-SD49225T-HN','DH-SD49225I-HC','SD49225XB-HNR','SD49425XB-HNR',
     'DH-SD52C232I-HC','DH-SD5A225GB-HNR','DH-SD5A432GB-HNR','DH-SD5A445GB-HNR',
     'DH-SD6C225U-HNI','DH-SD6C3425GB-HN','DH-SD6CE225U-HNI',
+    'Lain-lain',
   ],
   'Axis': [
     'AXIS M2025-LE','AXIS M2026-LE Mk II','AXIS M3045-V','AXIS M3046-V',
@@ -3805,6 +3819,7 @@ const CAMERA_MODELS = {
     'AXIS Q3505-V','AXIS Q3505-VE','AXIS Q3515-LV','AXIS Q3517-LVE','AXIS Q3517-SLVE','AXIS Q3527-LVE',
     'AXIS Q3626-VE','AXIS Q3628-VE',
     'AXIS Q6114-E','AXIS Q6115-E','AXIS Q6135-LE','AXIS Q6155-E','AXIS Q6315-LE',
+    'Lain-lain',
   ],
   'Uniview': [
     'IPC2122LB-ADF28KM-I0','IPC2122LB-ADF40KM-I0','IPC2122SB-ADF28KM-I0',
@@ -3822,6 +3837,7 @@ const CAMERA_MODELS = {
     'IPC6852ER-X45-VF','IPC6854ER-X40G-VF','IPC6858ER-X40-VF',
     'IPC6322SR-X22-VG','IPC6424SR-X25-VF','IPC6434LR-X16-VG1','IPC6658SR-X25-VF',
     'IPC742SR9-PZ30-32G',
+    'Lain-lain',
   ],
   'Vivotek': [
     'FD8134','FD8136','FD8137','FD8138-H','FD8154V','FD8161','FD8162','FD8164','FD8166',
@@ -3846,12 +3862,14 @@ const NVR_MODELS = {
     'WJ-ND400','WJ-ND410A','WJ-NV200','WJ-NV300','WJ-NV350',
     'WJ-NX200','WJ-NX300','WJ-NX400','WJ-NX500','WJ-NX310K','WJ-NX310KG','WJ-NX510K','WJ-NX510KG',
     'WJ-NU300','WJ-NU301K','WJ-NU301KG',
+    'Lain-lain',
   ],
   'Hanwha (Samsung)': [
     'QRN-410S','QRN-430S','QRN-810S','QRN-830S','QRN-1610S','QRN-1620S','QRN-1630S',
     'XRN-420S','XRN-810S','XRN-820S','XRN-1620S','XRN-1620SB1',
     'XRN-2010','XRN-2010A','XRN-2011A','XRN-3010A','XRN-3210B2','XRN-6410B2','XRN-6410RB2',
     'PRN-3200B4','PRN-6400B4',
+    'Lain-lain',
   ],
   'Bosch': [
     'DIVAR IP 2000','DIP-2042-2HD',
@@ -3862,6 +3880,7 @@ const NVR_MODELS = {
     'DIP-7180-00N','DIP-7183-4HD','DIP-7183-8HD','DIP-7184-8HD',
     'DIP-71F0-00N','DIP-71F6-16HD','DIP-738C-8HD','DIP-73GC-16HD','DIP-74C4-8HD',
     'DSA-N2P4X8HDD',
+    'Lain-lain',
   ],
   'Hikvision': [
     'DS-7608NI-I2','DS-7616NI-I2','DS-7632NI-I2',
@@ -3870,6 +3889,7 @@ const NVR_MODELS = {
     'DS-9616NI-I8','DS-9632NI-I8','DS-9664NI-I8',
     'DS-7608NI-K2','DS-7616NI-K2','DS-7600NI-Q2/P',
     'DS-7608NXI-I2','DS-7616NXI-I2','DS-7732NXI-I4',
+    'Lain-lain',
   ],
   'Dahua': [
     'NVR4208-8P-4KS2','DHI-NVR4208-8P-4KS2','NVR4216-4KS2','DHI-NVR4216-4KS2/L',
@@ -3878,6 +3898,7 @@ const NVR_MODELS = {
     'DHI-NVR5416-4KS2','DHI-NVR5432-4KS2',
     'DHI-NVR608-4KS2','DHI-NVR616-4KS2','DHI-NVR624-4KS2',
     'NVR5864-4KS2','NVR5864-R-4KS2',
+    'Lain-lain',
   ],
   'Axis': [
     'AXIS S1116','AXIS S1116 MT','AXIS S1216 Tower','AXIS S1216 Rack',
@@ -3885,6 +3906,7 @@ const NVR_MODELS = {
     'AXIS S1264 Rack','AXIS S1296 Rack',
     'AXIS S2212','AXIS S3008','AXIS S3008 Mk II','S3016','S3032',
     'AXIS S9302',
+    'Lain-lain',
   ],
   'Uniview': [
     'NVR301-08S3','NVR301-16S3','NVR301-08S3-P8','NVR301-16S3-P16',
@@ -3892,11 +3914,13 @@ const NVR_MODELS = {
     'NVR304-16S','NVR304-32S',
     'NVR308-32R','NVR308-64R',
     'NVR502-08B-P','NVR504-16B','NVR508-32E-R2',
+    'Lain-lain',
   ],
   'Vivotek': [
     'ND8301','ND8321','ND8322P','ND8422P',
     'ND9323P','ND9424P','ND9441P','ND9541','ND9541P',
     'NR8401',
+    'Lain-lain',
   ],
   'Lain-lain': [],
 };
@@ -3911,6 +3935,7 @@ const HDD_MODELS = {
     'WD121PURZ','WD121PURP','WD122PURP','WD140PURZ','WD141PURP','WD142PURP',
     'WD180PURZ','WD180PURP','WD181PURP','WD221PURP','WD241PURP','WD260PURP',
     'WD8001PURP','WD8002PURP',
+    'Lain-lain',
   ],
   'Seagate': [
     'ST1000VX005','ST1000VX013','ST2000VX003','ST2000VX008','ST2000VX012','ST2000VX015','ST2000VX017',
@@ -3920,6 +3945,7 @@ const HDD_MODELS = {
     'ST8000VX0002','ST8000VX0022','ST8000VX010','ST8000VE001',
     'ST10000VX0004','ST10000VE0008','ST10000VE001','ST12000VX0001','ST12000VE001',
     'ST16000VE001','ST16000VE002','ST18000VE002','ST20000VE002',
+    'Lain-lain',
   ],
   'Toshiba': [
     'HDWT120UZSVA','HDWT140UZSVA','HDWT160UZSVA','HDWT180UZSVA',
@@ -3927,6 +3953,7 @@ const HDD_MODELS = {
     'HDWT840UZSVA','HDWT860UZSVA','HDWT880UZSVA','HDWT31AUZSVA',
     'MD04ACA500','MD04ACA600',
     'MG07ACA14TE','MG08ACA16TE','MG09ACA14TE','MG09ACA16TE','MG09ACA18TE','MG10ACA20TE',
+    'Lain-lain',
   ],
   'Lain-lain': [],
 };
@@ -3934,7 +3961,7 @@ const HDD_CAPACITIES = ['500GB','1TB','2TB','3TB','4TB','6TB','8TB','10TB','12TB
 
 // PoE/network switch brands & models commonly used by CCTV integrators over
 // roughly the last 5 years (2020-2025).
-const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Lain-lain'];
+const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Allied Telesis','Lain-lain'];
 const SWITCH_MODELS = {
   'Hikvision': [
     'DS-3E0105P-E (5-Port PoE)','DS-3E0109P-E (8-Port PoE)','DS-3E0510HP-E (8-Port PoE)',
@@ -3942,6 +3969,7 @@ const SWITCH_MODELS = {
     'DS-3E0520HP-E (16-Port PoE)','DS-3E0526P-E (24-Port PoE)',
     'DS-3E1318P-EI (16-Port PoE)','DS-3E1318P-EI/M (16-Port PoE)','DS-3E1326P-EI (24-Port PoE)','DS-3E1526P-EI (24-Port PoE)',
     'DS-3E2528P-SI (24-Port PoE)','DS-3E1552P-SI (48-Port PoE)',
+    'Lain-lain',
   ],
   'Dahua': [
     'PFS3006-4ET-60 (4-Port PoE)','PFS3008-8GT-96 (8-Port PoE)','PFS3010-8ET-96 (8-Port PoE)','PFS3110-8ET-96 (8-Port PoE)',
@@ -3950,6 +3978,7 @@ const SWITCH_MODELS = {
     'PFS4218-16GT-135 (16-Port PoE)','PFS4218-16GT-190 (16-Port PoE)','PFS4218-16GT-240 (16-Port PoE)',
     'PFS3226-24GT-240 (24-Port PoE)','PFS4226-24GT-240 (24-Port PoE)','PFS4226-24GT-360 (24-Port PoE)','PFS5228-24GT-410 (24-Port PoE)',
     'PFS5210-48T (48-Port)',
+    'Lain-lain',
   ],
   'TP-Link': [
     'TL-SF1006P (6-Port PoE)','TL-SF1008P (8-Port PoE)',
@@ -3959,6 +3988,7 @@ const SWITCH_MODELS = {
     'TL-SG3210 (8-Port, non-PoE uplink)','TL-SX3016F',
     'TL-SL1218P (16-Port PoE)','TL-SL1310P (8-Port PoE)',
     'Omada TL-SG3210XHP-M2','LS108GP (8-Port PoE)',
+    'Lain-lain',
   ],
   'D-Link': [
     'DES-1210-28P (24-Port PoE)',
@@ -3966,12 +3996,14 @@ const SWITCH_MODELS = {
     'DGS-1210-10P (8-Port PoE)','DGS-1210-10MP (8-Port PoE)',
     'DGS-1210-28P (24-Port PoE)','DGS-1210-28MP (24-Port PoE)','DGS-1210-28P/ME (24-Port PoE)',
     'DGS-1210-52MP (48-Port PoE)',
+    'Lain-lain',
   ],
   'Cisco': [
     'SF350-24P (24-Port PoE)','SF350-48P (48-Port PoE)',
     'SG350-10P (8-Port PoE)','SG350-28P (24-Port PoE)','SG350-52P (48-Port PoE)','SG350-8PD (8-Port PoE)',
     'CBS350-8P-2G (8-Port PoE)','CBS350-24P-4G (24-Port PoE)','CBS350-48P-4G (48-Port PoE)',
     'C1300-24P-4G (24-Port PoE)','Catalyst 9200L','Catalyst 2960-X',
+    'Lain-lain',
   ],
   'Ubiquiti': [
     'US-8-60W (8-Port PoE)','US-16-150W (16-Port PoE)',
@@ -3980,6 +4012,7 @@ const SWITCH_MODELS = {
     'USW-Lite-8-PoE (8-Port PoE)','USW-16-PoE (16-Port PoE)',
     'USW-24-PoE (24-Port PoE)','USW-48-PoE (48-Port PoE)',
     'USW-Pro-24-PoE (24-Port PoE)','USW-Pro-48-PoE (48-Port PoE)','USW-Pro-Max-24-PoE (24-Port PoE)','USW-Flex',
+    'Lain-lain',
   ],
   'Netgear': [
     'GS108PP (8-Port PoE)','GS110TP (8-Port PoE)',
@@ -3987,6 +4020,7 @@ const SWITCH_MODELS = {
     'GS716TP (16-Port PoE)','GS716TPP (16-Port PoE)',
     'GS724TP (24-Port PoE)','GS728TP (24-Port PoE)',
     'GS748TP (48-Port PoE)','GS752TP (48-Port PoE)','M4250-26G4F-PoE+',
+    'Lain-lain',
   ],
   'Uniview': [
     'NSW2010-8P-2T-IN (8-Port PoE)','NSW2020-16P-2T-DIN (16-Port PoE)',
@@ -3994,6 +4028,12 @@ const SWITCH_MODELS = {
     'NSW2010-16T2GC-POE-IN (16-Port PoE)','NSW2020-16T1GT1GC-POE-IN (16-Port PoE)','NSW162PX (16-Port PoE)',
     'NSW2010-24T2GC-POE-IN (24-Port PoE)','NSW2020-24T1GT1GC-POE-IN (24-Port PoE)','NSW242PX (24-Port PoE)',
     'NSW3000-8T2GT-POE-IN (8-Port PoE)','NSW3000-16T1GT1GC-POE-IN (16-Port PoE)','NSW3000-24T1GT1GC-POE-IN (24-Port PoE)',
+    'Lain-lain',
+  ],
+  'Allied Telesis': [
+    'x950-28XSQ (Core Switch, 24-Port + 4x25G SFP28)',
+    'GS980MX/28PSM (24/8-Port PoE)',
+    'Lain-lain',
   ],
   'Lain-lain': [],
 };
@@ -4035,10 +4075,10 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:'',installDate:''});
-    const nNVR = reactive({name:'',type:'NVR',brand:'',model:'',serial:'',ip:'',installDate:''});
-    const nHDD = reactive({brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''});
-    const nSW  = reactive({brand:'',model:'',serial:'',ports:'',installDate:''});
+    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:''});
+    const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:''});
+    const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''});
+    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:''});
     const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:''});
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
@@ -4717,13 +4757,97 @@ createApp({
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:'',installDate:''},
-      nNVR:  {name:'',type:'NVR',brand:'',model:'',serial:'',ip:'',installDate:''},
-      nHDD:  {brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''},
-      nSW:   {brand:'',model:'',serial:'',ports:'',installDate:''},
+      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:''},
+      nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:''},
+      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''},
+      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:''},
       nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''},
     };
+
+    // ---- Crowdsourced brand/model dropdown growth ----
+    // CAMERA_MODELS/NVR_MODELS/HDD_MODELS/SWITCH_MODELS and
+    // BRANDS/HDD_BRANDS/SWITCH_BRANDS above are the built-in hardcoded
+    // lists. When someone picks "Lain-lain" and types a brand/model that
+    // isn't already known, it's persisted to Firestore so it becomes a real
+    // dropdown option for everyone afterwards — not just this browser
+    // session. "Lain-lain" always stays as the last option so there's
+    // always an escape hatch to add the next one.
+    const CUSTOM_EQUIP_OPTIONS_COLLECTION = 'customEquipmentOptions';
+    const BRAND_LISTS = { BRANDS, HDD_BRANDS, SWITCH_BRANDS };
+    const EQUIP_MODEL_DICTS = { cameras: CAMERA_MODELS, nvr: NVR_MODELS, hdd: HDD_MODELS, switches: SWITCH_MODELS };
+    const customBrands = reactive({ BRANDS: [], HDD_BRANDS: [], SWITCH_BRANDS: [] });
+    const customModels = reactive({ cameras: {}, nvr: {}, hdd: {}, switches: {} });
+
+    async function loadCustomEquipmentOptions() {
+      try {
+        const snap = await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).get();
+        snap.forEach(doc => {
+          const d = doc.data();
+          if(d.kind === 'brand' && customBrands[d.listKey] !== undefined) {
+            customBrands[d.listKey] = d.items || [];
+          } else if(d.kind === 'model' && customModels[d.equipType]) {
+            customModels[d.equipType][d.brand] = d.items || [];
+          }
+        });
+      } catch(e) { console.warn('loadCustomEquipmentOptions failed:', e); }
+    }
+
+    // Case-insensitive de-duped merge: built-in list (minus its own trailing
+    // "Lain-lain") + crowdsourced additions + "Lain-lain" always last.
+    function _mergeOptionList(builtIn, custom) {
+      const seen = new Set();
+      const merged = [];
+      [...builtIn.filter(v => v !== 'Lain-lain'), ...custom].forEach(v => {
+        const k = String(v).trim().toLowerCase();
+        if(!k || seen.has(k)) return;
+        seen.add(k);
+        merged.push(v);
+      });
+      merged.push('Lain-lain');
+      return merged;
+    }
+    function brandOptionsFor(listKey) {
+      if(!BRAND_LISTS[listKey]) return ['Lain-lain'];
+      return _mergeOptionList(BRAND_LISTS[listKey], customBrands[listKey] || []);
+    }
+    function modelOptionsFor(equipType, brand) {
+      if(!EQUIP_MODEL_DICTS[equipType] || !brand) return [];
+      const builtIn = EQUIP_MODEL_DICTS[equipType][brand] || [];
+      const custom = customModels[equipType]?.[brand] || [];
+      return _mergeOptionList(builtIn, custom);
+    }
+
+    async function _maybeAddCustomBrand(listKey, brand) {
+      if(!BRAND_LISTS[listKey] || !brand || brand === 'Lain-lain') return;
+      const known = brandOptionsFor(listKey).map(b => b.trim().toLowerCase());
+      const val = brand.trim();
+      if(known.includes(val.toLowerCase())) return; // already known, nothing new to persist
+      if(!customBrands[listKey]) customBrands[listKey] = [];
+      customBrands[listKey].push(val); // optimistic local update — shows immediately, no reload needed
+      try {
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('brand__'+listKey).set({
+          kind: 'brand', listKey,
+          items: firebase.firestore.FieldValue.arrayUnion(val),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } catch(e) { console.warn('Gagal simpan brand custom ke cloud:', e); }
+    }
+    async function _maybeAddCustomModel(equipType, brand, model) {
+      if(!EQUIP_MODEL_DICTS[equipType] || !brand || !model || model === 'Lain-lain') return;
+      const known = modelOptionsFor(equipType, brand).map(m => m.trim().toLowerCase());
+      const val = model.trim();
+      if(known.includes(val.toLowerCase())) return;
+      if(!customModels[equipType][brand]) customModels[equipType][brand] = [];
+      customModels[equipType][brand].push(val);
+      try {
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand).set({
+          kind: 'model', equipType, brand,
+          items: firebase.firestore.FieldValue.arrayUnion(val),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+      } catch(e) { console.warn('Gagal simpan model custom ke cloud:', e); }
+    }
 
     // ---- Project split ----
     const currentProject = ref('cctv');
@@ -6387,6 +6511,32 @@ createApp({
         } else {
           nMISC.categoryCustom = '';
         }
+      } else {
+        // Same idea for Kamera/NVR/HDD/Switch: saved brand/model may be a
+        // crowdsourced custom value — reflect that as "Lain-lain" + the
+        // custom text so editing shows it correctly. brandOptionsFor/
+        // modelOptionsFor already include known crowdsourced entries, so
+        // this only trips "Lain-lain" for values still unknown right now.
+        const brandListKey = { cameras:'BRANDS', nvr:'BRANDS', hdd:'HDD_BRANDS', switches:'SWITCH_BRANDS' }[key];
+        if(brandListKey) {
+          const knownBrands = brandOptionsFor(brandListKey).map(b => b.trim().toLowerCase());
+          if(item.brand && !knownBrands.includes(item.brand.trim().toLowerCase())) {
+            refs[key].brand = 'Lain-lain';
+            refs[key].brandCustom = item.brand;
+          } else {
+            refs[key].brandCustom = '';
+          }
+        }
+        const equipType = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switches:'switches' }[key];
+        if(equipType) {
+          const knownModels = modelOptionsFor(equipType, item.brand).map(m => m.trim().toLowerCase());
+          if(item.model && !knownModels.includes(item.model.trim().toLowerCase())) {
+            refs[key].model = 'Lain-lain';
+            refs[key].modelCustom = item.model;
+          } else {
+            refs[key].modelCustom = '';
+          }
+        }
       }
       equipEditIdx[key] = idx;
       // The edit form sits above the (possibly long) list — scroll it into
@@ -6415,55 +6565,79 @@ createApp({
       return `${fieldLabel} "${dup.value}" sudah digunakan oleh "${label}".`;
     }
 
+    // If the user picked "Lain-lain" from a Brand and/or Model dropdown,
+    // resolve each to their typed custom text (falls back to the literal
+    // "Lain-lain" only if they left the custom box empty) — and never let
+    // the scratch `brandCustom`/`modelCustom` fields themselves leak into
+    // the saved equipment record.
+    function _resolveBrandModel(formObj) {
+      const { brandCustom, modelCustom, ...rest } = formObj;
+      const brand = (rest.brand === 'Lain-lain' && brandCustom && brandCustom.trim()) ? brandCustom.trim() : rest.brand;
+      const model = (rest.model === 'Lain-lain' && modelCustom && modelCustom.trim()) ? modelCustom.trim() : rest.model;
+      return { ...rest, brand, model };
+    }
+
     function addCamera() {
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
       if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       if(!nCam.model){showToast('Sila masukkan model kamera','error');return;}
       if(!nCam.serial){showToast('Sila masukkan No. Siri kamera','error');return;}
+      const resolved = _resolveBrandModel(nCam);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
-      const dup = _findDupConflict('cameras', list, nCam, equipEditIdx.cameras);
+      const dup = _findDupConflict('cameras', list, resolved, equipEditIdx.cameras);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...nCam, _uid:list[equipEditIdx.cameras]._uid||_genId()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
-      else list.push({...nCam, _uid:_genId()});
-      Object.assign(nCam,{name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:'',_uid:''});
+      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...resolved, _uid:list[equipEditIdx.cameras]._uid||_genId()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
+      else list.push({...resolved, _uid:_genId()});
+      _maybeAddCustomBrand('BRANDS', resolved.brand);
+      _maybeAddCustomModel('cameras', resolved.brand, resolved.model);
+      Object.assign(nCam,{name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',_uid:''});
     }
     function addNVR() {
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       if(!nNVR.model){showToast('Sila masukkan model NVR','error');return;}
       if(!nNVR.serial){showToast('Sila masukkan No. Siri NVR','error');return;}
+      const resolved = _resolveBrandModel(nNVR);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
-      const dup = _findDupConflict('nvr', list, nNVR, equipEditIdx.nvr);
+      const dup = _findDupConflict('nvr', list, resolved, equipEditIdx.nvr);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...nNVR, _uid:list[equipEditIdx.nvr]._uid||_genId()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
-      else list.push({...nNVR, _uid:_genId()});
-      Object.assign(nNVR,{name:'',type:'NVR',brand:'',model:'',serial:'',ip:'',_uid:''});
+      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
+      else list.push({...resolved, _uid:_genId()});
+      _maybeAddCustomBrand('BRANDS', resolved.brand);
+      _maybeAddCustomModel('nvr', resolved.brand, resolved.model);
+      Object.assign(nNVR,{name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',_uid:''});
     }
     function addHDD() {
       if(!nHDD.brand){showToast('Sila masukkan brand HDD','error');return;}
       if(!nHDD.model){showToast('Sila masukkan model HDD','error');return;}
       if(!nHDD.serial){showToast('Sila masukkan No. Siri HDD','error');return;}
+      const resolved = _resolveBrandModel(nHDD);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].hdd;
-      const dup = _findDupConflict('hdd', list, nHDD, equipEditIdx.hdd);
+      const dup = _findDupConflict('hdd', list, resolved, equipEditIdx.hdd);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...nHDD, _uid:list[equipEditIdx.hdd]._uid||_genId()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
-      else list.push({...nHDD, _uid:_genId()});
-      Object.assign(nHDD,{brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',_uid:''});
+      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...resolved, _uid:list[equipEditIdx.hdd]._uid||_genId()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
+      else list.push({...resolved, _uid:_genId()});
+      _maybeAddCustomBrand('HDD_BRANDS', resolved.brand);
+      _maybeAddCustomModel('hdd', resolved.brand, resolved.model);
+      Object.assign(nHDD,{brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',_uid:''});
     }
     function addSwitch() {
       if(!nSW.brand){showToast('Sila masukkan brand switch','error');return;}
       if(!nSW.model){showToast('Sila masukkan model switch','error');return;}
       if(!nSW.serial){showToast('Sila masukkan No. Siri switch','error');return;}
+      const resolved = _resolveBrandModel(nSW);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].switches;
-      const dup = _findDupConflict('switches', list, nSW, equipEditIdx.switches);
+      const dup = _findDupConflict('switches', list, resolved, equipEditIdx.switches);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...nSW, _uid:list[equipEditIdx.switches]._uid||_genId()}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
-      else list.push({...nSW, _uid:_genId()});
-      Object.assign(nSW,{brand:'',model:'',serial:'',ports:'',_uid:''});
+      if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...resolved, _uid:list[equipEditIdx.switches]._uid||_genId()}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
+      else list.push({...resolved, _uid:_genId()});
+      _maybeAddCustomBrand('SWITCH_BRANDS', resolved.brand);
+      _maybeAddCustomModel('switches', resolved.brand, resolved.model);
+      Object.assign(nSW,{brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',_uid:''});
     }
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
@@ -8184,6 +8358,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             }
           } catch(e) { console.warn('Profile load error:', e); }
           await loadAll();
+          loadCustomEquipmentOptions();
           checkPmDraftRecovery();
           checkEquipDraftRecovery();
         } else {
@@ -8223,6 +8398,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
+      brandOptionsFor, modelOptionsFor,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
