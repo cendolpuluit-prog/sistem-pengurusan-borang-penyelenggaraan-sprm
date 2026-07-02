@@ -904,8 +904,8 @@ tr:hover td{background:#f9fbff}
       <div class="flex gap-8" style="align-items:center">
         <span class="text-sm text-muted" style="white-space:nowrap">{{today}}</span>
         <!-- Online users indicator -->
-        <div style="position:relative">
-          <button class="btn btn-outline btn-sm" @click="showOnlinePanel=!showOnlinePanel" style="position:relative;padding:7px 10px" title="Pengguna Online">
+        <div class="online-panel-wrap" style="position:relative">
+          <button class="btn btn-outline btn-sm" @click.stop="showOnlinePanel=!showOnlinePanel" style="position:relative;padding:7px 10px" title="Pengguna Online">
             🟢
             <span v-if="onlineUsers.length" style="position:absolute;top:-4px;right:-4px;background:#198754;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{onlineUsers.length>9?'9+':onlineUsers.length}}</span>
           </button>
@@ -926,8 +926,8 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
         <!-- Bell notifications -->
-        <div style="position:relative">
-          <button class="btn btn-outline btn-sm" @click="showNotifPanel=!showNotifPanel" style="position:relative;padding:7px 10px">
+        <div class="notif-panel-wrap" style="position:relative">
+          <button class="btn btn-outline btn-sm" @click.stop="showNotifPanel=!showNotifPanel" style="position:relative;padding:7px 10px">
             🔔
             <span v-if="unreadCount>0" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{unreadCount>9?'9+':unreadCount}}</span>
           </button>
@@ -972,6 +972,18 @@ tr:hover td{background:#f9fbff}
 
       <div v-if="page==='dashboard' && !initialLoading">
 
+        <!-- DASHBOARD YEAR FILTER -->
+        <div class="flex justify-between items-center" style="margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <div class="flex items-center gap-8" style="font-size:.83rem;color:#555">
+            <label for="dashboardYearSel" style="font-weight:600;color:#002244">📅 Tahun:</label>
+            <select id="dashboardYearSel" class="form-control" style="width:110px" v-model="dashboardYear">
+              <option v-for="y in dashboardYears" :key="y" :value="y">{{y}}</option>
+            </select>
+            <span style="color:#999">— menapis bilangan rekod PM &amp; carta di bawah sahaja. Skor kesihatan &amp; amaran sentiasa terkini.</span>
+          </div>
+          <button class="btn btn-outline btn-sm" @click="yirYear=dashboardYear; printYearInReview()">📋 Jana Laporan Tahunan ({{dashboardYear}})</button>
+        </div>
+
         <!-- CCTV STATS -->
         <div style="font-size:.75rem;font-weight:700;letter-spacing:.1em;color:#005599;text-transform:uppercase;margin-bottom:8px">📹 Projek CCTV SPRM</div>
         <div class="stat-grid" style="margin-bottom:24px">
@@ -985,7 +997,7 @@ tr:hover td{background:#f9fbff}
           </div>
           <div class="stat-card">
             <div class="num">{{pmThisYearCCTV}}</div>
-            <div class="lbl">PM CCTV Tahun Ini</div>
+            <div class="lbl">PM CCTV {{dashboardYear}}</div>
           </div>
         </div>
 
@@ -1002,7 +1014,7 @@ tr:hover td{background:#f9fbff}
           </div>
           <div class="stat-card">
             <div class="num">{{pmThisYearVIR}}</div>
-            <div class="lbl">PM VIR Tahun Ini</div>
+            <div class="lbl">PM VIR {{dashboardYear}}</div>
           </div>
         </div>
 
@@ -1079,11 +1091,11 @@ tr:hover td{background:#f9fbff}
           <div class="card-title">📊 Carta Penyelenggaraan</div>
           <div class="chart-grid">
             <div>
-              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">PM Rekod Per Site (Tahun Ini)</div>
+              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">PM Rekod Per Site ({{dashboardYear}})</div>
               <div class="chart-wrap"><canvas id="chartPMSite"></canvas></div>
             </div>
             <div>
-              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">Nisbah PM vs CM (Semua Rekod)</div>
+              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">Nisbah PM vs CM ({{dashboardYear}})</div>
               <div class="chart-wrap"><canvas id="chartPMType"></canvas></div>
             </div>
           </div>
@@ -1276,7 +1288,7 @@ tr:hover td{background:#f9fbff}
 
         <!-- CAMERAS TAB -->
         <div v-if="eqTab==='cameras'">
-          <div class="card">
+          <div class="card" id="equip-form-cameras">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Kamera</div>
               <div class="flex gap-8">
@@ -1286,7 +1298,7 @@ tr:hover td{background:#f9fbff}
                 </label>
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">
                   📄 Import Fail
-                  <input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'cameras')">
+                  <input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'cameras')">
                 </label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nCam')">↺ Reset</button>
               </div>
@@ -1330,19 +1342,23 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="card">
-            <div class="card-title">Senarai Kamera</div>
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Kamera</div>
+              <button v-if="equipSelected.cameras.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('cameras')">🗑 Padam Terpilih ({{equipSelected.cameras.size}})</button>
+            </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="i" :class="{'highlight-row':equipEditIdx.cameras===i}">
+                  <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="c._uid||i" :class="{'highlight-row':equipEditIdx.cameras===i}">
+                    <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
                     <td>{{i+1}}</td><td>{{c.name}}</td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.serial}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td colspan="8" class="empty">Tiada kamera. Tambah di atas.</td></tr>
+                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td colspan="9" class="empty">Tiada kamera. Tambah di atas.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1351,12 +1367,12 @@ tr:hover td{background:#f9fbff}
 
         <!-- NVR TAB -->
         <div v-if="eqTab==='nvr'">
-          <div class="card">
+          <div class="card" id="equip-form-nvr">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah NVR / Extension</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nNVR','serial')"></label>
-                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'nvr')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'nvr')"></label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nNVR')">↺ Reset</button>
               </div>
             </div>
@@ -1392,19 +1408,23 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="card">
-            <div class="card-title">Senarai NVR</div>
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai NVR</div>
+              <button v-if="equipSelected.nvr.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('nvr')">🗑 Padam Terpilih ({{equipSelected.nvr.size}})</button>
+            </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="i" :class="{'highlight-row':equipEditIdx.nvr===i}">
+                  <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="{'highlight-row':equipEditIdx.nvr===i}">
+                    <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
                     <td>{{i+1}}</td><td>{{n.name}}</td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td colspan="8" class="empty">Tiada NVR.</td></tr>
+                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td colspan="9" class="empty">Tiada NVR.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1413,10 +1433,10 @@ tr:hover td{background:#f9fbff}
 
         <!-- HDD TAB -->
         <div v-if="eqTab==='hdd'">
-          <div class="card">
+          <div class="card" id="equip-form-hdd">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Hard Disk</div>
-              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nHDD','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'hdd')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nHDD')">↺ Reset</button></div>
+              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nHDD','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'hdd')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nHDD')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nHDD'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nHDD','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
@@ -1452,19 +1472,23 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="card">
-            <div class="card-title">Senarai Hard Disk</div>
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Hard Disk</div>
+              <button v-if="equipSelected.hdd.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('hdd')">🗑 Padam Terpilih ({{equipSelected.hdd.size}})</button>
+            </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Config</th><th>NVR</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('hdd')" @change="toggleEquipSelectAll('hdd')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Config</th><th>NVR</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(h,i) in selSiteEquip.hdd||[]" :key="i" :class="{'highlight-row':equipEditIdx.hdd===i}">
+                  <tr v-for="(h,i) in selSiteEquip.hdd||[]" :key="h._uid||i" :class="{'highlight-row':equipEditIdx.hdd===i}">
+                    <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
                     <td>{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.config}}</td><td>{{h.nvrRef}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.hdd||[]).length"><td colspan="8" class="empty">Tiada HDD.</td></tr>
+                  <tr v-if="!(selSiteEquip.hdd||[]).length"><td colspan="9" class="empty">Tiada HDD.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1473,10 +1497,10 @@ tr:hover td{background:#f9fbff}
 
         <!-- SWITCH TAB -->
         <div v-if="eqTab==='switch'">
-          <div class="card">
+          <div class="card" id="equip-form-switches">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Network Switch</div>
-              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nSW','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'switches')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nSW')">↺ Reset</button></div>
+              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nSW','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'switches')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nSW')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nSW'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nSW','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
@@ -1503,19 +1527,23 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="card">
-            <div class="card-title">Senarai Network Switch</div>
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Network Switch</div>
+              <button v-if="equipSelected.switches.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('switches')">🗑 Padam Terpilih ({{equipSelected.switches.size}})</button>
+            </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="i" :class="{'highlight-row':equipEditIdx.switches===i}">
+                  <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
+                    <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}}</td><td>{{s.serial}}</td><td>{{s.ports}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.switches||[]).length"><td colspan="6" class="empty">Tiada switch.</td></tr>
+                  <tr v-if="!(selSiteEquip.switches||[]).length"><td colspan="7" class="empty">Tiada switch.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1524,10 +1552,13 @@ tr:hover td{background:#f9fbff}
 
         <!-- ALARM TAB -->
         <div v-if="eqTab==='alarm'">
-          <div class="card">
+          <div class="card" id="equip-form-alarms">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Alarm SMS System</div>
-              <button class="btn btn-outline btn-sm" @click="resetForm('nALM')">↺ Reset</button>
+              <div class="flex gap-8">
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'alarms')"></label>
+                <button class="btn btn-outline btn-sm" @click="resetForm('nALM')">↺ Reset</button>
+              </div>
             </div>
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="nALM.name" placeholder="cth: GSM SMS Controller-Alarm S130"></div>
@@ -1545,19 +1576,23 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="card">
-            <div class="card-title">Senarai Alarm</div>
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Alarm</div>
+              <button v-if="equipSelected.alarms.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('alarms')">🗑 Padam Terpilih ({{equipSelected.alarms.size}})</button>
+            </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="i" :class="{'highlight-row':equipEditIdx.alarms===i}">
+                  <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="{'highlight-row':equipEditIdx.alarms===i}">
+                    <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
                     <td>{{i+1}}</td><td>{{a.name}}</td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td colspan="7" class="empty">Tiada alarm.</td></tr>
+                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td colspan="8" class="empty">Tiada alarm.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1566,12 +1601,12 @@ tr:hover td{background:#f9fbff}
 
         <!-- LAIN-LAIN PERALATAN TAB (CCTV only — Monitor/TV/PC/UPS/POE dll.) -->
         <div v-if="eqTab==='misc' && currentProject!=='vir'">
-          <div class="card">
+          <div class="card" id="equip-form-misc">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Peralatan Lain-lain</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nMISC','serial')"></label>
-                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf" style="display:none" @change="importEquipFile($event,'misc')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'misc')"></label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nMISC')">↺ Reset</button>
               </div>
             </div>
@@ -1599,19 +1634,23 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="card">
-            <div class="card-title">Senarai Peralatan Lain-lain</div>
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Peralatan Lain-lain</div>
+              <button v-if="equipSelected.misc.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('misc')">🗑 Padam Terpilih ({{equipSelected.misc.size}})</button>
+            </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="i" :class="{'highlight-row':equipEditIdx.misc===i}">
+                  <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="{'highlight-row':equipEditIdx.misc===i}">
+                    <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
                     <td>{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.misc||[]).length"><td colspan="7" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
+                  <tr v-if="!(selSiteEquip.misc||[]).length"><td colspan="8" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1779,7 +1818,7 @@ tr:hover td{background:#f9fbff}
                 <th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kualiti Paparan</th><th>Nota</th>
               </tr></thead>
               <tbody>
-                <tr v-for="(c,i) in pm.cameras" :key="i">
+                <tr v-for="(c,i) in pm.cameras" :key="c._uid||i">
                   <td>{{i+1}}</td>
                   <td><input class="form-control" style="min-width:120px" v-model="c.name"></td>
                   <td><input class="form-control" style="min-width:110px" v-model="c.ip"></td>
@@ -1815,7 +1854,7 @@ tr:hover td{background:#f9fbff}
               <table>
                 <thead><tr><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Software Operation</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr v-for="(n,i) in pm.nvr" :key="i">
+                  <tr v-for="(n,i) in pm.nvr" :key="n._uid||i">
                     <td>{{i+1}}</td>
                     <td><input class="form-control" style="min-width:140px" v-model="n.name"></td>
                     <td><select class="form-control status-sel" v-model="n.brand"><option v-for="b in BRANDS" :key="b">{{b}}</option></select></td>
@@ -1835,7 +1874,7 @@ tr:hover td{background:#f9fbff}
               <table>
                 <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Download</th><th>Quick Playback</th><th>Time</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr v-for="(h,i) in pm.hdd" :key="i">
+                  <tr v-for="(h,i) in pm.hdd" :key="h._uid||i">
                     <td>{{i+1}}</td>
                     <td><input class="form-control" style="min-width:100px" v-model="h.brand"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="h.model"></td>
@@ -1865,7 +1904,7 @@ tr:hover td{background:#f9fbff}
               <table>
                 <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Error Notification</th><th>Port Status</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr v-for="(s,i) in pm.switches" :key="i">
+                  <tr v-for="(s,i) in pm.switches" :key="s._uid||i">
                     <td>{{i+1}}</td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.brand"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.model"></td>
@@ -1886,7 +1925,7 @@ tr:hover td{background:#f9fbff}
               <table>
                 <thead><tr><th>#</th><th>Nama</th><th>Jenis</th><th>Model</th><th>No. Siri</th><th>Functionality</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr v-for="(a,i) in pm.alarms" :key="i">
+                  <tr v-for="(a,i) in pm.alarms" :key="a._uid||i">
                     <td>{{i+1}}</td><td>{{a.name}}</td><td>{{a.type}}</td>
                     <td><input class="form-control" style="min-width:100px" v-model="a.model"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="a.serial"></td>
@@ -1904,7 +1943,7 @@ tr:hover td{background:#f9fbff}
               <table>
                 <thead><tr><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Status</th><th>Nota</th></tr></thead>
                 <tbody>
-                  <tr v-for="(m,i) in pm.misc" :key="i">
+                  <tr v-for="(m,i) in pm.misc" :key="m._uid||i">
                     <td>{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td>{{m.brand}}</td>
                     <td><input class="form-control" style="min-width:100px" v-model="m.model"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="m.serial"></td>
@@ -2820,34 +2859,28 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
 
-      <!-- ====== IMPORT EQUIPMENT FILE PREVIEW MODAL ====== -->
+      <!-- ====== IMPORT EQUIPMENT FILE RESULT MODAL ====== -->
       <div v-if="importState.show" class="modal-bg" @click.self="importState.show=false">
-        <div class="modal" style="max-width:900px">
-          <h3>📄 Semak Data Import ({{importState.rows.length}} rekod dikesan)</h3>
-          <div v-if="importState.loading" class="empty">⏳ Menganalisa fail...</div>
-          <p v-else-if="importState.err" style="color:#c62828;font-size:.85rem;margin-bottom:12px">{{importState.err}}</p>
-          <div v-if="!importState.loading && importState.rows.length" class="tbl-wrap" style="max-height:50vh">
-            <table class="equip-table">
-              <thead>
-                <tr>
-                  <th style="width:30px"></th>
-                  <th v-for="k in IMPORT_FIELD_KEYS[importState.kind]" :key="k">{{k}}</th>
-                  <th style="width:40px"></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(r,i) in importState.rows" :key="i">
-                  <td><input type="checkbox" v-model="r._include"></td>
-                  <td v-for="k in IMPORT_FIELD_KEYS[importState.kind]" :key="k"><input class="form-control" style="padding:5px 8px;font-size:.78rem" v-model="r[k]"></td>
-                  <td><button class="btn btn-danger btn-sm btn-icon" @click="removeImportRow(i)">🗑</button></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <p class="text-sm text-muted mb-12" style="margin-top:10px">Semak &amp; betulkan data jika perlu sebelum import. Hanya baris bertanda ✓ akan ditambah.</p>
-          <div class="flex gap-8" style="margin-top:10px">
-            <button class="btn btn-primary" :disabled="importState.loading || !importState.rows.length" @click="confirmImportRows">✓ Import {{importState.rows.filter(r=>r._include).length}} Rekod</button>
-            <button class="btn btn-outline" @click="importState.show=false">Batal</button>
+        <div class="modal" style="max-width:640px">
+          <h3>📄 Keputusan Import</h3>
+          <div v-if="importState.loading" class="empty">⏳ Menganalisa fail{{importState.ocrProgress?' (OCR '+importState.ocrProgress+'%)':'...'}}</div>
+          <template v-else>
+            <p v-if="importState.err" style="color:#c62828;font-size:.85rem;margin-bottom:12px">{{importState.err}}</p>
+            <p v-if="importState.added" style="color:#1e7e34;font-size:.88rem;font-weight:600;margin-bottom:12px">✓ {{importState.added}} rekod berjaya ditambah terus ke table di bawah.</p>
+            <div v-if="importState.duplicates.length">
+              <p style="color:#c62828;font-size:.85rem;font-weight:600;margin-bottom:8px">⚠️ {{importState.duplicates.length}} rekod dilangkau — sudah wujud dalam senarai:</p>
+              <div class="tbl-wrap" style="max-height:40vh">
+                <table class="equip-table">
+                  <thead><tr><th>{{importState.duplicates[0] && importState.duplicates[0].field==='ip' ? 'IP Address' : 'No. Siri'}}</th><th>Sudah wujud pada</th></tr></thead>
+                  <tbody>
+                    <tr v-for="(d,i) in importState.duplicates" :key="i"><td>{{d.value}}</td><td>{{d.label}}</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </template>
+          <div class="flex gap-8" style="margin-top:14px">
+            <button class="btn btn-outline" @click="importState.show=false">Tutup</button>
           </div>
         </div>
       </div>
@@ -4680,8 +4713,18 @@ createApp({
     const pmThisYear = computed(() => pmRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
     const pmCCTV = computed(() => pmRecords.value.filter(r=>(r.project||'cctv')==='cctv'));
     const pmVIR  = computed(() => pmRecords.value.filter(r=>r.project==='vir'));
-    const pmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===new Date().getFullYear()).length);
-    const pmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===new Date().getFullYear()).length);
+
+    // ---- Dashboard year filter — scopes the PM-count stat cards and the
+    // two charts below to a single year; health-score/overdue/approaching
+    // stay unfiltered since those are always relative to "today". ----
+    const dashboardYear = ref(new Date().getFullYear());
+    const dashboardYears = computed(() => {
+      const years = new Set(pmRecords.value.map(r=>r.year).filter(Boolean));
+      years.add(new Date().getFullYear());
+      return [...years].sort((a,b)=>b-a);
+    });
+    const pmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===dashboardYear.value).length);
+    const pmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===dashboardYear.value).length);
 
     const filteredPM = computed(() => pmRecords.value.filter(r=>{
       const rProj = r.project || 'cctv';
@@ -4901,10 +4944,10 @@ createApp({
     let chartTypeInst = null;
 
     function initCharts() {
-      const thisYear = new Date().getFullYear();
-      // Bar chart: PM records per site this year (top 8)
+      const yr = dashboardYear.value;
+      // Bar chart: PM records per site for the selected dashboard year (top 8)
       const siteCount = {};
-      pmRecords.value.filter(r => r.year === thisYear).forEach(r => {
+      pmRecords.value.filter(r => r.year === yr).forEach(r => {
         const code = [...SITES, ...VIR_SITES].find(s => s.id === r.siteId)?.code || r.siteName || r.siteId;
         siteCount[code] = (siteCount[code] || 0) + 1;
       });
@@ -4923,9 +4966,10 @@ createApp({
         });
       }
 
-      // Doughnut chart: PM vs CM
-      const pmCount = pmRecords.value.filter(r => r.maintType !== 'CM').length;
-      const cmCount = pmRecords.value.filter(r => r.maintType === 'CM').length;
+      // Doughnut chart: PM vs CM, scoped to the same selected year
+      const yrRecords = pmRecords.value.filter(r => r.year === yr);
+      const pmCount = yrRecords.filter(r => r.maintType !== 'CM').length;
+      const cmCount = yrRecords.filter(r => r.maintType === 'CM').length;
       const doughCanvas = document.getElementById('chartPMType');
       if(doughCanvas) {
         if(chartTypeInst) chartTypeInst.destroy();
@@ -4947,6 +4991,9 @@ createApp({
     });
 
     watch(pmRecords, async () => {
+      if(page.value === 'dashboard') { await nextTick(); initCharts(); }
+    });
+    watch(dashboardYear, async () => {
       if(page.value === 'dashboard') { await nextTick(); initCharts(); }
     });
 
@@ -5346,6 +5393,7 @@ createApp({
       nvr:      ['name','type','brand','model','serial','ip'],
       hdd:      ['brand','model','serial','capacity','config','nvrRef'],
       switches: ['brand','model','serial','ports'],
+      alarms:   ['name','type','brand','model','serial'],
       misc:     ['name','category','brand','model','serial'],
     };
     const IMPORT_HEADER_HINTS = {
@@ -5361,7 +5409,7 @@ createApp({
       nvrRef:   ['nvr','nvr ref','nvr berkaitan'],
       ports:    ['port','ports','bilangan port'],
     };
-    const importState = reactive({ show:false, kind:'', loading:false, err:'', rows:[] });
+    const importState = reactive({ show:false, kind:'', loading:false, err:'', added:0, duplicates:[], ocrProgress:0 });
 
     function _emptyRow(kind) {
       const row = { _include: true };
@@ -5444,29 +5492,118 @@ createApp({
       });
     }
 
-    async function _extractPdfText(file) {
+    // Groups OCR words into table rows/columns using their bounding-box
+    // x-position, so e.g. an IP-address column and a Name column that sit
+    // side-by-side in a screenshot stay in separate cells instead of being
+    // mashed into one blob of text.
+    function _wordsToRows(lines) {
+      return (lines || []).map(line => {
+        const words = (line.words || []).filter(w => w.text && w.text.trim());
+        if(!words.length) return null;
+        const avgW = words.reduce((s, w) => s + (w.bbox.x1 - w.bbox.x0), 0) / words.length;
+        const gapThresh = Math.max(avgW * 1.8, 20);
+        const cells = [[words[0]]];
+        for(let i = 1; i < words.length; i++) {
+          const prev = words[i - 1], w = words[i];
+          if(w.bbox.x0 - prev.bbox.x1 > gapThresh) cells.push([w]);
+          else cells[cells.length - 1].push(w);
+        }
+        return cells.map(c => c.map(w => w.text).join(' ').trim());
+      }).filter(Boolean);
+    }
+
+    // Runs OCR on an image/canvas and converts the recognized words into
+    // table rows via their layout, reusing the same header/column mapping
+    // logic as xlsx/csv imports.
+    async function _ocrToRows(source, kind) {
+      const { data } = await Tesseract.recognize(source, 'eng', {
+        logger: m => { if(m.status==='recognizing text') importState.ocrProgress = Math.round(m.progress*100); }
+      });
+      // Prefer bbox-based column detection (handles side-by-side table
+      // columns correctly); if the build's output has no word bboxes,
+      // fall back to plain-text heuristics rather than reporting no data.
+      const aoa = _wordsToRows(data.lines);
+      if(aoa.length) {
+        const rows = _rowsFromTable(aoa, kind);
+        if(rows.length) return rows;
+      }
+      return _rowsFromFreeText(data.text || '', kind);
+    }
+
+    async function _extractPdfPages(file) {
       if(window['pdfjsLib'] && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
       }
       const buf = await _readFileAsArrayBuffer(file);
       const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
       let text = '';
+      const canvases = [];
       for(let p = 1; p <= pdf.numPages; p++) {
         const page = await pdf.getPage(p);
         const content = await page.getTextContent();
         text += content.items.map(it => it.str).join(' ') + '\n';
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+        canvases.push(canvas);
       }
-      return text;
+      return { text, canvases };
+    }
+
+    // Adds parsed rows straight into the live equipment list (no manual
+    // review step) — skips any row whose IP (cameras/nvr) or Serial No.
+    // (everything else) already exists, since those are the closest thing
+    // this data model has to a unique identifier per equipment kind.
+    // targetProj/targetSiteId are pinned by the caller at the start of the
+    // (async, potentially long-running OCR) import — reading selSite/
+    // currentProject live here would target whatever site the user has
+    // since navigated to, not the one the file was scanned for.
+    function _autoAddRows(rows, kind, targetProj, targetSiteId) {
+      const store = targetProj === 'vir' ? virSiteEquip.value : siteEquip.value;
+      if(!store[targetSiteId]) store[targetSiteId] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      const list = store[targetSiteId][kind];
+      const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
+      const seen = new Map(list.map(x => [String(x[dupField]||'').trim().toLowerCase(), x]).filter(([k])=>k));
+      let added = 0;
+      const duplicates = [];
+      rows.forEach(r => {
+        const key = String(r[dupField]||'').trim().toLowerCase();
+        if(key && seen.has(key)) {
+          const existing = seen.get(key);
+          duplicates.push({ field: dupField, value: r[dupField], label: existing.name || existing.model || existing.serial || '(tiada nama)' });
+          return;
+        }
+        const item = { _uid: _genId() };
+        IMPORT_FIELD_KEYS[kind].forEach(k => item[k] = r[k] || '');
+        if(kind === 'cameras' && !item.camType) item.camType = 'Indoor';
+        if(kind === 'nvr' && !item.type) item.type = 'NVR';
+        if(kind === 'hdd' && !item.config) item.config = 'RAID 5';
+        if(kind === 'alarms' && !item.type) item.type = 'SMS Power Alert';
+        if(kind === 'misc' && !item.category) item.category = 'Monitor';
+        list.push(item);
+        if(key) seen.set(key, item);
+        added++;
+      });
+      return { added, duplicates };
     }
 
     async function importEquipFile(event, kind) {
       const file = event.target.files[0];
       event.target.value = '';
       if(!file) return;
-      importState.kind = kind; importState.err = ''; importState.loading = true; importState.rows = [];
+      // Pin the site/project this import targets right now — the user can
+      // dismiss the (still-loading) modal and navigate to a different site
+      // while OCR is still running in the background.
+      const targetProj = currentProject.value;
+      const targetSiteId = selSite.value.id;
+      const targetSiteName = selSite.value.name;
+      importState.kind = kind; importState.err = ''; importState.loading = true;
+      importState.added = 0; importState.duplicates = []; importState.ocrProgress = 0;
       importState.show = true;
       try {
         const ext = file.name.split('.').pop().toLowerCase();
+        const isImage = file.type.startsWith('image/') || ['png','jpg','jpeg','webp','bmp'].includes(ext);
         let rows = [];
         if(ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
           const buf = await _readFileAsArrayBuffer(file);
@@ -5475,43 +5612,35 @@ createApp({
           const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, defval: '' });
           rows = _rowsFromTable(aoa, kind);
         } else if(ext === 'pdf') {
-          const text = await _extractPdfText(file);
-          rows = _rowsFromFreeText(text, kind);
+          const { text, canvases } = await _extractPdfPages(file);
+          if(text.trim().length >= 8) {
+            rows = _rowsFromFreeText(text, kind);
+          } else {
+            // Scanned/image-only PDF: no text layer, so OCR each rendered page.
+            for(const canvas of canvases) rows.push(...await _ocrToRows(canvas, kind));
+          }
         } else if(ext === 'txt') {
           const text = await file.text();
           rows = _rowsFromFreeText(text, kind);
+        } else if(isImage) {
+          rows = await _ocrToRows(file, kind);
         } else {
-          importState.err = 'Format fail tidak disokong. Guna .txt, .csv, .xlsx atau .pdf.';
+          importState.err = 'Format fail tidak disokong. Guna .txt, .csv, .xlsx, .pdf atau imej (.png/.jpg).';
           importState.loading = false;
           return;
         }
-        if(!rows.length) { importState.err = 'Tiada data dapat diekstrak daripada fail ini.'; }
-        importState.rows = rows;
+        if(!rows.length) {
+          importState.err = 'Tiada data dapat diekstrak daripada fail ini. Cuba imej yang lebih jelas/tidak kabur.';
+        } else {
+          const result = _autoAddRows(rows, kind, targetProj, targetSiteId);
+          importState.added = result.added;
+          importState.duplicates = result.duplicates;
+          if(result.added) showToast(`${result.added} rekod berjaya ditambah ke "${targetSiteName}"! Jangan lupa klik "Simpan Semua".`);
+        }
       } catch(e) {
         importState.err = 'Gagal baca fail: ' + e.message;
       }
       importState.loading = false;
-    }
-
-    function removeImportRow(idx) { importState.rows.splice(idx, 1); }
-
-    function confirmImportRows() {
-      const kind = importState.kind;
-      const rows = importState.rows.filter(r => r._include);
-      if(!rows.length) { showToast('Tiada rekod dipilih untuk import.', 'error'); return; }
-      ensureSite(selSite.value.id);
-      const list = activeEquip()[selSite.value.id][kind];
-      rows.forEach(r => {
-        const item = {};
-        IMPORT_FIELD_KEYS[kind].forEach(k => item[k] = r[k] || '');
-        if(kind === 'cameras' && !item.camType) item.camType = 'Indoor';
-        if(kind === 'nvr' && !item.type) item.type = 'NVR';
-        if(kind === 'hdd' && !item.config) item.config = 'RAID 5';
-        if(kind === 'misc' && !item.category) item.category = 'Monitor';
-        list.push(item);
-      });
-      showToast(`${rows.length} rekod berjaya diimport! Jangan lupa klik "Simpan Peralatan".`);
-      importState.show = false; importState.rows = [];
     }
 
     // ---- Load data ----
@@ -5802,10 +5931,23 @@ createApp({
     }
 
     // ---- Site equipment ----
+    let _uidCounter = 0;
+    // Stable per-item id used as the v-for :key on equipment rows — using
+    // the array index as :key made rows re-bind to the wrong input values
+    // whenever an item above them was deleted, since Vue re-used the DOM
+    // node for whatever index landed there next.
+    function _genId() { return 'e_' + Date.now().toString(36) + '_' + (_uidCounter++).toString(36); }
+    const EQUIP_KINDS = ['cameras','nvr','hdd','switches','alarms','misc'];
+
     function openSiteEquip(site) {
       selSite.value = site;
       eqTab.value = 'cameras';
       page.value = 'site-equip';
+      ensureSite(site.id);
+      const eq = activeEquip()[site.id];
+      // Backfill ids for equipment saved before this id-based keying existed.
+      EQUIP_KINDS.forEach(k => (eq[k]||[]).forEach(item => { if(!item._uid) item._uid = _genId(); }));
+      EQUIP_KINDS.forEach(k => equipSelected[k].clear()); // don't carry bulk-selection over from a previous site
     }
 
     function activeEquip() {
@@ -5824,7 +5966,41 @@ createApp({
     // ---- Edit-in-place for equipment rows (instead of delete + re-add) ----
     const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null, misc:null });
     const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM', misc:'nMISC' };
-    function editEquipItem(key, idx) {
+
+    // ---- Bulk select/delete for equipment lists ----
+    const equipSelected = reactive({ cameras:new Set(), nvr:new Set(), hdd:new Set(), switches:new Set(), alarms:new Set(), misc:new Set() });
+    function toggleEquipRow(kind, uid) {
+      if(!uid) return;
+      equipSelected[kind].has(uid) ? equipSelected[kind].delete(uid) : equipSelected[kind].add(uid);
+    }
+    function isEquipAllSelected(kind) {
+      const list = selSiteEquip.value[kind]||[];
+      return list.length>0 && list.every(it => equipSelected[kind].has(it._uid));
+    }
+    function toggleEquipSelectAll(kind) {
+      const list = selSiteEquip.value[kind]||[];
+      if(isEquipAllSelected(kind)) equipSelected[kind].clear();
+      else equipSelected[kind] = new Set(list.map(it => it._uid));
+    }
+    function bulkDeleteEquip(kind) {
+      const sel = equipSelected[kind];
+      if(!sel.size) return;
+      if(!confirm(`Padam ${sel.size} rekod terpilih?`)) return;
+      const list = activeEquip()[selSite.value.id][kind];
+      const editedUid = equipEditIdx[kind]!==null ? (list[equipEditIdx[kind]]||{})._uid : null;
+      for(let i=list.length-1; i>=0; i--) { if(sel.has(list[i]._uid)) list.splice(i,1); }
+      sel.clear();
+      if(editedUid) {
+        // Deleting rows shifts every index after them, so the stored
+        // equipEditIdx would otherwise point at the wrong item (or a
+        // now-nonexistent one) the next time "Kemaskini" is clicked.
+        const newIdx = list.findIndex(it => it._uid === editedUid);
+        if(newIdx === -1) cancelEditEquip(kind); // the edited row itself was deleted
+        else equipEditIdx[kind] = newIdx; // re-sync to its shifted position
+      }
+      showToast('Rekod terpilih berjaya dipadam! Jangan lupa klik "Simpan Semua".');
+    }
+    async function editEquipItem(key, idx) {
       const item = (selSiteEquip.value[key]||[])[idx];
       if(!item) return;
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC };
@@ -5840,75 +6016,136 @@ createApp({
         }
       }
       equipEditIdx[key] = idx;
+      // The edit form sits above the (possibly long) list — scroll it into
+      // view so the user isn't left staring at the row they just clicked.
+      await nextTick();
+      document.getElementById('equip-form-'+key)?.scrollIntoView({ behavior:'smooth', block:'start' });
     }
     function cancelEditEquip(key) {
       equipEditIdx[key] = null;
       resetForm(EQUIP_KEY_TO_FORM[key]);
     }
 
+    // Same identity rule as the bulk import dedupe: IP for cameras/nvr,
+    // Serial No. for everything else. excludeIdx lets an in-place edit
+    // match against itself without tripping its own duplicate check.
+    function _findDupConflict(kind, list, item, excludeIdx) {
+      const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
+      const val = String(item[dupField]||'').trim().toLowerCase();
+      if(!val) return null;
+      const idx = list.findIndex((it,i) => i!==excludeIdx && String(it[dupField]||'').trim().toLowerCase()===val);
+      return idx>-1 ? { field:dupField, value:item[dupField], existing:list[idx] } : null;
+    }
+    function _dupErrMsg(dup) {
+      const label = dup.existing.name || dup.existing.model || dup.existing.serial || 'rekod lain';
+      const fieldLabel = dup.field==='ip' ? 'IP Address' : 'No. Siri';
+      return `${fieldLabel} "${dup.value}" sudah digunakan oleh "${label}".`;
+    }
+
     function addCamera() {
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
       if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
+      if(!nCam.model){showToast('Sila masukkan model kamera','error');return;}
+      if(!nCam.serial){showToast('Sila masukkan No. Siri kamera','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
-      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...nCam}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
-      else list.push({...nCam});
-      Object.assign(nCam,{name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:''});
+      const dup = _findDupConflict('cameras', list, nCam, equipEditIdx.cameras);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...nCam, _uid:list[equipEditIdx.cameras]._uid||_genId()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
+      else list.push({...nCam, _uid:_genId()});
+      Object.assign(nCam,{name:'',ip:'',camType:'Indoor',brand:'',model:'',serial:'',_uid:''});
     }
     function addNVR() {
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
+      if(!nNVR.model){showToast('Sila masukkan model NVR','error');return;}
+      if(!nNVR.serial){showToast('Sila masukkan No. Siri NVR','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
-      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...nNVR}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
-      else list.push({...nNVR});
-      Object.assign(nNVR,{name:'',type:'NVR',brand:'',model:'',serial:'',ip:''});
+      const dup = _findDupConflict('nvr', list, nNVR, equipEditIdx.nvr);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...nNVR, _uid:list[equipEditIdx.nvr]._uid||_genId()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
+      else list.push({...nNVR, _uid:_genId()});
+      Object.assign(nNVR,{name:'',type:'NVR',brand:'',model:'',serial:'',ip:'',_uid:''});
     }
     function addHDD() {
       if(!nHDD.brand){showToast('Sila masukkan brand HDD','error');return;}
+      if(!nHDD.model){showToast('Sila masukkan model HDD','error');return;}
+      if(!nHDD.serial){showToast('Sila masukkan No. Siri HDD','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].hdd;
-      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...nHDD}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
-      else list.push({...nHDD});
-      Object.assign(nHDD,{brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:''});
+      const dup = _findDupConflict('hdd', list, nHDD, equipEditIdx.hdd);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...nHDD, _uid:list[equipEditIdx.hdd]._uid||_genId()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
+      else list.push({...nHDD, _uid:_genId()});
+      Object.assign(nHDD,{brand:'',model:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',_uid:''});
     }
     function addSwitch() {
       if(!nSW.brand){showToast('Sila masukkan brand switch','error');return;}
+      if(!nSW.model){showToast('Sila masukkan model switch','error');return;}
+      if(!nSW.serial){showToast('Sila masukkan No. Siri switch','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].switches;
-      if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...nSW}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
-      else list.push({...nSW});
-      Object.assign(nSW,{brand:'',model:'',serial:'',ports:''});
+      const dup = _findDupConflict('switches', list, nSW, equipEditIdx.switches);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...nSW, _uid:list[equipEditIdx.switches]._uid||_genId()}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
+      else list.push({...nSW, _uid:_genId()});
+      Object.assign(nSW,{brand:'',model:'',serial:'',ports:'',_uid:''});
     }
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
+      if(!nALM.model){showToast('Sila masukkan model alarm','error');return;}
+      if(!nALM.serial){showToast('Sila masukkan No. Siri alarm','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].alarms;
-      if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...nALM}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
-      else list.push({...nALM});
-      Object.assign(nALM,{name:'',brand:'',model:'',serial:'',type:'SMS Power Alert'});
+      const dup = _findDupConflict('alarms', list, nALM, equipEditIdx.alarms);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...nALM, _uid:list[equipEditIdx.alarms]._uid||_genId()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
+      else list.push({...nALM, _uid:_genId()});
+      Object.assign(nALM,{name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',_uid:''});
     }
     function addMisc() {
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
+      if(!nMISC.model){showToast('Sila masukkan model peralatan','error');return;}
+      if(!nMISC.serial){showToast('Sila masukkan No. Siri peralatan','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
       const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
       const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, installDate:nMISC.installDate };
-      if(equipEditIdx.misc !== null) { list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
-      else list.push(item);
+      const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
+      else { item._uid = _genId(); list.push(item); }
       Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''});
     }
     function removeItem(siteId, key, idx) {
-      activeEquip()[siteId][key].splice(idx,1);
-      if(equipEditIdx[key] === idx) cancelEditEquip(key); // was mid-edit on the row just deleted
+      if(!confirm('Padam rekod ini?')) return;
+      const list = activeEquip()[siteId][key];
+      // Deleting a row before the one mid-edit shifts every later index, so
+      // equipEditIdx[key] must be re-synced by identity (_uid) — comparing
+      // it to the deleted idx directly only caught the exact-match case and
+      // left "Kemaskini" pointing at (and about to overwrite) the wrong row.
+      const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
+      list.splice(idx,1);
+      if(editedUid) {
+        const newIdx = list.findIndex(it => it._uid === editedUid);
+        if(newIdx === -1) cancelEditEquip(key);
+        else equipEditIdx[key] = newIdx;
+      }
     }
     async function saveSiteEquip() {
       loading.value=true;
+      // Capture the target site/label before the await — the user isn't
+      // blocked from navigating to a different site while this write is
+      // in flight, and reading selSite.value after the await would log
+      // the audit entry under whatever site they've since switched to.
+      const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
+      const eq  = activeEquip();
+      const siteId = selSite.value.id;
+      const siteLabel = selSite.value?.name || selSite.value?.id;
       try {
-        const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
-        const eq  = activeEquip();
-        await _fw(db.collection(col).doc(selSite.value.id).set(eq[selSite.value.id], { merge: true }));
-        await logAudit('EQUIPMENT_UPDATE', selSite.value?.name || selSite.value?.id);
+        await _fw(db.collection(col).doc(siteId).set(eq[siteId], { merge: true }));
+        await logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
         showToast('Peralatan berjaya disimpan!');
       } catch(e){ showToast('Gagal simpan: '+e.message,'error'); }
@@ -7549,6 +7786,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       window.addEventListener('online',  () => { isOnline.value = true;  showToast('Sambungan pulih — data sedang disegerakkan.', 'success'); });
       window.addEventListener('offline', () => { isOnline.value = false; showToast('Tiada sambungan internet. Data disimpan tempatan.', 'error'); });
 
+      // Auto-close notif/online popups when clicking anywhere outside them
+      document.addEventListener('click', (e) => {
+        if(showOnlinePanel.value && !e.target.closest('.online-panel-wrap')) showOnlinePanel.value = false;
+        if(showNotifPanel.value && !e.target.closest('.notif-panel-wrap')) showNotifPanel.value = false;
+      });
+
       auth.onAuthStateChanged(async user=>{
         authUser.value = user;
         if(user) {
@@ -7583,7 +7826,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       pmRecords, viewPM, filterSite, filterYear, filterMaintType, filterPmNo,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, totalCameras, totalVirCameras, pmThisYear,
-      pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR,
+      pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
       filteredPM, yearList,
       PROJECT_TYPES, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
@@ -7600,9 +7843,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       profileEdit, pwChange, saveProfile, changePassword, uploadPhoto,
       showLoginPw, showPwNew, showPwConfirm,
       ocrState, ocrScan, pickOcr, resetForm,
-      importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS,
+      importState, importEquipFile,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
+      equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
