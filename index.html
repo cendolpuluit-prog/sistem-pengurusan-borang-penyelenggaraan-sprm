@@ -2859,28 +2859,56 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
 
-      <!-- ====== IMPORT EQUIPMENT FILE RESULT MODAL ====== -->
+      <!-- ====== IMPORT EQUIPMENT FILE MODAL ====== -->
       <div v-if="importState.show" class="modal-bg" @click.self="importState.show=false">
-        <div class="modal" style="max-width:640px">
-          <h3>📄 Keputusan Import</h3>
+        <div class="modal" :style="importState.rows.length?'max-width:900px':'max-width:640px'">
+          <h3>📄 Import Peralatan</h3>
           <div v-if="importState.loading" class="empty">⏳ Menganalisa fail{{importState.ocrProgress?' (OCR '+importState.ocrProgress+'%)':'...'}}</div>
           <template v-else>
             <p v-if="importState.err" style="color:#c62828;font-size:.85rem;margin-bottom:12px">{{importState.err}}</p>
-            <p v-if="importState.added" style="color:#1e7e34;font-size:.88rem;font-weight:600;margin-bottom:12px">✓ {{importState.added}} rekod berjaya ditambah terus ke table di bawah.</p>
-            <div v-if="importState.duplicates.length">
-              <p style="color:#c62828;font-size:.85rem;font-weight:600;margin-bottom:8px">⚠️ {{importState.duplicates.length}} rekod dilangkau — sudah wujud dalam senarai:</p>
-              <div class="tbl-wrap" style="max-height:40vh">
+
+            <!-- Review step: rows extracted, awaiting confirmation -->
+            <div v-if="importState.rows.length">
+              <p class="text-sm text-muted mb-12">{{importState.rows.length}} rekod dikesan — semua ditandakan ✓ secara automatik. Semak, betulkan jika perlu, dan nyahtanda (untick) baris yang bukan peralatan sebenar sebelum tambah.</p>
+              <div class="tbl-wrap" style="max-height:50vh">
                 <table class="equip-table">
-                  <thead><tr><th>{{importState.duplicates[0] && importState.duplicates[0].field==='ip' ? 'IP Address' : 'No. Siri'}}</th><th>Sudah wujud pada</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th style="width:30px"></th>
+                      <th v-for="k in IMPORT_FIELD_KEYS[importState.kind]" :key="k">{{k}}</th>
+                      <th style="width:40px"></th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    <tr v-for="(d,i) in importState.duplicates" :key="i"><td>{{d.value}}</td><td>{{d.label}}</td></tr>
+                    <tr v-for="(r,i) in importState.rows" :key="i" :style="!r._include?'opacity:.45':''">
+                      <td><input type="checkbox" v-model="r._include"></td>
+                      <td v-for="k in IMPORT_FIELD_KEYS[importState.kind]" :key="k"><input class="form-control" style="padding:5px 8px;font-size:.78rem" v-model="r[k]"></td>
+                      <td><button class="btn btn-danger btn-sm btn-icon" @click="removeImportRow(i)">🗑</button></td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
             </div>
+
+            <!-- Result summary: shown after confirming the review above -->
+            <template v-else-if="importState.added || importState.duplicates.length">
+              <p v-if="importState.added" style="color:#1e7e34;font-size:.88rem;font-weight:600;margin-bottom:12px">✓ {{importState.added}} rekod berjaya ditambah ke table di bawah.</p>
+              <div v-if="importState.duplicates.length">
+                <p style="color:#c62828;font-size:.85rem;font-weight:600;margin-bottom:8px">⚠️ {{importState.duplicates.length}} rekod dilangkau — sudah wujud dalam senarai:</p>
+                <div class="tbl-wrap" style="max-height:40vh">
+                  <table class="equip-table">
+                    <thead><tr><th>{{importState.duplicates[0] && importState.duplicates[0].field==='ip' ? 'IP Address' : 'No. Siri'}}</th><th>Sudah wujud pada</th></tr></thead>
+                    <tbody>
+                      <tr v-for="(d,i) in importState.duplicates" :key="i"><td>{{d.value}}</td><td>{{d.label}}</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
           </template>
           <div class="flex gap-8" style="margin-top:14px">
-            <button class="btn btn-outline" @click="importState.show=false">Tutup</button>
+            <button v-if="!importState.loading && importState.rows.length" class="btn btn-primary" @click="confirmImportRows">✓ Tambah {{importState.rows.filter(r=>r._include).length}} Rekod</button>
+            <button class="btn btn-outline" @click="importState.show=false">{{!importState.loading && importState.rows.length ? 'Batal' : 'Tutup'}}</button>
           </div>
         </div>
       </div>
@@ -3660,82 +3688,207 @@ const BRANDS = ['Panasonic','Hanwha (Samsung)','Bosch','Hikvision','Dahua','Axis
 
 const CAMERA_MODELS = {
   'Panasonic': [
-    'WV-S1130V','WV-S1570L','WV-S2130','WV-S2136L','WV-S2170L','WV-S2550L',
-    'WV-S3531L','WV-S6530N','WV-X1571LN','WV-X2251L','WV-X4171','WV-X8570N',
-    'WV-U1130','WV-U1142','WV-U2130','WV-U2142','WV-U2540L','WV-U2550L',
+    'WV-S1130V','WV-S1131','WV-S1132','WV-S1136','WV-S1531LN','WV-S1532LN','WV-S1536LN','WV-S1570L',
+    'WV-S2111L','WV-S2130','WV-S2131L','WV-S2136L','WV-S2170L','WV-S2231L','WV-S2236L',
+    'WV-S2511LN','WV-S2531LN','WV-S2536LN','WV-S2550L','WV-S2551LN',
+    'WV-S3131','WV-S3132','WV-S3531L','WV-S3531LN','WV-S3532LN',
+    'WV-S4131','WV-S4132','WV-S4150','WV-S4551L','WV-S4552L',
+    'WV-S5130','WV-S5131','WV-S5530L','WV-S5531L','WV-S5532L',
+    'WV-S6130','WV-S6131','WV-S6132','WV-S6530N','WV-S6531N','WV-S6532LN','WV-S6532LNS',
+    'WV-U1130','WV-U1132','WV-U1142','WV-U1530L','WV-U1532L',
+    'WV-U2130','WV-U2132','WV-U2142','WV-U2530L','WV-U2532L','WV-U2540L','WV-U2550L',
+    'WV-X1571LN','WV-X1531LN','WV-X1532LN','WV-X2231L','WV-X2251L','WV-X2531LN',
+    'WV-X4171','WV-X4551L','WV-X6531N','WV-X6532N','WV-X8570N',
     'WV-S22700-V2L','WV-S21300-V2','WV-S32402-F2L','WV-S32404-F2',
     'WV-X86401-Z2','WV-B2110','WV-B6410','WV-SC588',
+    'WV-NS202A','WV-NW484S','WV-NW964',
   ],
   'Hanwha (Samsung)': [
-    'QNV-6022R','QNV-6023R','QNV-6080R','QNV-7080R','QNV-8010R','QNV-8080R','QNV-8090R',
-    'QNO-8030R','QNO-8080R','QND-8080R',
-    'XNV-6120R','XNV-6123R','XNV-8080R','XNV-8090R','XNV-8120R','XNV-8123R','XNV-8124R',
-    'XNO-6123R','XNO-8080R','XND-8020R',
-    'PNV-9080R','PNO-9080R','PND-9080R',
-    'ANV-L6022R','ANO-L6022R',
+    'QND-6012R','QND-6022R','QND-6032R','QND-6072R','QND-6082R','QND-7010R','QND-7080R',
+    'QND-8010R','QND-8020R','QND-8030R','QND-8080R',
+    'QNV-6012R','QNV-6022R','QNV-6023R','QNV-6032R','QNV-6072R','QNV-6080R','QNV-6082R',
+    'QNV-7010R','QNV-7080R','QNV-8010R','QNV-8020R','QNV-8030R','QNV-8080R','QNV-8090R',
     'QNV-9100','QNV-9200','QNV-9300',
+    'QNO-6012R','QNO-6022R','QNO-7010R','QNO-7080R','QNO-8010R','QNO-8020R','QNO-8030R','QNO-8080R',
+    'XND-6010','XND-6020R','XND-6080R','XND-8020R','XND-8080RV','XND-8082RV',
+    'XNV-6010','XNV-6020R','XNV-6080R','XNV-6120R','XNV-6123R',
+    'XNV-8020R','XNV-8080R','XNV-8090R','XNV-8120R','XNV-8123R','XNV-8124R',
+    'XNO-6010R','XNO-6080R','XNO-6123R','XNO-8080R',
+    'XNP-6320','XNP-6400','XNP-8250',
+    'TNV-7010RC','TNV-7011RC','TNV-8011RC','TNB-9000',
+    'PNM-9020V','PNM-9080VQ','PNM-9081VQ','PNM-9084RQZ','PNM-12082RVD',
+    'PNM-C16013RVQ','PNM-C16083RVQ','PNM-C32083RVQ',
+    'PNO-A9081R','PNO-A9311R','PNO-A9311RLP','PNO-A6081R','PNO-9080R',
+    'PNV-A9081R','PNV-A6081R','PNV-A6081R-E','PNV-9080R',
+    'PND-A6081RV','PND-A6081RF','PND-9080R',
+    'ANV-L6022R','ANO-L6022R',
   ],
   'Bosch': [
+    'NDN-733V03-P','NDN-733V09-IP','NDN-921V03-P','NDN-932V03-IP','NDN-932V09-IP',
+    'NDE-3502-F','NDE-3502-AL','NDE-4502-A','NDE-4502-AL','NDE-4503-AL',
+    'NDE-5502-A','NDE-5503-A','NDE-5503-AL','NDE-5702-AL','NDE-5702-AL-GOV',
+    'NDE-8502-R','NDE-8502-RT','NDE-8503-R','NDE-8503-RT','NDE-8504-R','NDE-8504-RT',
+    'NBE-3502-AL','NBE-4502-AL','NBE-5502-AL','NBE-5503-AL','NBE-6502-AL',
+    'NBN-733V03-P','NBN-832-IP','NBN-832V-IP','NBN-932V-IP','NBN-73023-BA','NBN-80122-IS',
+    'NIN-733-V03IP','NIN-733-V10IP','NIN-63013-A3','NIN-63023-A3',
+    'NDV-3503-F03','NDV-5503-A',
     'NDI-4502-AL','NDI-4512-AL','NDI-5503-AL','NDI-5583-ALE3',
-    'NBN-73023-BA','NBN-80122-IS','NBN-832-IP',
     'NDP-5512-Z12','NDP-7512-Z30','NDS-5703-F360LE',
     'MIC-550IR','MIC-7230-Z30','MIC-7522-Z30B',
+    'FLEXIDOME IP outdoor 4000i','FLEXIDOME IP outdoor 5000i','FLEXIDOME IP indoor 5000i',
   ],
   'Hikvision': [
-    'DS-2CD2043G2-I','DS-2CD2043G2-IU','DS-2CD2083G2-I','DS-2CD2083G2-IU',
-    'DS-2CD2143G2-I','DS-2CD2143G2-IS','DS-2CD2163G2-I','DS-2CD2183G2-I',
-    'DS-2CD2185G0-I','DS-2CD2185G1-I','DS-2CD2186G2-I',
-    'DS-2CD2343G2-I','DS-2CD2347G2-LU','DS-2CD2347G2H-LU',
-    'DS-2CD2365G1-I','DS-2CD2366G2-I',
-    'DS-2CD2T43G2-4I','DS-2CD2T46G2-4I','DS-2CD2T47G2-L','DS-2CD2T47G2H-L',
-    'DS-2CD2T86G2-4I','DS-2CD3T86G2-4IS',
+    'DS-2CD1023G0-I','DS-2CD1043G0-I','DS-2CD1H23G0-IZ',
+    'DS-2CD2022-I','DS-2CD2023G0-I','DS-2CD2023G2-I',
+    'DS-2CD2025FWD-I','DS-2CD2043G2-I','DS-2CD2043G2-IU',
+    'DS-2CD2042WD-I','DS-2CD2063G0-I','DS-2CD2063G2-I','DS-2CD2083G2-I','DS-2CD2083G2-IU',
+    'DS-2CD2085FWD-I','DS-2CD2086G2-I',
+    'DS-2CD2123G0-I','DS-2CD2123G2-IU','DS-2CD2125FWD-I','DS-2CD2143G0-I','DS-2CD2143G2-I','DS-2CD2143G2-IS',
+    'DS-2CD2145FWD-I','DS-2CD2147G2-SU','DS-2CD2163G0-I','DS-2CD2163G2-I','DS-2CD2183G0-I','DS-2CD2183G2-I',
+    'DS-2CD2185FWD-I','DS-2CD2185G0-I','DS-2CD2185G1-I','DS-2CD2186G2-I',
+    'DS-2CD2332-I','DS-2CD2343G2-I','DS-2CD2345FWD-I','DS-2CD2347G2-L','DS-2CD2347G2-LU',
+    'DS-2CD2347G2H-LISU','DS-2CD2347G2H-LU','DS-2CD2365FWD-I','DS-2CD2365G1-I','DS-2CD2366G2-I',
+    'DS-2CD2385G1-I','DS-2CD2386G2-I','DS-2CD2387G2-L',
+    'DS-2CD2T23G0-I8','DS-2CD2T43G0-I5','DS-2CD2T43G2-4I','DS-2CD2T46G2-4I',
+    'DS-2CD2T47G2-L','DS-2CD2T47G2H-L','DS-2CD2T63G0-I8','DS-2CD2T83G2-2I',
+    'DS-2CD2T86G2-4I','DS-2CD2T87G2-L','DS-2CD3T86G2-4IS',
+    'DS-2CD2643G0-IZ','DS-2CD2643G2-IZS','DS-2CD2646G2-IZS',
     'DS-2CD2H43G2-IZS','DS-2CD2H83G2-IZS',
-    'DS-2DE4425IWG-E','DS-2DE4A425IWG-E',
+    'DS-2DE4225IW-DE','DS-2DE4425IW-DE','DS-2DE4425IWG-E','DS-2DE4A425IWG-E',
+    'DS-2DE7230IW-AE','DS-2DE7425IW-AE',
   ],
   'Dahua': [
-    'IPC-HFW1439S1-LED-S4','IPC-HFW2831T-ZS','IPC-HFW2831TP-ZAS',
+    'DH-IPC-HDW1230S','DH-IPC-HDW1431S','DH-IPC-HDW1531S',
+    'DH-IPC-HDW2231T-AS','DH-IPC-HDW2431T-AS','DH-IPC-HDW2531T-AS',
+    'DH-IPC-HDW3241TM-AS','DH-IPC-HDW3441T-ZAS','DH-IPC-HDW3549H-AS-PV',
+    'DH-IPC-HDBW1230E-S','DH-IPC-HDBW1431E-S','DH-IPC-HDBW2231R-ZS',
+    'DH-IPC-HDBW2431R-ZS','DH-IPC-HDBW2531R-ZS','DH-IPC-HDBW2831R-ZS',
+    'DH-IPC-HDBW3241R-ZS','DH-IPC-HDBW3441R-ZS','DH-IPC-HDBW3441E-S','DH-IPC-HDBW3541R-ZS',
+    'DH-IPC-HDBW4231E-SE','DH-IPC-HDBW4431E-SE','DH-IPC-HDBW5241R-ZE',
+    'DH-IPC-HDBW5449H-ASE','DH-IPC-HDBW5849H-ASE',
+    'IPC-HFW1439S1-LED-S4','DH-IPC-HFW1230S','DH-IPC-HFW1431S','DH-IPC-HFW1531S',
+    'DH-IPC-HFW2231S-S','DH-IPC-HFW2431S-S','DH-IPC-HFW2531S-S',
+    'IPC-HFW2831T-ZS','IPC-HFW2831TP-ZAS','DH-IPC-HFW2831T-AS-S2','DH-IPC-HFW2831T-ZS','DH-IPC-HFW2831T-ZAS',
     'IPC-HFW2849S-S-IL','IPC-HFW2849S-S-LED',
-    'IPC-HFW3442T-ZAS','IPC-HFW3542T-ZAS',
+    'DH-IPC-HFW3441E-SA','IPC-HFW3442T-ZAS','DH-IPC-HFW3441T-ZAS','IPC-HFW3542T-ZAS','DH-IPC-HFW3549T1-AS-PV',
     'IPC-HFW3849H-AS-PV','IPC-HFW3849T-AS-PV',
-    'IPC-HFW4843H-ZSA',
-    'IPC-HFW5442TH-ZE','IPC-HFW5842H-ZHE','IPC-HFW5843H-ZHE',
+    'DH-IPC-HFW4231E-SE','DH-IPC-HFW4431E-SE','IPC-HFW4843H-ZSA',
+    'DH-IPC-HFW5241E-ZE','IPC-HFW5442TH-ZE','IPC-HFW5842H-ZHE','IPC-HFW5843H-ZHE',
+    'DH-IPC-HFW5449T1-ASE-LED','DH-IPC-HFW5849T1-ASE-LED',
     'IPC-HDW2849H-ASU-PV','IPC-HDW3849H-AS-PV',
-    'SD49225XB-HNR','SD49425XB-HNR',
+    'DH-SD22204T-GN','DH-SD22404T-GN','DH-SD49225T-HN','DH-SD49225I-HC','SD49225XB-HNR','SD49425XB-HNR',
+    'DH-SD52C232I-HC','DH-SD5A225GB-HNR','DH-SD5A432GB-HNR','DH-SD5A445GB-HNR',
+    'DH-SD6C225U-HNI','DH-SD6C3425GB-HN','DH-SD6CE225U-HNI',
   ],
   'Axis': [
-    'M3106-L MkII','M3106-LME','M3116-R MkII',
-    'P1448-LE','P1455-LE',
-    'P3228-LV MkII','P3228-LVE MkII',
-    'P3245-LVE','P3245-V','P3255-LVE',
-    'Q3517-LVE','Q3527-LVE',
-    'Q6135-LE','Q6315-LE',
-    'M5525-E',
+    'AXIS M2025-LE','AXIS M2026-LE Mk II','AXIS M3045-V','AXIS M3046-V',
+    'AXIS M3105-LVE','AXIS M3106-L MkII','AXIS M3106-LME','AXIS M3106-LVE','AXIS M3116-R MkII',
+    'AXIS M3205-LVE','AXIS M3206-LVE','AXIS M5525-E',
+    'AXIS P1435-LE','AXIS P1445-LE','AXIS P1447-LE','AXIS P1448-LE','AXIS P1455-LE',
+    'AXIS P3225-LV','AXIS P3225-LVE','AXIS P3225-V','AXIS P3225-VE',
+    'AXIS P3227-LV','AXIS P3227-LVE','AXIS P3228-LV MkII','AXIS P3228-LVE MkII',
+    'AXIS P3235-LVE','AXIS P3245-LV','AXIS P3245-LVE','AXIS P3245-V',
+    'AXIS P3247-LV','AXIS P3247-LVE','AXIS P3255-LVE',
+    'AXIS P3265-LV','AXIS P3265-LVE','AXIS P3267-LV','AXIS P3267-LVE','AXIS P3268-LV','AXIS P3268-LVE',
+    'AXIS P3343-VE','AXIS P3344-VE','AXIS P3364-VE',
+    'AXIS P3717-PLE','AXIS P3719-PLE','AXIS P3727-PLE',
+    'AXIS Q1615-LE Mk III','AXIS Q1645','AXIS Q1647','AXIS Q1656','AXIS Q1659',
+    'AXIS Q3505-V','AXIS Q3505-VE','AXIS Q3515-LV','AXIS Q3517-LVE','AXIS Q3517-SLVE','AXIS Q3527-LVE',
+    'AXIS Q3626-VE','AXIS Q3628-VE',
+    'AXIS Q6114-E','AXIS Q6115-E','AXIS Q6135-LE','AXIS Q6155-E','AXIS Q6315-LE',
   ],
   'Uniview': [
+    'IPC2122LB-ADF28KM-I0','IPC2122LB-ADF40KM-I0','IPC2122SB-ADF28KM-I0',
+    'IPC2124LB-ADF28KM-I0','IPC2124SB-ADF28(40)K-I0','IPC2125SB-ADF28(40)KMC-I0',
     'IPC2221SE-DF40K-WL','IPC2224SE-DF40K-WL-I0','IPC2228SE-DF40K-WL-I0',
-    'IPC252E-F-IS',
-    'IPC3614SB-ADF28KM-I0','IPC3615SE-ADF40KM','IPC3618SB-ADF28KM-I0','IPC3618SE-ADF40KM',
+    'IPC2322LB-ADF28KM-I0','IPC2322LR3-DUPF28-D','IPC2324LB-ADF28KM-I0',
+    'IPC2324SB-DF28K-I0','IPC2324SB-DF40K-I0','IPC252E-F-IS',
+    'IPC3612LB-AF28K-DL','IPC3612LB-AF40K-DL','IPC3612SB-ADF28KMC-I0',
+    'IPC3614SB-ADF28(40)KMC-I0','IPC3614SB-ADF28KM-I0','IPC3615SB-ADF28(40)KMC-I0','IPC3615SE-ADF40KM',
+    'IPC3618SB-ADF28(40)KM-I0','IPC3618SB-ADF28KM-I0','IPC3618SE-ADF40KM',
     'IPC3634SB-ADZK','IPC3814SB-ADZK-I0','IPC3818SB-ADZK-I0',
+    'IPC322LR3-VSPF28-D','IPC324LR3-DVPF28M-D','IPC322SB-DF28K-I0','IPC324SB-DF28(40)K-I0',
+    'IPC325SS-ADF28(40)K-I1','IPC322SS-ADF28(40)K-I1',
+    'IPC6252SR-X33UP','IPC6612SR-X33-VG','IPC6622SR-X33-VF',
+    'IPC6852ER-X45-VF','IPC6854ER-X40G-VF','IPC6858ER-X40-VF',
+    'IPC6322SR-X22-VG','IPC6424SR-X25-VF','IPC6434LR-X16-VG1','IPC6658SR-X25-VF',
+    'IPC742SR9-PZ30-32G',
   ],
   'Vivotek': [
-    'FD9160-H','FD9168-H','FD9360-HF2','FD9365-HTV','FD9365-EHTV','FD9387-HTV',
-    'IB9368-HT','IB9380-H','IB9381-HT',
-    'IP9191-HP',
-    'MS8391-EV','MS9390-HV',
-    'SD9364-EHL','SD9365-EHL',
+    'FD8134','FD8136','FD8137','FD8138-H','FD8154V','FD8161','FD8162','FD8164','FD8166',
+    'FD8167','FD8167A','FD8168','FD8169','FD8182-F2','FD8335H','FD8361','FD8363','FD8367',
+    'FD8369','FD8371','FD8372','FD8377-HTV','FD8377-EHTV','FD8382-VF2',
+    'FD9160-H','FD9165-HT','FD9166-HN','FD9168-H','FD9181-HT','FD9182-H','FD9187-HT-V3','FD9189-H',
+    'FD9360-HF2','FD9365-HTV','FD9365-EHTV','FD9365-EHTV-A','FD9365-HTV-A','FD9367-HV','FD9368-HTV',
+    'FD9380-H','FD9381-HTV','FD9387-HTV','FD9387-HTV-A','FD9389-EHTV-V2','FD9391-EHTV',
+    'IB8354-C','IB8360-W','IB8367-T','IB8369A','IB8373','IB8377-HT','IB8377-EHT','IB8379-H',
+    'IB9360-H','IB9365-HT','IB9367-H','IB9368-HT','IB9371-HT','IB9380-H','IB9381-HT',
+    'IB9387-HT-A','IB9387-EHT-A','IB9389-EHTV-V2','IB9389-EHTV-V3',
+    'IP9191-HP','MS8391-EV','MS9390-HV',
+    'SD8311E','SD8362E','SD8363E','SD8364E','SD9161-H','SD9362-EH','SD9362-EHL',
+    'SD9363-EHL','SD9364-EHL','SD9365-EHL','SD9384-EHL',
+    'IZ9361-EH',
   ],
   'Lain-lain': [],
 };
 
 const NVR_MODELS = {
-  'Panasonic': ['WJ-ND400','WJ-ND410A','WJ-NX300','WJ-NX400','WJ-NX500'],
-  'Hanwha (Samsung)': ['QRN-410S','QRN-810S','QRN-1610S','XRN-810S','XRN-3010A','XRN-6410RB2'],
-  'Bosch': ['DIVAR IP 5000 2U','DIVAR IP 7000 2U','DSA-N2P4X8HDD'],
-  'Hikvision': ['DS-7608NI-I2','DS-7616NI-I2','DS-7732NI-I4','DS-7608NXI-I2','DS-7616NXI-I2','DS-7732NXI-I4'],
-  'Dahua': ['NVR4208-8P-4KS2','NVR4216-4KS2','NVR4232-4KS2','NVR5232-4KS2'],
-  'Axis': ['S3008','S3016','S3032'],
-  'Uniview': ['NVR502-08B-P','NVR504-16B','NVR508-32E-R2'],
-  'Vivotek': ['ND9424P','ND9441P','NR8401'],
+  'Panasonic': [
+    'WJ-ND400','WJ-ND410A','WJ-NV200','WJ-NV300','WJ-NV350',
+    'WJ-NX200','WJ-NX300','WJ-NX400','WJ-NX500','WJ-NX310K','WJ-NX310KG','WJ-NX510K','WJ-NX510KG',
+    'WJ-NU300','WJ-NU301K','WJ-NU301KG',
+  ],
+  'Hanwha (Samsung)': [
+    'QRN-410S','QRN-430S','QRN-810S','QRN-830S','QRN-1610S','QRN-1620S','QRN-1630S',
+    'XRN-420S','XRN-810S','XRN-820S','XRN-1620S','XRN-1620SB1',
+    'XRN-2010','XRN-2010A','XRN-2011A','XRN-3010A','XRN-3210B2','XRN-6410B2','XRN-6410RB2',
+    'PRN-3200B4','PRN-6400B4',
+  ],
+  'Bosch': [
+    'DIVAR IP 2000','DIP-2042-2HD',
+    'DIVAR IP 3000','DIP-3040-00N','DIP-3042-2HD','DIP-3042-4HD',
+    'DIVAR IP 5000 2U',
+    'DIVAR IP 6000','DIP-6082-8HD',
+    'DIVAR IP 7000','DIVAR IP 7000 2U','DIP-7080-00N','DIP-7082-8HD','DIP-7083-8HD',
+    'DIP-7180-00N','DIP-7183-4HD','DIP-7183-8HD','DIP-7184-8HD',
+    'DIP-71F0-00N','DIP-71F6-16HD','DIP-738C-8HD','DIP-73GC-16HD','DIP-74C4-8HD',
+    'DSA-N2P4X8HDD',
+  ],
+  'Hikvision': [
+    'DS-7608NI-I2','DS-7616NI-I2','DS-7632NI-I2',
+    'DS-7708NI-I4','DS-7716NI-I4','DS-7732NI-I4',
+    'DS-7808NI-I2','DS-7816NI-I2','DS-7832NI-I2',
+    'DS-9616NI-I8','DS-9632NI-I8','DS-9664NI-I8',
+    'DS-7608NI-K2','DS-7616NI-K2','DS-7600NI-Q2/P',
+    'DS-7608NXI-I2','DS-7616NXI-I2','DS-7732NXI-I4',
+  ],
+  'Dahua': [
+    'NVR4208-8P-4KS2','DHI-NVR4208-8P-4KS2','NVR4216-4KS2','DHI-NVR4216-4KS2/L',
+    'NVR4232-4KS2','DHI-NVR4232-4KS2','DHI-NVR4416-4KS2/I','DHI-NVR4432-4KS2/I',
+    'NVR5232-4KS2','DHI-NVR5208-8P-AI','DHI-NVR5216-4KS2','DHI-NVR5232-4KS2',
+    'DHI-NVR5416-4KS2','DHI-NVR5432-4KS2',
+    'DHI-NVR608-4KS2','DHI-NVR616-4KS2','DHI-NVR624-4KS2',
+    'NVR5864-4KS2','NVR5864-R-4KS2',
+  ],
+  'Axis': [
+    'AXIS S1116','AXIS S1116 MT','AXIS S1216 Tower','AXIS S1216 Rack',
+    'AXIS S1224 Rack','AXIS S1228 Rack','AXIS S1232 Tower','AXIS S1232 Rack',
+    'AXIS S1264 Rack','AXIS S1296 Rack',
+    'AXIS S2212','AXIS S3008','AXIS S3008 Mk II','S3016','S3032',
+    'AXIS S9302',
+  ],
+  'Uniview': [
+    'NVR301-08S3','NVR301-16S3','NVR301-08S3-P8','NVR301-16S3-P16',
+    'NVR302-08S2','NVR302-16S2',
+    'NVR304-16S','NVR304-32S',
+    'NVR308-32R','NVR308-64R',
+    'NVR502-08B-P','NVR504-16B','NVR508-32E-R2',
+  ],
+  'Vivotek': [
+    'ND8301','ND8321','ND8322P','ND8422P',
+    'ND9323P','ND9424P','ND9441P','ND9541','ND9541P',
+    'NR8401',
+  ],
   'Lain-lain': [],
 };
 
@@ -3744,15 +3897,27 @@ const NVR_MODELS = {
 const HDD_BRANDS = ['Western Digital','Seagate','Toshiba','Lain-lain'];
 const HDD_MODELS = {
   'Western Digital': [
-    'WD10PURZ','WD20PURZ','WD30PURZ','WD40PURZ','WD60PURZ','WD80PURZ','WD100PURZ','WD121PURZ','WD140PURZ',
-    'WD8001PURP','WD101PURP','WD121PURP','WD141PURP','WD180PURP',
+    'WD10PURZ','WD11PURZ','WD20PURZ','WD30PURZ','WD40PURZ','WD43PURZ','WD60PURZ','WD64PURZ',
+    'WD80PURZ','WD82PURZ','WD84PURZ','WD100PURZ','WD101PURP','WD102PURZ','WD102PURP',
+    'WD121PURZ','WD121PURP','WD122PURP','WD140PURZ','WD141PURP','WD142PURP',
+    'WD180PURZ','WD180PURP','WD181PURP','WD221PURP','WD241PURP','WD260PURP',
+    'WD8001PURP','WD8002PURP',
   ],
   'Seagate': [
-    'ST1000VX005','ST2000VX015','ST3000VX015','ST4000VX016','ST6000VX001','ST8000VX010',
-    'ST10000VE0008','ST12000VE001','ST16000VE002','ST18000VE002','ST20000VE002',
+    'ST1000VX005','ST1000VX013','ST2000VX003','ST2000VX008','ST2000VX012','ST2000VX015','ST2000VX017',
+    'ST3000VX006','ST3000VX009','ST3000VX010','ST3000VX015',
+    'ST4000VX000','ST4000VX007','ST4000VX016',
+    'ST6000VX0001','ST6000VX0023','ST6000VX001','ST6000VX009',
+    'ST8000VX0002','ST8000VX0022','ST8000VX010','ST8000VE001',
+    'ST10000VX0004','ST10000VE0008','ST10000VE001','ST12000VX0001','ST12000VE001',
+    'ST16000VE001','ST16000VE002','ST18000VE002','ST20000VE002',
   ],
   'Toshiba': [
-    'HDWT840UZSVA','HDWT860UZSVA','HDWT880UZSVA','HDWT31AUZSVA','MG08ACA16TE','MG09ACA18TE',
+    'HDWT120UZSVA','HDWT140UZSVA','HDWT160UZSVA','HDWT180UZSVA',
+    'HDWT720UZSVA','HDWT740UZSVA','HDWT760UZSVA','HDWT780UZSVA','HDWTA80UZSVA',
+    'HDWT840UZSVA','HDWT860UZSVA','HDWT880UZSVA','HDWT31AUZSVA',
+    'MD04ACA500','MD04ACA600',
+    'MG07ACA14TE','MG08ACA16TE','MG09ACA14TE','MG09ACA16TE','MG09ACA18TE','MG10ACA20TE',
   ],
   'Lain-lain': [],
 };
@@ -3762,14 +3927,65 @@ const HDD_CAPACITIES = ['500GB','1TB','2TB','3TB','4TB','6TB','8TB','10TB','12TB
 // roughly the last 5 years (2020-2025).
 const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Lain-lain'];
 const SWITCH_MODELS = {
-  'Hikvision': ['DS-3E1318P-EI/M (16-Port PoE)','DS-3E0326P-E/M (24-Port PoE)','DS-3E1526P-EI (24-Port PoE)','DS-3E0510HP-E (8-Port PoE)'],
-  'Dahua': ['PFS3220-16ET-135 (16-Port PoE)','PFS4218-16GT-135 (16-Port PoE)','PFS3110-8ET-96 (8-Port PoE)','PFS4226-24GT-360 (24-Port PoE)'],
-  'TP-Link': ['TL-SG1016PE (16-Port PoE)','TL-SG1024P (24-Port PoE)','TL-SG2210P (8-Port PoE)','TL-SX3016F','Omada TL-SG3210XHP-M2'],
-  'D-Link': ['DGS-1210-28P (24-Port PoE)','DGS-1100-24P (24-Port PoE)','DGS-1210-10P (8-Port PoE)'],
-  'Cisco': ['Catalyst 9200L','SG350-28P','CBS350-24P-4G','Catalyst 2960-X'],
-  'Ubiquiti': ['UniFi Switch USW-24-PoE','USW-48-PoE','USW-Pro-24-PoE','USW-Flex'],
-  'Netgear': ['GS728TP','GS752TP','M4250-26G4F-PoE+'],
-  'Uniview': ['NSW2010-8P-2T-IN (8-Port PoE)','NSW2020-16P-2T-DIN (16-Port PoE)'],
+  'Hikvision': [
+    'DS-3E0105P-E (5-Port PoE)','DS-3E0109P-E (8-Port PoE)','DS-3E0510HP-E (8-Port PoE)',
+    'DS-3E0310HP-E (8-Port PoE)','DS-3E0318P-E (16-Port PoE)','DS-3E0326P-E (24-Port PoE)','DS-3E0326P-E/M (24-Port PoE)',
+    'DS-3E0520HP-E (16-Port PoE)','DS-3E0526P-E (24-Port PoE)',
+    'DS-3E1318P-EI (16-Port PoE)','DS-3E1318P-EI/M (16-Port PoE)','DS-3E1326P-EI (24-Port PoE)','DS-3E1526P-EI (24-Port PoE)',
+    'DS-3E2528P-SI (24-Port PoE)','DS-3E1552P-SI (48-Port PoE)',
+  ],
+  'Dahua': [
+    'PFS3006-4ET-60 (4-Port PoE)','PFS3008-8GT-96 (8-Port PoE)','PFS3010-8ET-96 (8-Port PoE)','PFS3110-8ET-96 (8-Port PoE)',
+    'PFS3117-8GT-135 (8-Port PoE)','PFS4210-8GT-150 (8-Port PoE)',
+    'PFS3218-16GT-135 (16-Port PoE)','PFS3220-16ET-135 (16-Port PoE)','PFS4218-16ET-240 (16-Port PoE)',
+    'PFS4218-16GT-135 (16-Port PoE)','PFS4218-16GT-190 (16-Port PoE)','PFS4218-16GT-240 (16-Port PoE)',
+    'PFS3226-24GT-240 (24-Port PoE)','PFS4226-24GT-240 (24-Port PoE)','PFS4226-24GT-360 (24-Port PoE)','PFS5228-24GT-410 (24-Port PoE)',
+    'PFS5210-48T (48-Port)',
+  ],
+  'TP-Link': [
+    'TL-SF1006P (6-Port PoE)','TL-SF1008P (8-Port PoE)',
+    'TL-SG1005P (5-Port PoE)','TL-SG105PE (5-Port PoE)','TL-SG108PE (8-Port PoE)',
+    'TL-SG1016PE (16-Port PoE)','TL-SG1024P (24-Port PoE)',
+    'TL-SG2210P (8-Port PoE)','TL-SG2424P (24-Port PoE)',
+    'TL-SG3210 (8-Port, non-PoE uplink)','TL-SX3016F',
+    'TL-SL1218P (16-Port PoE)','TL-SL1310P (8-Port PoE)',
+    'Omada TL-SG3210XHP-M2','LS108GP (8-Port PoE)',
+  ],
+  'D-Link': [
+    'DES-1210-28P (24-Port PoE)',
+    'DGS-1100-08PV2 (8-Port PoE)','DGS-1100-16V2 (16-Port)','DGS-1100-24P (24-Port PoE)','DGS-1100-24PV2 (24-Port PoE)',
+    'DGS-1210-10P (8-Port PoE)','DGS-1210-10MP (8-Port PoE)',
+    'DGS-1210-28P (24-Port PoE)','DGS-1210-28MP (24-Port PoE)','DGS-1210-28P/ME (24-Port PoE)',
+    'DGS-1210-52MP (48-Port PoE)',
+  ],
+  'Cisco': [
+    'SF350-24P (24-Port PoE)','SF350-48P (48-Port PoE)',
+    'SG350-10P (8-Port PoE)','SG350-28P (24-Port PoE)','SG350-52P (48-Port PoE)','SG350-8PD (8-Port PoE)',
+    'CBS350-8P-2G (8-Port PoE)','CBS350-24P-4G (24-Port PoE)','CBS350-48P-4G (48-Port PoE)',
+    'C1300-24P-4G (24-Port PoE)','Catalyst 9200L','Catalyst 2960-X',
+  ],
+  'Ubiquiti': [
+    'US-8-60W (8-Port PoE)','US-16-150W (16-Port PoE)',
+    'US-24-250W (24-Port PoE)','US-24-500W (24-Port PoE)',
+    'US-48-500W (48-Port PoE)','US-48-750W (48-Port PoE)',
+    'USW-Lite-8-PoE (8-Port PoE)','USW-16-PoE (16-Port PoE)',
+    'USW-24-PoE (24-Port PoE)','USW-48-PoE (48-Port PoE)',
+    'USW-Pro-24-PoE (24-Port PoE)','USW-Pro-48-PoE (48-Port PoE)','USW-Pro-Max-24-PoE (24-Port PoE)','USW-Flex',
+  ],
+  'Netgear': [
+    'GS108PP (8-Port PoE)','GS110TP (8-Port PoE)',
+    'GS305P (5-Port PoE)','GS308P (8-Port PoE)','GS308PP (8-Port PoE)','GS316P (16-Port PoE)',
+    'GS716TP (16-Port PoE)','GS716TPP (16-Port PoE)',
+    'GS724TP (24-Port PoE)','GS728TP (24-Port PoE)',
+    'GS748TP (48-Port PoE)','GS752TP (48-Port PoE)','M4250-26G4F-PoE+',
+  ],
+  'Uniview': [
+    'NSW2010-8P-2T-IN (8-Port PoE)','NSW2020-16P-2T-DIN (16-Port PoE)',
+    'NSW2020-6T-POE-IN (4-Port PoE)','NSW2020-10T-POE-IN (8-Port PoE)','NSW08PX (8-Port PoE)',
+    'NSW2010-16T2GC-POE-IN (16-Port PoE)','NSW2020-16T1GT1GC-POE-IN (16-Port PoE)','NSW162PX (16-Port PoE)',
+    'NSW2010-24T2GC-POE-IN (24-Port PoE)','NSW2020-24T1GT1GC-POE-IN (24-Port PoE)','NSW242PX (24-Port PoE)',
+    'NSW3000-8T2GT-POE-IN (8-Port PoE)','NSW3000-16T1GT1GC-POE-IN (16-Port PoE)','NSW3000-24T1GT1GC-POE-IN (24-Port PoE)',
+  ],
   'Lain-lain': [],
 };
 
@@ -5409,7 +5625,42 @@ createApp({
       nvrRef:   ['nvr','nvr ref','nvr berkaitan'],
       ports:    ['port','ports','bilangan port'],
     };
-    const importState = reactive({ show:false, kind:'', loading:false, err:'', added:0, duplicates:[], ocrProgress:0 });
+    // Product-line names / model-number prefixes that reliably identify a
+    // brand even when the brand itself was never typed or OCR'd — e.g. a
+    // scanned config-tool table often only has a "Type" column like
+    // "FLEXIDOME outdoor 3100i" with no separate Brand column at all.
+    // These naming conventions are fixed per vendor, so this is safe to
+    // hardcode rather than needing a live lookup.
+    const MODEL_BRAND_HINTS = [
+      { re: /FLEXIDOME|DINION|AUTODOME|AVIOTEC|\bDIVAR\b/i, brand: 'Bosch' },
+      { re: /\bDS-\d/i, brand: 'Hikvision' },
+      { re: /\bIPC-(HFW|HDW|HDBW)/i, brand: 'Dahua' },
+      { re: /\bWV-[SUXB]/i, brand: 'Panasonic' },
+      { re: /\bWJ-/i, brand: 'Panasonic' },
+      { re: /\b[QXPA]N[VOD]-/i, brand: 'Hanwha (Samsung)' },
+      { re: /\bIPC\d{3,4}/i, brand: 'Uniview' },
+      { re: /\bWD\d{2,3}PU[RZP]/i, brand: 'Western Digital' },
+      { re: /\bST\d{3,5}(VX|VE)/i, brand: 'Seagate' },
+      { re: /\bHDWT\w*|\bMG0\d\w*/i, brand: 'Toshiba' },
+      { re: /\bPFS\d/i, brand: 'Dahua' },
+      { re: /\bTL-[SG]/i, brand: 'TP-Link' },
+      { re: /\bDGS-\d/i, brand: 'D-Link' },
+      { re: /\bUSW-/i, brand: 'Ubiquiti' },
+      { re: /\bNSW\d/i, brand: 'Uniview' },
+      { re: /catalyst|\bCBS\d/i, brand: 'Cisco' },
+    ];
+    function _brandFromModelText(text) {
+      const hit = MODEL_BRAND_HINTS.find(h => h.re.test(text));
+      return hit ? hit.brand : '';
+    }
+    function _fillBrandFromModel(row) {
+      if('brand' in row && !row.brand) {
+        const guess = _brandFromModelText(`${row.name||''} ${row.model||''} ${row.camType||''} ${row.type||''}`);
+        if(guess) row.brand = guess;
+      }
+      return row;
+    }
+    const importState = reactive({ show:false, kind:'', loading:false, err:'', rows:[], added:0, duplicates:[], ocrProgress:0, _targetProj:'', _targetSiteId:'' });
 
     function _emptyRow(kind) {
       const row = { _include: true };
@@ -5431,6 +5682,14 @@ createApp({
         }
       });
       return map;
+    }
+
+    // OCR sometimes recognizes the source table's own header row as if it
+    // were a data row (garbled text like "[Paddress MACaddress Type"). If a
+    // row's fields hit >=2 header-name hints, treat it as a header and drop
+    // it rather than adding it as a fake piece of equipment.
+    function _looksLikeHeaderRow(fields, kind) {
+      return Object.keys(_mapHeaderRow(fields, kind)).length >= 2;
     }
 
     // Heuristic classifier for free-text lines / unmapped columns: figures
@@ -5474,7 +5733,7 @@ createApp({
       if('name' in row && leftover.length) row.name = leftover.shift();
       if('model' in row && leftover.length) row.model = leftover.shift();
       if(!('name' in row) && 'brand' in row && !row.brand && leftover.length) row.brand = leftover.shift();
-      return row;
+      return _fillBrandFromModel(row);
     }
 
     // Drops rows that are almost certainly OCR noise (stray table borders,
@@ -5496,19 +5755,21 @@ createApp({
         return dataRows.map(r => {
           const row = _emptyRow(kind);
           Object.entries(headerMap).forEach(([idx, key]) => { row[key] = String(r[idx]==null?'':r[idx]).trim(); });
-          return row;
+          return _fillBrandFromModel(row);
         });
       }
       // Weak/no header — fall back to per-row auto-classification.
-      return aoa.filter(r => r.some(c => String(c||'').trim())).map(r => _autoClassifyFields(r, kind)).filter(_isMeaningfulRow);
+      return aoa.filter(r => r.some(c => String(c||'').trim())).filter(r => !_looksLikeHeaderRow(r, kind)).map(r => _autoClassifyFields(r, kind)).filter(_isMeaningfulRow);
     }
 
     function _rowsFromFreeText(text, kind) {
       const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
       return lines.map(line => {
         const fields = line.split(/\t|,|;|\s{2,}|\|/).map(f => f.trim()).filter(Boolean);
-        return _autoClassifyFields(fields.length > 1 ? fields : [line], kind);
-      }).filter(row => Object.keys(row).some(k => k!=='_include' && row[k])).filter(_isMeaningfulRow);
+        return { fields: fields.length > 1 ? fields : [line] };
+      }).filter(({fields}) => !_looksLikeHeaderRow(fields, kind))
+        .map(({fields}) => _autoClassifyFields(fields, kind))
+        .filter(row => Object.keys(row).some(k => k!=='_include' && row[k])).filter(_isMeaningfulRow);
     }
 
     async function _readFileAsArrayBuffer(file) {
@@ -5579,14 +5840,14 @@ createApp({
       return { text, canvases };
     }
 
-    // Adds parsed rows straight into the live equipment list (no manual
-    // review step) — skips any row whose IP (cameras/nvr) or Serial No.
-    // (everything else) already exists, since those are the closest thing
-    // this data model has to a unique identifier per equipment kind.
-    // targetProj/targetSiteId are pinned by the caller at the start of the
-    // (async, potentially long-running OCR) import — reading selSite/
-    // currentProject live here would target whatever site the user has
-    // since navigated to, not the one the file was scanned for.
+    // Adds confirmed rows into the live equipment list — skips any row
+    // whose IP (cameras/nvr) or Serial No. (everything else) already
+    // exists, since those are the closest thing this data model has to a
+    // unique identifier per equipment kind.
+    // targetProj/targetSiteId are pinned by the caller when the import
+    // started (an async, potentially long-running OCR + review process) —
+    // reading selSite/currentProject live here would target whatever site
+    // the user has since navigated to, not the one the file was scanned for.
     function _autoAddRows(rows, kind, targetProj, targetSiteId) {
       const store = targetProj === 'vir' ? virSiteEquip.value : siteEquip.value;
       if(!store[targetSiteId]) store[targetSiteId] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
@@ -5621,13 +5882,13 @@ createApp({
       event.target.value = '';
       if(!file) return;
       // Pin the site/project this import targets right now — the user can
-      // dismiss the (still-loading) modal and navigate to a different site
-      // while OCR is still running in the background.
-      const targetProj = currentProject.value;
-      const targetSiteId = selSite.value.id;
-      const targetSiteName = selSite.value.name;
+      // dismiss the modal (or just take a while reviewing the extracted
+      // rows) and navigate to a different site before confirming.
+      importState._targetProj = currentProject.value;
+      importState._targetSiteId = selSite.value.id;
+      importState._targetSiteName = selSite.value.name;
       importState.kind = kind; importState.err = ''; importState.loading = true;
-      importState.added = 0; importState.duplicates = []; importState.ocrProgress = 0;
+      importState.rows = []; importState.added = 0; importState.duplicates = []; importState.ocrProgress = 0;
       importState.show = true;
       try {
         const ext = file.name.split('.').pop().toLowerCase();
@@ -5660,15 +5921,27 @@ createApp({
         if(!rows.length) {
           importState.err = 'Tiada data dapat diekstrak daripada fail ini. Cuba imej yang lebih jelas/tidak kabur.';
         } else {
-          const result = _autoAddRows(rows, kind, targetProj, targetSiteId);
-          importState.added = result.added;
-          importState.duplicates = result.duplicates;
-          if(result.added) showToast(`${result.added} rekod berjaya ditambah ke "${targetSiteName}"! Jangan lupa klik "Simpan Semua".`);
+          // Pre-checked so a clean scan can be confirmed with one click,
+          // but still editable/untick-able for OCR misreads or junk rows.
+          importState.rows = rows.map(r => ({ ...r, _include: true }));
         }
       } catch(e) {
         importState.err = 'Gagal baca fail: ' + e.message;
       }
       importState.loading = false;
+    }
+
+    function removeImportRow(idx) { importState.rows.splice(idx, 1); }
+
+    function confirmImportRows() {
+      const kind = importState.kind;
+      const rows = importState.rows.filter(r => r._include);
+      if(!rows.length) { showToast('Tiada rekod dipilih untuk import.', 'error'); return; }
+      const result = _autoAddRows(rows, kind, importState._targetProj, importState._targetSiteId);
+      importState.rows = [];
+      importState.added = result.added;
+      importState.duplicates = result.duplicates;
+      if(result.added) showToast(`${result.added} rekod berjaya ditambah ke "${importState._targetSiteName}"! Jangan lupa klik "Simpan Semua".`);
     }
 
     // ---- Load data ----
@@ -7871,7 +8144,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       profileEdit, pwChange, saveProfile, changePassword, uploadPhoto,
       showLoginPw, showPwNew, showPwConfirm,
       ocrState, ocrScan, pickOcr, resetForm,
-      importState, importEquipFile,
+      importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
