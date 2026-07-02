@@ -424,6 +424,12 @@ tr:hover td{background:#f9fbff}
 .pm-preview-label{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:.78rem;font-weight:700;color:#888;letter-spacing:.12em;text-transform:uppercase}
 .pm-preview-label::before,.pm-preview-label::after{content:'';flex:1;height:1px;background:#d0d5e8}
 .pm-preview-inner{background:#fff;border:1px solid #ccd0e0;border-radius:6px;padding:28px 32px;box-shadow:0 2px 12px rgba(0,0,0,.06)}
+/* Mod Baca (mobile) — instead of shrinking the whole A4 page to fit the
+   phone width (text becomes unreadably small), let content flow at natural
+   text size; wide tables get their own horizontal scroll. Not WYSIWYG —
+   that's what Mod Borang is for. Screen-only: print CSS ignores all this. */
+.pm-read-mode table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+.pm-read-mode .pm-corp-header{display:flex;flex-wrap:wrap;justify-content:center;text-align:center}
 .pm-corp-header{border-bottom:3px solid #006633;padding-bottom:10px;margin-bottom:10px;display:grid;grid-template-columns:130px 1fr 130px;align-items:flex-start;gap:8px}
 .pm-corp-logo-img{height:56px;max-width:100%;object-fit:contain;display:block}
 .pm-corp-center{text-align:center}
@@ -2150,10 +2156,13 @@ tr:hover td{background:#f9fbff}
 
         <!-- PREVIEW + PRINT AREA -->
         <div class="pm-preview-wrap">
-          <div class="pm-preview-label no-print">Pratonton Borang <span v-if="pmPreviewScale<1" class="text-muted" style="font-weight:400;text-transform:none;letter-spacing:normal;font-size:.72rem">({{Math.round(pmPreviewScale*100)}}% — cubit skrin untuk zum)</span></div>
+          <div class="pm-preview-label no-print">Pratonton Borang
+            <span v-if="pmPreviewScale<1 && !pmReadMode" class="text-muted" style="font-weight:400;text-transform:none;letter-spacing:normal;font-size:.72rem">({{Math.round(pmPreviewScale*100)}}% — cubit skrin untuk zum)</span>
+            <button v-if="pmPreviewScale<1 || pmReadMode" class="btn btn-outline btn-sm" style="text-transform:none;letter-spacing:normal" @click="pmReadMode=!pmReadMode">{{pmReadMode?'📄 Mod Borang':'📱 Mod Baca'}}</button>
+          </div>
           <div class="pm-preview-inner" id="pm-preview-inner">
-            <div class="pm-print-scale-outer" :style="pmPreviewScale<1 ? {height:(pmPreviewNaturalHeight*pmPreviewScale)+'px',overflow:'hidden'} : null">
-            <div id="print-area" class="pm-print" :style="pmPreviewScale<1 ? {width:PM_PREVIEW_DESIGN_WIDTH+'px',transform:'scale('+pmPreviewScale+')',transformOrigin:'top left'} : null">
+            <div class="pm-print-scale-outer" :style="pmPreviewScale<1 && !pmReadMode ? {height:(pmPreviewNaturalHeight*pmPreviewScale)+'px',overflow:'hidden'} : null">
+            <div id="print-area" class="pm-print" :class="{'pm-read-mode': pmReadMode}" :style="pmPreviewScale<1 && !pmReadMode ? {width:PM_PREVIEW_DESIGN_WIDTH+'px',transform:'scale('+pmPreviewScale+')',transformOrigin:'top left'} : null">
 
           <!-- HEADER -->
           <div class="pm-corp-header">
@@ -6679,8 +6688,12 @@ createApp({
       if(!pmPreviewContainerWidth.value || pmPreviewContainerWidth.value >= PM_PREVIEW_DESIGN_WIDTH) return 1;
       return Math.max(pmPreviewContainerWidth.value / PM_PREVIEW_DESIGN_WIDTH, 0.28);
     });
+    // Mod Baca — on phones, flow the borang at natural text size (tables
+    // scroll sideways individually) instead of the shrunken WYSIWYG page.
+    const pmReadMode = ref(false);
     watch(page, async (p) => {
       if(p === 'pm-view') { await nextTick(); _observePmPreview(); }
+      else pmReadMode.value = false; // reset when leaving the preview page
     });
 
     async function deleteRecord(id) {
@@ -7236,7 +7249,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       if(el1) _chartPmCm = new Chart(el1, { type:'bar', data:{
         labels: months.map(m=>m.label),
         datasets:[
-          { label:'PM', data:pmByMonth, backgroundColor:'rgba(0,100,50,0.75)', borderRadius:4 },
+          { label:'PM', data:pmByMonth, backgroundColor:'rgba(122,132,26,0.85)', borderRadius:4 },
           { label:'CM', data:cmByMonth, backgroundColor:'rgba(183,28,28,0.75)', borderRadius:4 }
         ]
       }, options:{ responsive:true, plugins:{ legend:{position:'top'} }, scales:{ x:{stacked:false}, y:{beginAtZero:true,ticks:{stepSize:1}} } }});
@@ -7247,7 +7260,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const el2 = document.getElementById('chart-doughnut');
       if(el2) _chartDoughnut = new Chart(el2, { type:'doughnut', data:{
         labels:['PM','CM'],
-        datasets:[{ data:[pmTotal,cmTotal], backgroundColor:['rgba(0,100,50,0.8)','rgba(183,28,28,0.8)'], borderWidth:2 }]
+        datasets:[{ data:[pmTotal,cmTotal], backgroundColor:['rgba(122,132,26,0.9)','rgba(183,28,28,0.8)'], borderWidth:2 }]
       }, options:{ responsive:true, plugins:{ legend:{position:'bottom'}, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} (${recs.length?Math.round(ctx.parsed/recs.length*100):0}%)`}} } }});
 
       // Chart 3: Top sites by CM
@@ -7296,15 +7309,15 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.refNo||'—')}</td><td>${esc(r.siteName||'—')}</td><td>${esc(r.visitDate||(r.month?MONTHS[r.month-1]+' '+r.year:'—'))}</td><td>${esc(r.maintType||'PM')}</td><td>${esc((r.project||'cctv').toUpperCase())}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
       const notaRows = laporanNotaItems.value;
       const notaHtml = notaRows.length ? notaRows.map((row,i)=>{
-        const stBg = /selesai/i.test(row.status)?'#e8f5e9':/pending/i.test(row.status)?'#fff8e1':'#e3f2fd';
-        const stColor = /selesai/i.test(row.status)?'#1b5e20':/pending/i.test(row.status)?'#e65100':'#0d47a1';
-        return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.visitDate)}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#1b5e20'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
+        const stBg = /selesai/i.test(row.status)?'#F4F7DC':/pending/i.test(row.status)?'#fff8e1':'#e3f2fd';
+        const stColor = /selesai/i.test(row.status)?'#7A841A':/pending/i.test(row.status)?'#e65100':'#0d47a1';
+        return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.visitDate)}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#7A841A'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
       }).join('') : '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:12px">Tiada data nota yang mengandungi format MASALAH/TINDAKAN/STATUS</td></tr>';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Penyelenggaraan</title>
-<style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.co{font-size:13px;font-weight:800;color:#006633}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
+<style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.co{font-size:13px;font-weight:800;color:#7A841A}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
 </head><body>
 <div class="header"><div class="co">DAYA ONE RESOURCES SDN BHD</div><div class="sub">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor</div><h1 style="margin-top:8px">LAPORAN PENYELENGGARAAN — ${months[0]?months[0].label:''} hingga ${months[months.length-1]?months[months.length-1].label:''}</h1><div class="sub">Projek: ${laporanProject.value==='all'?'Semua':laporanProject.value.toUpperCase()} &nbsp;|&nbsp; Site: ${laporanSite.value==='all'?'Semua':laporanSite.value} &nbsp;|&nbsp; Jana: ${new Date().toLocaleDateString('ms-MY')}</div></div>
-<div class="stats"><div class="stat"><div class="n" style="color:#003366">${recs.length}</div><div class="l">Jumlah Rekod</div></div><div class="stat"><div class="n" style="color:#1b5e20">${pmCount}</div><div class="l">Rekod PM</div></div><div class="stat"><div class="n" style="color:#b71c1c">${cmCount}</div><div class="l">Rekod CM</div></div><div class="stat"><div class="n" style="color:#4a148c">${siteCount}</div><div class="l">Site Diliputi</div></div></div>
+<div class="stats"><div class="stat"><div class="n" style="color:#003366">${recs.length}</div><div class="l">Jumlah Rekod</div></div><div class="stat"><div class="n" style="color:#7A841A">${pmCount}</div><div class="l">Rekod PM</div></div><div class="stat"><div class="n" style="color:#b71c1c">${cmCount}</div><div class="l">Rekod CM</div></div><div class="stat"><div class="n" style="color:#4a148c">${siteCount}</div><div class="l">Site Diliputi</div></div></div>
 <div class="charts"><div class="chart-box"><h2>Trend PM vs CM per Bulan</h2>${img1?`<img src="${img1}">`:''}</div><div class="chart-box"><h2>Nisbah PM : CM</h2>${img2?`<img src="${img2}">`:''}</div></div>
 <div class="charts"><div class="chart-box"><h2>Top Site — CM Tertinggi</h2>${img3?`<img src="${img3}">`:''}</div><div class="chart-box"><h2>Peralatan Kerap Gagal</h2>${img4?`<img src="${img4}">`:''}</div></div>
 <h2>Senarai Rekod</h2><table><thead><tr><th>#</th><th>No. Rujukan</th><th>Site</th><th>Tarikh</th><th>Jenis</th><th>Projek</th></tr></thead><tbody>${rowsHtml}</tbody></table>
@@ -7418,8 +7431,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         const pmRecs = siteRecs.filter(r => (r.maintType||'PM') !== 'CM');
         const cmRecs = siteRecs.filter(r => r.maintType === 'CM');
         const statusText = siteRecs.length === 0 ? 'Tiada Rekod' : (cmRecs.length > 0 ? 'CM Dilaksanakan' : 'PM Selesai');
-        const statusColor = siteRecs.length === 0 ? '#888' : (cmRecs.length > 0 ? '#b71c1c' : '#1b5e20');
-        const statusBg = siteRecs.length === 0 ? '#f5f5f5' : (cmRecs.length > 0 ? '#ffebee' : '#e8f5e9');
+        const statusColor = siteRecs.length === 0 ? '#888' : (cmRecs.length > 0 ? '#b71c1c' : '#7A841A');
+        const statusBg = siteRecs.length === 0 ? '#f5f5f5' : (cmRecs.length > 0 ? '#ffebee' : '#F4F7DC');
         const latestDate = siteRecs.reduce((acc, r) => {
           const d = r.visitDate || (r.month ? `${r.year}-${String(r.month).padStart(2,'0')}-01` : '');
           return d > acc ? d : acc;
@@ -7429,7 +7442,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         const notaHtml = notaItems.length ? notaItems.map(n =>
           `<div style="margin:2px 0;font-size:9px;color:#333;padding:3px 6px;background:#fffde7;border-left:2px solid #f9a825;border-radius:2px">` +
           `${n.masalah ? '<b>M:</b> '+esc(n.masalah) : ''}${n.tindakan ? ' &nbsp;<b>T:</b> '+esc(n.tindakan) : ''}` +
-          `${n.status ? ' &nbsp;<span style="color:'+(/selesai/i.test(n.status)?'#2e7d32':'#e65100')+'"><b>['+esc(n.status)+']</b></span>' : ''}</div>`
+          `${n.status ? ' &nbsp;<span style="color:'+(/selesai/i.test(n.status)?'#7A841A':'#e65100')+'"><b>['+esc(n.status)+']</b></span>' : ''}</div>`
         ).join('') : '<div style="font-size:9px;color:#bbb;padding:2px 6px">—</div>';
         return `<tr>
           <td style="text-align:center">${i+1}</td>
@@ -7457,8 +7470,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         return parsed.map(p => ({ ...p, siteName: r.siteName, visitDate: r.visitDate }));
       });
       const issueTableRows = allIssues.length ? allIssues.map((row, idx) => {
-        const stBg = /selesai/i.test(row.status) ? '#e8f5e9' : /pending/i.test(row.status) ? '#fff8e1' : '#f5f5f5';
-        const stColor = /selesai/i.test(row.status) ? '#1b5e20' : /pending/i.test(row.status) ? '#e65100' : '#555';
+        const stBg = /selesai/i.test(row.status) ? '#F4F7DC' : /pending/i.test(row.status) ? '#fff8e1' : '#f5f5f5';
+        const stColor = /selesai/i.test(row.status) ? '#7A841A' : /pending/i.test(row.status) ? '#e65100' : '#555';
         return `<tr>
           <td style="text-align:center">${idx+1}</td>
           <td>${esc(row.siteName||'—')}</td>
@@ -7500,7 +7513,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
   .sig-label{font-size:9px;color:#555;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
   .sig-name{font-size:9px;color:#888;margin-top:3px}
   .footer{margin-top:20px;padding-top:10px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:8.5px;color:#aaa}
-  .badge-ok{background:#e8f5e9;color:#1b5e20;padding:2px 7px;border-radius:6px;font-weight:700;font-size:8.5px}
+  .badge-ok{background:#F4F7DC;color:#7A841A;padding:2px 7px;border-radius:6px;font-weight:700;font-size:8.5px}
   .badge-cm{background:#ffebee;color:#b71c1c;padding:2px 7px;border-radius:6px;font-weight:700;font-size:8.5px}
   .badge-none{background:#f5f5f5;color:#888;padding:2px 7px;border-radius:6px;font-size:8.5px}
   @media print{body{padding:15px 18px}@page{margin:10mm;size:A4}}
@@ -7522,12 +7535,12 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 
 <div class="stats-row">
   <div class="stat"><div class="n" style="color:#003366">${recs.length}</div><div class="l">Jumlah Rekod</div></div>
-  <div class="stat"><div class="n" style="color:#1b5e20">${pmCount}</div><div class="l">Rekod PM</div></div>
+  <div class="stat"><div class="n" style="color:#7A841A">${pmCount}</div><div class="l">Rekod PM</div></div>
   <div class="stat"><div class="n" style="color:#b71c1c">${cmCount}</div><div class="l">Rekod CM</div></div>
   <div class="stat"><div class="n" style="color:#003366">${sitesOk}/${totalSites}</div><div class="l">Site Diliputi</div></div>
   <div class="stat">
     <div class="progress-bar-wrap"><div class="progress-bar" style="width:${completionPct}%"></div></div>
-    <div class="n" style="color:${completionPct===100?'#1b5e20':completionPct>=70?'#f57c00':'#b71c1c'};font-size:16px">${completionPct}%</div>
+    <div class="n" style="color:${completionPct===100?'#7A841A':completionPct>=70?'#f57c00':'#b71c1c'};font-size:16px">${completionPct}%</div>
     <div class="l">Kadar Liputan</div>
   </div>
 </div>
@@ -7635,8 +7648,8 @@ ${allIssues.length > 0 ? `
       const worstSites = [...cctvData,...virData].filter(s=>s.pmCount<s.expected).sort((a,b)=>a.pct-b.pct).slice(0,5);
       const bestSites = [...cctvData,...virData].filter(s=>s.pmCount>=s.expected).slice(0,5);
 
-      const levelColor = l => l==='green'?'#1b5e20':l==='yellow'?'#e65100':'#b71c1c';
-      const levelBg = l => l==='green'?'#e8f5e9':l==='yellow'?'#fff8e1':'#ffebee';
+      const levelColor = l => l==='green'?'#7A841A':l==='yellow'?'#e65100':'#b71c1c';
+      const levelBg = l => l==='green'?'#F4F7DC':l==='yellow'?'#fff8e1':'#ffebee';
       const levelText = l => l==='green'?'Baik':l==='yellow'?'Sederhana':'Kritikal';
 
       const siteTableRows = (data, project) => data.map((s,i) => {
@@ -7659,8 +7672,8 @@ ${allIssues.length > 0 ? `
 
       const issueHighlights = [...cctvData,...virData].flatMap(s => s.issues.map(iss => ({...iss, siteName:s.name}))).slice(0,15);
       const issueRows = issueHighlights.length ? issueHighlights.map((row,i) => {
-        const stColor = /selesai/i.test(row.status)?'#1b5e20':/pending/i.test(row.status)?'#e65100':'#555';
-        const stBg = /selesai/i.test(row.status)?'#e8f5e9':/pending/i.test(row.status)?'#fff8e1':'#f5f5f5';
+        const stColor = /selesai/i.test(row.status)?'#7A841A':/pending/i.test(row.status)?'#e65100':'#555';
+        const stBg = /selesai/i.test(row.status)?'#F4F7DC':/pending/i.test(row.status)?'#fff8e1':'#f5f5f5';
         return `<tr><td style="text-align:center">${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:6px;font-size:8.5px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
       }).join('') : '<tr><td colspan="5" style="text-align:center;color:#bbb;padding:8px">Tiada isu direkodkan dalam nota catatan</td></tr>';
 
@@ -7704,7 +7717,7 @@ tr:nth-child(even) td{background:#f9fafc}
 
 <div class="stats-grid">
   <div class="stat-box"><div class="n" style="color:#003366">${totalPM+totalCM}</div><div class="l">Jumlah Rekod</div></div>
-  <div class="stat-box"><div class="n" style="color:#1b5e20">${totalPM}</div><div class="l">Rekod PM</div></div>
+  <div class="stat-box"><div class="n" style="color:#7A841A">${totalPM}</div><div class="l">Rekod PM</div></div>
   <div class="stat-box"><div class="n" style="color:#b71c1c">${totalCM}</div><div class="l">Rekod CM</div></div>
   <div class="stat-box"><div class="n" style="color:#003366">${SITES.length+VIR_SITES.length}</div><div class="l">Jumlah Site</div></div>
 </div>
@@ -7712,12 +7725,12 @@ tr:nth-child(even) td{background:#f9fafc}
 <div class="stats-grid" style="grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
   <div class="stat-box">
     <div class="l" style="margin-bottom:6px">Kadar Pematuhan PM — CCTV (Sasaran 3x/tahun)</div>
-    <div class="compliance-bar-wrap"><div class="compliance-bar" style="width:${cctvCompliance}%;background:${cctvCompliance>=80?'#2e7d32':cctvCompliance>=50?'#f57c00':'#c62828'}">${cctvCompliance}%</div></div>
+    <div class="compliance-bar-wrap"><div class="compliance-bar" style="width:${cctvCompliance}%;background:${cctvCompliance>=80?'#7A841A':cctvCompliance>=50?'#f57c00':'#c62828'}">${cctvCompliance}%</div></div>
     <div style="font-size:9px;color:#888;margin-top:4px">${cctvData.filter(s=>s.pmCount>=s.expected).length} / ${SITES.length} site mencapai sasaran</div>
   </div>
   <div class="stat-box">
     <div class="l" style="margin-bottom:6px">Kadar Pematuhan PM — VIR (Sasaran 2x/tahun)</div>
-    <div class="compliance-bar-wrap"><div class="compliance-bar" style="width:${virCompliance}%;background:${virCompliance>=80?'#2e7d32':virCompliance>=50?'#f57c00':'#c62828'}">${virCompliance}%</div></div>
+    <div class="compliance-bar-wrap"><div class="compliance-bar" style="width:${virCompliance}%;background:${virCompliance>=80?'#7A841A':virCompliance>=50?'#f57c00':'#c62828'}">${virCompliance}%</div></div>
     <div style="font-size:9px;color:#888;margin-top:4px">${virData.filter(s=>s.pmCount>=s.expected).length} / ${VIR_SITES.length} site mencapai sasaran</div>
   </div>
 </div>
@@ -7727,9 +7740,9 @@ ${worstSites.length||bestSites.length ? `<div class="highlight-grid">
     <div class="hl-title" style="color:#c62828">⚠ Site Pematuhan Rendah</div>
     ${worstSites.map(s=>`<div class="hl-row"><span>${s.name}</span><span style="color:${levelColor(s.level)};font-weight:700">${s.pmCount}/${s.expected} PM (${s.pct}%)</span></div>`).join('')}
   </div>`:''}
-  ${bestSites.length?`<div class="hl-box" style="border-color:#a5d6a7;background:#f1fff4">
-    <div class="hl-title" style="color:#2e7d32">✓ Site Pematuhan Penuh</div>
-    ${bestSites.map(s=>`<div class="hl-row"><span>${s.name}</span><span style="color:#2e7d32;font-weight:700">${s.pmCount}/${s.expected} PM ✓</span></div>`).join('')}
+  ${bestSites.length?`<div class="hl-box" style="border-color:#D9E38A;background:#FAFBEC">
+    <div class="hl-title" style="color:#7A841A">✓ Site Pematuhan Penuh</div>
+    ${bestSites.map(s=>`<div class="hl-row"><span>${s.name}</span><span style="color:#7A841A;font-weight:700">${s.pmCount}/${s.expected} PM ✓</span></div>`).join('')}
   </div>`:''}
 </div>`:''}
 
@@ -7861,8 +7874,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 </style></head><body>
 <div class="hdr"><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>RINGKASAN EKSEKUTIF PENYELENGGARAAN</h1><div class="sub">SPRM — CCTV &amp; VIR &nbsp;|&nbsp; ${genDate}</div></div>
 <div class="kpi-grid">
-  <div class="kpi"><div class="n" style="color:${cctvCompliance>=75?'#1b5e20':cctvCompliance>=45?'#e65100':'#b71c1c'}">${cctvCompliance}</div><div class="l">Skor CCTV</div></div>
-  <div class="kpi"><div class="n" style="color:${virCompliance>=75?'#1b5e20':virCompliance>=45?'#e65100':'#b71c1c'}">${virCompliance}</div><div class="l">Skor VIR</div></div>
+  <div class="kpi"><div class="n" style="color:${cctvCompliance>=75?'#7A841A':cctvCompliance>=45?'#e65100':'#b71c1c'}">${cctvCompliance}</div><div class="l">Skor CCTV</div></div>
+  <div class="kpi"><div class="n" style="color:${virCompliance>=75?'#7A841A':virCompliance>=45?'#e65100':'#b71c1c'}">${virCompliance}</div><div class="l">Skor VIR</div></div>
   <div class="kpi"><div class="n" style="color:#b71c1c">${totalOverdue}</div><div class="l">Site Lampau PM</div></div>
   <div class="kpi"><div class="n" style="color:#e65100">${openCm}</div><div class="l">CM Terbuka</div></div>
 </div>
@@ -7946,7 +7959,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       _chartYearTrend = new Chart(el, { type:'bar', data:{
         labels: years,
         datasets:[
-          { label:'PM', data:pmByYear, backgroundColor:'rgba(0,100,50,0.75)', borderRadius:4 },
+          { label:'PM', data:pmByYear, backgroundColor:'rgba(122,132,26,0.85)', borderRadius:4 },
           { label:'CM', data:cmByYear, backgroundColor:'rgba(183,28,28,0.75)', borderRadius:4 },
         ]
       }, options:{ responsive:true, interaction:{mode:'index',intersect:false}, plugins:{ legend:{position:'top'}, tooltip:{enabled:true} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }});
@@ -8215,7 +8228,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
       startNewPM, loadPMEquip, savePM, viewRecord, deleteRecord,
-      pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH,
+      pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
