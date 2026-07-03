@@ -1025,17 +1025,6 @@ tr:hover td{background:#f9fbff}
 
       <div v-if="page==='dashboard' && !initialLoading">
 
-        <!-- DB STORAGE MINI-WIDGET (superadmin only) -->
-        <div class="card" v-if="authProfile?.role==='superadmin' && dbStorage.checkedAt" style="cursor:pointer" @click="openBackup">
-          <div class="flex justify-between items-center" style="margin-bottom:6px">
-            <span style="font-size:.8rem;font-weight:700">🗄 Storan Database (anggaran)</span>
-            <span style="font-size:.76rem;color:#888">{{fmtBytes(dbStorage.total)}} / 1 GB &nbsp;·&nbsp; {{((dbStorage.total/FIRESTORE_FREE_TIER_BYTES)*100).toFixed(1)}}%</span>
-          </div>
-          <div class="progress-bar" style="border-radius:6px;height:6px;overflow:hidden">
-            <div :style="'height:100%;border-radius:6px;background:'+((dbStorage.total/FIRESTORE_FREE_TIER_BYTES)>0.9?'#dc3545':(dbStorage.total/FIRESTORE_FREE_TIER_BYTES)>0.7?'#ffc107':'#198754')+';width:'+Math.min(100,(dbStorage.total/FIRESTORE_FREE_TIER_BYTES)*100)+'%'"></div>
-          </div>
-        </div>
-
         <!-- NEXT 7 DAYS AT A GLANCE -->
         <div class="card" v-if="next7DaysItems.length">
           <div class="card-title">🔭 7 Hari Akan Datang</div>
@@ -2408,7 +2397,7 @@ tr:hover td{background:#f9fbff}
             <div class="pm-info-cell"><b>Cawangan / Site:</b> {{viewPM?.siteName}}</div>
             <div class="pm-info-cell"><b>Tarikh Penyelenggaraan:</b> {{viewPM?.visitDate||'—'}}</div>
             <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}}</div>
-            <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{MONTHS[viewPM?.month-1]}} {{viewPM?.year}}</div>
+            <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{viewPM?.month?MONTHS[viewPM.month-1]:'—'}} {{viewPM?.year}}</div>
             <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#006633">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
             <div class="pm-info-cell pm-info-full" v-if="viewPM?.maintType==='PM'"><b>Penyelenggaraan Ke-:</b>
               <span class="pm-no-boxes">
@@ -6597,8 +6586,9 @@ createApp({
             await db.collection('users').doc(saUid).set({ username:uid, email, name:builtIn.name, role:builtIn.role, disabled:false }, {merge:true});
           }
         } else {
-          const snap = await db.collection('users').where('username','==',uid).limit(1).get();
-          authProfile.value = { id: snap.docs[0].id, ...snap.docs[0].data() };
+          const snap2 = await db.collection('users').where('username','==',uid).limit(1).get();
+          if(snap2.empty){ await auth.signOut(); loginErr.value='ID pengguna tidak dijumpai.'; triggerShake(); loading.value=false; return; }
+          authProfile.value = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
         }
         // Check account expiry for temporary users
         const prof = authProfile.value;
