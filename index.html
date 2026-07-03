@@ -878,7 +878,7 @@ tr:hover td{background:#f9fbff}
       <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContactPersons();page='contact-person'">
         <span class="icon">📞</span> Contact Person CCTV
       </div>
-      <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContracts();page='contracts'" v-if="['superadmin','admin'].includes(authProfile?.role)">
+      <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContracts();page='contracts'">
         <span class="icon">📜</span> Kontrak &amp; SLA (CCTV)
         <span v-if="contractsExpiringCountCctv>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountCctv}}</span>
       </div>
@@ -895,7 +895,7 @@ tr:hover td{background:#f9fbff}
       <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='vir'}" @click="currentProject='vir';loadContactPersons();page='contact-person'">
         <span class="icon">📞</span> Contact Person VIR
       </div>
-      <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='vir'}" @click="currentProject='vir';loadContracts();page='contracts'" v-if="['superadmin','admin'].includes(authProfile?.role)">
+      <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='vir'}" @click="currentProject='vir';loadContracts();page='contracts'">
         <span class="icon">📜</span> Kontrak &amp; SLA (VIR)
         <span v-if="contractsExpiringCountVir>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountVir}}</span>
       </div>
@@ -1167,7 +1167,7 @@ tr:hover td{background:#f9fbff}
         </div><!-- /dashboardCompact wrapper -->
 
         <!-- CONTRACT/SLA EXPIRY ALERT -->
-        <div class="overdue-alert" v-if="contractsExpiringCount>0 && ['superadmin','admin'].includes(authProfile?.role)" style="cursor:pointer" @click="loadContracts();page='contracts'">
+        <div class="overdue-alert" v-if="contractsExpiringCount>0" style="cursor:pointer" @click="loadContracts();page='contracts'">
           <div class="overdue-alert-title">📜 {{contractsExpiringCount}} Kontrak Hampir/Telah Tamat Tempoh (CCTV + VIR) — klik untuk lihat Kontrak &amp; SLA</div>
         </div>
 
@@ -1315,7 +1315,11 @@ tr:hover td{background:#f9fbff}
       <div v-if="page==='contracts'">
         <div class="flex justify-between items-center mb-20">
           <div class="card-title" style="margin:0;border:none;padding:0">📜 Kontrak &amp; SLA ({{currentProject==='vir'?'VIR':'CCTV'}}) — Penyelenggaraan</div>
-          <button class="btn btn-primary" @click="openAddContract">+ Tambah Kontrak</button>
+          <div class="flex gap-8">
+            <button v-if="contractsFiltered.length" class="btn btn-outline btn-sm" @click="exportContractsExcel">⬇ Excel</button>
+            <button v-if="contractsFiltered.length" class="btn btn-outline btn-sm" @click="exportContractsPdf">🖨 PDF</button>
+            <button v-if="canEditContract" class="btn btn-primary" @click="openAddContract">+ Tambah Kontrak</button>
+          </div>
         </div>
         <div v-if="!contractsFiltered.length" class="empty">Tiada kontrak direkodkan lagi.</div>
         <div v-for="c in contractsFiltered" :key="c.id" class="backup-card" style="align-items:flex-start">
@@ -1333,7 +1337,7 @@ tr:hover td{background:#f9fbff}
             <p style="font-size:.82rem;color:#666;margin-top:4px">Tempoh: {{fmtDate(c.startDate)}} — {{fmtDate(c.endDate)}} &nbsp;·&nbsp; Reminder: {{c.reminderDays||60}} hari sebelum tamat</p>
             <p v-if="c.notes" style="font-size:.8rem;color:#888;margin-top:4px">{{c.notes}}</p>
           </div>
-          <div class="flex gap-8">
+          <div v-if="canEditContract" class="flex gap-8">
             <button class="btn btn-sm btn-outline" @click="openEditContract(c)">✏️ Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteContract(c)">🗑</button>
           </div>
@@ -1438,7 +1442,7 @@ tr:hover td{background:#f9fbff}
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
             <span class="fw-600" style="margin-left:12px">{{selSite?.name}}</span>
           </div>
-          <button class="btn btn-success btn-sm" @click="saveSiteEquip">💾 Simpan Semua</button>
+          <button class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
         <div class="tabs">
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
@@ -1511,6 +1515,7 @@ tr:hover td{background:#f9fbff}
               <div class="card-title" style="margin:0;border:none;padding:0">Senarai Kamera</div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.cameras||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByIp('cameras')">🔀 Susun ikut IP</button>
+                <button v-if="equipSelected.cameras.size" class="btn btn-outline btn-sm" @click="openBulkEdit('cameras')">✏️ Edit Pukal ({{equipSelected.cameras.size}})</button>
                 <button v-if="equipSelected.cameras.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('cameras')">🗑 Padam Terpilih ({{equipSelected.cameras.size}})</button>
               </div>
             </div>
@@ -1520,7 +1525,7 @@ tr:hover td{background:#f9fbff}
                 <tbody>
                   <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="c._uid||i" :class="{'highlight-row':equipEditIdx.cameras===i}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{i+1}}</td><td>{{c.name}}</td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.serial}}</td>
+                    <td>{{i+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.serial}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)" title="Padam">🗑</button>
@@ -1582,6 +1587,7 @@ tr:hover td{background:#f9fbff}
               <div class="card-title" style="margin:0;border:none;padding:0">Senarai NVR</div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.nvr||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByIp('nvr')">🔀 Susun ikut IP</button>
+                <button v-if="equipSelected.nvr.size" class="btn btn-outline btn-sm" @click="openBulkEdit('nvr')">✏️ Edit Pukal ({{equipSelected.nvr.size}})</button>
                 <button v-if="equipSelected.nvr.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('nvr')">🗑 Padam Terpilih ({{equipSelected.nvr.size}})</button>
               </div>
             </div>
@@ -1591,7 +1597,7 @@ tr:hover td{background:#f9fbff}
                 <tbody>
                   <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="{'highlight-row':equipEditIdx.nvr===i}">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td>{{n.name}}</td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td>
+                    <td>{{i+1}}</td><td>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
@@ -1649,7 +1655,10 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Senarai Hard Disk</div>
-              <button v-if="equipSelected.hdd.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('hdd')">🗑 Padam Terpilih ({{equipSelected.hdd.size}})</button>
+              <div class="flex gap-8">
+                <button v-if="equipSelected.hdd.size" class="btn btn-outline btn-sm" @click="openBulkEdit('hdd')">✏️ Edit Pukal ({{equipSelected.hdd.size}})</button>
+                <button v-if="equipSelected.hdd.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('hdd')">🗑 Padam Terpilih ({{equipSelected.hdd.size}})</button>
+              </div>
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
@@ -1657,7 +1666,7 @@ tr:hover td{background:#f9fbff}
                 <tbody>
                   <tr v-for="(h,i) in selSiteEquip.hdd||[]" :key="h._uid||i" :class="{'highlight-row':equipEditIdx.hdd===i}">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
-                    <td>{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.config}}</td><td>{{h.nvrRef}}</td>
+                    <td>{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.config}}</td><td>{{h.nvrRef}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',i)" title="Padam">🗑</button>
@@ -1706,7 +1715,10 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Senarai Network Switch</div>
-              <button v-if="equipSelected.switches.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('switches')">🗑 Padam Terpilih ({{equipSelected.switches.size}})</button>
+              <div class="flex gap-8">
+                <button v-if="equipSelected.switches.size" class="btn btn-outline btn-sm" @click="openBulkEdit('switches')">✏️ Edit Pukal ({{equipSelected.switches.size}})</button>
+                <button v-if="equipSelected.switches.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('switches')">🗑 Padam Terpilih ({{equipSelected.switches.size}})</button>
+              </div>
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
@@ -1714,7 +1726,7 @@ tr:hover td{background:#f9fbff}
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}}</td><td>{{s.serial}}</td><td>{{s.ports}}</td>
+                    <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ports}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
@@ -1755,7 +1767,10 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Senarai Alarm</div>
-              <button v-if="equipSelected.alarms.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('alarms')">🗑 Padam Terpilih ({{equipSelected.alarms.size}})</button>
+              <div class="flex gap-8">
+                <button v-if="equipSelected.alarms.size" class="btn btn-outline btn-sm" @click="openBulkEdit('alarms')">✏️ Edit Pukal ({{equipSelected.alarms.size}})</button>
+                <button v-if="equipSelected.alarms.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('alarms')">🗑 Padam Terpilih ({{equipSelected.alarms.size}})</button>
+              </div>
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
@@ -1763,7 +1778,7 @@ tr:hover td{background:#f9fbff}
                 <tbody>
                   <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="{'highlight-row':equipEditIdx.alarms===i}">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
-                    <td>{{i+1}}</td><td>{{a.name}}</td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td>
+                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
@@ -1813,7 +1828,10 @@ tr:hover td{background:#f9fbff}
           <div class="card">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Senarai Peralatan Lain-lain</div>
-              <button v-if="equipSelected.misc.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('misc')">🗑 Padam Terpilih ({{equipSelected.misc.size}})</button>
+              <div class="flex gap-8">
+                <button v-if="equipSelected.misc.size" class="btn btn-outline btn-sm" @click="openBulkEdit('misc')">✏️ Edit Pukal ({{equipSelected.misc.size}})</button>
+                <button v-if="equipSelected.misc.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('misc')">🗑 Padam Terpilih ({{equipSelected.misc.size}})</button>
+              </div>
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
@@ -1821,7 +1839,7 @@ tr:hover td{background:#f9fbff}
                 <tbody>
                   <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="{'highlight-row':equipEditIdx.misc===i}">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
-                    <td>{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td>
+                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
@@ -2230,7 +2248,7 @@ tr:hover td{background:#f9fbff}
               <option value="in-progress">Dalam Proses</option>
               <option value="resolved">Selesai</option>
             </select>
-            <button class="btn btn-sm" style="background:#e65100;color:#fff;font-weight:700" @click="bulkUpdateCMStatus">✔ Kemaskini Status</button>
+            <button class="btn btn-sm" style="background:#e65100;color:#fff;font-weight:700" :disabled="loading" @click="bulkUpdateCMStatus">✔ Kemaskini Status</button>
             <button class="btn btn-sm btn-outline" style="font-size:.8rem" @click="batchSelected=[]">Batal Pilihan</button>
             <span style="font-size:.75rem;color:#888;margin-left:4px">
               ({{batchSelected.length - bulkCmSelected.length}} rekod PM dalam pilihan akan diabaikan)
@@ -3202,6 +3220,26 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="contractModal.show=false">Batal</button>
             <button class="btn btn-primary" @click="submitContract" :disabled="loading">{{loading?'Menyimpan...':contractModal.editing?'Simpan Perubahan':'Tambah Kontrak'}}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== BULK EDIT EQUIPMENT MODAL ====== -->
+      <div v-if="bulkEditModal.show" class="modal-bg" @click.self="bulkEditModal.show=false">
+        <div class="modal">
+          <h3>✏️ Edit Pukal — {{equipSelected[bulkEditModal.kind]?.size||0}} rekod terpilih</h3>
+          <div class="form-group"><label>Field</label>
+            <select class="form-control" v-model="bulkEditModal.field">
+              <option v-for="(f,k) in BULK_EDIT_FIELDS" :key="k" :value="k">{{f.label}}</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Nilai Baru</label>
+            <input class="form-control" :type="BULK_EDIT_FIELDS[bulkEditModal.field].type" v-model="bulkEditModal.value">
+          </div>
+          <p style="font-size:.8rem;color:#888;margin-bottom:10px">Nilai ini akan menggantikan {{BULK_EDIT_FIELDS[bulkEditModal.field].label}} sedia ada untuk kesemua rekod terpilih.</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="bulkEditModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="applyBulkEdit">✔ Terapkan</button>
           </div>
         </div>
       </div>
@@ -4822,6 +4860,7 @@ createApp({
     }
 
     async function saveTeam() {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!teamModal.data.team || !teamModal.data.date) {
         teamModal.err = 'Team dan tarikh wajib diisi.'; return;
       }
@@ -4972,6 +5011,7 @@ createApp({
     });
 
     async function deleteTeam(t) {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!t?.id) return;
       if(!confirm('Padam penugasan Team ' + t.team + ' ini?')) return;
       try {
@@ -4995,6 +5035,7 @@ createApp({
     const canEditContact = computed(()=>
       ['superadmin','admin','staff'].includes(authProfile.value?.role)
     );
+    const canEditContract = computed(()=> isAdminRole());
 
     const calCells = computed(()=>{
       const first = new Date(calYear.value, calMonth.value, 1).getDay(); // 0=Sun
@@ -5208,6 +5249,50 @@ createApp({
         showToast('Kontrak dipadam.');
       } catch(e) { showToast('Gagal padam kontrak: ' + e.message, 'error'); }
     }
+
+    const CONTRACT_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
+    async function exportContractsExcel() {
+      const rows = contractsFiltered.value.map((c,i) => ({
+        '#': i+1, 'Tajuk Kontrak': c.title, 'No. Kontrak': c.contractNo||'-',
+        'Tarikh Mula': fmtDate(c.startDate), 'Tarikh Tamat': fmtDate(c.endDate),
+        'Status': CONTRACT_STATUS_LABEL[contractStatus(c)], 'Reminder (hari)': c.reminderDays||60, 'Nota': c.notes||'-',
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Kontrak & SLA');
+      XLSX.writeFile(wb, `kontrak_sla_${currentProject.value}_${new Date().toISOString().slice(0,10)}.xlsx`);
+      await logAudit('CONTRACT_EXPORT_EXCEL', `${rows.length} rekod (${currentProject.value.toUpperCase()})`);
+    }
+    async function exportContractsPdf() {
+      const list = contractsFiltered.value;
+      const tableRows = list.map((c,i) => `<tr>
+        <td>${i+1}</td><td>${(c.title||'').replace(/</g,'&lt;')}</td><td>${(c.contractNo||'-').replace(/</g,'&lt;')}</td>
+        <td>${fmtDate(c.startDate)}</td><td>${fmtDate(c.endDate)}</td><td>${CONTRACT_STATUS_LABEL[contractStatus(c)]}</td>
+        <td>${(c.notes||'-').replace(/</g,'&lt;')}</td>
+      </tr>`).join('');
+      const w = window.open('','_blank','width=1000,height=700');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Kontrak_SLA_${currentProject.value.toUpperCase()}_${new Date().toISOString().slice(0,10)}</title>
+        <style>
+          body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
+          h2{color:#003366;margin-bottom:2px}
+          p{color:#555;font-size:8.5pt;margin-top:0}
+          table{width:100%;border-collapse:collapse;margin-top:12px}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
+          td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt}
+          tr:nth-child(even) td{background:#f7f9fc}
+        </style>
+      </head><body>
+        <h2>Kontrak &amp; SLA — ${currentProject.value==='vir'?'VIR':'CCTV'} SPRM</h2>
+        <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
+        <table><thead><tr><th>#</th><th>Tajuk Kontrak</th><th>No. Kontrak</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Status</th><th>Nota</th></tr></thead>
+        <tbody>${tableRows}</tbody></table>
+      </body></html>`);
+      w.document.close();
+      w.focus();
+      setTimeout(()=>{ w.print(); w.close(); }, 600);
+      await logAudit('CONTRACT_EXPORT_PDF', `${list.length} rekod (${currentProject.value.toUpperCase()})`);
+    }
     const resetPwModal = reactive({ show:false, userId:'', username:'', userEmail:'', err:'' });
     const forcePwModal = reactive({ show:false, newPw:'', confirmPw:'', err:'' });
     const showResetNew = ref(false);
@@ -5301,7 +5386,10 @@ createApp({
           items: firebase.firestore.FieldValue.arrayUnion(val),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
-      } catch(e) { console.warn('Gagal simpan brand custom ke cloud:', e); }
+      } catch(e) {
+        console.warn('Gagal simpan brand custom ke cloud:', e);
+        showToast('Peralatan disimpan. Brand baru "'+val+'" belum sync ke cloud (offline) — akan cuba lagi bila online.', 'error');
+      }
     }
     async function _maybeAddCustomModel(equipType, brand, model) {
       if(!EQUIP_MODEL_DICTS[equipType] || !brand || !model || model === 'Lain-lain') return;
@@ -5316,7 +5404,10 @@ createApp({
           items: firebase.firestore.FieldValue.arrayUnion(val),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
-      } catch(e) { console.warn('Gagal simpan model custom ke cloud:', e); }
+      } catch(e) {
+        console.warn('Gagal simpan model custom ke cloud:', e);
+        showToast('Peralatan disimpan. Model baru "'+val+'" belum sync ke cloud (offline) — akan cuba lagi bila online.', 'error');
+      }
     }
 
     // ---- Project split ----
@@ -6795,7 +6886,7 @@ createApp({
           duplicates.push({ field: dupField, value: r[dupField], label: existing.name || existing.model || existing.serial || '(tiada nama)' });
           return;
         }
-        const item = { _uid: _genId() };
+        const item = { _uid: _genId(), _ts: Date.now() };
         IMPORT_FIELD_KEYS[kind].forEach(k => item[k] = r[k] || '');
         if(kind === 'cameras' && !item.camType) item.camType = 'Indoor';
         if(kind === 'nvr' && !item.type) item.type = 'NVR';
@@ -7395,6 +7486,36 @@ createApp({
       }
       showToast('Rekod terpilih berjaya dipadam! Jangan lupa klik "Simpan Semua".');
     }
+    // Bulk-edit: apply one field's value to every currently-selected row in
+    // a single equipment list at once (reuses the same equipSelected Sets
+    // that already power bulk-delete). Kept to the fields that are common
+    // to all 6 equipment types and safe to overwrite in bulk.
+    const bulkEditModal = reactive({ show:false, kind:'', field:'installDate', value:'' });
+    const BULK_EDIT_FIELDS = { installDate:{label:'Tarikh Pasang', type:'date'}, brand:{label:'Brand', type:'text'} };
+    function openBulkEdit(kind) {
+      if(!equipSelected[kind].size) return;
+      bulkEditModal.kind = kind;
+      bulkEditModal.field = 'installDate';
+      bulkEditModal.value = '';
+      bulkEditModal.show = true;
+    }
+    function applyBulkEdit() {
+      const { kind, field, value } = bulkEditModal;
+      const sel = equipSelected[kind];
+      if(!sel.size) { bulkEditModal.show = false; return; }
+      const list = activeEquip()[selSite.value.id][kind];
+      // If the row currently open in the "Kemaskini" inline-edit form is
+      // part of this bulk selection, its form still holds a stale copy
+      // (editEquipItem() Object.assign'd a snapshot, not a live reference)
+      // — submitting that form afterwards would silently overwrite the
+      // bulk-applied value. Cancel that in-progress edit so it can't clobber it.
+      const editedUid = equipEditIdx[kind]!==null ? (list[equipEditIdx[kind]]||{})._uid : null;
+      if(editedUid && sel.has(editedUid)) cancelEditEquip(kind);
+      let count = 0;
+      list.forEach(it => { if(sel.has(it._uid)) { it[field] = value; it._ts = Date.now(); count++; } });
+      bulkEditModal.show = false;
+      showToast(`${field==='installDate'?'Tarikh Pasang':'Brand'} dikemaskini untuk ${count} rekod! Jangan lupa klik "Simpan Semua".`);
+    }
     async function editEquipItem(key, idx) {
       const item = (selSiteEquip.value[key]||[])[idx];
       if(!item) return;
@@ -7457,6 +7578,12 @@ createApp({
       const idx = list.findIndex((it,i) => i!==excludeIdx && String(it[dupField]||'').trim().toLowerCase()===val);
       return idx>-1 ? { field:dupField, value:item[dupField], existing:list[idx] } : null;
     }
+    // Badge shown next to equipment rows added/edited within the last 24h,
+    // so a batch-entry session can spot at a glance which rows are new.
+    const RECENT_EQUIP_MS = 24*60*60*1000;
+    function isRecentEquip(item) {
+      return !!item._ts && (Date.now() - item._ts) < RECENT_EQUIP_MS;
+    }
     function _dupErrMsg(dup) {
       const label = dup.existing.name || dup.existing.model || dup.existing.serial || 'rekod lain';
       const fieldLabel = dup.field==='ip' ? 'IP Address' : 'No. Siri';
@@ -7484,11 +7611,11 @@ createApp({
       const list = activeEquip()[selSite.value.id].cameras;
       const dup = _findDupConflict('cameras', list, resolved, equipEditIdx.cameras);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...resolved, _uid:list[equipEditIdx.cameras]._uid||_genId()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
-      else { list.push({...resolved, _uid:_genId()}); showToast('Kamera berjaya ditambah!'); }
+      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...resolved, _uid:list[equipEditIdx.cameras]._uid||_genId(), _ts:Date.now()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
+      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Kamera berjaya ditambah!'); }
       _maybeAddCustomBrand('BRANDS', resolved.brand);
       _maybeAddCustomModel('cameras', resolved.brand, resolved.model);
-      Object.assign(nCam,{name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',_uid:''});
+      resetForm('nCam');
     }
     function addNVR() {
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
@@ -7499,11 +7626,11 @@ createApp({
       const list = activeEquip()[selSite.value.id].nvr;
       const dup = _findDupConflict('nvr', list, resolved, equipEditIdx.nvr);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
-      else { list.push({...resolved, _uid:_genId()}); showToast('NVR berjaya ditambah!'); }
+      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId(), _ts:Date.now()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
+      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('NVR berjaya ditambah!'); }
       _maybeAddCustomBrand('BRANDS', resolved.brand);
       _maybeAddCustomModel('nvr', resolved.brand, resolved.model);
-      Object.assign(nNVR,{name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',_uid:''});
+      resetForm('nNVR');
     }
     function addHDD() {
       if(!nHDD.brand){showToast('Sila masukkan brand HDD','error');return;}
@@ -7513,11 +7640,11 @@ createApp({
       const list = activeEquip()[selSite.value.id].hdd;
       const dup = _findDupConflict('hdd', list, resolved, equipEditIdx.hdd);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...resolved, _uid:list[equipEditIdx.hdd]._uid||_genId()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
-      else { list.push({...resolved, _uid:_genId()}); showToast('HDD berjaya ditambah!'); }
+      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...resolved, _uid:list[equipEditIdx.hdd]._uid||_genId(), _ts:Date.now()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
+      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('HDD berjaya ditambah!'); }
       _maybeAddCustomBrand('HDD_BRANDS', resolved.brand);
       _maybeAddCustomModel('hdd', resolved.brand, resolved.model);
-      Object.assign(nHDD,{brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',_uid:''});
+      resetForm('nHDD');
     }
     function addSwitch() {
       if(!nSW.brand){showToast('Sila masukkan brand switch','error');return;}
@@ -7527,11 +7654,11 @@ createApp({
       const list = activeEquip()[selSite.value.id].switches;
       const dup = _findDupConflict('switches', list, resolved, equipEditIdx.switches);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...resolved, _uid:list[equipEditIdx.switches]._uid||_genId()}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
-      else { list.push({...resolved, _uid:_genId()}); showToast('Switch berjaya ditambah!'); }
+      if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...resolved, _uid:list[equipEditIdx.switches]._uid||_genId(), _ts:Date.now()}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
+      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Switch berjaya ditambah!'); }
       _maybeAddCustomBrand('SWITCH_BRANDS', resolved.brand);
       _maybeAddCustomModel('switches', resolved.brand, resolved.model);
-      Object.assign(nSW,{brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',_uid:''});
+      resetForm('nSW');
     }
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
@@ -7540,16 +7667,16 @@ createApp({
       const list = activeEquip()[selSite.value.id].alarms;
       const dup = _findDupConflict('alarms', list, nALM, equipEditIdx.alarms);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...nALM, _uid:list[equipEditIdx.alarms]._uid||_genId()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
-      else { list.push({...nALM, _uid:_genId()}); showToast('Alarm berjaya ditambah!'); }
-      Object.assign(nALM,{name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',_uid:''});
+      if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...nALM, _uid:list[equipEditIdx.alarms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
+      else { list.push({...nALM, _uid:_genId(), _ts:Date.now()}); showToast('Alarm berjaya ditambah!'); }
+      resetForm('nALM');
     }
     function addMisc() {
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
       const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
-      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, installDate:nMISC.installDate };
+      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, installDate:nMISC.installDate, _ts:Date.now() };
       const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
@@ -8302,6 +8429,13 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
           }
         }
       });
+      // Contracts & SLA expiring/expired (any project)
+      contracts.value.forEach(c => {
+        const status = contractStatus(c);
+        if(status !== 'active') {
+          list.push({ id:'contract-'+c.id, icon: status==='expired'?'🔴':'🟡', type:'contract', title:(status==='expired'?'Kontrak Tamat: ':'Kontrak Hampir Tamat: ')+c.title, body:'Tamat pada '+fmtDate(c.endDate)+' ('+((c.project||'cctv')==='vir'?'VIR':'CCTV')+')', time: now, read:false, action:'contracts', project: c.project||'cctv' });
+        }
+      });
       // Preserve read-state across rebuilds — ids are stable (e.g.
       // 'overdue-'+siteId), but this function reruns on every pmRecords
       // change and previously hardcoded read:false on every item, silently
@@ -8319,11 +8453,15 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         startNewPMForSite(n.siteId);
         return;
       }
+      if(n.type === 'contract' && n.project) {
+        currentProject.value = n.project;
+      }
       showNotifPanel.value = false;
       if(n.action) page.value = n.action;
     }
 
     watch(pmRecords, () => buildNotifications(), { deep: true });
+    watch(contracts, () => buildNotifications(), { deep: true });
 
     // ── Feature 2: Laporan ──
     const laporanTempoh = ref(6);
@@ -9356,7 +9494,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
       allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser,
-      contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount,
+      contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract,
+      exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
       setExpiryPreset, userExpiryStatus,
@@ -9368,8 +9507,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
-      brandOptionsFor, modelOptionsFor,
+      brandOptionsFor, modelOptionsFor, isRecentEquip,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
+      bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
