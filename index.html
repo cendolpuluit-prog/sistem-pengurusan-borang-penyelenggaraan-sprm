@@ -3177,7 +3177,7 @@ tr:hover td{background:#f9fbff}
             </div>
             <button class="btn btn-danger btn-sm btn-icon" @click="cpModal.contacts.splice(i,1)" title="Padam">🗑</button>
           </div>
-          <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:14px" @click="cpModal.contacts.push({id:_genId(),name:'',phone:'',label:''})">+ Tambah Pegawai</button>
+          <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:14px" @click="addCpModalContact">+ Tambah Pegawai</button>
           <p v-if="cpModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{cpModal.err}}</p>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="cpModal.show=false">Batal</button>
@@ -7096,6 +7096,15 @@ createApp({
       cpModal.show = true;
     }
 
+    // _genId() is a plain hoisted function, not part of the returned setup()
+    // object — calling it directly from a template expression (as the
+    // "+ Tambah Pegawai" button used to) throws "_genId is not a function"
+    // at click time since the template's render context only sees exported
+    // properties. Wrapping it in an exported function fixes that.
+    function addCpModalContact() {
+      cpModal.contacts.push({ id:_genId(), name:'', phone:'', label:'' });
+    }
+
     async function saveCpModal() {
       if(!cpModal.siteId) return;
       cpModal.err = '';
@@ -7663,6 +7672,18 @@ createApp({
       if(refNoDuplicate.value) {
         showToast(`No. rujukan "${pm.refNo}" sudah wujud. Sila guna nombor lain.`, 'error');
         return;
+      }
+      // Drafts may stay incomplete, but a final "Submit" must have these —
+      // otherwise the record can silently save with maintType:'PM' (masking
+      // a CM that was never classified, losing rootCause) or with no
+      // month/year/visitDate, which then makes it vanish from the dashboard
+      // year stats and "last PM" overdue tracking even though it was submitted.
+      if(status === 'submitted') {
+        if(!pm.siteId) { showToast('Sila pilih site.', 'error'); return; }
+        if(!pm.maintType) { showToast('Sila pilih Jenis Penyelenggaraan (PM/CM).', 'error'); return; }
+        if(!pm.month || !pm.year) { showToast('Sila pilih Bulan dan Tahun Penyelenggaraan.', 'error'); return; }
+        if(!pm.visitDate) { showToast('Sila isi Tarikh Penyelenggaraan.', 'error'); return; }
+        if(pm.maintType === 'CM' && !pm.rootCause) { showToast('Sila isi Punca Masalah (Root Cause) untuk CM.', 'error'); return; }
       }
       loading.value=true;
       try {
@@ -9373,7 +9394,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES,
-      contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, exportContactCsv, canEditContact, cpSites,
+      contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, canEditContact, cpSites,
       mobileNavOpen,
       darkMode,
       setTimeout
