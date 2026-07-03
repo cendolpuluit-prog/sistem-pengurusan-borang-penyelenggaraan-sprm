@@ -451,8 +451,8 @@ tr:hover td{background:#f9fbff}
 .pm-corp-logo-txt{font-size:12pt;font-weight:bold;color:#006633;letter-spacing:.3px}
 .pm-corp-logo-sub{font-size:8pt;color:#444;margin-top:3px;line-height:1.5}
 .pm-corp-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.pm-corp-ref{text-align:right;font-size:7.8pt;color:#333;white-space:normal;word-break:break-word}
-.pm-corp-ref .ref-no{font-size:10pt;font-weight:bold;color:#006633;display:inline}
+.pm-corp-ref{text-align:right;font-size:7.5pt;color:#333;white-space:normal;overflow-wrap:break-word}
+.pm-corp-ref .ref-no{font-size:8.5pt;font-weight:bold;color:#006633;display:block;margin-top:1px}
 .pm-qr-canvas{width:46px!important;height:46px!important;flex-shrink:0;margin-top:2px}
 .pm-classification{text-align:right;font-size:7.5pt;font-weight:700;color:#b71c1c;letter-spacing:.06em;margin-bottom:4px}
 .pm-corp-title{background:#006633;color:#fff;text-align:center;padding:6px 0;font-size:10.5pt;font-weight:bold;letter-spacing:.5px;margin-bottom:10px}
@@ -714,7 +714,7 @@ tr:hover td{background:#f9fbff}
 
 /* CONTACT PERSON */
 .cp-empty-row td{ background:#fffde7 }
-.cp-empty-row td:nth-child(4),.cp-empty-row td:nth-child(5){ opacity:.7 }
+.cp-empty-row td:nth-child(4){ opacity:.7 }
 
 /* ── LAPORAN PRINT ── */
 #laporan-area{display:none}
@@ -1792,7 +1792,7 @@ tr:hover td{background:#f9fbff}
               <div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nMISC','serial',t)">{{t}}</span></div></div>
             </div>
             <div class="form-row form-row-3">
-              <div class="form-group"><label>Nama / Lokasi</label><input class="form-control" v-model="nMISC.name" placeholder="cth: Monitor Bilik Kawalan"></div>
+              <div class="form-group"><label>Nama / Lokasi *</label><input class="form-control" v-model="nMISC.name" placeholder="cth: Monitor Bilik Kawalan"></div>
               <div class="form-group"><label>Kategori</label>
                 <select class="form-control" v-model="nMISC.category">
                   <option v-for="c in MISC_CATEGORIES" :key="c">{{c}}</option>
@@ -1800,8 +1800,8 @@ tr:hover td{background:#f9fbff}
                 </select>
                 <input v-if="nMISC.category==='Lain-lain'" class="form-control" v-model="nMISC.categoryCustom" placeholder="Nyatakan kategori" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Brand</label><input class="form-control" v-model="nMISC.brand"></div>
-              <div class="form-group"><label>Model</label><input class="form-control" v-model="nMISC.model"></div>
+              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.brand"></div>
+              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.model"></div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
             </div>
@@ -2347,7 +2347,7 @@ tr:hover td{background:#f9fbff}
               <div class="pm-corp-ref">
                 <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
               </div>
-              <canvas id="pm-qr-canvas" class="pm-qr-canvas" title="Imbas untuk No. Rujukan"></canvas>
+              <canvas id="pm-qr-canvas" class="pm-qr-canvas" width="46" height="46" title="Imbas untuk No. Rujukan"></canvas>
             </div>
           </div>
 
@@ -3162,6 +3162,30 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
 
+      <!-- ====== CONTACT PERSON MODAL (multi-contact per site) ====== -->
+      <div v-if="cpModal.show" class="modal-bg" @click.self="cpModal.show=false">
+        <div class="modal">
+          <h3>📞 Pegawai Hubungan — {{cpModal.siteName}}</h3>
+          <div v-if="!cpModal.contacts.length" class="empty" style="padding:16px">Tiada pegawai hubungan lagi. Tambah di bawah.</div>
+          <div v-for="(c,i) in cpModal.contacts" :key="c.id" class="user-card" style="margin-bottom:8px">
+            <div style="flex:1">
+              <div class="form-row form-row-3" style="gap:8px">
+                <div class="form-group" style="margin:0"><input class="form-control" v-model="c.name" placeholder="Nama pegawai" style="font-size:.83rem;padding:6px 10px"></div>
+                <div class="form-group" style="margin:0"><input class="form-control" v-model="c.phone" placeholder="No. Telefon" style="font-size:.83rem;padding:6px 10px"></div>
+                <div class="form-group" style="margin:0"><input class="form-control" v-model="c.label" placeholder="Peranan (cth: Utama, Backup)" style="font-size:.83rem;padding:6px 10px"></div>
+              </div>
+            </div>
+            <button class="btn btn-danger btn-sm btn-icon" @click="cpModal.contacts.splice(i,1)" title="Padam">🗑</button>
+          </div>
+          <button class="btn btn-outline btn-sm" style="width:100%;margin-bottom:14px" @click="cpModal.contacts.push({id:_genId(),name:'',phone:'',label:''})">+ Tambah Pegawai</button>
+          <p v-if="cpModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{cpModal.err}}</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="cpModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="saveCpModal" :disabled="loading">{{loading?'Menyimpan...':'💾 Simpan'}}</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== ADD/EDIT CONTRACT MODAL ====== -->
       <div v-if="contractModal.show" class="modal-bg" @click.self="contractModal.show=false">
         <div class="modal">
@@ -3205,59 +3229,33 @@ tr:hover td{background:#f9fbff}
                   <th style="width:36px;text-align:center">Bil</th>
                   <th>Nama Premis SPRM</th>
                   <th style="width:60px;text-align:center">Kod</th>
-                  <th style="width:150px">Nama Pegawai</th>
-                  <th style="width:140px">No. Telefon</th>
+                  <th style="width:230px">Pegawai Hubungan</th>
                   <th v-if="canEditContact" style="width:70px;text-align:center">Tindakan</th>
                 </tr>
               </thead>
               <tbody>
-                <template v-for="(site, idx) in cpSites.filter(s=>s.zone===zoneKey)" :key="site.id">
-                  <!-- VIEW ROW -->
-                  <tr v-if="cpEdit.siteId !== site.id" :class="contactPersons[site.id]?.name ? '' : 'cp-empty-row'">
-                    <td style="text-align:center;color:#888;font-size:.8rem">{{idx+1}}</td>
-                    <td>
-                      <div style="font-weight:600;font-size:.85rem;color:#002244">{{site.name}}</div>
-                    </td>
-                    <td style="text-align:center">
-                      <span :class="['proj-badge', currentProject==='vir'?'proj-vir':'proj-cctv']" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
-                    </td>
-                    <td>
-                      <span v-if="contactPersons[site.id]?.name" style="font-size:.85rem;color:#222">{{contactPersons[site.id].name}}</span>
-                      <span v-else style="font-size:.78rem;color:#bbb;font-style:italic">— belum diisi —</span>
-                    </td>
-                    <td>
-                      <span v-if="contactPersons[site.id]?.phone">
-                        <a :href="'tel:'+contactPersons[site.id].phone" style="font-size:.85rem;color:#005599;text-decoration:none;font-weight:600">📱 {{contactPersons[site.id].phone}}</a>
-                      </span>
-                      <span v-else style="font-size:.78rem;color:#bbb;font-style:italic">—</span>
-                    </td>
-                    <td v-if="canEditContact" style="text-align:center">
-                      <button class="btn btn-outline btn-sm" @click="openCpEdit(site)" style="font-size:.75rem;padding:4px 10px">✏ Edit</button>
-                    </td>
-                  </tr>
-                  <!-- EDIT ROW (inline) -->
-                  <tr v-else style="background:#f0f6ff">
-                    <td style="text-align:center;color:#888;font-size:.8rem">{{idx+1}}</td>
-                    <td>
-                      <div style="font-weight:600;font-size:.85rem;color:#002244">{{site.name}}</div>
-                    </td>
-                    <td style="text-align:center">
-                      <span :class="['proj-badge', currentProject==='vir'?'proj-vir':'proj-cctv']" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
-                    </td>
-                    <td>
-                      <input class="form-control cp-edit-name" v-model="cpEdit.name" placeholder="Nama pegawai" style="font-size:.83rem;padding:5px 8px" @keyup.enter="saveCpEdit" @keyup.escape="cpEdit.siteId=null">
-                    </td>
-                    <td>
-                      <input class="form-control" v-model="cpEdit.phone" placeholder="Cth: 019-1234567" style="font-size:.83rem;padding:5px 8px" @keyup.enter="saveCpEdit" @keyup.escape="cpEdit.siteId=null">
-                    </td>
-                    <td v-if="canEditContact" style="text-align:center">
-                      <div class="flex gap-8" style="justify-content:center">
-                        <button class="btn btn-success btn-sm" @click="saveCpEdit" style="font-size:.75rem;padding:4px 10px" :disabled="loading">💾</button>
-                        <button class="btn btn-outline btn-sm" @click="cpEdit.siteId=null" style="font-size:.75rem;padding:4px 10px">✕</button>
+                <tr v-for="(site, idx) in cpSites.filter(s=>s.zone===zoneKey)" :key="site.id" :class="(contactPersons[site.id]||[]).length ? '' : 'cp-empty-row'">
+                  <td style="text-align:center;color:#888;font-size:.8rem">{{idx+1}}</td>
+                  <td>
+                    <div style="font-weight:600;font-size:.85rem;color:#002244">{{site.name}}</div>
+                  </td>
+                  <td style="text-align:center">
+                    <span :class="['proj-badge', currentProject==='vir'?'proj-vir':'proj-cctv']" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
+                  </td>
+                  <td>
+                    <div v-if="(contactPersons[site.id]||[]).length">
+                      <div v-for="c in contactPersons[site.id]" :key="c.id" style="margin-bottom:3px;font-size:.82rem">
+                        <span style="font-weight:600;color:#222">{{c.name}}</span>
+                        <span v-if="c.label" class="badge badge-blue" style="font-size:.65rem;margin-left:4px">{{c.label}}</span>
+                        <span v-if="c.phone">&nbsp;·&nbsp;<a :href="'tel:'+c.phone" style="color:#005599;text-decoration:none;font-weight:600">📱 {{c.phone}}</a></span>
                       </div>
-                    </td>
-                  </tr>
-                </template>
+                    </div>
+                    <span v-else style="font-size:.78rem;color:#bbb;font-style:italic">— belum diisi —</span>
+                  </td>
+                  <td v-if="canEditContact" style="text-align:center">
+                    <button class="btn btn-outline btn-sm" @click="openCpModal(site)" style="font-size:.75rem;padding:4px 10px">✏ Urus</button>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -3271,11 +3269,11 @@ tr:hover td{background:#f9fbff}
               <div class="lbl">Jumlah Premis</div>
             </div>
             <div class="stat-card" style="flex:1;min-width:120px">
-              <div class="num" style="font-size:1.5rem;color:#198754">{{Object.values(contactPersons).filter(c=>c.name).length}}</div>
+              <div class="num" style="font-size:1.5rem;color:#198754">{{Object.values(contactPersons).filter(c=>Array.isArray(c)?c.length:c.name).length}}</div>
               <div class="lbl">Sudah Diisi</div>
             </div>
             <div class="stat-card" style="flex:1;min-width:120px">
-              <div class="num" style="font-size:1.5rem;color:#dc3545">{{cpSites.length - Object.values(contactPersons).filter(c=>c.name).length}}</div>
+              <div class="num" style="font-size:1.5rem;color:#dc3545">{{cpSites.length - Object.values(contactPersons).filter(c=>Array.isArray(c)?c.length:c.name).length}}</div>
               <div class="lbl">Belum Diisi</div>
             </div>
           </div>
@@ -5485,21 +5483,34 @@ createApp({
         await doAutoBackup();
 
         // Write to Firestore FIRST — only update local state after each commit succeeds
+        // Merge each restored site onto the full default shape — an older
+        // backup file predating some equipment category (e.g. "misc") would
+        // otherwise restore that field as missing entirely, and the very
+        // next add-equipment click would push() onto undefined and crash
+        // (the same bug class just fixed in loadAll()/ensureSite()).
+        const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+        const EQUIP_SHAPE_VIR  = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[]};
+        const restoredSiteEquip = {};
+        const restoredVirSiteEquip = {};
         const batch = db.batch();
         if(data.siteEquip) {
           Object.entries(data.siteEquip).forEach(([id,val])=>{
-            batch.set(db.collection('siteEquipment').doc(id), val);
+            const merged = {...EQUIP_SHAPE_CCTV, ...val};
+            restoredSiteEquip[id] = merged;
+            batch.set(db.collection('siteEquipment').doc(id), merged);
           });
         }
         if(data.virSiteEquip) {
           Object.entries(data.virSiteEquip).forEach(([id,val])=>{
-            batch.set(db.collection('virSiteEquipment').doc(id), val);
+            const merged = {...EQUIP_SHAPE_VIR, ...val};
+            restoredVirSiteEquip[id] = merged;
+            batch.set(db.collection('virSiteEquipment').doc(id), merged);
           });
         }
         await _fw(batch.commit());
         // Only mutate local state after Firestore write confirmed
-        if(data.siteEquip) siteEquip.value = data.siteEquip;
-        if(data.virSiteEquip) virSiteEquip.value = data.virSiteEquip;
+        if(data.siteEquip) siteEquip.value = restoredSiteEquip;
+        if(data.virSiteEquip) virSiteEquip.value = restoredVirSiteEquip;
 
         if(data.pmRecords?.length) {
           const pmBatch = db.batch();
@@ -6910,14 +6921,18 @@ createApp({
         const eq = {};
         SITES.forEach(s=>{ eq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; });
         const snap = await db.collection('siteEquipment').get();
-        snap.forEach(doc=>{ eq[doc.id] = doc.data(); });
+        // Merge onto the default shape (not a full overwrite) — a site doc
+        // saved before some equipment category existed in the schema (e.g.
+        // "misc" for older records) would otherwise load with that field
+        // missing entirely, and pushing onto `undefined` later throws.
+        snap.forEach(doc=>{ eq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[], ...doc.data()}; });
         siteEquip.value = eq;
 
         // VIR site equipment
         const veq = {};
         VIR_SITES.forEach(s=>{ veq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[]}; });
         const vsnap = await db.collection('virSiteEquipment').get();
-        vsnap.forEach(doc=>{ veq[doc.id] = doc.data(); });
+        vsnap.forEach(doc=>{ veq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[], ...doc.data()}; });
         virSiteEquip.value = veq;
 
         const pmSnap = await db.collection('pmRecords').orderBy('createdAt','desc').get();
@@ -7050,57 +7065,64 @@ createApp({
     }
 
     // ── CONTACT PERSON (project-aware: CCTV or VIR, keyed by currentProject) ──
+    // contactPersons[siteId] is an array of {id,name,phone,label} — a site
+    // can have more than one contact (e.g. a primary + backup officer).
     const contactPersons = ref({});
-    const cpEdit = reactive({ siteId: null, name: '', phone: '' });
+    const cpModal = reactive({ show:false, siteId:null, siteName:'', contacts:[], err:'' });
     const cpSites = computed(() => currentProject.value === 'vir' ? VIR_SITES : SITES);
 
     async function loadContactPersons() {
       try {
         const doc = await db.collection('contactPersons').doc(currentProject.value).get();
-        contactPersons.value = doc.exists ? doc.data() : {};
+        const data = doc.exists ? doc.data() : {};
+        // Migrate legacy single-contact shape ({name,phone}) into the new
+        // array shape so every other function can assume an array.
+        Object.keys(data).forEach(siteId => {
+          if(!Array.isArray(data[siteId])) {
+            const legacy = data[siteId];
+            data[siteId] = (legacy && legacy.name) ? [{ id:_genId(), name:legacy.name||'', phone:legacy.phone||'', label:'' }] : [];
+          }
+        });
+        contactPersons.value = data;
       } catch(e) { console.warn('loadContactPersons:', e); }
     }
 
-    function openCpEdit(site) {
-      cpEdit.siteId = site.id;
-      cpEdit.name  = contactPersons.value[site.id]?.name  || '';
-      cpEdit.phone = contactPersons.value[site.id]?.phone || '';
-      nextTick(() => {
-        const el = document.querySelector('.cp-edit-name');
-        if(el) el.focus();
-      });
+    function openCpModal(site) {
+      cpModal.siteId = site.id;
+      cpModal.siteName = site.name;
+      cpModal.err = '';
+      // Deep-copy so edits are local until "Simpan" is pressed.
+      cpModal.contacts = (contactPersons.value[site.id] || []).map(c => ({...c}));
+      cpModal.show = true;
     }
 
-    async function saveCpEdit() {
-      if(!cpEdit.siteId) return;
+    async function saveCpModal() {
+      if(!cpModal.siteId) return;
+      cpModal.err = '';
+      const cleaned = cpModal.contacts
+        .map(c => ({ id: c.id||_genId(), name:(c.name||'').trim(), phone:(c.phone||'').trim(), label:(c.label||'').trim() }))
+        .filter(c => c.name || c.phone);
       const update = {};
-      update[cpEdit.siteId] = {
-        name: cpEdit.name.trim(),
-        phone: cpEdit.phone.trim(),
-        updatedBy: authProfile.value?.name || authProfile.value?.username || '',
-        updatedAt: new Date().toISOString()
-      };
+      update[cpModal.siteId] = cleaned;
       try {
         await _fw(db.collection('contactPersons').doc(currentProject.value).set(update, { merge: true }));
-        if(!contactPersons.value[cpEdit.siteId]) contactPersons.value[cpEdit.siteId] = {};
-        contactPersons.value[cpEdit.siteId].name  = cpEdit.name.trim();
-        contactPersons.value[cpEdit.siteId].phone = cpEdit.phone.trim();
-        const siteName = cpSites.value.find(s=>s.id===cpEdit.siteId)?.name || cpEdit.siteId;
-        await logAudit('CONTACT_PERSON_EDIT', `[${currentProject.value.toUpperCase()}] ${siteName} → ${cpEdit.name.trim()} / ${cpEdit.phone.trim()}`);
-        cpEdit.siteId = null;
+        contactPersons.value[cpModal.siteId] = cleaned;
+        await logAudit('CONTACT_PERSON_EDIT', `[${currentProject.value.toUpperCase()}] ${cpModal.siteName} → ${cleaned.length} pegawai`);
+        cpModal.show = false;
         showToast('Maklumat pegawai dikemas kini!', 'success');
-      } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
+      } catch(e) { cpModal.err = 'Gagal simpan: ' + e.message; }
     }
 
     async function exportContactCsv() {
       // Prefix a leading apostrophe on values starting with =,+,-,@ to prevent
       // CSV formula/DDE injection when opened in Excel.
       const csvSafe = v => { const s = String(v); return /^[=+\-@]/.test(s) ? "'"+s : s; };
-      const rows = [['Bil','Site ID','Nama Premis','Kod','Zon','Nama Pegawai','No. Telefon']];
+      const rows = [['Bil','Site ID','Nama Premis','Kod','Zon','Nama Pegawai','Peranan','No. Telefon']];
       let i = 1;
       cpSites.value.forEach(s => {
-        const cp = contactPersons.value[s.id] || {};
-        rows.push([i++, s.id, s.name, s.code, s.zone, cp.name||'', cp.phone||'']);
+        const contacts = contactPersons.value[s.id] || [];
+        if(!contacts.length) { rows.push([i++, s.id, s.name, s.code, s.zone, '', '', '']); return; }
+        contacts.forEach(c => rows.push([i++, s.id, s.name, s.code, s.zone, c.name||'', c.label||'', c.phone||'']));
       });
       const csv = rows.map(r => r.map(v => `"${csvSafe(v).replace(/"/g,'""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
@@ -7292,6 +7314,12 @@ createApp({
       // Backfill ids for equipment saved before this id-based keying existed.
       EQUIP_KINDS.forEach(k => (eq[k]||[]).forEach(item => { if(!item._uid) item._uid = _genId(); }));
       EQUIP_KINDS.forEach(k => equipSelected[k].clear()); // don't carry bulk-selection over from a previous site
+      // Also clear any in-progress "Kemaskini" edit from the previous site —
+      // otherwise equipEditIdx[key] still points at a row index in the new
+      // site's list, and clicking "+ Tambah" (relabelled "Kemaskini" while
+      // equipEditIdx isn't null) silently overwrites that row instead of
+      // adding a new one.
+      EQUIP_KINDS.forEach(k => cancelEditEquip(k));
     }
 
     function activeEquip() {
@@ -7304,7 +7332,17 @@ createApp({
 
     function ensureSite(id) {
       const eq = activeEquip();
-      if(!eq[id]) eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      if(!eq[id]) { eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; return; }
+      // Backfill any equipment category missing on a site record that
+      // predates that category being added to the schema (e.g. sites saved
+      // to Firestore before "misc" equipment tracking existed have no
+      // `misc` field at all — loadAll() overwrites the full default shape
+      // with doc.data() as-is, so the array never gets created). Without
+      // this, addMisc()/addCamera()/etc push() onto `undefined` and throw,
+      // which aborts the click handler silently — the button looks dead.
+      ['cameras','nvr','hdd','switches','alarms','misc'].forEach(k => {
+        if(!Array.isArray(eq[id][k])) eq[id][k] = [];
+      });
     }
 
     // ---- Edit-in-place for equipment rows (instead of delete + re-add) ----
@@ -7499,7 +7537,6 @@ createApp({
     }
     function addMisc() {
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
-      if(!nMISC.model){showToast('Sila masukkan model peralatan','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
       const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
@@ -7792,8 +7829,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       setCell('F10', (r.month?MONTHS[r.month-1]:'—') + ' ' + r.year);
 
       // Indoor cameras (rows 25,27,29,31,33,35,37,39,41,43)
-      const indoor = r.cameras.filter(c => c.camType==='Indoor' || c.camType==='IR Cam' || (!c.camType));
-      const outdoor = r.cameras.filter(c => c.camType==='Outdoor' || c.camType==='PTZ');
+      const indoor = (r.cameras||[]).filter(c => c.camType==='Indoor' || c.camType==='IR Cam' || (!c.camType));
+      const outdoor = (r.cameras||[]).filter(c => c.camType==='Outdoor' || c.camType==='PTZ');
       indoor.forEach((c, i) => {
         const row = 25 + (i * 2);
         setCell('C'+row, i+1); setCell('D'+row, c.name);
@@ -7821,13 +7858,13 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       }
 
       // Camera counts
-      setCell('H15', r.cameras.length);
+      setCell('H15', (r.cameras||[]).length);
       setCell('O15', outdoor.length);
       setCell('Y15', indoor.length);
 
       // NVR (rows 82, 86)
       const nvrRows = [82, 86];
-      r.nvr.forEach((n, i) => {
+      (r.nvr||[]).forEach((n, i) => {
         if(i >= nvrRows.length) return;
         const row = nvrRows[i];
         setCell('C'+row, i+1); setCell('D'+row, n.name);
@@ -8244,6 +8281,12 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
           }
         }
       });
+      // Preserve read-state across rebuilds — ids are stable (e.g.
+      // 'overdue-'+siteId), but this function reruns on every pmRecords
+      // change and previously hardcoded read:false on every item, silently
+      // un-reading anything the user had already dismissed.
+      const prevRead = new Set(notifications.value.filter(n=>n.read).map(n=>n.id));
+      list.forEach(n => { if(prevRead.has(n.id)) n.read = true; });
       notifications.value = list;
     }
 
@@ -9330,7 +9373,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES,
-      contactPersons, cpEdit, loadContactPersons, openCpEdit, saveCpEdit, exportContactCsv, canEditContact, cpSites,
+      contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, exportContactCsv, canEditContact, cpSites,
       mobileNavOpen,
       darkMode,
       setTimeout
