@@ -1025,6 +1025,56 @@ tr:hover td{background:#f9fbff}
 
       <div v-if="page==='dashboard' && !initialLoading">
 
+        <!-- CONTRACT/SLA EXPIRY ALERT -->
+        <div class="overdue-alert" v-if="contractsExpiringCount>0" style="cursor:pointer" @click="loadContracts();page='contracts'">
+          <div class="overdue-alert-title">📜 {{contractsExpiringCount}} Kontrak Hampir/Telah Tamat Tempoh (CCTV + VIR) — klik untuk lihat Kontrak &amp; SLA</div>
+        </div>
+
+        <!-- OVERDUE ALERT -->
+        <div class="overdue-alert" v-if="overdueSortedCctv.length || overdueSortedVir.length">
+          <div class="overdue-alert-title">⚠ Site PM Lampau — klik site untuk terus mula borang PM</div>
+
+          <template v-if="overdueSortedCctv.length">
+            <div class="overdue-group-label">📹 CCTV — lebih {{PM_INTERVAL.cctv}} bulan tiada PM</div>
+            <div v-for="s in (overdueExpandCctv?overdueSortedCctv:overdueSortedCctv.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
+              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
+              <span class="oi-name">⚠ {{s.name}}</span>
+              <span class="flex gap-8 items-center">
+                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
+                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
+              </span>
+            </div>
+            <button v-if="overdueSortedCctv.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" style="margin-bottom:10px" @click="overdueExpandCctv=!overdueExpandCctv">
+              {{overdueExpandCctv?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedCctv.length+')'}}
+            </button>
+          </template>
+
+          <template v-if="overdueSortedVir.length">
+            <div class="overdue-group-label">🖥️ VIR — lebih {{PM_INTERVAL.vir}} bulan tiada PM</div>
+            <div v-for="s in (overdueExpandVir?overdueSortedVir:overdueSortedVir.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
+              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
+              <span class="oi-name">⚠ {{s.name}}</span>
+              <span class="flex gap-8 items-center">
+                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
+                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
+              </span>
+            </div>
+            <button v-if="overdueSortedVir.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" @click="overdueExpandVir=!overdueExpandVir">
+              {{overdueExpandVir?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedVir.length+')'}}
+            </button>
+          </template>
+        </div>
+        <!-- APPROACHING WARNING -->
+        <div v-if="approachingList.length" style="background:rgba(255,152,0,.08);border:1.5px solid rgba(255,152,0,.3);border-radius:10px;padding:12px 18px;margin-bottom:16px">
+          <div style="color:#e65100;font-weight:700;font-size:.88rem;margin-bottom:8px">🔔 PM Hampir Tiba (dalam 28 hari)</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <span v-for="s in approachingList" :key="s.id" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:600">
+              📅 {{s.name}}
+              <span style="font-weight:400"> — due dalam {{siteNextPmMap[s.id]?.daysUntilDue}} hari</span>
+            </span>
+          </div>
+        </div>
+
         <!-- NEXT 7 DAYS AT A GLANCE -->
         <div class="card" v-if="next7DaysItems.length">
           <div class="card-title">🔭 7 Hari Akan Datang</div>
@@ -1181,56 +1231,6 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
         </div><!-- /dashboardCompact wrapper -->
-
-        <!-- CONTRACT/SLA EXPIRY ALERT -->
-        <div class="overdue-alert" v-if="contractsExpiringCount>0" style="cursor:pointer" @click="loadContracts();page='contracts'">
-          <div class="overdue-alert-title">📜 {{contractsExpiringCount}} Kontrak Hampir/Telah Tamat Tempoh (CCTV + VIR) — klik untuk lihat Kontrak &amp; SLA</div>
-        </div>
-
-        <!-- OVERDUE ALERT -->
-        <div class="overdue-alert" v-if="overdueSortedCctv.length || overdueSortedVir.length">
-          <div class="overdue-alert-title">⚠ Site PM Lampau — klik site untuk terus mula borang PM</div>
-
-          <template v-if="overdueSortedCctv.length">
-            <div class="overdue-group-label">📹 CCTV — lebih {{PM_INTERVAL.cctv}} bulan tiada PM</div>
-            <div v-for="s in (overdueExpandCctv?overdueSortedCctv:overdueSortedCctv.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
-              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
-              <span class="oi-name">⚠ {{s.name}}</span>
-              <span class="flex gap-8 items-center">
-                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
-                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
-              </span>
-            </div>
-            <button v-if="overdueSortedCctv.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" style="margin-bottom:10px" @click="overdueExpandCctv=!overdueExpandCctv">
-              {{overdueExpandCctv?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedCctv.length+')'}}
-            </button>
-          </template>
-
-          <template v-if="overdueSortedVir.length">
-            <div class="overdue-group-label">🖥️ VIR — lebih {{PM_INTERVAL.vir}} bulan tiada PM</div>
-            <div v-for="s in (overdueExpandVir?overdueSortedVir:overdueSortedVir.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
-              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
-              <span class="oi-name">⚠ {{s.name}}</span>
-              <span class="flex gap-8 items-center">
-                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
-                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
-              </span>
-            </div>
-            <button v-if="overdueSortedVir.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" @click="overdueExpandVir=!overdueExpandVir">
-              {{overdueExpandVir?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedVir.length+')'}}
-            </button>
-          </template>
-        </div>
-        <!-- APPROACHING WARNING -->
-        <div v-if="approachingList.length" style="background:rgba(255,152,0,.08);border:1.5px solid rgba(255,152,0,.3);border-radius:10px;padding:12px 18px;margin-bottom:16px">
-          <div style="color:#e65100;font-weight:700;font-size:.88rem;margin-bottom:8px">🔔 PM Hampir Tiba (dalam 28 hari)</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px">
-            <span v-for="s in approachingList" :key="s.id" style="background:#fff3e0;color:#e65100;border:1px solid #ffcc80;padding:3px 10px;border-radius:8px;font-size:.78rem;font-weight:600">
-              📅 {{s.name}}
-              <span style="font-weight:400"> — due dalam {{siteNextPmMap[s.id]?.daysUntilDue}} hari</span>
-            </span>
-          </div>
-        </div>
 
         <!-- CHARTS -->
         <div class="card">
