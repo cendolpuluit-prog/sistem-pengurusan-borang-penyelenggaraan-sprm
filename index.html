@@ -14,6 +14,7 @@
 <script src="https://unpkg.com/docx@8/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -433,7 +434,7 @@ tr:hover td{background:#f9fbff}
 /* #print-area shows on screen too — styled via .pm-preview-inner wrapper */
 
 /* IMPROVED PM PRINT */
-.pm-print{font-family:'Times New Roman',Times,serif;font-size:10pt;color:#000;line-height:1.4;border:1.5px solid #004d26;padding:10px;box-sizing:border-box}
+.pm-print{font-family:'Times New Roman',Times,serif;font-size:10pt;color:#000;line-height:1.4;border:1px solid #004d26;padding:18px;box-sizing:border-box}
 .pm-preview-wrap{background:#f5f6fa;border:1px solid #d0d5e8;border-radius:10px;padding:20px 24px;margin-top:8px}
 .pm-preview-label{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:.78rem;font-weight:700;color:#888;letter-spacing:.12em;text-transform:uppercase}
 .pm-preview-label::before,.pm-preview-label::after{content:'';flex:1;height:1px;background:#d0d5e8}
@@ -444,13 +445,13 @@ tr:hover td{background:#f9fbff}
    that's what Mod Borang is for. Screen-only: print CSS ignores all this. */
 .pm-read-mode table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
 .pm-read-mode .pm-corp-header{display:flex;flex-wrap:wrap;justify-content:center;text-align:center}
-.pm-corp-header{border-bottom:3px solid #006633;padding-bottom:10px;margin-bottom:10px;display:grid;grid-template-columns:130px 1fr 175px;align-items:flex-start;gap:8px}
+.pm-corp-header{border-bottom:3px solid #006633;padding-bottom:10px;margin-bottom:10px;display:grid;grid-template-columns:130px 1fr 130px;align-items:flex-start;gap:8px}
 .pm-corp-logo-img{height:56px;max-width:100%;object-fit:contain;display:block}
 .pm-corp-center{text-align:center}
 .pm-corp-logo-txt{font-size:12pt;font-weight:bold;color:#006633;letter-spacing:.3px}
 .pm-corp-logo-sub{font-size:8pt;color:#444;margin-top:3px;line-height:1.5}
 .pm-corp-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.pm-corp-ref{text-align:right;font-size:8.5pt;color:#333;white-space:nowrap}
+.pm-corp-ref{text-align:right;font-size:7.8pt;color:#333;white-space:normal;word-break:break-word}
 .pm-corp-ref .ref-no{font-size:10pt;font-weight:bold;color:#006633;display:inline}
 .pm-qr-canvas{width:46px!important;height:46px!important;flex-shrink:0;margin-top:2px}
 .pm-classification{text-align:right;font-size:7.5pt;font-weight:700;color:#b71c1c;letter-spacing:.06em;margin-bottom:4px}
@@ -874,8 +875,12 @@ tr:hover td{background:#f9fbff}
       <div class="nav-item" :class="{active:page==='pm-list'&&currentProject==='cctv'}" @click="openPMList('cctv')">
         <span class="icon">📋</span> Rekod CCTV
       </div>
-      <div class="nav-item" :class="{active:page==='contact-cctv'}" @click="loadContactPersons();page='contact-cctv'">
+      <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContactPersons();page='contact-person'">
         <span class="icon">📞</span> Contact Person CCTV
+      </div>
+      <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContracts();page='contracts'" v-if="['superadmin','admin'].includes(authProfile?.role)">
+        <span class="icon">📜</span> Kontrak &amp; SLA (CCTV)
+        <span v-if="contractsExpiringCountCctv>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountCctv}}</span>
       </div>
       <div class="nav-section-label" style="margin-top:6px">PROJEK VIR</div>
       <div class="nav-item" :class="{active:page==='sites'&&currentProject==='vir'}" @click="openSites('vir')">
@@ -886,6 +891,13 @@ tr:hover td{background:#f9fbff}
       </div>
       <div class="nav-item" :class="{active:page==='pm-list'&&currentProject==='vir'}" @click="openPMList('vir')">
         <span class="icon">📋</span> Rekod VIR
+      </div>
+      <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='vir'}" @click="currentProject='vir';loadContactPersons();page='contact-person'">
+        <span class="icon">📞</span> Contact Person VIR
+      </div>
+      <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='vir'}" @click="currentProject='vir';loadContracts();page='contracts'" v-if="['superadmin','admin'].includes(authProfile?.role)">
+        <span class="icon">📜</span> Kontrak &amp; SLA (VIR)
+        <span v-if="contractsExpiringCountVir>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountVir}}</span>
       </div>
       <div class="nav-divider"></div>
       <div class="nav-item" :class="{active:page==='jadual'}" @click="openJadual">
@@ -900,10 +912,6 @@ tr:hover td{background:#f9fbff}
       <div class="nav-divider"></div>
       <div class="nav-item" :class="{active:page==='audit-log'}" @click="loadAuditLogs();page='audit-log'" v-if="['superadmin','admin'].includes(authProfile?.role)">
         <span class="icon">🗒</span> Log Audit
-      </div>
-      <div class="nav-item" :class="{active:page==='contracts'}" @click="loadContracts();page='contracts'" v-if="['superadmin','admin'].includes(authProfile?.role)">
-        <span class="icon">📜</span> Kontrak &amp; SLA
-        <span v-if="contractsExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCount}}</span>
       </div>
       <div class="nav-item" :class="{active:page==='user-mgmt'}" @click="page='user-mgmt'" v-if="authProfile?.role==='superadmin'">
         <span class="icon">👥</span> Pengurusan Pengguna
@@ -1160,7 +1168,7 @@ tr:hover td{background:#f9fbff}
 
         <!-- CONTRACT/SLA EXPIRY ALERT -->
         <div class="overdue-alert" v-if="contractsExpiringCount>0 && ['superadmin','admin'].includes(authProfile?.role)" style="cursor:pointer" @click="loadContracts();page='contracts'">
-          <div class="overdue-alert-title">📜 {{contractsExpiringCount}} Kontrak Hampir/Telah Tamat Tempoh — klik untuk lihat Kontrak &amp; SLA</div>
+          <div class="overdue-alert-title">📜 {{contractsExpiringCount}} Kontrak Hampir/Telah Tamat Tempoh (CCTV + VIR) — klik untuk lihat Kontrak &amp; SLA</div>
         </div>
 
         <!-- OVERDUE ALERT -->
@@ -1306,11 +1314,11 @@ tr:hover td{background:#f9fbff}
       <!-- ====== KONTRAK & SLA ====== -->
       <div v-if="page==='contracts'">
         <div class="flex justify-between items-center mb-20">
-          <div class="card-title" style="margin:0;border:none;padding:0">📜 Kontrak &amp; SLA Penyelenggaraan</div>
+          <div class="card-title" style="margin:0;border:none;padding:0">📜 Kontrak &amp; SLA ({{currentProject==='vir'?'VIR':'CCTV'}}) — Penyelenggaraan</div>
           <button class="btn btn-primary" @click="openAddContract">+ Tambah Kontrak</button>
         </div>
-        <div v-if="!contracts.length" class="empty">Tiada kontrak direkodkan lagi.</div>
-        <div v-for="c in contracts" :key="c.id" class="backup-card" style="align-items:flex-start">
+        <div v-if="!contractsFiltered.length" class="empty">Tiada kontrak direkodkan lagi.</div>
+        <div v-for="c in contractsFiltered" :key="c.id" class="backup-card" style="align-items:flex-start">
           <div class="bc-icon">{{contractStatus(c)==='expired'?'🔴':contractStatus(c)==='expiring'?'🟡':'🟢'}}</div>
           <div class="bc-info" style="flex:1">
             <div class="flex items-center gap-8" style="flex-wrap:wrap">
@@ -1453,7 +1461,7 @@ tr:hover td{background:#f9fbff}
                 </label>
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">
                   📄 Import Fail
-                  <input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'cameras')">
+                  <input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'cameras')">
                 </label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nCam')">↺ Reset</button>
               </div>
@@ -1532,7 +1540,7 @@ tr:hover td{background:#f9fbff}
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah NVR / Extension</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nNVR','serial')"></label>
-                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'nvr')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'nvr')"></label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nNVR')">↺ Reset</button>
               </div>
             </div>
@@ -1601,7 +1609,7 @@ tr:hover td{background:#f9fbff}
           <div class="card" id="equip-form-hdd">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Hard Disk</div>
-              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nHDD','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'hdd')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nHDD')">↺ Reset</button></div>
+              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nHDD','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'hdd')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nHDD')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nHDD'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nHDD','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
@@ -1667,7 +1675,7 @@ tr:hover td{background:#f9fbff}
           <div class="card" id="equip-form-switches">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Network Switch</div>
-              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nSW','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'switches')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nSW')">↺ Reset</button></div>
+              <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nSW','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'switches')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nSW')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nSW'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nSW','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
@@ -1725,7 +1733,7 @@ tr:hover td{background:#f9fbff}
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Alarm SMS System</div>
               <div class="flex gap-8">
-                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'alarms')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'alarms')"></label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nALM')">↺ Reset</button>
               </div>
             </div>
@@ -1775,7 +1783,7 @@ tr:hover td{background:#f9fbff}
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Peralatan Lain-lain</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nMISC','serial')"></label>
-                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.pdf,image/*" style="display:none" @change="importEquipFile($event,'misc')"></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'misc')"></label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nMISC')">↺ Reset</button>
               </div>
             </div>
@@ -2335,15 +2343,11 @@ tr:hover td{background:#f9fbff}
               <div class="pm-corp-logo-sub">No 29-1 Jalan Equine 9A, Taman Equine, Bandar Putra Permai<br>Seri Kembangan 43300, Selangor Darul Ehsan<br>Tel: 03-89431400 &nbsp;|&nbsp; Faks: 03-89431500</div>
             </div>
             <div class="pm-corp-right">
-              <div style="display:flex;align-items:flex-start;gap:8px">
-                <div>
-                  <img src="logo_sprm.png" alt="SPRM" class="pm-corp-logo-img">
-                  <div class="pm-corp-ref">
-                    <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
-                  </div>
-                </div>
-                <canvas id="pm-qr-canvas" class="pm-qr-canvas" title="Imbas untuk No. Rujukan"></canvas>
+              <img src="logo_sprm.png" alt="SPRM" class="pm-corp-logo-img">
+              <div class="pm-corp-ref">
+                <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
               </div>
+              <canvas id="pm-qr-canvas" class="pm-qr-canvas" title="Imbas untuk No. Rujukan"></canvas>
             </div>
           </div>
 
@@ -2409,14 +2413,14 @@ tr:hover td{background:#f9fbff}
           <div class="pm-section-hdr">1. &nbsp;PEMERIKSAAN KAMERA <span>({{viewPM?.cameras?.length||0}} unit)</span></div>
           <table class="pm-tbl">
             <thead><tr>
-              <th style="width:4%">No.</th>
+              <th style="width:7%">No.</th>
               <th style="width:20%">Nama / Lokasi</th>
               <th style="width:13%">IP Address</th>
               <th style="width:9%">Brand</th>
               <th style="width:13%">Model</th>
               <th style="width:14%">No. Siri</th>
               <th style="width:8%">Jenis</th>
-              <th style="width:13%">Kualiti Paparan</th>
+              <th style="width:10%">Kualiti Paparan</th>
               <th style="width:6%">Nota</th>
             </tr></thead>
             <tbody>
@@ -2498,7 +2502,7 @@ tr:hover td{background:#f9fbff}
           <!-- 6. LAIN-LAIN PERALATAN -->
           <div class="pm-section-hdr">6. &nbsp;PERALATAN LAIN-LAIN</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:22%">Nama/Lokasi</th><th style="width:15%">Kategori</th><th style="width:14%">Brand</th><th style="width:16%">Model</th><th style="width:16%">No. Siri</th><th style="width:9%">Status</th><th style="width:3%">Nota</th></tr></thead>
+            <thead><tr><th style="width:5%">No.</th><th style="width:22%">Nama/Lokasi</th><th style="width:10%">Kategori</th><th style="width:9%">Brand</th><th style="width:16%">Model</th><th style="width:16%">No. Siri</th><th style="width:9%">Status</th><th style="width:13%">Nota</th></tr></thead>
             <tbody>
               <tr v-for="(m,i) in viewPM?.misc" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td class="ctr">{{m.brand}}</td>
@@ -3179,12 +3183,12 @@ tr:hover td{background:#f9fbff}
       </div>
 
       <!-- ====== CONTACT PERSON CCTV ====== -->
-      <div v-if="page==='contact-cctv'">
+      <div v-if="page==='contact-person'">
         <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
           <div>
-            <div style="font-size:.72rem;font-weight:700;letter-spacing:.1em;color:#005599;text-transform:uppercase;margin-bottom:4px">📹 Projek CCTV SPRM</div>
+            <div :style="'font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;color:'+(currentProject==='vir'?'#7a2e00':'#005599')">{{currentProject==='vir'?'🖥️ Projek VIR SPRM':'📹 Projek CCTV SPRM'}}</div>
             <div style="font-size:1.1rem;font-weight:700;color:#002244">📞 Contact Person Pegawai SPRM</div>
-            <div style="font-size:.8rem;color:#888;margin-top:2px">Senarai pegawai hubungan bagi setiap premis SPRM di bawah kontrak CCTV</div>
+            <div style="font-size:.8rem;color:#888;margin-top:2px">Senarai pegawai hubungan bagi setiap premis SPRM di bawah kontrak {{currentProject==='vir'?'VIR':'CCTV'}}</div>
           </div>
           <button v-if="canEditContact" class="btn btn-primary btn-sm" @click="exportContactCsv">⬇ Export CSV</button>
         </div>
@@ -3207,7 +3211,7 @@ tr:hover td{background:#f9fbff}
                 </tr>
               </thead>
               <tbody>
-                <template v-for="(site, idx) in SITES.filter(s=>s.zone===zoneKey)" :key="site.id">
+                <template v-for="(site, idx) in cpSites.filter(s=>s.zone===zoneKey)" :key="site.id">
                   <!-- VIEW ROW -->
                   <tr v-if="cpEdit.siteId !== site.id" :class="contactPersons[site.id]?.name ? '' : 'cp-empty-row'">
                     <td style="text-align:center;color:#888;font-size:.8rem">{{idx+1}}</td>
@@ -3215,7 +3219,7 @@ tr:hover td{background:#f9fbff}
                       <div style="font-weight:600;font-size:.85rem;color:#002244">{{site.name}}</div>
                     </td>
                     <td style="text-align:center">
-                      <span class="proj-badge proj-cctv" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
+                      <span :class="['proj-badge', currentProject==='vir'?'proj-vir':'proj-cctv']" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
                     </td>
                     <td>
                       <span v-if="contactPersons[site.id]?.name" style="font-size:.85rem;color:#222">{{contactPersons[site.id].name}}</span>
@@ -3238,7 +3242,7 @@ tr:hover td{background:#f9fbff}
                       <div style="font-weight:600;font-size:.85rem;color:#002244">{{site.name}}</div>
                     </td>
                     <td style="text-align:center">
-                      <span class="proj-badge proj-cctv" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
+                      <span :class="['proj-badge', currentProject==='vir'?'proj-vir':'proj-cctv']" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
                     </td>
                     <td>
                       <input class="form-control cp-edit-name" v-model="cpEdit.name" placeholder="Nama pegawai" style="font-size:.83rem;padding:5px 8px" @keyup.enter="saveCpEdit" @keyup.escape="cpEdit.siteId=null">
@@ -3263,7 +3267,7 @@ tr:hover td{background:#f9fbff}
         <div class="card" style="margin-top:8px">
           <div class="flex gap-12" style="flex-wrap:wrap">
             <div class="stat-card" style="flex:1;min-width:120px">
-              <div class="num" style="font-size:1.5rem">{{SITES.length}}</div>
+              <div class="num" style="font-size:1.5rem">{{cpSites.length}}</div>
               <div class="lbl">Jumlah Premis</div>
             </div>
             <div class="stat-card" style="flex:1;min-width:120px">
@@ -3271,7 +3275,7 @@ tr:hover td{background:#f9fbff}
               <div class="lbl">Sudah Diisi</div>
             </div>
             <div class="stat-card" style="flex:1;min-width:120px">
-              <div class="num" style="font-size:1.5rem;color:#dc3545">{{SITES.length - Object.values(contactPersons).filter(c=>c.name).length}}</div>
+              <div class="num" style="font-size:1.5rem;color:#dc3545">{{cpSites.length - Object.values(contactPersons).filter(c=>c.name).length}}</div>
               <div class="lbl">Belum Diisi</div>
             </div>
           </div>
@@ -5121,14 +5125,20 @@ createApp({
 
     // ── CONTRACT / SLA TRACKING ──
     const contracts = ref([]);
-    const contractModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{ title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'' } });
+    const contractModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{ title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'',project:'cctv' } });
 
     async function loadContracts() {
       try {
         const snap = await db.collection('contracts').orderBy('endDate','asc').get();
-        contracts.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        // Legacy docs created before project-tagging default to 'cctv' (the
+        // only project this feature supported at the time).
+        contracts.value = snap.docs.map(d => ({id:d.id, project:'cctv', ...d.data()}));
       } catch(e) { console.warn('loadContracts failed:', e); }
     }
+
+    const contractsFiltered = computed(() =>
+      contracts.value.filter(c => (c.project||'cctv') === currentProject.value)
+    );
 
     function contractStatus(c) {
       if(!c.endDate) return 'active';
@@ -5143,16 +5153,22 @@ createApp({
     const contractsExpiringCount = computed(() =>
       contracts.value.filter(c => contractStatus(c) !== 'active').length
     );
+    const contractsExpiringCountCctv = computed(() =>
+      contracts.value.filter(c => (c.project||'cctv')==='cctv' && contractStatus(c) !== 'active').length
+    );
+    const contractsExpiringCountVir = computed(() =>
+      contracts.value.filter(c => (c.project||'cctv')==='vir' && contractStatus(c) !== 'active').length
+    );
 
     function openAddContract() {
       contractModal.editing = false; contractModal.err = '';
-      Object.assign(contractModal.data, { title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'' });
+      Object.assign(contractModal.data, { title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'', project: currentProject.value });
       contractModal.show = true;
     }
 
     function openEditContract(c) {
       contractModal.editing = true; contractModal.err = '';
-      Object.assign(contractModal.data, { title:c.title||'',contractNo:c.contractNo||'',startDate:c.startDate||'',endDate:c.endDate||'',reminderDays:c.reminderDays||60,notes:c.notes||'' });
+      Object.assign(contractModal.data, { title:c.title||'',contractNo:c.contractNo||'',startDate:c.startDate||'',endDate:c.endDate||'',reminderDays:c.reminderDays||60,notes:c.notes||'', project:c.project||'cctv' });
       contractModal._editId = c.id;
       contractModal.show = true;
     }
@@ -5317,7 +5333,17 @@ createApp({
       if(page.value !== 'site-equip' || !selSite.value) return;
       clearTimeout(_equipDraftTimer);
       _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
+      // Debounced auto-save to Firestore — pushed back on every further
+      // edit so rapid typing doesn't hammer the database; fires once the
+      // user pauses for 2s.
+      clearTimeout(_equipAutoSaveTimer);
+      _equipAutoSaveTimer = setTimeout(() => { _equipAutoSaveTimer = null; _writeSiteEquipToFirestore({ toast:false }); }, 2000);
     }, { deep: true });
+
+    // Flush any pending auto-save immediately when the user navigates away
+    // from site-equip (or to a different site) so a same-second exit can't
+    // race the 2s debounce and silently drop the last edit.
+    watch(page, (v, old) => { if(old === 'site-equip' && v !== 'site-equip') _flushEquipAutoSave(); });
 
     function openSites(proj) {
       currentProject.value = proj;
@@ -5508,7 +5534,8 @@ createApp({
       'pm-view':'Lihat Rekod', 'jadual':'Jadual Penyelenggaraan',
       'user-mgmt':'Pengurusan Pengguna', profile:'Profil Saya', backup:'Backup & Restore',
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
-      'contracts':'Kontrak & SLA'
+      'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
+      'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV')
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
@@ -5955,7 +5982,7 @@ createApp({
     // re-check real elapsed time whenever the page becomes visible again,
     // on focus, and on load/refresh — so idle logout is enforced even after
     // the tab was backgrounded or the browser was reopened.
-    const SESSION_IDLE_MS = 5 * 60 * 1000; // 5 minutes
+    const SESSION_IDLE_MS = 15 * 60 * 1000; // 15 minutes
     const SESSION_WARN_S  = 10;             // 10 second warning
     const LAST_ACTIVITY_KEY = 'pm_sprm_last_activity';
     const sessionWarning = reactive({ show: false, countdown: SESSION_WARN_S });
@@ -6805,10 +6832,15 @@ createApp({
         } else if(ext === 'txt') {
           const text = await file.text();
           rows = _rowsFromFreeText(text, kind);
+        } else if(ext === 'docx') {
+          if(!window.mammoth) { importState.err = 'Library pembaca DOCX tidak tersedia. Semak sambungan internet.'; importState.loading = false; return; }
+          const buf = await _readFileAsArrayBuffer(file);
+          const result = await mammoth.extractRawText({ arrayBuffer: buf });
+          rows = _rowsFromFreeText(result.value, kind);
         } else if(isImage) {
           rows = await _ocrToRows(file, kind);
         } else {
-          importState.err = 'Format fail tidak disokong. Guna .txt, .csv, .xlsx, .pdf atau imej (.png/.jpg).';
+          importState.err = 'Format fail tidak disokong. Guna .txt, .csv, .xlsx, .docx, .pdf atau imej (.png/.jpg).';
           importState.loading = false;
           return;
         }
@@ -7017,14 +7049,15 @@ createApp({
       loading.value=false;
     }
 
-    // ── CONTACT PERSON CCTV ──
+    // ── CONTACT PERSON (project-aware: CCTV or VIR, keyed by currentProject) ──
     const contactPersons = ref({});
     const cpEdit = reactive({ siteId: null, name: '', phone: '' });
+    const cpSites = computed(() => currentProject.value === 'vir' ? VIR_SITES : SITES);
 
     async function loadContactPersons() {
       try {
-        const doc = await db.collection('contactPersons').doc('cctv').get();
-        if(doc.exists) contactPersons.value = doc.data();
+        const doc = await db.collection('contactPersons').doc(currentProject.value).get();
+        contactPersons.value = doc.exists ? doc.data() : {};
       } catch(e) { console.warn('loadContactPersons:', e); }
     }
 
@@ -7048,12 +7081,12 @@ createApp({
         updatedAt: new Date().toISOString()
       };
       try {
-        await _fw(db.collection('contactPersons').doc('cctv').set(update, { merge: true }));
+        await _fw(db.collection('contactPersons').doc(currentProject.value).set(update, { merge: true }));
         if(!contactPersons.value[cpEdit.siteId]) contactPersons.value[cpEdit.siteId] = {};
         contactPersons.value[cpEdit.siteId].name  = cpEdit.name.trim();
         contactPersons.value[cpEdit.siteId].phone = cpEdit.phone.trim();
-        const siteName = SITES.find(s=>s.id===cpEdit.siteId)?.name || cpEdit.siteId;
-        await logAudit('CONTACT_PERSON_EDIT', `${siteName} → ${cpEdit.name.trim()} / ${cpEdit.phone.trim()}`);
+        const siteName = cpSites.value.find(s=>s.id===cpEdit.siteId)?.name || cpEdit.siteId;
+        await logAudit('CONTACT_PERSON_EDIT', `[${currentProject.value.toUpperCase()}] ${siteName} → ${cpEdit.name.trim()} / ${cpEdit.phone.trim()}`);
         cpEdit.siteId = null;
         showToast('Maklumat pegawai dikemas kini!', 'success');
       } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
@@ -7065,16 +7098,16 @@ createApp({
       const csvSafe = v => { const s = String(v); return /^[=+\-@]/.test(s) ? "'"+s : s; };
       const rows = [['Bil','Site ID','Nama Premis','Kod','Zon','Nama Pegawai','No. Telefon']];
       let i = 1;
-      SITES.forEach(s => {
+      cpSites.value.forEach(s => {
         const cp = contactPersons.value[s.id] || {};
         rows.push([i++, s.id, s.name, s.code, s.zone, cp.name||'', cp.phone||'']);
       });
       const csv = rows.map(r => r.map(v => `"${csvSafe(v).replace(/"/g,'""')}"`).join(',')).join('\n');
       const a = document.createElement('a');
       a.href = 'data:text/csv;charset=utf-8,﻿' + encodeURIComponent(csv);
-      a.download = 'Contact_Person_CCTV.csv';
+      a.download = 'Contact_Person_'+currentProject.value.toUpperCase()+'.csv';
       a.click();
-      await logAudit('EXPORT_CSV', 'Contact Person CCTV');
+      await logAudit('EXPORT_CSV', 'Contact Person '+currentProject.value.toUpperCase());
     }
 
     async function toggleFreeze(u) {
@@ -7250,6 +7283,7 @@ createApp({
     const EQUIP_KINDS = ['cameras','nvr','hdd','switches','alarms','misc'];
 
     function openSiteEquip(site) {
+      _flushEquipAutoSave(); // persist any pending edits for the site we're leaving
       selSite.value = site;
       eqTab.value = 'cameras';
       page.value = 'site-equip';
@@ -7404,7 +7438,7 @@ createApp({
       const dup = _findDupConflict('cameras', list, resolved, equipEditIdx.cameras);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...resolved, _uid:list[equipEditIdx.cameras]._uid||_genId()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
-      else list.push({...resolved, _uid:_genId()});
+      else { list.push({...resolved, _uid:_genId()}); showToast('Kamera berjaya ditambah!'); }
       _maybeAddCustomBrand('BRANDS', resolved.brand);
       _maybeAddCustomModel('cameras', resolved.brand, resolved.model);
       Object.assign(nCam,{name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',_uid:''});
@@ -7419,7 +7453,7 @@ createApp({
       const dup = _findDupConflict('nvr', list, resolved, equipEditIdx.nvr);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
-      else list.push({...resolved, _uid:_genId()});
+      else { list.push({...resolved, _uid:_genId()}); showToast('NVR berjaya ditambah!'); }
       _maybeAddCustomBrand('BRANDS', resolved.brand);
       _maybeAddCustomModel('nvr', resolved.brand, resolved.model);
       Object.assign(nNVR,{name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',_uid:''});
@@ -7433,7 +7467,7 @@ createApp({
       const dup = _findDupConflict('hdd', list, resolved, equipEditIdx.hdd);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...resolved, _uid:list[equipEditIdx.hdd]._uid||_genId()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
-      else list.push({...resolved, _uid:_genId()});
+      else { list.push({...resolved, _uid:_genId()}); showToast('HDD berjaya ditambah!'); }
       _maybeAddCustomBrand('HDD_BRANDS', resolved.brand);
       _maybeAddCustomModel('hdd', resolved.brand, resolved.model);
       Object.assign(nHDD,{brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',_uid:''});
@@ -7447,7 +7481,7 @@ createApp({
       const dup = _findDupConflict('switches', list, resolved, equipEditIdx.switches);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...resolved, _uid:list[equipEditIdx.switches]._uid||_genId()}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
-      else list.push({...resolved, _uid:_genId()});
+      else { list.push({...resolved, _uid:_genId()}); showToast('Switch berjaya ditambah!'); }
       _maybeAddCustomBrand('SWITCH_BRANDS', resolved.brand);
       _maybeAddCustomModel('switches', resolved.brand, resolved.model);
       Object.assign(nSW,{brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',_uid:''});
@@ -7460,7 +7494,7 @@ createApp({
       const dup = _findDupConflict('alarms', list, nALM, equipEditIdx.alarms);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...nALM, _uid:list[equipEditIdx.alarms]._uid||_genId()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
-      else list.push({...nALM, _uid:_genId()});
+      else { list.push({...nALM, _uid:_genId()}); showToast('Alarm berjaya ditambah!'); }
       Object.assign(nALM,{name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',_uid:''});
     }
     function addMisc() {
@@ -7491,12 +7525,13 @@ createApp({
         else equipEditIdx[key] = newIdx;
       }
     }
-    async function saveSiteEquip() {
-      loading.value=true;
-      // Capture the target site/label before the await — the user isn't
-      // blocked from navigating to a different site while this write is
-      // in flight, and reading selSite.value after the await would log
-      // the audit entry under whatever site they've since switched to.
+    // Shared write path for both the manual "Simpan Semua" button and the
+    // debounced auto-save — captures the target site/label up front since
+    // the user isn't blocked from navigating away while this write is in
+    // flight, and reading selSite.value after the await would log the audit
+    // entry (or write the data) under whatever site they've since switched to.
+    async function _writeSiteEquipToFirestore(opts = {}) {
+      if(!selSite.value) return;
       const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
       const eq  = activeEquip();
       const siteId = selSite.value.id;
@@ -7505,9 +7540,29 @@ createApp({
         await _fw(db.collection(col).doc(siteId).set(eq[siteId], { merge: true }));
         await logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
-        showToast('Peralatan berjaya disimpan!');
-      } catch(e){ showToast('Gagal simpan: '+e.message,'error'); }
+        if(opts.toast !== false) showToast('Peralatan berjaya disimpan!');
+      } catch(e){
+        showToast('Gagal simpan automatik: '+e.message,'error');
+      }
+    }
+
+    async function saveSiteEquip() {
+      loading.value=true;
+      await _writeSiteEquipToFirestore();
       loading.value=false;
+    }
+
+    // ── Auto-save: silently persists equipment changes ~2s after the user
+    // stops typing/clicking, so forgetting to press "Simpan Semua" no longer
+    // loses data. The "Menyegerakkan data..." top banner (driven by _fw()
+    // inside _writeSiteEquipToFirestore) is the user-visible sync indicator
+    // — no extra toast on every autosave to avoid spamming it.
+    let _equipAutoSaveTimer = null;
+    function _flushEquipAutoSave() {
+      if(!_equipAutoSaveTimer) return;
+      clearTimeout(_equipAutoSaveTimer);
+      _equipAutoSaveTimer = null;
+      _writeSiteEquipToFirestore({ toast:false });
     }
 
     // ---- PM Form ----
@@ -9238,6 +9293,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
       allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser,
       contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount,
+      contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
@@ -9274,7 +9330,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES,
-      contactPersons, cpEdit, loadContactPersons, openCpEdit, saveCpEdit, exportContactCsv, canEditContact,
+      contactPersons, cpEdit, loadContactPersons, openCpEdit, saveCpEdit, exportContactCsv, canEditContact, cpSites,
       mobileNavOpen,
       darkMode,
       setTimeout
