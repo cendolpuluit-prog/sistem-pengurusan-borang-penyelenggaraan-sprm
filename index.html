@@ -5933,13 +5933,31 @@ createApp({
       }, null);
     }
 
+    // Contract start date for a project, used to avoid flagging brand-new
+    // sites as "overdue" before their first PM cycle has even elapsed.
+    // Only CCTV has contract data right now — VIR has none, so this returns
+    // null for 'vir' and callers fall back to the old no-record=overdue rule.
+    function _projectContractStart(project) {
+      const relevant = contracts.value.filter(c => (c.project||'cctv') === project && c.startDate);
+      if(!relevant.length) return null;
+      const todayStr = new Date().toISOString().slice(0,10);
+      const active = relevant.find(c => c.startDate <= todayStr && (!c.endDate || c.endDate >= todayStr));
+      const chosen = active || relevant.slice().sort((a,b) => a.startDate.localeCompare(b.startDate))[0];
+      return chosen.startDate ? new Date(chosen.startDate) : null;
+    }
+
     const overdueMap = computed(() => {
       const now = new Date();
       const result = {};
       SITES.forEach(s => {
         const threshold = new Date(now); threshold.setMonth(threshold.getMonth() - PM_INTERVAL.cctv);
         const latest = _lastPmDate(s.id);
-        result[s.id] = !latest || latest < threshold;
+        if(!latest) {
+          const cStart = _projectContractStart('cctv');
+          result[s.id] = cStart ? cStart < threshold : true;
+        } else {
+          result[s.id] = latest < threshold;
+        }
       });
       VIR_SITES.forEach(s => {
         const threshold = new Date(now); threshold.setMonth(threshold.getMonth() - PM_INTERVAL.vir);
@@ -5956,7 +5974,17 @@ createApp({
       const buildEntry = (s, project) => {
         const intervalMonths = PM_INTERVAL[project];
         const latest = _lastPmDate(s.id);
-        if(!latest) { result[s.id] = { nextDue: null, daysSince: null, daysUntilDue: null, approaching: false, overdue: true, project }; return; }
+        if(!latest) {
+          const cStart = _projectContractStart(project);
+          if(cStart) {
+            const nextDue = new Date(cStart); nextDue.setMonth(nextDue.getMonth() + intervalMonths);
+            const daysUntilDue = Math.floor((nextDue - now) / 86400000);
+            result[s.id] = { nextDue, daysSince: null, daysUntilDue, approaching: daysUntilDue >= 0 && daysUntilDue <= 28, overdue: daysUntilDue < 0, project };
+          } else {
+            result[s.id] = { nextDue: null, daysSince: null, daysUntilDue: null, approaching: false, overdue: true, project };
+          }
+          return;
+        }
         const nextDue = new Date(latest); nextDue.setMonth(nextDue.getMonth() + intervalMonths);
         const daysSince = Math.floor((now - latest) / 86400000);
         const daysUntilDue = Math.floor((nextDue - now) / 86400000);
