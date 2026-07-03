@@ -514,6 +514,7 @@ tr:hover td{background:#f9fbff}
 .dark-mode .badge-red{background:#3a1a1a;color:#f85149}
 .dark-mode .badge-blue{background:#1a2a3a;color:#79c0ff}
 .dark-mode .badge-gray{background:#21262d;color:#8b949e}
+.dark-mode .progress-bar{background:#30363d}
 .dark-mode .btn-outline{background:rgba(255,255,255,.05);color:#90caf9;border-color:#30363d}
 .dark-mode .btn-outline:hover{background:rgba(88,166,255,.1)}
 .dark-mode .stat-card{background:rgba(22,27,34,.85)!important;color:#e0e0e0}
@@ -1024,6 +1025,31 @@ tr:hover td{background:#f9fbff}
 
       <div v-if="page==='dashboard' && !initialLoading">
 
+        <!-- DB STORAGE MINI-WIDGET (superadmin only) -->
+        <div class="card" v-if="authProfile?.role==='superadmin' && dbStorage.checkedAt" style="cursor:pointer" @click="openBackup">
+          <div class="flex justify-between items-center" style="margin-bottom:6px">
+            <span style="font-size:.8rem;font-weight:700">🗄 Storan Database (anggaran)</span>
+            <span style="font-size:.76rem;color:#888">{{fmtBytes(dbStorage.total)}} / 1 GB &nbsp;·&nbsp; {{((dbStorage.total/FIRESTORE_FREE_TIER_BYTES)*100).toFixed(1)}}%</span>
+          </div>
+          <div class="progress-bar" style="border-radius:6px;height:6px;overflow:hidden">
+            <div :style="'height:100%;border-radius:6px;background:'+((dbStorage.total/FIRESTORE_FREE_TIER_BYTES)>0.9?'#dc3545':(dbStorage.total/FIRESTORE_FREE_TIER_BYTES)>0.7?'#ffc107':'#198754')+';width:'+Math.min(100,(dbStorage.total/FIRESTORE_FREE_TIER_BYTES)*100)+'%'"></div>
+          </div>
+        </div>
+
+        <!-- NEXT 7 DAYS AT A GLANCE -->
+        <div class="card" v-if="next7DaysItems.length">
+          <div class="card-title">🔭 7 Hari Akan Datang</div>
+          <p class="text-sm text-muted mb-12">Gabungan site lampau tempoh, jadual penyelenggaraan &amp; kontrak yang tamat dalam minggu ini.</p>
+          <div v-for="it in next7DaysItems" :key="it.id" class="flex items-center gap-8" style="padding:7px 0;border-bottom:1px solid #f0f0f0;cursor:pointer" @click="handleNext7Click(it)">
+            <span style="font-size:1.05rem">{{it.icon}}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:.84rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{it.label}}</div>
+              <div style="font-size:.74rem;color:#888">{{it.sub}}{{it.date?' · '+fmtDate(it.date):''}}</div>
+            </div>
+            <span v-if="it.urgency===0" class="badge badge-red" style="font-size:.68rem">Lampau</span>
+          </div>
+        </div>
+
         <!-- DASHBOARD YEAR FILTER -->
         <div class="flex justify-between items-center" style="margin-bottom:16px;flex-wrap:wrap;gap:10px">
           <div class="flex items-center gap-8" style="font-size:.83rem;color:#555">
@@ -1153,13 +1179,14 @@ tr:hover td{background:#f9fbff}
         <div class="card">
           <div class="card-title">🗺️ Tinjauan Ikut Zon</div>
           <div class="zone-map-grid">
-            <div v-for="(zoneInfo, zoneKey) in ZONES" :key="zoneKey" class="zone-map-card" @click="openSites('cctv')">
+            <div v-for="(zoneInfo, zoneKey) in ZONES" :key="zoneKey" class="zone-map-card" :style="{background:zoneHeatColor(zoneKey)}" @click="openSites('cctv')">
               <div class="zone-map-pin">📍</div>
               <div class="zone-map-name">{{zoneInfo.label}}</div>
               <div class="zone-map-states">{{zoneInfo.states}}</div>
-              <div class="flex gap-8" style="margin-top:8px;font-size:.72rem;justify-content:center">
+              <div class="flex gap-8" style="margin-top:8px;font-size:.72rem;justify-content:center;flex-wrap:wrap">
                 <span class="badge badge-blue">{{zoneSiteCounts[zoneKey]?.cctv||0}} CCTV</span>
                 <span class="badge badge-gray" style="background:#fff3e0;color:#7a2e00">{{zoneSiteCounts[zoneKey]?.vir||0}} VIR</span>
+                <span v-if="zoneOverdueCounts[zoneKey]?.overdue" class="badge badge-red">⚠ {{zoneOverdueCounts[zoneKey].overdue}} Overdue</span>
               </div>
             </div>
           </div>
@@ -3026,6 +3053,36 @@ tr:hover td{background:#f9fbff}
       <!-- ====== BACKUP & RESTORE ====== -->
       <div v-if="page==='backup' && authProfile?.role==='superadmin'">
         <div class="card">
+          <div class="card-title">🗄 Anggaran Saiz Database</div>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Firebase pelan percuma (Spark) beri had 1 GiB storan Firestore. Anggaran di bawah dikira dari saiz data sebenar (bukan cas billing tepat Firebase — untuk angka rasmi, semak Firebase Console → Usage).</p>
+          <button class="btn btn-outline btn-sm" @click="calcDbStorageEstimate" :disabled="dbStorage.loading" style="margin-bottom:14px">
+            {{dbStorage.loading?'⏳ Mengira...':'🔄 Kira Anggaran Storan'}}
+          </button>
+          <div v-if="dbStorage.checkedAt">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+              <b style="font-size:1.05rem">{{fmtBytes(dbStorage.total)}} <span style="font-weight:400;color:#888;font-size:.82rem">/ 1 GB</span></b>
+              <span style="font-size:.78rem;color:#888">{{((dbStorage.total/FIRESTORE_FREE_TIER_BYTES)*100).toFixed(2)}}% digunakan</span>
+            </div>
+            <div class="progress-bar" style="border-radius:6px;height:10px;overflow:hidden;margin-bottom:6px">
+              <div :style="'height:100%;border-radius:6px;background:'+((dbStorage.total/FIRESTORE_FREE_TIER_BYTES)>0.9?'#dc3545':(dbStorage.total/FIRESTORE_FREE_TIER_BYTES)>0.7?'#ffc107':'#198754')+';width:'+Math.min(100,(dbStorage.total/FIRESTORE_FREE_TIER_BYTES)*100)+'%'"></div>
+            </div>
+            <p style="font-size:.76rem;color:#aaa;margin-bottom:12px">Dikira pada {{new Date(dbStorage.checkedAt).toLocaleString('ms-MY')}}</p>
+            <div class="tbl-wrap">
+              <table style="width:100%;font-size:.82rem">
+                <thead><tr style="color:#888;text-align:left"><th style="padding:4px 0">Koleksi</th><th style="padding:4px 0">Dokumen</th><th style="padding:4px 0;text-align:right">Saiz</th></tr></thead>
+                <tbody>
+                  <tr v-for="b in dbStorage.breakdown" :key="b.collection" style="border-top:1px solid #f0f0f0">
+                    <td style="padding:5px 0">{{b.collection}}</td>
+                    <td style="padding:5px 0">{{b.docs}}</td>
+                    <td style="padding:5px 0;text-align:right">{{fmtBytes(b.bytes)}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">💾 Backup Manual</div>
           <p style="color:#555;font-size:.88rem;margin-bottom:14px">Muat turun semua data (peralatan, rekod PM, jadual) sebagai fail JSON untuk simpanan luar.</p>
           <button class="btn btn-primary" @click="doManualBackup" :disabled="loading">
@@ -3541,6 +3598,7 @@ tr:hover td{background:#f9fbff}
           <div class="tab" :class="{active:reportTab==='kegagalan'}" @click="reportTab='kegagalan'">🔧 Analisis Kegagalan</div>
           <div class="tab" :class="{active:reportTab==='isu'}" @click="reportTab='isu'">🔁 Isu Berulang</div>
           <div class="tab" :class="{active:reportTab==='team'}" @click="reportTab='team'">👷 Prestasi Team</div>
+          <div class="tab" :class="{active:reportTab==='beban'}" @click="reportTab='beban'">👤 Beban Kerja Staff</div>
           <div class="tab" :class="{active:reportTab==='trend'}" @click="reportTab='trend'">📈 Trend Tahunan</div>
           <div class="tab" :class="{active:reportTab==='tindakan'}" @click="reportTab='tindakan'">🛠️ Jenis Tindakan</div>
           <div class="tab" :class="{active:reportTab==='resolusi'}" @click="reportTab='resolusi'">⏳ Masa Selesai</div>
@@ -3674,6 +3732,28 @@ tr:hover td{background:#f9fbff}
                     <td><span :class="'badge badge-'+(t.rate>=80?'green':t.rate>=50?'blue':'red')">{{t.rate}}%</span></td>
                   </tr>
                   <tr v-if="!teamPerformance.length"><td colspan="5" class="empty">Tiada penugasan direkodkan.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: BEBAN KERJA STAFF -->
+        <div v-if="reportTab==='beban'">
+          <div class="card">
+            <div class="card-title">Beban Kerja Individu Staff</div>
+            <p class="text-sm text-muted mb-12">Kiraan penugasan PM/CM setiap staff (dari Jadual Penyelenggaraan), berasingan dari kadar siap Team. Berguna untuk agihan kerja yang lebih adil.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Staff</th><th>Jumlah Penugasan</th><th>PM</th><th>CM</th><th>Bil. Site Berbeza</th></tr></thead>
+                <tbody>
+                  <tr v-for="(s,i) in staffWorkload" :key="s.uid">
+                    <td>{{i+1}}</td><td><b>{{s.name}}</b></td><td>{{s.total}}</td>
+                    <td><span class="badge badge-blue">{{s.pm}}</span></td>
+                    <td><span class="badge badge-red">{{s.cm}}</span></td>
+                    <td>{{s.siteCount}}</td>
+                  </tr>
+                  <tr v-if="!staffWorkload.length"><td colspan="6" class="empty">Tiada penugasan direkodkan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4936,6 +5016,34 @@ createApp({
         .slice(0, 5);
     });
 
+    // "Next 7 Days" dashboard widget — merges 3 different urgency sources
+    // (already-overdue sites, jadual within a week, contracts expiring
+    // within a week) into one sorted glance-list so the user doesn't have
+    // to visually scan 3 separate cards to know what needs attention soonest.
+    const next7DaysItems = computed(() => {
+      const now = new Date();
+      const todayStr = now.toISOString().slice(0,10);
+      const in7 = new Date(now); in7.setDate(in7.getDate()+7);
+      const in7Str = in7.toISOString().slice(0,10);
+      const items = [];
+      overdueList.value.forEach(s => {
+        items.push({ id:'ov-'+s.id, icon:'⚠️', urgency:0, label:'Site Lampau: '+s.name, sub:VIR_SITES.some(v=>v.id===s.id)?'VIR':'CCTV', date:null, action:'sites' });
+      });
+      teamAssignments.value.filter(a => a.date >= todayStr && a.date <= in7Str).forEach(a => {
+        items.push({ id:'ta-'+a.id, icon:'📅', urgency:1, label:'Jadual: '+a.siteName, sub:(a.maintType||'PM')+' — Team '+a.team, date:a.date, action:'jadual' });
+      });
+      contracts.value.filter(c => c.endDate >= todayStr && c.endDate <= in7Str).forEach(c => {
+        items.push({ id:'ct-'+c.id, icon:'📜', urgency:1, label:'Kontrak Tamat: '+c.title, sub:(c.project||'cctv')==='vir'?'VIR':'CCTV', date:c.endDate, action:'contracts', project:c.project||'cctv' });
+      });
+      return items.sort((a,b) => a.urgency - b.urgency || (a.date||'').localeCompare(b.date||'')).slice(0, 8);
+    });
+    function handleNext7Click(item) {
+      if(item.project) currentProject.value = item.project;
+      if(item.action === 'sites') { openSites(item.sub==='VIR'?'vir':'cctv'); return; }
+      if(item.action === 'contracts') { loadContracts(); page.value = 'contracts'; return; }
+      if(item.action === 'jadual') { openJadual(); return; }
+    }
+
     // ── Dashboard: site count per zone (CCTV vs VIR) ──
     const zoneSiteCounts = computed(() => {
       const counts = {};
@@ -4944,6 +5052,29 @@ createApp({
       VIR_SITES.forEach(s => { if(counts[s.zone]) counts[s.zone].vir++; });
       return counts;
     });
+
+    // Zone heatmap: overdue-site count + ratio per zone, so the dashboard's
+    // zone overview can be colour-coded by severity instead of just showing
+    // flat CCTV/VIR totals.
+    const zoneOverdueCounts = computed(() => {
+      const counts = {};
+      Object.keys(ZONES).forEach(z => { counts[z] = { overdue:0, total:0 }; });
+      [...SITES, ...VIR_SITES].forEach(s => {
+        if(!counts[s.zone]) return;
+        counts[s.zone].total++;
+        if(overdueMap.value[s.id]) counts[s.zone].overdue++;
+      });
+      return counts;
+    });
+    function zoneHeatColor(zoneKey) {
+      const z = zoneOverdueCounts.value[zoneKey];
+      if(!z || !z.total) return '#f5f5f5';
+      const ratio = z.overdue / z.total;
+      if(ratio === 0) return '#e6f4ea';
+      if(ratio < 0.34) return '#fff8e1';
+      if(ratio < 0.67) return '#ffe0b2';
+      return '#fdecea';
+    }
 
     // { uid: { zone: count } } — counts distinct YYYY-MM months per zone (PM only)
     // CCTV+VIR in the same month = 1 zone visit
@@ -5461,6 +5592,63 @@ createApp({
       };
     }
 
+    // Superadmin-only estimate of total Firestore storage in use, checked
+    // against the ~1GiB free-tier (Spark plan) cap. The Firestore client SDK
+    // has no API for the *actual* billed storage figure (that includes index
+    // overhead + per-document metadata only Firebase's own backend tracks) —
+    // this sums the JSON payload size of every document across every
+    // collection as a close approximation, clearly labelled as such. Fetched
+    // on-demand via a button (not on every page load) since it reads every
+    // document in every collection, which costs Firestore read quota.
+    const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts'];
+    const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
+    const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
+    const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
+    async function calcDbStorageEstimate() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      dbStorage.loading = true;
+      try {
+        const breakdown = [];
+        let total = 0;
+        for(const coll of DB_COLLECTIONS_TO_MEASURE) {
+          const snap = await db.collection(coll).get();
+          let bytes = 0;
+          snap.forEach(doc => { bytes += new Blob([JSON.stringify(doc.data())]).size; });
+          breakdown.push({ collection: coll, docs: snap.size, bytes });
+          total += bytes;
+        }
+        breakdown.sort((a,b) => b.bytes - a.bytes);
+        dbStorage.breakdown = breakdown;
+        dbStorage.total = total;
+        dbStorage.checkedAt = Date.now();
+        try { localStorage.setItem(DB_STORAGE_CACHE_KEY, JSON.stringify({ total, breakdown, checkedAt: dbStorage.checkedAt })); } catch(e) {}
+      } catch(e) { showToast('Gagal kira anggaran storan: ' + e.message, 'error'); }
+      dbStorage.loading = false;
+    }
+    // Called once per login (for superadmin only) so the Dashboard's storage
+    // mini-widget has something to show without re-reading every collection
+    // on every visit — only refreshes for real if the cached figure is more
+    // than a week old (or missing), keeping Firestore read quota low.
+    function initDbStorageWidgetIfStale() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      try {
+        const cached = JSON.parse(localStorage.getItem(DB_STORAGE_CACHE_KEY) || 'null');
+        if(cached?.checkedAt && (Date.now() - cached.checkedAt) < DB_STORAGE_CACHE_MAX_AGE_MS) {
+          dbStorage.total = cached.total;
+          dbStorage.breakdown = cached.breakdown;
+          dbStorage.checkedAt = cached.checkedAt;
+          return;
+        }
+      } catch(e) {}
+      calcDbStorageEstimate();
+    }
+    function fmtBytes(n) {
+      if(n < 1024) return n + ' B';
+      if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+      if(n < 1024*1024*1024) return (n/1024/1024).toFixed(2) + ' MB';
+      return (n/1024/1024/1024).toFixed(2) + ' GB';
+    }
     function doManualBackup() {
       const data = collectBackupData();
       const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
@@ -7036,6 +7224,7 @@ createApp({
           loadAuditLogs(); // fire-and-forget — not on critical login path
           loadContracts(); // fire-and-forget — needed for the dashboard expiry badge/alert
         }
+        initDbStorageWidgetIfStale(); // fire-and-forget — no-op for non-superadmin, cache-first for superadmin
 
         // Load team assignments
         const tSnap = await db.collection('teamAssignments').orderBy('date','asc').get();
@@ -9212,6 +9401,29 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         .sort((a,b) => b.assigned - a.assigned);
     });
 
+    // ── 6b. Beban Kerja per Staff (bukan setakat Team) — kiraan penugasan
+    // PM/CM individu, untuk agihan kerja lebih adil selain rotation tracking ──
+    const staffWorkload = computed(() => {
+      const per = {};
+      teamAssignments.value.forEach(t => {
+        const isCm = t.maintType === 'CM';
+        // Dedup by uid within this one assignment first — a malformed/
+        // duplicate member entry on a single doc would otherwise inflate
+        // that staff member's count for what is really one assignment.
+        const seenInThisAssignment = new Map();
+        (t.members||[]).forEach(m => { if(m.uid && !seenInThisAssignment.has(m.uid)) seenInThisAssignment.set(m.uid, m); });
+        seenInThisAssignment.forEach(m => {
+          if(!per[m.uid]) per[m.uid] = { uid:m.uid, name:m.name||'?', total:0, pm:0, cm:0, sites:new Set() };
+          per[m.uid].total++;
+          if(isCm) per[m.uid].cm++; else per[m.uid].pm++;
+          if(t.siteId) per[m.uid].sites.add(t.siteId);
+        });
+      });
+      return Object.values(per)
+        .map(x => ({ ...x, siteCount: x.sites.size }))
+        .sort((a,b) => b.total - a.total);
+    });
+
     // ── 7. Trend Tahunan PM vs CM (multi-year, bukan setakat beberapa bulan) ──
     function _recDate(r) {
       return r.visitDate ? new Date(r.visitDate) : (r.year ? new Date(r.year, (r.month||1)-1, 1) : null);
@@ -9480,7 +9692,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       dashboardCompact, toggleDashboardCompact,
       cctvSitesCount, cctvRecordsCount, cctvThisYearCount, virSitesCount, virRecordsCount, virThisYearCount,
       cctvYearTarget, virYearTarget, cctvTargetPct, virTargetPct,
-      upcomingAssignments, zoneSiteCounts,
+      upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
+      next7DaysItems, handleNext7Click,
       filteredPM, yearList,
       PROJECT_TYPES, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
@@ -9512,6 +9725,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
+      dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
       startNewPM, loadPMEquip, savePM, viewRecord, deleteRecord,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
@@ -9531,7 +9745,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       healthCountCctv, healthCountVir, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister,
-      slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance,
+      slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, canEditContact, cpSites,
