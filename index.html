@@ -75,6 +75,10 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .main{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0}
 .topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05)}
 .topbar h3{font-size:1rem;color:#002244;font-weight:700}
+/* Uniform sizing for the topbar action row (online/notif/dark-mode/help/
+   logout) so they line up consistently instead of each having its own
+   one-off inline padding. */
+.topbar-icon-btn{box-sizing:border-box;min-height:36px;padding:7px 10px;display:inline-flex;align-items:center;justify-content:center;white-space:nowrap}
 .content{padding:24px;min-width:0;max-width:100%}
 .app-footer{text-align:center;padding:16px 24px;font-size:.76rem;color:#8a95a8;border-top:1px solid rgba(0,51,102,.08)}
 .app-footer b{color:#5a6a85}
@@ -585,6 +589,11 @@ tr:hover td{background:#f9fbff}
   /* Search box wraps onto its own full-width row on mobile — center it
      instead of leaving it anchored to the left from its desktop margin. */
   .topbar-search-wrap{flex:0 0 100%!important;max-width:min(360px,90vw)!important;margin:2px auto 0!important}
+  /* The action-button row (online/notif/dark-mode/help/logout) was a
+     non-wrapping flex row — on a narrow phone it either squeezed every
+     button to a different width or overflowed past the right edge. Let it
+     wrap and center like the rest of the topbar. */
+  .topbar-actions{flex-wrap:wrap!important;justify-content:center!important;row-gap:8px}
 
   /* Content */
   .content{padding:12px}
@@ -612,6 +621,15 @@ tr:hover td{background:#f9fbff}
   /* Tables */
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   table{min-width:580px}
+
+  /* Overdue-site list: was a single non-wrapping flex row, so a long site
+     name squeezed the days-text + "+ Mula PM" button into whatever space
+     was left — inconsistent width per row and the button's own text could
+     wrap onto 2 lines. Stack name above the days+button row instead, each
+     full width, so every card looks the same regardless of name length. */
+  .overdue-item{flex-direction:column;align-items:flex-start;gap:6px}
+  .overdue-item > span:last-child{width:100%;justify-content:space-between}
+  .oi-action{white-space:nowrap;flex-shrink:0}
 
   /* Modal */
   .modal-bg{align-items:flex-end}
@@ -920,7 +938,7 @@ tr:hover td{background:#f9fbff}
       <div class="nav-item" :class="{active:page==='compare'}" @click="page='compare'" v-if="compareList.length===2">
         <span class="icon">⚖️</span> Bandingkan
       </div>
-      <div class="nav-item" :class="{active:page==='profile'}" @click="initProfile();page='profile'">
+      <div class="nav-item" :class="{active:page==='profile'}" @click="page='profile'">
         <span class="icon">👤</span> Profil Saya
       </div>
       <div class="nav-item" :class="{active:page==='backup'}" @click="openBackup" v-if="authProfile?.role==='superadmin'">
@@ -953,11 +971,11 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
       </div>
-      <div class="flex gap-8" style="align-items:center">
+      <div class="flex gap-8 topbar-actions" style="align-items:center">
         <span class="text-sm text-muted" style="white-space:nowrap">{{today}}</span>
         <!-- Online users indicator -->
         <div class="online-panel-wrap" style="position:relative">
-          <button class="btn btn-outline btn-sm" @click.stop="showOnlinePanel=!showOnlinePanel" style="position:relative;padding:7px 10px" title="Pengguna Online">
+          <button class="btn btn-outline btn-sm topbar-icon-btn" @click.stop="showOnlinePanel=!showOnlinePanel" style="position:relative" title="Pengguna Online">
             🟢
             <span v-if="onlineUsers.length" style="position:absolute;top:-4px;right:-4px;background:#198754;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{onlineUsers.length>9?'9+':onlineUsers.length}}</span>
           </button>
@@ -979,7 +997,7 @@ tr:hover td{background:#f9fbff}
         </div>
         <!-- Bell notifications -->
         <div class="notif-panel-wrap" style="position:relative">
-          <button class="btn btn-outline btn-sm" @click.stop="showNotifPanel=!showNotifPanel" style="position:relative;padding:7px 10px">
+          <button class="btn btn-outline btn-sm topbar-icon-btn" @click.stop="showNotifPanel=!showNotifPanel" style="position:relative">
             🔔
             <span v-if="unreadCount>0" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{unreadCount>9?'9+':unreadCount}}</span>
           </button>
@@ -1002,10 +1020,10 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
         <!-- Dark mode toggle -->
-        <button @click="darkMode=!darkMode" class="btn btn-outline btn-sm" style="padding:7px 10px">{{darkMode?'☀️':'🌙'}}</button>
-        <button @click="openTutorial" class="btn btn-outline btn-sm" style="padding:7px 10px" title="Bantuan / Panduan">❓</button>
+        <button @click="darkMode=!darkMode" class="btn btn-outline btn-sm topbar-icon-btn">{{darkMode?'☀️':'🌙'}}</button>
+        <button @click="openTutorial" class="btn btn-outline btn-sm topbar-icon-btn" title="Bantuan / Panduan">❓</button>
         <!-- Log Keluar — mobile only -->
-        <button v-if="authUser" @click="confirmLogout" class="btn btn-sm mobile-logout-btn" style="background:#c62828;color:#fff;border:none;padding:7px 12px;display:none">🚪 Keluar</button>
+        <button v-if="authUser" @click="confirmLogout" class="btn btn-sm mobile-logout-btn topbar-icon-btn" style="background:#c62828;color:#fff;border:none;display:none">🚪 Keluar</button>
       </div>
     </div>
     <div class="content">
@@ -1520,6 +1538,10 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
+              <template v-if="canViewCredentials">
+                <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.accessUser" autocomplete="off"></div>
+                <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nCam.accessPw" autocomplete="new-password"></div>
+              </template>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addCamera">{{equipEditIdx.cameras!==null?'✓ Kemaskini Kamera':'+ Tambah Kamera'}}</button>
@@ -1537,17 +1559,22 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="c._uid||i" :class="{'highlight-row':equipEditIdx.cameras===i}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
                     <td>{{i+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.serial}}</td>
+                    <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
+                    <td v-if="canViewCredentials" class="flex items-center gap-8">
+                      <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
+                      <button v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('cameras',c._uid)" :title="revealedPw.cameras.has(c._uid)?'Sembunyi':'Papar'">{{revealedPw.cameras.has(c._uid)?'🙈':'👁'}}</button>
+                    </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td colspan="9" class="empty">Tiada kamera. Tambah di atas.</td></tr>
+                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada kamera. Tambah di atas.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1592,6 +1619,10 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"></div>
               <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nNVR.ip"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
+              <template v-if="canViewCredentials">
+                <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.accessUser" autocomplete="off"></div>
+                <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nNVR.accessPw" autocomplete="new-password"></div>
+              </template>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addNVR">{{equipEditIdx.nvr!==null?'✓ Kemaskini NVR':'+ Tambah NVR'}}</button>
@@ -1609,17 +1640,22 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="{'highlight-row':equipEditIdx.nvr===i}">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
                     <td>{{i+1}}</td><td>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td>
+                    <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
+                    <td v-if="canViewCredentials" class="flex items-center gap-8">
+                      <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
+                      <button v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('nvr',n._uid)" :title="revealedPw.nvr.has(n._uid)?'Sembunyi':'Papar'">{{revealedPw.nvr.has(n._uid)?'🙈':'👁'}}</button>
+                    </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td colspan="9" class="empty">Tiada NVR.</td></tr>
+                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada NVR.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1722,6 +1758,10 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
+              <template v-if="canViewCredentials">
+                <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.accessUser" autocomplete="off"></div>
+                <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nSW.accessPw" autocomplete="new-password"></div>
+              </template>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addSwitch">{{equipEditIdx.switches!==null?'✓ Kemaskini Switch':'+ Tambah Switch'}}</button>
@@ -1738,17 +1778,22 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ports}}</td>
+                    <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
+                    <td v-if="canViewCredentials" class="flex items-center gap-8">
+                      <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
+                      <button v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('switches',s._uid)" :title="revealedPw.switches.has(s._uid)?'Sembunyi':'Papar'">{{revealedPw.switches.has(s._uid)?'🙈':'👁'}}</button>
+                    </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.switches||[]).length"><td colspan="7" class="empty">Tiada switch.</td></tr>
+                  <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?9:7" class="empty">Tiada switch.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1774,6 +1819,10 @@ tr:hover td{background:#f9fbff}
                 <select class="form-control" v-model="nALM.type"><option>SMS Power Alert</option><option>SMS iNotifi</option><option>iNotifi Appliance</option></select>
               </div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nALM.installDate"></div>
+              <template v-if="canViewCredentials">
+                <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.accessUser" autocomplete="off"></div>
+                <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nALM.accessPw" autocomplete="new-password"></div>
+              </template>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addAlarm">{{equipEditIdx.alarms!==null?'✓ Kemaskini Alarm':'+ Tambah Alarm'}}</button>
@@ -1790,17 +1839,22 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="{'highlight-row':equipEditIdx.alarms===i}">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
                     <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td>
+                    <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
+                    <td v-if="canViewCredentials" class="flex items-center gap-8">
+                      <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
+                      <button v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('alarms',a._uid)" :title="revealedPw.alarms.has(a._uid)?'Sembunyi':'Papar'">{{revealedPw.alarms.has(a._uid)?'🙈':'👁'}}</button>
+                    </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td colspan="8" class="empty">Tiada alarm.</td></tr>
+                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td :colspan="canViewCredentials?10:8" class="empty">Tiada alarm.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1835,6 +1889,10 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.model"></div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
+              <template v-if="canViewCredentials">
+                <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan, cth: PC)</span></label><input class="form-control" v-model="nMISC.accessUser" autocomplete="off"></div>
+                <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nMISC.accessPw" autocomplete="new-password"></div>
+              </template>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addMisc">{{equipEditIdx.misc!==null?'✓ Kemaskini Peralatan':'+ Tambah Peralatan'}}</button>
@@ -1851,17 +1909,22 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="{'highlight-row':equipEditIdx.misc===i}">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
                     <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td>
+                    <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
+                    <td v-if="canViewCredentials" class="flex items-center gap-8">
+                      <span>{{m.accessPw ? (revealedPw.misc.has(m._uid) ? m.accessPw : '••••••') : '-'}}</span>
+                      <button v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('misc',m._uid)" :title="revealedPw.misc.has(m._uid)?'Sembunyi':'Papar'">{{revealedPw.misc.has(m._uid)?'🙈':'👁'}}</button>
+                    </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.misc||[]).length"><td colspan="8" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
+                  <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="canViewCredentials?10:8" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2276,12 +2339,13 @@ tr:hover td{background:#f9fbff}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Site</th><th>Bulan</th><th>Tahun</th><th>Tarikh Penyelenggaraan</th><th>Kamera</th><th>Status</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th>Bulan</th><th>Tahun</th><th>Tarikh Penyelenggaraan</th><th>Kamera</th><th>Status</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in filteredPM" :key="r.id">
                   <td><input type="checkbox" :value="r.id" v-model="batchSelected"></td>
                   <td><b>{{r.refNo||'-'}}</b></td>
+                  <td><span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span></td>
                   <td>{{r.siteName}}</td>
                   <td>{{r.month?MONTHS[r.month-1]:'—'}}</td>
                   <td>{{r.year}}</td>
@@ -2307,7 +2371,7 @@ tr:hover td{background:#f9fbff}
                     <button class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!filteredPM.length"><td colspan="10" class="empty">Tiada rekod.</td></tr>
+                <tr v-if="!filteredPM.length"><td colspan="11" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
           </div>
@@ -2318,6 +2382,7 @@ tr:hover td{background:#f9fbff}
               <div class="pmc-top">
                 <input type="checkbox" :value="r.id" v-model="batchSelected">
                 <b class="pmc-ref">{{r.refNo||'-'}}</b>
+                <span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span>
                 <span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span>
               </div>
               <div class="pmc-site">{{r.siteName}}</div>
@@ -2990,14 +3055,10 @@ tr:hover td{background:#f9fbff}
       <!-- ====== PROFILE ====== -->
       <div v-if="page==='profile'">
         <div class="profile-header">
-          <label style="cursor:pointer" title="Klik untuk tukar gambar profil">
-            <div class="profile-avatar">
-              <img v-if="authProfile?.photoURL" :src="authProfile.photoURL" alt="Profil">
-              <span v-else>{{authProfile?.name?.charAt(0)||'?'}}</span>
-              <div class="avatar-overlay">📷<br>Tukar<br>Gambar</div>
-            </div>
-            <input type="file" accept="image/*" style="display:none" @change="uploadPhoto($event, authProfile?.uid)">
-          </label>
+          <div class="profile-avatar">
+            <img v-if="authProfile?.photoURL" :src="authProfile.photoURL" alt="Profil">
+            <span v-else>{{authProfile?.name?.charAt(0)||'?'}}</span>
+          </div>
           <div>
             <div class="profile-name">{{authProfile?.name||authProfile?.username}}</div>
             <div class="profile-role">@{{authProfile?.username}} &nbsp;·&nbsp; <span style="background:rgba(255,255,255,.2);padding:2px 10px;border-radius:20px;font-size:.8rem">{{authProfile?.role}}</span></div>
@@ -3006,36 +3067,15 @@ tr:hover td{background:#f9fbff}
         </div>
         <div class="card">
           <div class="card-title">Maklumat Profil</div>
+          <p style="color:#888;font-size:.82rem;margin-bottom:14px">Maklumat profil dan kata laluan tidak boleh diubah sendiri. Hubungi Admin/Superadmin untuk sebarang kemaskini.</p>
           <div class="form-row form-row-2">
-            <div class="form-group"><label>Nama Penuh</label><input class="form-control" v-model="profileEdit.name"></div>
+            <div class="form-group"><label>Nama Penuh</label><input class="form-control" :value="authProfile?.name" disabled style="background:#f5f5f5"></div>
             <div class="form-group"><label>Username</label><input class="form-control" :value="authProfile?.username" disabled style="background:#f5f5f5"></div>
-            <div class="form-group"><label>Emel</label><input class="form-control" v-model="profileEdit.email" placeholder="cth: ahmad@example.com" type="email"></div>
-            <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="profileEdit.jawatan" placeholder="cth: Juruteknik Kanan"></div>
-            <div class="form-group"><label>Jabatan</label><input class="form-control" v-model="profileEdit.jabatan" placeholder="cth: Bahagian Teknikal"></div>
-            <div class="form-group"><label>No. Telefon</label><input class="form-control" v-model="profileEdit.phone" placeholder="cth: 0123456789"></div>
+            <div class="form-group"><label>Emel</label><input class="form-control" :value="authProfile?.email" disabled style="background:#f5f5f5"></div>
+            <div class="form-group"><label>Jawatan</label><input class="form-control" :value="authProfile?.jawatan" disabled style="background:#f5f5f5"></div>
+            <div class="form-group"><label>Jabatan</label><input class="form-control" :value="authProfile?.jabatan" disabled style="background:#f5f5f5"></div>
+            <div class="form-group"><label>No. Telefon</label><input class="form-control" :value="authProfile?.phone" disabled style="background:#f5f5f5"></div>
           </div>
-          <button class="btn btn-primary" @click="saveProfile" :disabled="loading">💾 Simpan Profil</button>
-        </div>
-        <div class="card">
-          <div class="card-title">Tukar Kata Laluan</div>
-          <div class="form-row form-row-2">
-            <div class="form-group">
-              <label>Kata Laluan Baru</label>
-              <div class="pw-wrap">
-                <input class="form-control" :type="showPwNew?'text':'password'" v-model="pwChange.newPw" placeholder="Kata laluan baru">
-                <button type="button" class="pw-reveal" @click="showPwNew=!showPwNew" tabindex="-1">{{showPwNew?'🙈':'👁'}}</button>
-              </div>
-            </div>
-            <div class="form-group">
-              <label>Sahkan Kata Laluan</label>
-              <div class="pw-wrap">
-                <input class="form-control" :type="showPwConfirm?'text':'password'" v-model="pwChange.confirmPw" placeholder="Ulang kata laluan baru">
-                <button type="button" class="pw-reveal" @click="showPwConfirm=!showPwConfirm" tabindex="-1">{{showPwConfirm?'🙈':'👁'}}</button>
-              </div>
-            </div>
-          </div>
-          <p v-if="pwChange.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{pwChange.err}}</p>
-          <button class="btn btn-warning" @click="changePassword" :disabled="loading">🔑 Tukar Kata Laluan</button>
         </div>
       </div>
 
@@ -3188,7 +3228,14 @@ tr:hover td{background:#f9fbff}
               </select>
             </div>
             <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="userModal.data.jawatan" placeholder="cth: Juruteknik Kanan"></div>
-            <div class="form-group"><label>Jabatan</label><input class="form-control" v-model="userModal.data.jabatan" placeholder="cth: Bahagian Teknikal"></div>
+            <div class="form-group"><label>Jabatan</label>
+              <select class="form-control" v-model="userModal.data.jabatan">
+                <option value="">-- Pilih --</option>
+                <option v-for="j in JABATAN_OPTIONS" :key="j">{{j}}</option>
+                <option value="Lain-lain">Lain-lain</option>
+              </select>
+              <input v-if="userModal.data.jabatan==='Lain-lain'" class="form-control" v-model="userModal.data.jabatanCustom" placeholder="Nyatakan jabatan" style="margin-top:6px">
+            </div>
             <div class="form-group"><label>No. Telefon</label><input class="form-control" v-model="userModal.data.phone" placeholder="cth: 0123456789"></div>
             <div class="form-group"><label>Emel *</label><input class="form-control" v-model="userModal.data.email" placeholder="cth: ahmad@example.com" type="email"></div>
           </div>
@@ -4544,12 +4591,12 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:''});
-    const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:''});
+    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+    const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''});
-    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:''});
-    const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:''});
-    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''});
+    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',accessUser:'',accessPw:''});
+    const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''});
+    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
     const ROOT_CAUSE_CATEGORIES = ['Litup/Bekalan Kuasa','Cuaca/Petir','Kabel Rosak','Vandalism/Kerosakan Fizikal','Umur Peralatan','Software/Firmware','Lain-lain'];
 
@@ -5157,6 +5204,10 @@ createApp({
       ['superadmin','admin','staff'].includes(authProfile.value?.role)
     );
     const canEditContract = computed(()=> isAdminRole());
+    // Equipment login credentials (camera/NVR/switch/alarm/misc access
+    // username+password) are visible to staff and above — internship
+    // accounts should never see them.
+    const canViewCredentials = computed(()=> ['superadmin','admin','staff'].includes(authProfile.value?.role));
 
     const calCells = computed(()=>{
       const first = new Date(calYear.value, calMonth.value, 1).getDay(); // 0=Sun
@@ -5281,7 +5332,8 @@ createApp({
 
     // ---- User management ----
     const allUsers = ref([]);
-    const userModal = reactive({ show:false, editing:false, err:'', data:{ username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',phone:'',email:'',accessType:'permanent',expiryDate:'' } });
+    const JABATAN_OPTIONS = ['Pengurusan','Teknikal'];
+    const userModal = reactive({ show:false, editing:false, err:'', data:{ username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',jabatanCustom:'',phone:'',email:'',accessType:'permanent',expiryDate:'' } });
 
     // ── CONTRACT / SLA TRACKING ──
     const contracts = ref([]);
@@ -5419,26 +5471,20 @@ createApp({
     const showResetNew = ref(false);
     const showResetConfirm = ref(false);
 
-    // ---- Profile ----
-    const profileEdit = reactive({ name:'', jawatan:'', jabatan:'', phone:'', email:'' });
-    const pwChange = reactive({ newPw:'', confirmPw:'', err:'' });
-
     // ---- Password reveal toggles ----
     const showLoginPw   = ref(false);
-    const showPwNew     = ref(false);
-    const showPwConfirm = ref(false);
 
     // ---- OCR ----
     const ocrState = reactive({ active:false, target:'', loading:false, progress:0, tokens:[] });
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:''},
-      nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:''},
+      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
+      nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''},
-      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:''},
-      nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:''},
-      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''},
+      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',accessUser:'',accessPw:''},
+      nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''},
+      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''},
     };
 
     // ---- Crowdsourced brand/model dropdown growth ----
@@ -6536,7 +6582,6 @@ createApp({
 
     async function finishLogin() {
       await logAudit('LOGIN', authProfile.value?.name || authProfile.value?.username || '');
-      initProfile();
       if(authProfile.value?.forcePwReset) {
         forcePwModal.newPw=''; forcePwModal.confirmPw=''; forcePwModal.err='';
         forcePwModal.show = true;
@@ -6728,7 +6773,6 @@ createApp({
       authProfile.value=null;
       loginUser.value=''; loginPass.value='';
       allUsers.value=[];
-      pwChange.newPw=''; pwChange.confirmPw=''; pwChange.err='';
       ocrState.active=false; ocrState.tokens=[];
       page.value='dashboard';
     }
@@ -7267,13 +7311,20 @@ createApp({
 
     function openAddUser() {
       userModal.editing=false; userModal.err='';
-      Object.assign(userModal.data,{username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',phone:'',email:'',accessType:'permanent',expiryDate:''});
+      Object.assign(userModal.data,{username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',jabatanCustom:'',phone:'',email:'',accessType:'permanent',expiryDate:''});
       userModal.show=true;
     }
 
     function openEditUser(u) {
       userModal.editing=true; userModal.err='';
-      Object.assign(userModal.data,{username:u.username,password:'',name:u.name,role:u.role,jawatan:u.jawatan||'',jabatan:u.jabatan||'',phone:u.phone||'',email:u.email||'',accessType:u.accessType||'permanent',expiryDate:u.expiryDate||''});
+      Object.assign(userModal.data,{username:u.username,password:'',name:u.name,role:u.role,jawatan:u.jawatan||'',jabatan:u.jabatan||'',jabatanCustom:'',phone:u.phone||'',email:u.email||'',accessType:u.accessType||'permanent',expiryDate:u.expiryDate||''});
+      // Saved jabatan may be a free-text legacy value not in JABATAN_OPTIONS
+      // — reflect that as "Lain-lain" + the custom text so editing shows it
+      // correctly, same pattern as other smart dropdowns in this app.
+      if(u.jabatan && !JABATAN_OPTIONS.includes(u.jabatan)) {
+        userModal.data.jabatan = 'Lain-lain';
+        userModal.data.jabatanCustom = u.jabatan;
+      }
       userModal._editId = u.id;
       userModal.show=true;
     }
@@ -7312,6 +7363,7 @@ createApp({
       if(!userModal.editing && !userModal.data.password){ userModal.err='Kata laluan wajib diisi.'; return; }
       if(!isValidEmail(userModal.data.email)){ userModal.err='Format emel tidak sah.'; return; }
       if(!isValidPhone(userModal.data.phone)){ userModal.err='Format no. telefon tidak sah.'; return; }
+      const resolvedJabatan = (userModal.data.jabatan==='Lain-lain' && userModal.data.jabatanCustom.trim()) ? userModal.data.jabatanCustom.trim() : userModal.data.jabatan;
       loading.value=true;
       try {
         if(!userModal.editing) {
@@ -7331,7 +7383,7 @@ createApp({
             name: userModal.data.name,
             role: userModal.data.role,
             jawatan: userModal.data.jawatan,
-            jabatan: userModal.data.jabatan,
+            jabatan: resolvedJabatan,
             phone: userModal.data.phone,
             accessType: userModal.data.accessType || 'permanent',
             expiryDate: userModal.data.accessType === 'temporary' ? (userModal.data.expiryDate || '') : '',
@@ -7346,7 +7398,7 @@ createApp({
             name: userModal.data.name,
             role: userModal.data.role,
             jawatan: userModal.data.jawatan,
-            jabatan: userModal.data.jabatan,
+            jabatan: resolvedJabatan,
             phone: userModal.data.phone,
             email: userModal.data.email,
             accessType: userModal.data.accessType || 'permanent',
@@ -7525,44 +7577,6 @@ createApp({
       loading.value = false;
     }
 
-    // ---- Profile ----
-    function initProfile() {
-      profileEdit.name    = authProfile.value?.name||'';
-      profileEdit.jawatan = authProfile.value?.jawatan||'';
-      profileEdit.jabatan = authProfile.value?.jabatan||'';
-      profileEdit.phone   = authProfile.value?.phone||'';
-      profileEdit.email   = authProfile.value?.email||'';
-    }
-
-    async function saveProfile() {
-      if(!isValidEmail(profileEdit.email)){ showToast('Format emel tidak sah.','error'); return; }
-      if(!isValidPhone(profileEdit.phone)){ showToast('Format no. telefon tidak sah.','error'); return; }
-      loading.value=true;
-      try {
-        const uid = auth.currentUser.uid;
-        const updates = { name:profileEdit.name, jawatan:profileEdit.jawatan, jabatan:profileEdit.jabatan, phone:profileEdit.phone, email:profileEdit.email };
-        await db.collection('users').doc(uid).set(updates, {merge:true});
-        Object.assign(authProfile.value, updates);
-        showToast('Profil berjaya disimpan!');
-      } catch(e){ showToast('Gagal: '+e.message,'error'); }
-      loading.value=false;
-    }
-
-    async function changePassword() {
-      pwChange.err='';
-      if(!pwChange.newPw || pwChange.newPw.length < 6){ pwChange.err='Kata laluan mesti sekurang-kurangnya 6 aksara.'; return; }
-      if(pwChange.newPw !== pwChange.confirmPw){ pwChange.err='Kata laluan tidak sepadan.'; return; }
-      loading.value=true;
-      try {
-        await auth.currentUser.updatePassword(pwChange.newPw);
-        pwChange.newPw=''; pwChange.confirmPw='';
-        showToast('Kata laluan berjaya ditukar!');
-      } catch(e){
-        pwChange.err = e.code==='auth/requires-recent-login'?'Sila log keluar dan log masuk semula sebelum tukar kata laluan.':'Gagal: '+e.message;
-      }
-      loading.value=false;
-    }
-
     // ---- Profile photo upload ----
     async function uploadPhoto(evt, uid) {
       const file = evt.target.files[0];
@@ -7659,6 +7673,14 @@ createApp({
 
     // ---- Bulk select/delete for equipment lists ----
     const equipSelected = reactive({ cameras:new Set(), nvr:new Set(), hdd:new Set(), switches:new Set(), alarms:new Set(), misc:new Set() });
+    // Per-row password reveal toggle in the equipment tables — masked by
+    // default even for roles allowed to view credentials, so a passer-by
+    // glancing at the screen doesn't see every password at once.
+    const revealedPw = reactive({ cameras:new Set(), nvr:new Set(), switches:new Set(), alarms:new Set(), misc:new Set() });
+    function togglePwReveal(kind, uid) {
+      if(!uid) return;
+      revealedPw[kind].has(uid) ? revealedPw[kind].delete(uid) : revealedPw[kind].add(uid);
+    }
     function toggleEquipRow(kind, uid) {
       if(!uid) return;
       equipSelected[kind].has(uid) ? equipSelected[kind].delete(uid) : equipSelected[kind].add(uid);
@@ -7884,12 +7906,12 @@ createApp({
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
       const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
-      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, installDate:nMISC.installDate, _ts:Date.now() };
+      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, installDate:nMISC.installDate, accessUser:nMISC.accessUser, accessPw:nMISC.accessPw, _ts:Date.now() };
       const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Peralatan berjaya ditambah!'); }
-      Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:''});
+      Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     }
     function removeItem(siteId, key, idx) {
       if(!confirm('Padam rekod ini?')) return;
@@ -9722,25 +9744,26 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
       fmtDate,
-      doLogin, doLogout, confirmLogout, initProfile, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
+      doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
-      allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser,
-      contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract,
+      allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS,
+      contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canViewCredentials,
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
-      profileEdit, pwChange, saveProfile, changePassword, uploadPhoto,
-      showLoginPw, showPwNew, showPwConfirm,
+      uploadPhoto,
+      showLoginPw,
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
+      revealedPw, togglePwReveal,
       bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
