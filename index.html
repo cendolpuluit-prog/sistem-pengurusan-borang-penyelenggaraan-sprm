@@ -393,6 +393,18 @@ tr:hover td{background:#f9fbff}
 .badge-G{background:#d81b60;color:#fff}
 .team-card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px}
 .team-card-body{flex:1;min-width:0}
+/* Compact per-date summary tiles for Jadual Penyelenggaraan — a grid of
+   small square-ish cards (several per row) instead of one full-width row
+   per date, so a month with many assignment-dates doesn't turn into a
+   long vertical scroll. */
+.day-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}
+.day-summary-card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:10px 6px;cursor:pointer;text-align:center;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:5px}
+.day-summary-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);border-color:#003366}
+.day-summary-card .dsc-datenum{width:32px;height:32px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}
+.day-summary-card .dsc-count{font-size:.66rem;color:#666;font-weight:600;white-space:nowrap}
+.day-summary-card .dsc-teams{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
+.dark-mode .day-summary-card{background:rgba(22,27,34,.85);border-color:rgba(255,255,255,.08)}
+.dark-mode .day-summary-card .dsc-count{color:#8b949e}
 .team-member-chip{display:inline-flex;align-items:center;gap:4px;background:#f0f4ff;border:1px solid #c5cdf0;border-radius:20px;padding:2px 10px;font-size:.78rem;margin:2px 3px 2px 0}
 .team-member-photo{width:20px;height:20px;border-radius:50%;object-fit:cover;background:#c5cdf0}
 
@@ -2769,18 +2781,14 @@ tr:hover td{background:#f9fbff}
           <div v-if="!teamsByDateForMonth.length" style="text-align:center;color:#aaa;padding:32px;background:#fff;border-radius:10px;border:1px dashed #ddd">
             Tiada penugasan team untuk bulan ini.
           </div>
-          <div v-for="grp in teamsByDateForMonth" :key="grp.date" class="team-card" style="cursor:pointer" @click="openDayDetail(grp.date)">
-            <div style="width:36px;height:36px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0">{{grp.date.split('-')[2]}}</div>
-            <div class="team-card-body">
-              <div class="flex items-center gap-8 mb-6">
-                <b style="font-size:.95rem">{{fmtDate(grp.date)}}</b>
-                <span class="badge badge-blue" style="font-size:.72rem">{{grp.teams.length}} penugasan</span>
-              </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <div v-if="teamsByDateForMonth.length" class="day-summary-grid">
+            <div v-for="grp in teamsByDateForMonth" :key="grp.date" class="day-summary-card" :title="fmtDate(grp.date)" @click="openDayDetail(grp.date)">
+              <div class="dsc-datenum">{{grp.date.split('-')[2]}}</div>
+              <div class="dsc-count">{{grp.teams.length}} penugasan</div>
+              <div class="dsc-teams">
                 <span v-for="t in grp.teams" :key="t.id" :class="['team-badge','badge-'+t.team]" :title="'Team '+t.team+' — '+(t.siteName||'—')">{{t.team}}</span>
               </div>
             </div>
-            <div style="flex-shrink:0;color:#bbb;font-size:1.2rem">→</div>
           </div>
         </div>
 
@@ -2798,17 +2806,29 @@ tr:hover td{background:#f9fbff}
             Tiada data penugasan PM lagi.
           </div>
 
-          <div v-for="u in rotationMatrix" :key="u.uid" style="background:#fff;border-radius:10px;border:1px solid #e8edf5;padding:12px 16px;margin-bottom:8px">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap">
-              <div style="width:32px;height:32px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0">
-                {{(u.name||'?').charAt(0).toUpperCase()}}
+          <div v-if="rotationMatrix.length" class="day-summary-grid">
+            <div v-for="u in rotationMatrix" :key="u.uid" class="day-summary-card" :title="u.name" @click="openStaffRotationDetail(u.uid)">
+              <div class="dsc-datenum">{{(u.name||'?').charAt(0).toUpperCase()}}</div>
+              <div class="dsc-count" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{u.name}}</div>
+              <span :class="'badge '+(u.dueSites.length?'badge-red':'badge-green')" style="font-size:.64rem">{{u.dueSites.length?'⚠ '+u.dueSites.length+' zon':'✓ OK'}}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====== STAFF ROTATION DETAIL MODAL ====== -->
+        <div v-if="staffRotationModal.show && staffRotationDetail" class="modal-bg" @click.self="staffRotationModal.show=false">
+          <div class="modal" style="max-width:520px;position:relative">
+            <button @click="staffRotationModal.show=false" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+              <div style="width:36px;height:36px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;flex-shrink:0">
+                {{(staffRotationDetail.name||'?').charAt(0).toUpperCase()}}
               </div>
               <div>
-                <div style="font-weight:700;font-size:.88rem;color:#222">{{u.name}}</div>
-                <div style="font-size:.72rem;color:#888">{{u.role}} · Jumlah kunjungan zon PM: {{u.totalPm}}</div>
+                <div style="font-weight:700;font-size:.95rem;color:#222">{{staffRotationDetail.name}}</div>
+                <div style="font-size:.76rem;color:#888">{{staffRotationDetail.role}} · Jumlah kunjungan zon PM: {{staffRotationDetail.totalPm}}</div>
               </div>
-              <div v-if="u.dueSites.length" style="margin-left:auto;background:#ffebee;color:#b71c1c;padding:3px 10px;border-radius:8px;font-size:.75rem;font-weight:700">
-                ⚠ {{u.dueSites.length}} zon perlu rotasi
+              <div v-if="staffRotationDetail.dueSites.length" style="margin-left:auto;background:#ffebee;color:#b71c1c;padding:3px 10px;border-radius:8px;font-size:.75rem;font-weight:700">
+                ⚠ {{staffRotationDetail.dueSites.length}} zon perlu rotasi
               </div>
               <div v-else style="margin-left:auto;background:#e8f5e9;color:#1b5e20;padding:3px 10px;border-radius:8px;font-size:.75rem;font-weight:700">
                 ✓ OK
@@ -2817,21 +2837,21 @@ tr:hover td{background:#f9fbff}
 
             <!-- Zone visit chips -->
             <div style="display:flex;flex-wrap:wrap;gap:6px">
-              <div v-for="z in u.zoneCounts" :key="z.zone"
+              <div v-for="z in staffRotationDetail.zoneCounts" :key="z.zone"
                 :style="'display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:8px;font-size:.75rem;border:1px solid '+(z.due?'#ef9a9a':z.count===1?'#ffe082':'#a5d6a7')+';background:'+(z.due?'#fff5f5':z.count===1?'#fffde7':'#f1fff4')">
                 <span :style="'font-weight:800;color:'+(z.due?'#b71c1c':z.count===1?'#e65100':'#1b5e20')">{{z.count}}x</span>
                 <span style="color:#333;font-weight:600">{{z.zoneName}}</span>
                 <span style="color:#888;font-size:.68rem">{{z.states}}</span>
                 <span v-if="z.due" style="color:#b71c1c;font-size:.65rem;font-weight:700;margin-left:2px">⚠ ROTASI</span>
               </div>
-              <div v-if="!u.zoneCounts.length" style="color:#bbb;font-size:.8rem;font-style:italic">Belum ada rekod PM</div>
+              <div v-if="!staffRotationDetail.zoneCounts.length" style="color:#bbb;font-size:.8rem;font-style:italic">Belum ada rekod PM</div>
             </div>
 
             <!-- Rotation suggestion -->
-            <div v-if="u.dueSites.length" style="margin-top:8px;padding:6px 10px;background:#fff8e1;border-radius:6px;font-size:.76rem;color:#795548">
-              💡 <b>{{u.name}}</b> perlu dihantar ke zon lain. Zon yang masih boleh:
+            <div v-if="staffRotationDetail.dueSites.length" style="margin-top:8px;padding:6px 10px;background:#fff8e1;border-radius:6px;font-size:.76rem;color:#795548">
+              💡 <b>{{staffRotationDetail.name}}</b> perlu dihantar ke zon lain. Zon yang masih boleh:
               <template v-for="(zv,zk) in ZONES" :key="zk">
-                <span v-if="!u.zoneCounts.find(z=>z.zone===zk&&z.due)"
+                <span v-if="!staffRotationDetail.zoneCounts.find(z=>z.zone===zk&&z.due)"
                   style="margin-left:4px;background:#e8f5e9;color:#1b5e20;padding:1px 8px;border-radius:4px;font-weight:600">
                   {{zv.label}}
                 </span>
@@ -4995,6 +5015,7 @@ createApp({
       data: { team:'A', date:'', project:'SPRM - CCTV', maintType:'PM', siteId:'', siteName:'', notes:'' }
     });
 
+    const allUsers = ref([]);
     const allStaff = computed(() => {
       const list = [...allUsers.value];
       const uid = authUser.value?.uid;
@@ -5274,6 +5295,20 @@ createApp({
       }).filter(u => u.totalPm > 0);
     });
 
+    // Status Rotasi Staff was one full detail-card per staff, stacked
+    // one-by-one — same "long wall" issue as the team-per-date list.
+    // Compact grid tile per staff, click opens a popup with the full
+    // zone-chip breakdown + rotation suggestion.
+    const staffRotationModal = reactive({ show:false, uid:'' });
+    function openStaffRotationDetail(uid) { staffRotationModal.uid = uid; staffRotationModal.show = true; }
+    const staffRotationDetail = computed(() => rotationMatrix.value.find(u => u.uid === staffRotationModal.uid) || null);
+    // Keep .show honest if the underlying entry disappears (e.g. the
+    // staff's totalPm drops to 0 and rotationMatrix filters them out) —
+    // otherwise .show stays true while the v-if just hides it, and it
+    // could silently reappear later if the data recomputes back to
+    // including that uid. Mirrors dayDetailModal's equivalent guard.
+    watch(staffRotationDetail, v => { if(staffRotationModal.show && !v) staffRotationModal.show = false; });
+
     async function deleteTeam(t) {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!t?.id) return;
@@ -5520,7 +5555,6 @@ createApp({
     }
 
     // ---- User management ----
-    const allUsers = ref([]);
     const JABATAN_OPTIONS = ['Pengurusan','Teknikal'];
     const userModal = reactive({ show:false, editing:false, err:'', data:{ username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',jabatanCustom:'',phone:'',email:'',accessType:'permanent',expiryDate:'' } });
 
@@ -9934,6 +9968,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
+      staffRotationModal, openStaffRotationDetail, staffRotationDetail,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
       fmtDate,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
