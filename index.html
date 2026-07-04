@@ -240,6 +240,11 @@ tr:hover td{background:#f9fbff}
 
 /* OVERDUE ALERT */
 .overdue-alert{background:rgba(220,53,69,.07);border:1.5px solid rgba(220,53,69,.25);border-radius:10px;padding:14px 18px;margin-bottom:16px}
+/* "Site PM Lampau" + "7 Hari Akan Datang" side-by-side once there's enough
+   width for two ~320px columns (tablet/desktop) — on a phone the single
+   column naturally kicks in on its own, no separate breakpoint needed. */
+.dash-top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start;margin-bottom:16px}
+.dash-top-grid .overdue-alert,.dash-top-grid .card{margin-bottom:0}
 .overdue-alert-title{color:#dc3545;font-weight:700;font-size:.88rem;margin-bottom:10px}
 .overdue-group-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 6px;color:#555}
 .overdue-item{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:.15s;margin-bottom:6px;border:1px solid transparent}
@@ -400,7 +405,8 @@ tr:hover td{background:#f9fbff}
 .day-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px}
 .day-summary-card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:10px 6px;cursor:pointer;text-align:center;transition:.15s;display:flex;flex-direction:column;align-items:center;gap:5px}
 .day-summary-card:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.1);border-color:#003366}
-.day-summary-card .dsc-datenum{width:32px;height:32px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0}
+.day-summary-card .dsc-datenum{width:32px;height:32px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0;overflow:hidden}
+.day-summary-card .dsc-datenum img{width:100%;height:100%;object-fit:cover}
 .day-summary-card .dsc-count{font-size:.66rem;color:#666;font-weight:600;white-space:nowrap}
 .day-summary-card .dsc-teams{display:flex;flex-wrap:wrap;gap:3px;justify-content:center}
 .dark-mode .day-summary-card{background:rgba(22,27,34,.85);border-color:rgba(255,255,255,.08)}
@@ -1060,40 +1066,60 @@ tr:hover td{background:#f9fbff}
           <div class="overdue-alert-title">📜 {{contractsExpiringCount}} Kontrak Hampir/Telah Tamat Tempoh (CCTV + VIR) — klik untuk lihat Kontrak &amp; SLA</div>
         </div>
 
-        <!-- OVERDUE ALERT -->
-        <div class="overdue-alert" v-if="overdueSortedCctv.length || overdueSortedVir.length">
-          <div class="overdue-alert-title">⚠ Site PM Lampau — klik site untuk terus mula borang PM</div>
+        <!-- OVERDUE ALERT + NEXT 7 DAYS — side-by-side once there's room
+             (tablet/desktop), stacked on phone (handled by the grid's
+             auto-fit, no separate mobile rule needed). -->
+        <div class="dash-top-grid" v-if="(overdueSortedCctv.length || overdueSortedVir.length) || next7DaysItems.length">
+          <!-- OVERDUE ALERT -->
+          <div class="overdue-alert" v-if="overdueSortedCctv.length || overdueSortedVir.length">
+            <div class="overdue-alert-title">⚠ Site PM Lampau — klik site untuk terus mula borang PM</div>
 
-          <template v-if="overdueSortedCctv.length">
-            <div class="overdue-group-label">📹 CCTV — lebih {{PM_INTERVAL.cctv}} bulan tiada PM</div>
-            <div v-for="s in (overdueExpandCctv?overdueSortedCctv:overdueSortedCctv.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
-              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
-              <span class="oi-name">⚠ {{s.name}}</span>
-              <span class="flex gap-8 items-center">
-                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
-                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
-              </span>
-            </div>
-            <button v-if="overdueSortedCctv.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" style="margin-bottom:10px" @click="overdueExpandCctv=!overdueExpandCctv">
-              {{overdueExpandCctv?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedCctv.length+')'}}
-            </button>
-          </template>
+            <template v-if="overdueSortedCctv.length">
+              <div class="overdue-group-label">📹 CCTV — lebih {{PM_INTERVAL.cctv}} bulan tiada PM</div>
+              <div v-for="s in (overdueExpandCctv?overdueSortedCctv:overdueSortedCctv.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
+                :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
+                <span class="oi-name">⚠ {{s.name}}</span>
+                <span class="flex gap-8 items-center">
+                  <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
+                  <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
+                </span>
+              </div>
+              <button v-if="overdueSortedCctv.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" style="margin-bottom:10px" @click="overdueExpandCctv=!overdueExpandCctv">
+                {{overdueExpandCctv?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedCctv.length+')'}}
+              </button>
+            </template>
 
-          <template v-if="overdueSortedVir.length">
-            <div class="overdue-group-label">🖥️ VIR — lebih {{PM_INTERVAL.vir}} bulan tiada PM</div>
-            <div v-for="s in (overdueExpandVir?overdueSortedVir:overdueSortedVir.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
-              :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
-              <span class="oi-name">⚠ {{s.name}}</span>
-              <span class="flex gap-8 items-center">
-                <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
-                <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
-              </span>
+            <template v-if="overdueSortedVir.length">
+              <div class="overdue-group-label">🖥️ VIR — lebih {{PM_INTERVAL.vir}} bulan tiada PM</div>
+              <div v-for="s in (overdueExpandVir?overdueSortedVir:overdueSortedVir.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
+                :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
+                <span class="oi-name">⚠ {{s.name}}</span>
+                <span class="flex gap-8 items-center">
+                  <span class="oi-days">{{s.daysSince!=null?s.daysSince+' hari lampau':'Tiada rekod PM'}}</span>
+                  <span class="btn btn-sm btn-outline oi-action">+ Mula PM</span>
+                </span>
+              </div>
+              <button v-if="overdueSortedVir.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" @click="overdueExpandVir=!overdueExpandVir">
+                {{overdueExpandVir?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedVir.length+')'}}
+              </button>
+            </template>
+          </div>
+
+          <!-- NEXT 7 DAYS AT A GLANCE -->
+          <div class="card" v-if="next7DaysItems.length">
+            <div class="card-title">🔭 7 Hari Akan Datang</div>
+            <p class="text-sm text-muted mb-12">Gabungan site lampau tempoh, jadual penyelenggaraan &amp; kontrak yang tamat dalam minggu ini.</p>
+            <div v-for="it in next7DaysItems" :key="it.id" class="flex items-center gap-8" style="padding:7px 0;border-bottom:1px solid #f0f0f0;cursor:pointer" @click="handleNext7Click(it)">
+              <span style="font-size:1.05rem">{{it.icon}}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:.84rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{it.label}}</div>
+                <div style="font-size:.74rem;color:#888">{{it.sub}}{{it.date?' · '+fmtDate(it.date):''}}</div>
+              </div>
+              <span v-if="it.urgency===0" class="badge badge-red" style="font-size:.68rem">Lampau</span>
             </div>
-            <button v-if="overdueSortedVir.length>OVERDUE_DASH_LIMIT" class="btn btn-sm btn-outline" @click="overdueExpandVir=!overdueExpandVir">
-              {{overdueExpandVir?'▲ Tunjuk kurang':'▼ Lihat semua ('+overdueSortedVir.length+')'}}
-            </button>
-          </template>
+          </div>
         </div>
+
         <!-- APPROACHING WARNING -->
         <div v-if="approachingList.length" style="background:rgba(255,152,0,.08);border:1.5px solid rgba(255,152,0,.3);border-radius:10px;padding:12px 18px;margin-bottom:16px">
           <div style="color:#e65100;font-weight:700;font-size:.88rem;margin-bottom:8px">🔔 PM Hampir Tiba (dalam 28 hari)</div>
@@ -1102,20 +1128,6 @@ tr:hover td{background:#f9fbff}
               📅 {{s.name}}
               <span style="font-weight:400"> — due dalam {{siteNextPmMap[s.id]?.daysUntilDue}} hari</span>
             </span>
-          </div>
-        </div>
-
-        <!-- NEXT 7 DAYS AT A GLANCE -->
-        <div class="card" v-if="next7DaysItems.length">
-          <div class="card-title">🔭 7 Hari Akan Datang</div>
-          <p class="text-sm text-muted mb-12">Gabungan site lampau tempoh, jadual penyelenggaraan &amp; kontrak yang tamat dalam minggu ini.</p>
-          <div v-for="it in next7DaysItems" :key="it.id" class="flex items-center gap-8" style="padding:7px 0;border-bottom:1px solid #f0f0f0;cursor:pointer" @click="handleNext7Click(it)">
-            <span style="font-size:1.05rem">{{it.icon}}</span>
-            <div style="flex:1;min-width:0">
-              <div style="font-size:.84rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{it.label}}</div>
-              <div style="font-size:.74rem;color:#888">{{it.sub}}{{it.date?' · '+fmtDate(it.date):''}}</div>
-            </div>
-            <span v-if="it.urgency===0" class="badge badge-red" style="font-size:.68rem">Lampau</span>
           </div>
         </div>
 
@@ -2015,7 +2027,14 @@ tr:hover td{background:#f9fbff}
                 <option v-for="c in ROOT_CAUSE_CATEGORIES" :key="c">{{c}}</option>
               </select>
             </div>
-            <div class="form-group" v-if="currentProject==='vir'"><label>No. Bilik VIR</label><input class="form-control" v-model="pm.virRoomNo" placeholder="cth: NO.1"></div>
+            <div class="form-group" v-if="currentProject==='vir'"><label>No. Bilik VIR</label>
+              <select class="form-control" v-model="pm.virRoomNo">
+                <option value="">-- Pilih --</option>
+                <option v-for="r in VIR_ROOM_OPTIONS" :key="r">{{r}}</option>
+                <option value="Lain-lain">Lain-lain</option>
+              </select>
+              <input v-if="pm.virRoomNo==='Lain-lain'" class="form-control" v-model="pm.virRoomNoCustom" placeholder="Nyatakan no. bilik" style="margin-top:6px">
+            </div>
           </div>
           <button class="btn btn-primary" @click="loadPMEquip" :disabled="!pm.siteId">Seterusnya →</button>
         </div>
@@ -2808,7 +2827,7 @@ tr:hover td{background:#f9fbff}
 
           <div v-if="rotationMatrix.length" class="day-summary-grid">
             <div v-for="u in rotationMatrix" :key="u.uid" class="day-summary-card" :title="u.name" @click="openStaffRotationDetail(u.uid)">
-              <div class="dsc-datenum">{{(u.name||'?').charAt(0).toUpperCase()}}</div>
+              <div class="dsc-datenum"><img v-if="u.photoURL" :src="u.photoURL" alt=""><span v-else>{{(u.name||'?').charAt(0).toUpperCase()}}</span></div>
               <div class="dsc-count" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{u.name}}</div>
               <span :class="'badge '+(u.dueSites.length?'badge-red':'badge-green')" style="font-size:.64rem">{{u.dueSites.length?'⚠ '+u.dueSites.length+' zon':'✓ OK'}}</span>
             </div>
@@ -2820,8 +2839,9 @@ tr:hover td{background:#f9fbff}
           <div class="modal" style="max-width:520px;position:relative">
             <button @click="staffRotationModal.show=false" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-              <div style="width:36px;height:36px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;flex-shrink:0">
-                {{(staffRotationDetail.name||'?').charAt(0).toUpperCase()}}
+              <div style="width:36px;height:36px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.9rem;font-weight:700;flex-shrink:0;overflow:hidden">
+                <img v-if="staffRotationDetail.photoURL" :src="staffRotationDetail.photoURL" alt="" style="width:100%;height:100%;object-fit:cover">
+                <span v-else>{{(staffRotationDetail.name||'?').charAt(0).toUpperCase()}}</span>
               </div>
               <div>
                 <div style="font-weight:700;font-size:.95rem;color:#222">{{staffRotationDetail.name}}</div>
@@ -4687,6 +4707,10 @@ createApp({
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
     const ROOT_CAUSE_CATEGORIES = ['Litup/Bekalan Kuasa','Cuaca/Petir','Kabel Rosak','Vandalism/Kerosakan Fizikal','Umur Peralatan','Software/Firmware','Lain-lain'];
+    // HQ Putrajaya has up to 16 VIR rooms; other sites normally have 1-2 —
+    // 20 covers every realistic case with room to spare, plus "Lain-lain"
+    // for anything unusual.
+    const VIR_ROOM_OPTIONS = Array.from({length:20}, (_,i) => 'NO.'+(i+1));
 
     // ---- PM form state ----
     // VIR checklist master — each item has label, okCell, nokCell (for Excel injection)
@@ -4751,7 +4775,7 @@ createApp({
         {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
       ],
       // VIR fields
-      virRoomNo:'', virItems:[],
+      virRoomNo:'', virRoomNoCustom:'', virItems:[],
       maintType:'', pmNo:null, rootCause:'',
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
@@ -5020,7 +5044,7 @@ createApp({
       const list = [...allUsers.value];
       const uid = authUser.value?.uid;
       if(authProfile.value && uid && !list.find(u => u.id === uid)) {
-        list.push({ id: uid, name: authProfile.value.name, username: authProfile.value.username, role: authProfile.value.role });
+        list.push({ id: uid, name: authProfile.value.name, username: authProfile.value.username, role: authProfile.value.role, photoURL: authProfile.value.photoURL||'' });
       }
       return list.filter(u => u && !u.disabled).sort((a,b) => (a.name||a.username).localeCompare(b.name||b.username));
     });
@@ -5291,7 +5315,7 @@ createApp({
         const totalPm = Object.values(staffZonePmCount.value[u.id] || {}).reduce((a,b)=>a+b, 0);
         const dueSites = zoneCounts.filter(z => z.due);
         const safeName = u.name||u.username||'?';
-        return { uid: u.id, name: safeName, role: u.role, zoneCounts, totalPm, dueSites };
+        return { uid: u.id, name: safeName, role: u.role, photoURL: u.photoURL||'', zoneCounts, totalPm, dueSites };
       }).filter(u => u.totalPm > 0);
     });
 
@@ -5456,7 +5480,9 @@ createApp({
           body{font-family:Arial,sans-serif;font-size:10pt;color:#000;padding:14mm 16mm}
           h2{font-size:15pt;font-weight:bold;color:#003366}
           p.sub{font-size:9pt;color:#555;margin-top:3px}
-          .header{text-align:center;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:16px}
+          .header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:16px}
+          .header-logo{height:46px;max-width:150px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
           .section{font-weight:700;font-size:10pt;color:#003366;background:#e8f0fb;padding:5px 10px;margin:16px 0 8px;border-left:4px solid #003366}
           table{width:100%;border-collapse:collapse;font-size:9pt}
           th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-weight:600}
@@ -5476,8 +5502,12 @@ createApp({
           @media print{@page{size:A4 landscape;margin:10mm 12mm}}
         </style></head><body>
         <div class="header">
-          <h2>Jadual Penyelenggaraan Bulanan</h2>
-          <p class="sub">${monthName} ${year} &nbsp;|&nbsp; Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
+          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Jadual Penyelenggaraan Bulanan</h2>
+            <p class="sub">${monthName} ${year} &nbsp;|&nbsp; Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
+          </div>
+          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
         </div>
         ${calGrid}
         <div class="section">Senarai Penugasan Team</div>
@@ -6269,35 +6299,59 @@ createApp({
     const approachingList = computed(() => [...SITES, ...VIR_SITES].filter(s => siteNextPmMap.value[s.id]?.approaching));
 
     // ---- Site Health Score ----
+    // PM expectation is anchored to the PROJECT'S ACTIVE CONTRACT start date
+    // (via _projectContractStart), not the Jan-1 calendar year — a contract
+    // starting mid-year (e.g. CCTV renewed July 2026) shouldn't expect PM
+    // visits as if the annual cycle began in January. When no contract data
+    // exists yet for a project (e.g. VIR, pending renewal), this falls back
+    // to the old calendar-year window so scoring still works, just less
+    // precisely, until a contract is recorded.
     const siteHealthScores = computed(() => {
       const now = new Date();
-      const curYear = now.getFullYear();
       const scores = {};
       const calc = (s, project) => {
         const intervalMonths = PM_INTERVAL[project];
         const expectedPM = PM_PER_YEAR[project];
         const allRecs = pmRecords.value.filter(r => r.siteId === s.id);
-        const pmThisYear = allRecs.filter(r => (r.maintType||'PM') !== 'CM' && Number(r.year || (r.visitDate ? new Date(r.visitDate).getFullYear() : 0)) === curYear);
-        const cmThisYear = allRecs.filter(r => r.maintType === 'CM' && Number(r.year || (r.visitDate ? new Date(r.visitDate).getFullYear() : 0)) === curYear);
+
+        const cStart = _projectContractStart(project);
+        let cycleStart;
+        if(cStart) {
+          // Roll the contract's start date forward by whole years to find
+          // the most recent anniversary on/before today — that's the start
+          // of the CURRENT 12-month PM cycle.
+          cycleStart = new Date(cStart);
+          while(true) {
+            const next = new Date(cycleStart); next.setFullYear(next.getFullYear() + 1);
+            if(next > now) break;
+            cycleStart = next;
+          }
+        } else {
+          cycleStart = new Date(now.getFullYear(), 0, 1); // fallback: calendar year
+        }
+
+        const pmThisCycle = allRecs.filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r) && _recDate(r) >= cycleStart && _recDate(r) <= now);
+        const cmThisCycle = allRecs.filter(r => r.maintType === 'CM' && _recDate(r) && _recDate(r) >= cycleStart && _recDate(r) <= now);
         const lastPM = _lastPmDate(s.id);
         const monthsSincePM = lastPM ? (now - lastPM) / (1000*60*60*24*30.44) : 999;
 
-        // PM Compliance 0-50pts: actual vs expected this year (prorated by month)
-        const monthsElapsed = now.getMonth() + 1;
+        // PM Compliance 0-50pts: actual vs expected-by-now, prorated across
+        // the current contract-anchored 12-month cycle.
+        const monthsElapsed = Math.max(1, Math.min(12, Math.round((now - cycleStart) / (1000*60*60*24*30.44))));
         const proratedExpected = Math.max(1, Math.round(expectedPM * monthsElapsed / 12));
-        const compliance = Math.min(pmThisYear.length / proratedExpected, 1) * 50;
+        const compliance = Math.min(pmThisCycle.length / proratedExpected, 1) * 50;
 
         // Recency 0-30pts: how fresh is the last PM vs interval
         const recencyRatio = Math.max(0, 1 - Math.max(0, monthsSincePM - intervalMonths) / intervalMonths);
         const recency = recencyRatio * 30;
 
         // CM burden 0-20pts: fewer CM = better
-        const cmPenalty = Math.max(0, 20 - cmThisYear.length * 4);
+        const cmPenalty = Math.max(0, 20 - cmThisCycle.length * 4);
 
         const score = Math.round(compliance + recency + cmPenalty);
         const level = score >= 75 ? 'green' : score >= 45 ? 'yellow' : 'red';
         const label = score >= 75 ? 'Baik' : score >= 45 ? 'Sederhana' : 'Kritikal';
-        scores[s.id] = { score, level, label, pmCount: pmThisYear.length, cmCount: cmThisYear.length, expectedPM: proratedExpected, lastPM, project };
+        scores[s.id] = { score, level, label, pmCount: pmThisCycle.length, cmCount: cmThisCycle.length, expectedPM: proratedExpected, lastPM, project, hasContract: !!cStart };
       };
       SITES.forEach(s => calc(s, 'cctv'));
       VIR_SITES.forEach(s => calc(s, 'vir'));
@@ -7508,9 +7562,12 @@ createApp({
         // All roles need the user list now (for the online-users indicator);
         // audit log stays admin/superadmin-only since it's sensitive.
         await loadUsers();
+        // Contract start dates now feed Site Health Score's PM-cycle
+        // anchoring (see siteHealthScores) — that widget is visible to every
+        // role, so contracts must load for everyone, not just admin/superadmin.
+        loadContracts(); // fire-and-forget — needed for the dashboard expiry badge/alert + site health scoring
         if(['superadmin','admin'].includes(authProfile.value?.role)) {
           loadAuditLogs(); // fire-and-forget — not on critical login path
-          loadContracts(); // fire-and-forget — needed for the dashboard expiry badge/alert
         }
         initDbStorageWidgetIfStale(); // fire-and-forget — no-op for non-superadmin, cache-first for superadmin
 
@@ -8197,7 +8254,7 @@ createApp({
     function startNewPM(proj) {
       clearPmDraftLocal();
       if(proj) currentProject.value = proj;
-      pm.virRoomNo='';
+      pm.virRoomNo=''; pm.virRoomNoCustom='';
       pm.virItems = VIR_CHECKLIST_TEMPLATE.map(t=>({...t, status:'ok', nota:''}));
       pm.siteId=''; pm.siteName=''; pm.refNo=''; refNoSuffix.value='';
       pm.month=null; pm.year=null;
@@ -8295,7 +8352,7 @@ createApp({
           ...(pm.maintType==='CM' && status==='submitted' ? {cmStatus:'open'} : {}),
           createdAt: firebase.firestore.FieldValue.serverTimestamp(),
           ...(isVir ? {
-            virRoomNo: pm.virRoomNo,
+            virRoomNo: (pm.virRoomNo==='Lain-lain' && pm.virRoomNoCustom.trim()) ? pm.virRoomNoCustom.trim() : pm.virRoomNo,
             virItems: JSON.parse(JSON.stringify(pm.virItems)),
           } : {
             cameras:[...pm.cameras], nvr:[...pm.nvr], hdd:[...pm.hdd],
@@ -10017,7 +10074,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister,
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
-      EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES,
+      EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, canEditContact, cpSites,
       mobileNavOpen,
       darkMode,
