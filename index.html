@@ -892,7 +892,7 @@ tr:hover td{background:#f9fbff}
         <span class="icon">📝</span> Borang CCTV
       </div>
       <div class="nav-item" :class="{active:page==='pm-list'&&currentProject==='cctv'}" @click="openPMList('cctv')">
-        <span class="icon">📋</span> Rekod CCTV
+        <span class="icon">📋</span> Rekod Borang CCTV
       </div>
       <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContactPersons();page='contact-person'">
         <span class="icon">📞</span> Contact Person CCTV
@@ -909,7 +909,7 @@ tr:hover td{background:#f9fbff}
         <span class="icon">📝</span> Borang VIR
       </div>
       <div class="nav-item" :class="{active:page==='pm-list'&&currentProject==='vir'}" @click="openPMList('vir')">
-        <span class="icon">📋</span> Rekod VIR
+        <span class="icon">📋</span> Rekod Borang VIR
       </div>
       <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='vir'}" @click="currentProject='vir';loadContactPersons();page='contact-person'">
         <span class="icon">📞</span> Contact Person VIR
@@ -938,7 +938,7 @@ tr:hover td{background:#f9fbff}
       <div class="nav-item" :class="{active:page==='compare'}" @click="page='compare'" v-if="compareList.length===2">
         <span class="icon">⚖️</span> Bandingkan
       </div>
-      <div class="nav-item" :class="{active:page==='profile'}" @click="page='profile'">
+      <div class="nav-item" :class="{active:page==='profile'}" @click="initProfile();page='profile'">
         <span class="icon">👤</span> Profil Saya
       </div>
       <div class="nav-item" :class="{active:page==='backup'}" @click="openBackup" v-if="authProfile?.role==='superadmin'">
@@ -1131,7 +1131,7 @@ tr:hover td{background:#f9fbff}
           </div>
           <div class="stat-card stat-card-clickable" @click="openPMList('cctv')">
             <div class="num">{{cctvRecordsCount}}</div>
-            <div class="lbl">Rekod CCTV</div>
+            <div class="lbl">Rekod Borang CCTV</div>
           </div>
           <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('cctv')">
             <div class="num">{{cctvThisYearCount}}</div>
@@ -1148,7 +1148,7 @@ tr:hover td{background:#f9fbff}
           </div>
           <div class="stat-card stat-card-clickable" @click="openPMList('vir')">
             <div class="num">{{virRecordsCount}}</div>
-            <div class="lbl">Rekod VIR</div>
+            <div class="lbl">Rekod Borang VIR</div>
           </div>
           <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('vir')">
             <div class="num">{{virThisYearCount}}</div>
@@ -2763,34 +2763,24 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
 
-          <!-- Team cards for current month -->
-          <div v-if="!teamsForMonth().length" style="text-align:center;color:#aaa;padding:32px;background:#fff;border-radius:10px;border:1px dashed #ddd">
+          <!-- One compact card per date — click to see the full team list
+               for that date in a popup, instead of a long wall of
+               near-identical cards when several teams share a date. -->
+          <div v-if="!teamsByDateForMonth.length" style="text-align:center;color:#aaa;padding:32px;background:#fff;border-radius:10px;border:1px dashed #ddd">
             Tiada penugasan team untuk bulan ini.
           </div>
-          <div v-for="t in teamsForMonth()" :key="t.id" class="team-card">
-            <div :class="['team-badge','badge-'+t.team]" style="width:36px;height:36px;font-size:1rem;flex-shrink:0;border-radius:50%">{{t.team}}</div>
+          <div v-for="grp in teamsByDateForMonth" :key="grp.date" class="team-card" style="cursor:pointer" @click="openDayDetail(grp.date)">
+            <div style="width:36px;height:36px;border-radius:50%;background:#003366;color:#fff;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:700;flex-shrink:0">{{grp.date.split('-')[2]}}</div>
             <div class="team-card-body">
               <div class="flex items-center gap-8 mb-6">
-                <b style="font-size:.95rem">Team {{t.team}}</b>
-                <span class="badge badge-blue" style="font-size:.72rem">{{fmtDate(t.date)}}</span>
-                <span class="badge" style="background:#e8f5e9;color:#1b5e20;font-size:.72rem">{{t.maintType||'PM'}} · {{t.project}}</span>
+                <b style="font-size:.95rem">{{fmtDate(grp.date)}}</b>
+                <span class="badge badge-blue" style="font-size:.72rem">{{grp.teams.length}} penugasan</span>
               </div>
-              <div style="font-size:.85rem;color:#333;margin-bottom:6px">
-                📍 <b>{{t.siteName||'—'}}</b>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <span v-for="t in grp.teams" :key="t.id" :class="['team-badge','badge-'+t.team]" :title="'Team '+t.team+' — '+(t.siteName||'—')">{{t.team}}</span>
               </div>
-              <div style="margin-bottom:4px">
-                <span v-for="m in t.members" :key="m.uid" class="team-member-chip">
-                  <span style="width:18px;height:18px;border-radius:50%;background:#003366;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0">{{m.name?.charAt(0)||'?'}}</span>
-                  {{m.name}}
-                </span>
-                <span v-if="!t.members?.length" style="color:#aaa;font-size:.82rem;font-style:italic">Tiada anggota ditetapkan</span>
-              </div>
-              <div v-if="t.notes" style="font-size:.8rem;color:#666;margin-top:4px">💬 {{t.notes}}</div>
             </div>
-            <div v-if="canEditSchedule" class="flex gap-6" style="flex-shrink:0">
-              <button class="btn btn-sm btn-outline" @click="openEditTeam(t)">✏️</button>
-              <button class="btn btn-sm btn-danger" @click="deleteTeam(t)">🗑</button>
-            </div>
+            <div style="flex-shrink:0;color:#bbb;font-size:1.2rem">→</div>
           </div>
         </div>
 
@@ -3012,6 +3002,38 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
 
+      <!-- ====== DAY DETAIL MODAL — full team list for one date ====== -->
+      <div v-if="dayDetailModal.show" class="modal-bg" @click.self="dayDetailModal.show=false">
+        <div class="modal" style="max-width:560px;position:relative">
+          <button @click="dayDetailModal.show=false" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
+          <h3 style="margin-bottom:16px">📅 {{fmtDate(dayDetailModal.date)}} — {{dayDetailTeams.length}} Penugasan</h3>
+          <div v-for="t in dayDetailTeams" :key="t.id" class="team-card" style="margin-bottom:12px">
+            <div :class="['team-badge','badge-'+t.team]" style="width:36px;height:36px;font-size:1rem;flex-shrink:0;border-radius:50%">{{t.team}}</div>
+            <div class="team-card-body">
+              <div class="flex items-center gap-8 mb-6">
+                <b style="font-size:.95rem">Team {{t.team}}</b>
+                <span class="badge" style="background:#e8f5e9;color:#1b5e20;font-size:.72rem">{{t.maintType||'PM'}} · {{t.project}}</span>
+              </div>
+              <div style="font-size:.85rem;color:#333;margin-bottom:6px">
+                📍 <b>{{t.siteName||'—'}}</b>
+              </div>
+              <div style="margin-bottom:4px">
+                <span v-for="m in t.members" :key="m.uid" class="team-member-chip">
+                  <span style="width:18px;height:18px;border-radius:50%;background:#003366;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0">{{m.name?.charAt(0)||'?'}}</span>
+                  {{m.name}}
+                </span>
+                <span v-if="!t.members?.length" style="color:#aaa;font-size:.82rem;font-style:italic">Tiada anggota ditetapkan</span>
+              </div>
+              <div v-if="t.notes" style="font-size:.8rem;color:#666;margin-top:4px">💬 {{t.notes}}</div>
+            </div>
+            <div v-if="canEditSchedule" class="flex gap-6" style="flex-shrink:0">
+              <button class="btn btn-sm btn-outline" @click="dayDetailModal.show=false;openEditTeam(t)">✏️</button>
+              <button class="btn btn-sm btn-danger" @click="deleteTeam(t)">🗑</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
 
       <!-- ====== USER MANAGEMENT ====== -->
       <div v-if="page==='user-mgmt' && authProfile?.role==='superadmin'">
@@ -3067,15 +3089,60 @@ tr:hover td{background:#f9fbff}
         </div>
         <div class="card">
           <div class="card-title">Maklumat Profil</div>
-          <p style="color:#888;font-size:.82rem;margin-bottom:14px">Maklumat profil dan kata laluan tidak boleh diubah sendiri. Hubungi Admin/Superadmin untuk sebarang kemaskini.</p>
+          <p v-if="authProfile?.role!=='superadmin'" style="color:#888;font-size:.82rem;margin-bottom:14px">Maklumat profil hanya boleh dikemaskini oleh Admin/Superadmin melalui Pengurusan Pengguna.</p>
           <div class="form-row form-row-2">
-            <div class="form-group"><label>Nama Penuh</label><input class="form-control" :value="authProfile?.name" disabled style="background:#f5f5f5"></div>
+            <div class="form-group"><label>Nama Penuh</label>
+              <input v-if="authProfile?.role==='superadmin'" class="form-control" v-model="profileEdit.name">
+              <input v-else class="form-control" :value="authProfile?.name" disabled style="background:#f5f5f5">
+            </div>
             <div class="form-group"><label>Username</label><input class="form-control" :value="authProfile?.username" disabled style="background:#f5f5f5"></div>
-            <div class="form-group"><label>Emel</label><input class="form-control" :value="authProfile?.email" disabled style="background:#f5f5f5"></div>
-            <div class="form-group"><label>Jawatan</label><input class="form-control" :value="authProfile?.jawatan" disabled style="background:#f5f5f5"></div>
-            <div class="form-group"><label>Jabatan</label><input class="form-control" :value="authProfile?.jabatan" disabled style="background:#f5f5f5"></div>
-            <div class="form-group"><label>No. Telefon</label><input class="form-control" :value="authProfile?.phone" disabled style="background:#f5f5f5"></div>
+            <div class="form-group"><label>Emel</label>
+              <input v-if="authProfile?.role==='superadmin'" class="form-control" type="email" v-model="profileEdit.email" placeholder="cth: ahmad@example.com">
+              <input v-else class="form-control" :value="authProfile?.email" disabled style="background:#f5f5f5">
+            </div>
+            <div class="form-group"><label>Jawatan</label>
+              <input v-if="authProfile?.role==='superadmin'" class="form-control" v-model="profileEdit.jawatan" placeholder="cth: Juruteknik Kanan">
+              <input v-else class="form-control" :value="authProfile?.jawatan" disabled style="background:#f5f5f5">
+            </div>
+            <div class="form-group"><label>Jabatan</label>
+              <template v-if="authProfile?.role==='superadmin'">
+                <select class="form-control" v-model="profileEdit.jabatan">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="j in JABATAN_OPTIONS" :key="j">{{j}}</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="profileEdit.jabatan==='Lain-lain'" class="form-control" v-model="profileEdit.jabatanCustom" placeholder="Nyatakan jabatan" style="margin-top:6px">
+              </template>
+              <input v-else class="form-control" :value="authProfile?.jabatan" disabled style="background:#f5f5f5">
+            </div>
+            <div class="form-group"><label>No. Telefon</label>
+              <input v-if="authProfile?.role==='superadmin'" class="form-control" v-model="profileEdit.phone" placeholder="cth: 0123456789">
+              <input v-else class="form-control" :value="authProfile?.phone" disabled style="background:#f5f5f5">
+            </div>
           </div>
+          <button v-if="authProfile?.role==='superadmin'" class="btn btn-primary" @click="saveProfile" :disabled="loading">💾 Simpan Profil</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Tukar Kata Laluan</div>
+          <div class="form-row form-row-2">
+            <div class="form-group">
+              <label>Kata Laluan Baru</label>
+              <div class="pw-wrap">
+                <input class="form-control" :type="showPwNew?'text':'password'" v-model="pwChange.newPw" placeholder="Kata laluan baru">
+                <button type="button" class="pw-reveal" @click="showPwNew=!showPwNew" tabindex="-1">{{showPwNew?'🙈':'👁'}}</button>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Sahkan Kata Laluan</label>
+              <div class="pw-wrap">
+                <input class="form-control" :type="showPwConfirm?'text':'password'" v-model="pwChange.confirmPw" placeholder="Ulang kata laluan baru">
+                <button type="button" class="pw-reveal" @click="showPwConfirm=!showPwConfirm" tabindex="-1">{{showPwConfirm?'🙈':'👁'}}</button>
+              </div>
+            </div>
+          </div>
+          <p v-if="pwChange.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{pwChange.err}}</p>
+          <button class="btn btn-warning" @click="changePassword" :disabled="loading">🔑 Tukar Kata Laluan</button>
         </div>
       </div>
 
@@ -3974,7 +4041,7 @@ tr:hover td{background:#f9fbff}
 
   <!-- MODAL: RESET KATA LALUAN (superadmin) -->
   <div v-if="resetPwModal.show" class="modal-bg" @click.self="resetPwModal.show=false">
-    <div class="modal-box" style="max-width:420px">
+    <div class="modal" style="max-width:420px">
       <h3>🔑 Reset Kata Laluan</h3>
       <p style="font-size:.85rem;color:#555;margin-bottom:6px">Pengguna: <strong>@{{resetPwModal.username}}</strong></p>
       <div v-if="resetPwModal.userEmail" style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:8px;padding:12px 14px;font-size:.82rem;color:#1b5e20;margin-bottom:16px;line-height:1.6">
@@ -3995,7 +4062,7 @@ tr:hover td{background:#f9fbff}
 
   <!-- MODAL: PAKSA TUKAR KATA LALUAN (user selepas login) -->
   <div v-if="forcePwModal.show" class="modal-bg">
-    <div class="modal-box" style="max-width:420px">
+    <div class="modal" style="max-width:420px">
       <h3>🔐 Tukar Kata Laluan</h3>
       <p style="font-size:.85rem;color:#555;margin-bottom:16px">Pentadbir telah meminta anda menukar kata laluan. Sila tetapkan kata laluan baru sebelum meneruskan.</p>
       <div class="form-group">
@@ -4021,7 +4088,7 @@ tr:hover td{background:#f9fbff}
 
   <!-- SUPERADMIN PIN (2FA-lite) -->
   <div v-if="pinModal.show" class="modal-bg">
-    <div class="modal-box" style="max-width:380px;text-align:center">
+    <div class="modal" style="max-width:380px;text-align:center">
       <div style="font-size:2rem;margin-bottom:6px">🔒</div>
       <h3 style="text-align:center">{{pinModal.mode==='setup' ? 'Tetapkan PIN Keselamatan' : 'Masukkan PIN Keselamatan'}}</h3>
       <p style="font-size:.83rem;color:#555;margin-bottom:16px">
@@ -4044,7 +4111,8 @@ tr:hover td{background:#f9fbff}
 
   <!-- ONBOARDING TUTORIAL -->
   <div v-if="tutorialModal.show" class="modal-bg" @click.self="closeTutorial">
-    <div class="modal-box" style="max-width:420px;text-align:center">
+    <div class="modal" style="max-width:420px;text-align:center;position:relative">
+      <button @click="closeTutorial" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
       <div style="font-size:2.6rem;margin-bottom:10px">{{TUTORIAL_STEPS[tutorialModal.step].icon}}</div>
       <h3 style="text-align:center">{{TUTORIAL_STEPS[tutorialModal.step].title}}</h3>
       <p style="font-size:.87rem;color:#555;line-height:1.6;margin-bottom:18px">{{TUTORIAL_STEPS[tutorialModal.step].body}}</p>
@@ -4949,6 +5017,34 @@ createApp({
         .sort((a,b) => a.date.localeCompare(b.date) || a.team.localeCompare(b.team));
     }
 
+    // "Senarai Team" was one full detail-card per assignment — on a date
+    // with several teams deployed, that grew into a long wall of near-
+    // identical cards. Group into one compact card per date instead; the
+    // full per-team detail (used to live inline) now shows in a popup.
+    const teamsByDateForMonth = computed(() => {
+      const groups = {};
+      teamsForMonth().forEach(t => {
+        if(!groups[t.date]) groups[t.date] = [];
+        groups[t.date].push(t);
+      });
+      return Object.keys(groups).sort().map(date => ({ date, teams: groups[date] }));
+    });
+
+    const dayDetailModal = reactive({ show:false, date:'' });
+    function openDayDetail(date) {
+      dayDetailModal.date = date;
+      dayDetailModal.show = true;
+    }
+    // Computed off the live teamAssignments (not a static snapshot copied
+    // at open-time) so editing/deleting a team from inside the popup is
+    // reflected immediately without needing to close and reopen it.
+    const dayDetailTeams = computed(() =>
+      teamAssignments.value.filter(t => t.date === dayDetailModal.date).sort((a,b) => a.team.localeCompare(b.team))
+    );
+    // Auto-close if the last team for that date gets deleted from inside
+    // the popup — otherwise it'd sit open showing an empty list.
+    watch(dayDetailTeams, (v) => { if(dayDetailModal.show && v.length === 0) dayDetailModal.show = false; });
+
     function openAddTeam(date) {
       teamModal.editing = false;
       teamModal.current = null;
@@ -5267,6 +5363,32 @@ createApp({
       const hols = holidaysForMonth();
       const teamColors = {A:'#e53935',B:'#1e88e5',C:'#43a047',D:'#fb8c00',E:'#8e24aa',F:'#00acc1',G:'#6d4c41'};
 
+      // Visual month-grid — mirrors the on-screen colourful calendar (day
+      // cells with coloured team pills) rather than just a flat list table,
+      // so the exported PDF looks like what's actually shown in the app.
+      const dayHeaders = ['Ahd','Isn','Sel','Rab','Kha','Jum','Sab'];
+      const gridCells = calCells.value.map((cell, i) => {
+        if(!cell) return '<div class="cal-cell-print empty"></div>';
+        const dstr = dateStr(cell);
+        const dayTeams = teamsForDay(cell);
+        const ph = publicHolidaysForDay(dstr);
+        const isSch = !ph.length && isSchoolHoliday(dstr);
+        const pills = dayTeams.map(t => {
+          const bc = teamColors[t.team]||'#555';
+          return `<span class="team-pill-print" style="background:${bc}" title="${esc(t.siteName||'')}">${esc(t.team)} ${esc(shortSite(t.siteName))}</span>`;
+        }).join('');
+        const holChip = ph.length ? `<div class="hol-chip-print h-public">🔴 ${esc(ph[0].localName||ph[0].name)}</div>`
+          : isSch ? `<div class="hol-chip-print h-school">🟠 Cuti Sekolah</div>` : '';
+        const weekendCls = isWeekend(i%7) ? ' weekend' : '';
+        return `<div class="cal-cell-print${weekendCls}"><div class="cal-dn-print">${cell}</div>${holChip}${pills}</div>`;
+      }).join('');
+      const calGrid = `
+        <div class="section">Kalendar ${monthName} ${year}</div>
+        <div class="cal-grid-print">
+          ${dayHeaders.map(d=>`<div class="cal-dh-print">${d}</div>`).join('')}
+          ${gridCells}
+        </div>`;
+
       const teamRows = teams.length ? teams.map(t => {
         const members = esc((t.members||[]).map(m=>m.name).join(', ') || '—');
         const bc = teamColors[t.team]||'#555';
@@ -5284,7 +5406,7 @@ createApp({
         const tarikh = h.type==='public' ? fmtDate(h.date) : `${fmtDate(h.date)} – ${fmtDate(h.endDate)}`;
         const color = h.type==='public' ? '#c62828' : '#e65100';
         const jenis = h.type==='public' ? 'Cuti Umum' : 'Cuti Sekolah';
-        return `<tr><td>${tarikh}</td><td style="color:${color};font-weight:600">${jenis}</td><td>${h.name}</td></tr>`;
+        return `<tr><td>${tarikh}</td><td style="color:${color};font-weight:600">${jenis}</td><td>${esc(h.name)}</td></tr>`;
       }).join('') : '';
 
       const holSection = hols.length ? `
@@ -5306,12 +5428,23 @@ createApp({
           td{padding:5px 8px;border-bottom:1px solid #ddd;vertical-align:top}
           tr:nth-child(even) td{background:#f5f7ff}
           .footer{margin-top:18px;border-top:1px solid #ccc;padding-top:7px;font-size:8pt;color:#888;display:flex;justify-content:space-between}
-          @media print{@page{size:A4;margin:12mm 15mm}}
+          .cal-grid-print{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:6px}
+          .cal-dh-print{background:#003366;color:#fff;text-align:center;padding:4px;font-size:8pt;font-weight:700}
+          .cal-cell-print{border:1px solid #ddd;min-height:56px;padding:3px;font-size:7pt}
+          .cal-cell-print.empty{background:#fafafa;border-color:#eee}
+          .cal-cell-print.weekend{background:#fff8f8}
+          .cal-dn-print{font-weight:700;color:#333;margin-bottom:2px}
+          .team-pill-print{display:block;color:#fff;border-radius:3px;padding:1px 4px;font-size:6.3pt;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+          .hol-chip-print{font-size:6.2pt;margin-bottom:1px}
+          .hol-chip-print.h-public{color:#c62828;font-weight:700}
+          .hol-chip-print.h-school{color:#e65100;font-weight:700}
+          @media print{@page{size:A4 landscape;margin:10mm 12mm}}
         </style></head><body>
         <div class="header">
           <h2>Jadual Penyelenggaraan Bulanan</h2>
           <p class="sub">${monthName} ${year} &nbsp;|&nbsp; Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
         </div>
+        ${calGrid}
         <div class="section">Senarai Penugasan Team</div>
         <table><thead><tr>
           <th style="width:11%">Tarikh</th><th style="width:7%">Team</th><th style="width:8%">Jenis</th>
@@ -5329,6 +5462,62 @@ createApp({
       setTimeout(()=>{ w.print(); }, 600);
     }
 
+
+    // ---- Profile (self-service) ----
+    // Superadmin may edit their own info (except username) directly here;
+    // everyone else's info is admin/superadmin-managed via User Management
+    // and shown read-only. Password change, however, is open to ALL roles.
+    const profileEdit = reactive({ name:'', jawatan:'', jabatan:'', jabatanCustom:'', phone:'', email:'' });
+    function initProfile() {
+      profileEdit.name    = authProfile.value?.name||'';
+      profileEdit.jawatan = authProfile.value?.jawatan||'';
+      profileEdit.phone   = authProfile.value?.phone||'';
+      profileEdit.email   = authProfile.value?.email||'';
+      const j = authProfile.value?.jabatan||'';
+      if(j && !JABATAN_OPTIONS.includes(j)) { profileEdit.jabatan = 'Lain-lain'; profileEdit.jabatanCustom = j; }
+      else { profileEdit.jabatan = j; profileEdit.jabatanCustom = ''; }
+    }
+    async function saveProfile() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      if(!isValidEmail(profileEdit.email)){ showToast('Format emel tidak sah.','error'); return; }
+      if(!isValidPhone(profileEdit.phone)){ showToast('Format no. telefon tidak sah.','error'); return; }
+      loading.value=true;
+      try {
+        const uid = auth.currentUser.uid;
+        const resolvedJabatan = (profileEdit.jabatan==='Lain-lain' && profileEdit.jabatanCustom.trim()) ? profileEdit.jabatanCustom.trim() : profileEdit.jabatan;
+        const updates = { name:profileEdit.name, jawatan:profileEdit.jawatan, jabatan:resolvedJabatan, phone:profileEdit.phone, email:profileEdit.email };
+        await db.collection('users').doc(uid).set(updates, {merge:true});
+        Object.assign(authProfile.value, updates);
+        showToast('Profil berjaya disimpan!');
+      } catch(e){ showToast('Gagal: '+e.message,'error'); }
+      loading.value=false;
+    }
+
+    const pwChange = reactive({ newPw:'', confirmPw:'', err:'' });
+    const showPwNew = ref(false);
+    const showPwConfirm = ref(false);
+    async function changePassword() {
+      pwChange.err='';
+      if(!pwChange.newPw || pwChange.newPw.length < 6){ pwChange.err='Kata laluan mesti sekurang-kurangnya 6 aksara.'; return; }
+      if(pwChange.newPw !== pwChange.confirmPw){ pwChange.err='Kata laluan tidak sepadan.'; return; }
+      loading.value=true;
+      try {
+        await auth.currentUser.updatePassword(pwChange.newPw);
+        // If an admin had flagged this account with a mandatory forced
+        // password reset, this voluntary change already satisfies it —
+        // clear the flag so finishLogin() doesn't needlessly re-trigger
+        // the blocking forcePwModal on the user's next login.
+        if(authProfile.value?.forcePwReset) {
+          await db.collection('users').doc(auth.currentUser.uid).update({ forcePwReset:false });
+          authProfile.value.forcePwReset = false;
+        }
+        pwChange.newPw=''; pwChange.confirmPw='';
+        showToast('Kata laluan berjaya ditukar!');
+      } catch(e){
+        pwChange.err = e.code==='auth/requires-recent-login'?'Sila log keluar dan log masuk semula sebelum tukar kata laluan.':'Gagal: '+e.message;
+      }
+      loading.value=false;
+    }
 
     // ---- User management ----
     const allUsers = ref([]);
@@ -5856,7 +6045,7 @@ createApp({
       sites: currentProject.value==='vir' ? 'Pengurusan Site VIR' : 'Pengurusan Site CCTV',
       'site-equip':'Urus Peralatan Site',
       'new-pm': currentProject.value==='vir' ? 'Borang VIR Baru' : 'Borang CCTV Baru',
-      'pm-list': currentProject.value==='vir' ? 'Rekod VIR' : 'Rekod CCTV',
+      'pm-list': currentProject.value==='vir' ? 'Rekod Borang VIR' : 'Rekod Borang CCTV',
       'pm-view':'Lihat Rekod', 'jadual':'Jadual Penyelenggaraan',
       'user-mgmt':'Pengurusan Pengguna', profile:'Profil Saya', backup:'Backup & Restore',
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
@@ -6582,6 +6771,7 @@ createApp({
 
     async function finishLogin() {
       await logAudit('LOGIN', authProfile.value?.name || authProfile.value?.username || '');
+      initProfile();
       if(authProfile.value?.forcePwReset) {
         forcePwModal.newPw=''; forcePwModal.confirmPw=''; forcePwModal.err='';
         forcePwModal.show = true;
@@ -6773,6 +6963,7 @@ createApp({
       authProfile.value=null;
       loginUser.value=''; loginPass.value='';
       allUsers.value=[];
+      pwChange.newPw=''; pwChange.confirmPw=''; pwChange.err='';
       ocrState.active=false; ocrState.tokens=[];
       page.value='dashboard';
     }
@@ -9740,6 +9931,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
+      teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
@@ -9757,6 +9949,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
       uploadPhoto,
       showLoginPw,
+      profileEdit, initProfile, saveProfile, pwChange, showPwNew, showPwConfirm, changePassword,
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
