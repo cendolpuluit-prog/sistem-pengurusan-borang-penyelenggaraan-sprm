@@ -964,8 +964,16 @@ tr:hover td{background:#f9fbff}
       </div>
     </div>
     <div class="sidebar-footer">
-      <div>👤 {{authProfile?.name||authUser.email}}</div>
-      <div style="font-size:.72rem;opacity:.6">{{authProfile?.role==='superadmin'?'⭐ Superadmin':'Staff'}}</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <div class="user-avatar-sm" style="width:32px;height:32px;font-size:.85rem;flex-shrink:0">
+          <img v-if="authProfile?.photoURL" :src="authProfile.photoURL" alt="">
+          <span v-else>{{(authProfile?.name||authUser?.email||'?').charAt(0).toUpperCase()}}</span>
+        </div>
+        <div style="min-width:0">
+          <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{authProfile?.name||authUser.email}}</div>
+          <div style="font-size:.72rem;opacity:.6">{{authProfile?.role==='superadmin'?'⭐ Superadmin':'Staff'}}</div>
+        </div>
+      </div>
       <button class="btn btn-sm" style="margin-top:8px;background:rgba(255,255,255,.15);color:#fff;border:none" @click="confirmLogout">Log Keluar</button>
     </div>
   </nav>
@@ -990,7 +998,10 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
       <div class="flex gap-8 topbar-actions" style="align-items:center">
-        <span class="text-sm text-muted" style="white-space:nowrap">{{today}}</span>
+        <div class="text-sm text-muted" style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;white-space:nowrap">
+          <span>{{today}}</span>
+          <span style="font-size:.72rem;opacity:.75">{{currentTime}}</span>
+        </div>
         <!-- Online users indicator -->
         <div class="online-panel-wrap" style="position:relative">
           <button class="btn btn-outline btn-sm topbar-icon-btn" @click.stop="showOnlinePanel=!showOnlinePanel" style="position:relative" title="Pengguna Online">
@@ -1041,7 +1052,13 @@ tr:hover td{background:#f9fbff}
         <button @click="darkMode=!darkMode" class="btn btn-outline btn-sm topbar-icon-btn">{{darkMode?'☀️':'🌙'}}</button>
         <button @click="openTutorial" class="btn btn-outline btn-sm topbar-icon-btn" title="Bantuan / Panduan">❓</button>
         <!-- Log Keluar — mobile only -->
-        <button v-if="authUser" @click="confirmLogout" class="btn btn-sm mobile-logout-btn topbar-icon-btn" style="background:#c62828;color:#fff;border:none;display:none">🚪 Keluar</button>
+        <div v-if="authUser" class="mobile-logout-btn" style="display:none;align-items:center;gap:6px">
+          <div class="user-avatar-sm" style="width:28px;height:28px;font-size:.72rem">
+            <img v-if="authProfile?.photoURL" :src="authProfile.photoURL" alt="">
+            <span v-else>{{(authProfile?.name||authUser?.email||'?').charAt(0).toUpperCase()}}</span>
+          </div>
+          <button @click="confirmLogout" class="btn btn-sm topbar-icon-btn" style="background:#c62828;color:#fff;border:none">🚪 Keluar</button>
+        </div>
       </div>
     </div>
     <div class="content">
@@ -6118,6 +6135,11 @@ createApp({
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
+    // Live clock shown under the date in the topbar — ticks on its own
+    // (not derived from a reactive dependency like `today` is), so it needs
+    // an explicit timer rather than a computed.
+    const currentTime = ref(new Date().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}));
+    setInterval(() => { currentTime.value = new Date().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}); }, 30000);
 
     const totalCameras = computed(() => Object.values(siteEquip.value).reduce((sum,s)=>sum+(s?.cameras?.length||0),0));
     const totalVirCameras = computed(() => Object.values(virSiteEquip.value).reduce((sum,s)=>sum+(s?.cameras?.length||0),0));
@@ -10010,7 +10032,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
       pmRecords, viewPM, filterSite, filterYear, filterMaintType, filterPmNo,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
-      pageTitle, today, totalCameras, totalVirCameras, pmThisYear,
+      pageTitle, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
       dashboardCompact, toggleDashboardCompact,
       cctvSitesCount, cctvRecordsCount, cctvThisYearCount, virSitesCount, virRecordsCount, virThisYearCount,
