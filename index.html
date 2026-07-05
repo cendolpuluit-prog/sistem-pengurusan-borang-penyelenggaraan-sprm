@@ -2058,7 +2058,10 @@ tr:hover td{background:#f9fbff}
               <input v-if="pm.virRoomNo==='Lain-lain'" class="form-control" v-model="pm.virRoomNoCustom" placeholder="Nyatakan no. bilik" style="margin-top:6px">
             </div>
           </div>
-          <button class="btn btn-primary" @click="loadPMEquip" :disabled="!pm.siteId">Seterusnya →</button>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
+            <button class="btn btn-primary" @click="loadPMEquip" :disabled="!pm.siteId">Seterusnya →</button>
+          </div>
         </div>
 
         <!-- STEP 2: VIR Checklist -->
@@ -2093,6 +2096,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8 mt-16">
             <button class="btn btn-outline" @click="pmStep=1">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=3">Seterusnya →</button>
+            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2131,6 +2135,7 @@ tr:hover td{background:#f9fbff}
             <button class="btn btn-outline" @click="pmStep=2">← Balik</button>
             <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
             <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang VIR'}}</button>
+            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
           </div>
           </div><!-- /card tandatangan vir -->
         </div><!-- /step3 vir wrapper -->
@@ -2170,6 +2175,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8" style="margin-top:16px">
             <button class="btn btn-outline" @click="pmStep=1">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=3">Seterusnya →</button>
+            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2218,6 +2224,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=2">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=4">Seterusnya →</button>
+            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2283,6 +2290,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=3">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=5">Seterusnya →</button>
+            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2337,6 +2345,7 @@ tr:hover td{background:#f9fbff}
             <button class="btn btn-outline" @click="pmStep=4">← Balik</button>
             <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
             <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang'}}</button>
+            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
       </div>
@@ -8516,6 +8525,29 @@ createApp({
       page.value = 'new-pm';
     }
 
+    // Lets the user back out of the PM wizard (new form OR mid-edit) from
+    // any step without saving. Confirms first since all in-progress field
+    // data is lost — wording differs for edit vs brand-new so it's clear
+    // whether they're discarding fresh input or unsaved changes to an
+    // already-submitted record.
+    function cancelPmForm() {
+      const msg = pm._isEdit
+        ? 'Batal edit borang ini? Sebarang perubahan yang belum disimpan akan hilang.'
+        : 'Batal borang ini? Data yang telah dimasukkan akan hilang.';
+      if(!confirm(msg)) return;
+      clearPmDraftLocal();
+      const wasEdit = pm._isEdit;
+      const originalId = pm._draftId;
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false;
+      if(wasEdit && originalId) {
+        // Return to viewing the record as it was, not the bare list —
+        // less jarring than dumping them back at the full pm-list table.
+        const rec = pmRecords.value.find(r => r.id === originalId);
+        if(rec) { viewPM.value = rec; page.value = 'pm-view'; return; }
+      }
+      page.value = 'pm-list';
+    }
+
     // Renders the header QR code (encodes the ref no. only, for quick manual
     // lookup — no deep-link routing exists in this app yet).
     function renderPmQr() {
@@ -10192,7 +10224,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
-      startNewPM, loadPMEquip, savePM, viewRecord, editRecord, deleteRecord,
+      startNewPM, loadPMEquip, savePM, viewRecord, editRecord, cancelPmForm, deleteRecord,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF, exportUnderMaintenance,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
