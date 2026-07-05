@@ -13,7 +13,6 @@
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://unpkg.com/docx@8/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -473,10 +472,8 @@ tr:hover td{background:#f9fbff}
 .pm-corp-logo-txt{font-size:12pt;font-weight:bold;color:#006633;letter-spacing:.3px}
 .pm-corp-logo-sub{font-size:8pt;color:#444;margin-top:3px;line-height:1.5}
 .pm-corp-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
-.pm-corp-ref-row{display:flex;align-items:center;gap:6px}
 .pm-corp-ref{text-align:right;font-size:7.5pt;color:#333;white-space:normal;overflow-wrap:break-word}
 .pm-corp-ref .ref-no{font-size:8.5pt;font-weight:bold;color:#006633;display:block;margin-top:1px}
-.pm-qr-canvas{width:34px!important;height:34px!important;flex-shrink:0}
 .pm-classification{text-align:right;font-size:7.5pt;font-weight:700;color:#b71c1c;letter-spacing:.06em;margin-bottom:4px}
 .pm-corp-title{background:#006633;color:#fff;text-align:center;padding:6px 0;font-size:10.5pt;font-weight:bold;letter-spacing:.5px;margin-bottom:10px}
 .pm-corp-info{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #006633;margin-bottom:10px}
@@ -2511,11 +2508,8 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="pm-corp-right">
               <img src="logo_sprm.png" alt="SPRM" class="pm-corp-logo-img">
-              <div class="pm-corp-ref-row">
-                <div class="pm-corp-ref">
-                  <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
-                </div>
-                <canvas id="pm-qr-canvas" class="pm-qr-canvas" width="46" height="46" title="Imbas untuk No. Rujukan"></canvas>
+              <div class="pm-corp-ref">
+                <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
               </div>
             </div>
           </div>
@@ -8577,19 +8571,6 @@ createApp({
       page.value = 'pm-list';
     }
 
-    // Renders the header QR code (encodes the ref no. only, for quick manual
-    // lookup — no deep-link routing exists in this app yet).
-    function renderPmQr() {
-      const canvas = document.getElementById('pm-qr-canvas');
-      const refNo = viewPM.value?.refNo;
-      if(!canvas || !refNo || !window.QRCode) return;
-      QRCode.toCanvas(canvas, refNo, { width:46, margin:0, color:{dark:'#004d26',light:'#ffffff'} }, (err)=>{
-        if(err) console.warn('QR render failed:', err);
-      });
-    }
-    watch(viewPM, () => { if(page.value==='pm-view') nextTick(renderPmQr); });
-    watch(page, (v) => { if(v==='pm-view') nextTick(renderPmQr); });
-
     // ---- Responsive print-preview scaling (mobile) ----
     // The PM print/preview layout uses fixed-px, print-oriented columns
     // designed for A4 paper width. Trying to make that CSS itself reflow on
@@ -9082,17 +9063,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       if(!el) return;
       const styles = [...document.querySelectorAll('style,link[rel="stylesheet"]')]
         .map(s => s.outerHTML).join('\n');
-      // <canvas> pixel content is not captured by innerHTML — swap the live
-      // QR canvas for a static <img> snapshot before serializing the DOM.
       const clone = el.cloneNode(true);
-      const liveCanvas = document.getElementById('pm-qr-canvas');
-      const cloneCanvas = clone.querySelector('#pm-qr-canvas');
-      if(liveCanvas && cloneCanvas && liveCanvas.width) {
-        const img = document.createElement('img');
-        img.src = liveCanvas.toDataURL('image/png');
-        img.className = cloneCanvas.className;
-        cloneCanvas.replaceWith(img);
-      }
       const w = window.open('','_blank','width=900,height=700');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       // Browser "Save as PDF" uses the document <title> as the default filename.
