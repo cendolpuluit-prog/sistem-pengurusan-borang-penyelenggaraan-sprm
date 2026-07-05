@@ -451,7 +451,7 @@ tr:hover td{background:#f9fbff}
   /* Running footer — repeats on every printed page (CSS paged-media: a
      position:fixed element inside the page box reflows per page). */
   .pm-footer{position:fixed!important;bottom:4mm!important;left:0!important;right:0!important;background:#fff!important;margin-top:0!important}
-  .pm-print{padding-bottom:14mm!important}
+  .pm-print{padding-bottom:14mm!important;border:none!important}
 }
 /* #print-area shows on screen too — styled via .pm-preview-inner wrapper */
 
@@ -1364,7 +1364,7 @@ tr:hover td{background:#f9fbff}
       </div>
 
       <!-- ====== AUDIT LOG ====== -->
-      <div v-if="page==='audit-log'">
+      <div v-if="page==='audit-log' && ['superadmin','admin'].includes(authProfile?.role)">
         <div class="card">
           <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             <span>🗒 Log Audit</span>
@@ -2130,7 +2130,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=2">← Balik</button>
             <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
-            <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">✅ Submit Borang VIR</button>
+            <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang VIR'}}</button>
           </div>
           </div><!-- /card tandatangan vir -->
         </div><!-- /step3 vir wrapper -->
@@ -2196,10 +2196,10 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="card">
-            <div class="card-title">💾 Pemeriksaan Hard Disk</div>
+            <div class="card-title">💾 Pemeriksaan Storage</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Download</th><th>Quick Playback</th><th>Time</th><th>Status</th></tr></thead>
+                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jenis RAID</th><th>Status</th></tr></thead>
                 <tbody>
                   <tr v-for="(h,i) in pm.hdd" :key="h._uid||i">
                     <td>{{i+1}}</td>
@@ -2207,12 +2207,10 @@ tr:hover td{background:#f9fbff}
                     <td><input class="form-control" style="min-width:100px" v-model="h.model"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="h.serial"></td>
                     <td><input class="form-control" style="min-width:80px" v-model="h.capacity"></td>
-                    <td><select class="status-sel" v-model="h.download" :class="h.download==='Ya'?'status-ok':'status-no'"><option>Ya</option><option>Tidak</option></select></td>
-                    <td><select class="status-sel" v-model="h.playback" :class="h.playback==='Ya'?'status-ok':'status-no'"><option>Ya</option><option>Tidak</option></select></td>
-                    <td><select class="status-sel" v-model="h.time" :class="h.time==='Betul'?'status-ok':'status-no'"><option>Betul</option><option>Tidak Betul</option></select></td>
+                    <td><select class="form-control" style="min-width:100px" v-model="h.raidType"><option>RAID 0</option><option>RAID 1</option><option>RAID 5</option></select></td>
                     <td><select class="status-sel" v-model="h.status" :class="h.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                   </tr>
-                  <tr v-if="!pm.hdd.length"><td colspan="9" class="empty">Tiada HDD didaftar.</td></tr>
+                  <tr v-if="!pm.hdd.length"><td colspan="7" class="empty">Tiada HDD didaftar.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2338,7 +2336,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=4">← Balik</button>
             <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
-            <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">✅ Submit Borang</button>
+            <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang'}}</button>
           </div>
         </div>
       </div>
@@ -2392,7 +2390,7 @@ tr:hover td{background:#f9fbff}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th>Bulan</th><th>Tahun</th><th>Tarikh Penyelenggaraan</th><th>Kamera</th><th>Status</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th>Bulan</th><th>Tahun</th><th>Tarikh Penyelenggaraan</th><th>Status</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in filteredPM" :key="r.id">
@@ -2403,7 +2401,6 @@ tr:hover td{background:#f9fbff}
                   <td>{{r.month?MONTHS[r.month-1]:'—'}}</td>
                   <td>{{r.year}}</td>
                   <td>{{r.visitDate||'-'}}</td>
-                  <td>{{r.cameras?.length||0}} unit</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
                   <td>
                     <template v-if="r.maintType==='CM'">
@@ -2420,11 +2417,12 @@ tr:hover td{background:#f9fbff}
                   </td>
                   <td class="flex gap-8">
                     <button class="btn btn-sm btn-outline" @click="viewRecord(r)">👁 Lihat</button>
+                    <button class="btn btn-sm btn-outline" @click="editRecord(r)" title="Edit borang">✏️</button>
                     <button class="btn btn-sm" :style="compareList.includes(r.id)?'background:#f59e0b;color:#fff':'background:#e8f0ff;color:#003366'" @click="toggleCompare(r.id)" title="Bandingkan">⚖️</button>
                     <button class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!filteredPM.length"><td colspan="11" class="empty">Tiada rekod.</td></tr>
+                <tr v-if="!filteredPM.length"><td colspan="10" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
           </div>
@@ -2442,7 +2440,6 @@ tr:hover td{background:#f9fbff}
               <div class="pmc-meta">
                 <span>📅 {{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</span>
                 <span>🛠 {{r.visitDate||'-'}}</span>
-                <span>📷 {{r.cameras?.length||0}} unit</span>
               </div>
               <div v-if="r.maintType==='CM'" class="pmc-cm">
                 <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')">
@@ -2456,6 +2453,7 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="pmc-actions">
                 <button class="btn btn-sm btn-outline" @click="viewRecord(r)">👁 Lihat</button>
+                <button class="btn btn-sm btn-outline" @click="editRecord(r)">✏️ Edit</button>
                 <button class="btn btn-sm" :style="compareList.includes(r.id)?'background:#f59e0b;color:#fff':'background:#e8f0ff;color:#003366'" @click="toggleCompare(r.id)">⚖️ Banding</button>
                 <button class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
               </div>
@@ -2470,9 +2468,10 @@ tr:hover td{background:#f9fbff}
         <div class="flex justify-between items-center mb-20 no-print">
           <button class="btn btn-outline" @click="page='pm-list'">← Balik</button>
           <div class="flex gap-8">
-            <button class="btn btn-success" v-if="viewPM?.project!=='vir'" @click="exportExcel">📊 Excel CCTV</button>
-            <button class="btn btn-success" v-if="viewPM?.project==='vir'" @click="exportExcelVIR">📊 Excel VIR</button>
-            <button class="btn btn-outline" @click="exportDOCX">📄 Export DOCX</button>
+            <button class="btn btn-outline" @click="editRecord(viewPM)">✏️ Edit</button>
+            <button class="btn btn-success" v-if="viewPM?.project!=='vir'" @click="exportUnderMaintenance">📊 Excel CCTV</button>
+            <button class="btn btn-success" v-if="viewPM?.project==='vir'" @click="exportUnderMaintenance">📊 Excel VIR</button>
+            <button class="btn btn-outline" @click="exportUnderMaintenance">📄 Export DOCX</button>
             <button class="btn btn-danger" @click="exportPDF">🖨️ Export PDF</button>
           </div>
         </div>
@@ -2606,17 +2605,15 @@ tr:hover td{background:#f9fbff}
           <!-- 3. HDD -->
           <div class="pm-section-hdr">3. &nbsp;CAKERA KERAS (HARD DISK)</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:10%">Brand</th><th style="width:12%">Model</th><th style="width:16%">No. Siri</th><th style="width:10%">Kapasiti</th><th style="width:9%">Config</th><th style="width:9%">Download</th><th style="width:9%">Playback</th><th style="width:9%">Masa</th><th style="width:12%">Status</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:14%">Brand</th><th style="width:16%">Model</th><th style="width:20%">No. Siri</th><th style="width:14%">Kapasiti</th><th style="width:16%">Jenis RAID</th><th style="width:16%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(h,i) in viewPM?.hdd" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td>
-                <td class="ctr" style="font-family:monospace">{{h.serial}}</td><td class="ctr">{{h.capacity}}</td><td class="ctr">{{h.config}}</td>
-                <td :class="h.download==='Ya'?'ok':'no'">{{h.download}}</td>
-                <td :class="h.playback==='Ya'?'ok':'no'">{{h.playback}}</td>
-                <td :class="h.time==='Betul'?'ok':'no'">{{h.time}}</td>
+                <td class="ctr" style="font-family:monospace">{{h.serial}}</td><td class="ctr">{{h.capacity}}</td>
+                <td class="ctr">{{h.raidType||'—'}}</td>
                 <td :class="h.status==='Baik'?'ok':'no'">{{h.status}}</td>
               </tr>
-              <tr v-if="!viewPM?.hdd?.length"><td colspan="10" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</td></tr>
+              <tr v-if="!viewPM?.hdd?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</td></tr>
             </tbody>
           </table>
 
@@ -2667,9 +2664,9 @@ tr:hover td{background:#f9fbff}
           </table>
 
           <!-- 7. SUPPORT -->
-          <div class="pm-section-hdr">7. &nbsp;PERALATAN SOKONGAN</div>
+          <div class="pm-section-hdr">7. &nbsp;PERKARA LAIN-LAIN</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:45%">Perkara</th><th style="width:12%">Status</th><th style="width:39%">Nota</th></tr></thead>
+            <thead><tr><th style="width:7%">No.</th><th style="width:35%">Perkara</th><th style="width:12%">Status</th><th style="width:46%">Nota</th></tr></thead>
             <tbody>
               <tr v-for="(s,i) in viewPM?.support" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{s.label}}</td>
@@ -3103,7 +3100,7 @@ tr:hover td{background:#f9fbff}
           <div class="card-title" style="margin:0;border:none;padding:0">Senarai Pengguna</div>
           <button class="btn btn-primary" @click="openAddUser">+ Tambah Pengguna</button>
         </div>
-        <div v-for="u in allUsers" :key="u.id" class="user-card" :class="{'disabled-user':u.disabled}">
+        <div v-for="u in sortedUsers" :key="u.id" class="user-card" :class="{'disabled-user':u.disabled}">
           <label style="cursor:pointer;flex-shrink:0" title="Klik untuk tukar gambar profil pengguna">
             <div class="user-avatar-sm">
               <img v-if="u.photoURL" :src="u.photoURL" alt="">
@@ -3242,7 +3239,7 @@ tr:hover td{background:#f9fbff}
 
         <div class="card">
           <div class="card-title">💾 Backup Manual</div>
-          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Muat turun semua data (peralatan, rekod PM, jadual) sebagai fail JSON untuk simpanan luar.</p>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Muat turun <b>SEMUA</b> data sistem (peralatan, rekod PM, pengguna, kontrak & SLA, contact person, jadual, log audit, senarai custom) sebagai fail JSON untuk simpanan luar.</p>
           <button class="btn btn-primary" @click="doManualBackup" :disabled="loading">
             ⬇️ Muat Turun Backup Sekarang
           </button>
@@ -3250,7 +3247,7 @@ tr:hover td{background:#f9fbff}
 
         <div class="card">
           <div class="card-title">☁️ Auto-Backup Cloud (Max 3)</div>
-          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali seminggu dan disimpan di Firestore (cloud) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan.</p>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali seminggu dan disimpan di Firestore (cloud) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan. Skop terhad kepada data <b>penting/operasi</b> sahaja (peralatan site &amp; rekod PM) supaya kekal di bawah had saiz dokumen Firestore — untuk backup semua data, guna Backup Manual di sebelah.</p>
           <button class="btn btn-outline btn-sm" @click="doAutoBackup" :disabled="loading" style="margin-bottom:14px">
             ⚡ Buat Auto-Backup Sekarang
           </button>
@@ -4784,6 +4781,7 @@ createApp({
     ];
 
     const pm = reactive({
+      _draftId:null, _createdAt:null, _isEdit:false,
       siteId:'', siteName:'', refNo:'',
       month: null, year: null,
       visitDate:'',
@@ -4962,7 +4960,7 @@ createApp({
 
     const refNoDuplicate = computed(() => {
       if(!pm.refNo || !refNoSuffix.value) return false;
-      return pmRecords.value.some(r => r.refNo === pm.refNo);
+      return pmRecords.value.some(r => r.refNo === pm.refNo && r.id !== pm._draftId);
     });
 
     // ---- Malaysian Holidays ----
@@ -5062,6 +5060,12 @@ createApp({
     });
 
     const allUsers = ref([]);
+    // Alphabetical (A-Z) by name for the User Management list — recomputes
+    // automatically whenever allUsers changes (add/remove/edit), no manual
+    // re-sort needed.
+    const sortedUsers = computed(() =>
+      [...allUsers.value].sort((a,b) => (a.name||a.username||'').localeCompare((b.name||b.username||''), 'ms', {sensitivity:'base'}))
+    );
     const allStaff = computed(() => {
       const list = [...allUsers.value];
       const uid = authUser.value?.uid;
@@ -5903,6 +5907,38 @@ createApp({
       };
     }
 
+    // Manual (file-download) backup covers EVERYTHING — unlike the cloud
+    // auto-backup below, it isn't constrained by Firestore's ~1MiB document
+    // size cap, so it also dumps users, contracts, contact persons, team
+    // assignments, audit logs and custom equipment options. Fetched fresh
+    // from Firestore (not the local reactive refs) so it's always complete
+    // regardless of what happens to be loaded in the app right now.
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts'];
+    async function collectFullBackupData() {
+      const data = collectBackupData();
+      data.full = true;
+      for(const coll of FULL_BACKUP_EXTRA_COLLECTIONS) {
+        const snap = await db.collection(coll).get();
+        data[coll] = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      }
+      return data;
+    }
+
+    // Firestore batches cap out at 500 writes — chunk so collections that
+    // grow past that (audit logs, PM records over the years) don't silently
+    // fail to restore.
+    async function _batchRestoreCollection(coll, docs) {
+      const CHUNK = 450;
+      for(let i=0; i<docs.length; i+=CHUNK) {
+        const b = db.batch();
+        docs.slice(i, i+CHUNK).forEach(r => {
+          const {id, ...rest} = r;
+          if(id) b.set(db.collection(coll).doc(id), rest);
+        });
+        await _fw(b.commit());
+      }
+    }
+
     // Superadmin-only estimate of total Firestore storage in use, checked
     // against the ~1GiB free-tier (Spark plan) cap. The Firestore client SDK
     // has no API for the *actual* billed storage figure (that includes index
@@ -5960,16 +5996,20 @@ createApp({
       if(n < 1024*1024*1024) return (n/1024/1024).toFixed(2) + ' MB';
       return (n/1024/1024/1024).toFixed(2) + ' GB';
     }
-    function doManualBackup() {
-      const data = collectBackupData();
-      const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement('a');
-      a.href = url;
-      a.download = 'backup_pm_' + new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-') + '.json';
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Backup manual berjaya dimuat turun!');
+    async function doManualBackup() {
+      loading.value = true;
+      try {
+        const data = await collectFullBackupData();
+        const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = 'backup_pm_full_' + new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-') + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Backup manual (semua data) berjaya dimuat turun!');
+      } catch(e) { showToast('Gagal buat backup: '+e.message, 'error'); }
+      loading.value = false;
     }
 
     // Auto-backups live entirely in Firestore ('systemBackups' collection,
@@ -6066,7 +6106,8 @@ createApp({
     }
 
     async function applyRestore(data) {
-      if(!confirm('Restore data ini? Data semasa akan digantikan.\n\nSatu backup automatik akan disimpan dahulu sebagai langkah keselamatan.')) return;
+      const isFull = !!data.full;
+      if(!confirm(`Restore data ini${isFull?' (PENUH — termasuk pengguna, kontrak, contact person, jadual, log audit & senarai custom)':''}? Data semasa akan digantikan.\n\nSatu backup automatik akan disimpan dahulu sebagai langkah keselamatan.`)) return;
       loading.value=true;
       try {
         // Checkpoint current state before overwriting anything
@@ -6103,14 +6144,24 @@ createApp({
         if(data.virSiteEquip) virSiteEquip.value = restoredVirSiteEquip;
 
         if(data.pmRecords?.length) {
-          const pmBatch = db.batch();
-          data.pmRecords.forEach(r=>{
-            const {id,...rest}=r;
-            if(id) pmBatch.set(db.collection('pmRecords').doc(id), rest);
-          });
-          await _fw(pmBatch.commit());
+          await _batchRestoreCollection('pmRecords', data.pmRecords);
           pmRecords.value = data.pmRecords;
         }
+
+        // Extra collections only present in a FULL manual backup — an
+        // auto-backup (core-only) simply won't have these keys, so each
+        // block is a no-op for that case.
+        if(data.users?.length) { await _batchRestoreCollection('users', data.users); await loadUsers(); }
+        if(data.contracts?.length) { await _batchRestoreCollection('contracts', data.contracts); await loadContracts(); }
+        if(data.contactPersons?.length) { await _batchRestoreCollection('contactPersons', data.contactPersons); }
+        if(data.teamAssignments?.length) {
+          await _batchRestoreCollection('teamAssignments', data.teamAssignments);
+          const tSnap = await db.collection('teamAssignments').orderBy('date','asc').get();
+          teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()}));
+        }
+        if(data.auditLogs?.length) { await _batchRestoreCollection('auditLogs', data.auditLogs); }
+        if(data.customEquipmentOptions?.length) { await _batchRestoreCollection('customEquipmentOptions', data.customEquipmentOptions); await loadCustomEquipmentOptions(); }
+        if(data.loginAttempts?.length) { await _batchRestoreCollection('loginAttempts', data.loginAttempts); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
@@ -6130,7 +6181,7 @@ createApp({
       dashboard:'Dashboard',
       sites: currentProject.value==='vir' ? 'Pengurusan Site VIR' : 'Pengurusan Site CCTV',
       'site-equip':'Urus Peralatan Site',
-      'new-pm': currentProject.value==='vir' ? 'Borang VIR Baru' : 'Borang CCTV Baru',
+      'new-pm': pm._isEdit ? ('Edit ' + (currentProject.value==='vir' ? 'Borang VIR' : 'Borang CCTV')) : (currentProject.value==='vir' ? 'Borang VIR Baru' : 'Borang CCTV Baru'),
       'pm-list': currentProject.value==='vir' ? 'Rekod Borang VIR' : 'Rekod Borang CCTV',
       'pm-view':'Lihat Rekod', 'jadual':'Jadual Penyelenggaraan',
       'user-mgmt':'Pengurusan Pengguna', profile:'Profil Saya', backup:'Backup & Restore',
@@ -6790,6 +6841,14 @@ createApp({
     });
 
     // ---- Toast helper ----
+    // Excel/DOCX export temporarily disabled while under maintenance —
+    // buttons stay visible (so users know the feature exists) but clicking
+    // shows this notice instead of running the real export function. To
+    // re-enable, swap the button @click back to exportExcel/exportExcelVIR/exportDOCX.
+    function exportUnderMaintenance() {
+      alert('Fungsi ini masih diselenggara oleh admin.');
+    }
+
     function showToast(msg, type='success') {
       const id = ++_toastIdSeq;
       toasts.push({ id, msg, type });
@@ -8280,6 +8339,7 @@ createApp({
     // ---- PM Form ----
     function startNewPM(proj) {
       clearPmDraftLocal();
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false;
       if(proj) currentProject.value = proj;
       pm.virRoomNo=''; pm.virRoomNoCustom='';
       pm.virItems = VIR_CHECKLIST_TEMPLATE.map(t=>({...t, status:'ok', nota:''}));
@@ -8316,7 +8376,7 @@ createApp({
 
       pm.cameras = (eq.cameras||[]).map(c=>({...c,display:'Baik',icam:'Baik',nota:''}));
       pm.nvr = (eq.nvr||[]).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
-      pm.hdd = (eq.hdd||[]).map(h=>({...h,download:'Ya',playback:'Ya',time:'Betul',status:'Baik'}));
+      pm.hdd = (eq.hdd||[]).map(h=>({...h,raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'}));
       pm.switches = (eq.switches||[]).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = (eq.alarms||[]).map(a=>({...a,func:'Baik',status:'Baik'}));
       pm.misc = (eq.misc||[]).map(m=>({...m,status:'Baik',nota:''}));
@@ -8377,7 +8437,8 @@ createApp({
           notaCatatan: pm.notaCatatan||'',
           status, createdBy: authUser.value?.email || '',
           ...(pm.maintType==='CM' && status==='submitted' ? {cmStatus:'open'} : {}),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          createdAt: pm._createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+          ...(pm._isEdit ? { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '' } : {}),
           ...(isVir ? {
             virRoomNo: (pm.virRoomNo==='Lain-lain' && pm.virRoomNoCustom.trim()) ? pm.virRoomNoCustom.trim() : pm.virRoomNo,
             virItems: JSON.parse(JSON.stringify(pm.virItems)),
@@ -8391,18 +8452,69 @@ createApp({
         if(!pm._draftId) pm._draftId = db.collection('pmRecords').doc().id;
         const docRef = db.collection('pmRecords').doc(pm._draftId);
         await _fw(docRef.set(data));
-        await logAudit(status==='submitted'?'BORANG_SUBMIT':'BORANG_DRAFT', pm.refNo||pm._draftId);
-        showToast(status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!');
+        await logAudit(pm._isEdit ? 'BORANG_EDIT' : (status==='submitted'?'BORANG_SUBMIT':'BORANG_DRAFT'), pm.refNo||pm._draftId);
+        showToast(pm._isEdit ? 'Perubahan borang berjaya disimpan!' : (status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!'));
         clearPmDraftLocal(); // Firestore now holds the authoritative copy — local recovery draft no longer needed
         await loadAll();
         viewPM.value = {id:pm._draftId,...data};
-        pm._draftId = null; // clear so next new form gets fresh ID
+        pm._draftId = null; pm._createdAt = null; pm._isEdit = false; // clear so next new form gets fresh ID
         page.value='pm-view';
       } catch(e){ showToast('Gagal: '+e.message,'error'); }
       loading.value=false;
     }
 
     function viewRecord(r) { viewPM.value=r; currentProject.value=r.project||'cctv'; page.value='pm-view'; }
+
+    // Loads an already-submitted record back into the editable pm form so
+    // mistakes can be corrected without deleting + recreating the whole
+    // borang. savePM() detects pm._draftId is already set and overwrites
+    // the same Firestore doc instead of creating a new one.
+    function editRecord(r) {
+      clearPmDraftLocal();
+      currentProject.value = r.project||'cctv';
+      pm._draftId = r.id;
+      pm._createdAt = r.createdAt || null;
+      pm._isEdit = true;
+      pm.siteId = r.siteId||''; pm.siteName = r.siteName||''; pm.refNo = r.refNo||'';
+      const parts = (r.refNo||'').split('/');
+      refNoSuffix.value = parts.length>1 ? parts[parts.length-1] : '';
+      pm.month = r.month||null; pm.year = r.year||null;
+      pm.visitDate = r.visitDate||'';
+      pm.maintType = r.maintType||''; pm.pmNo = r.pmNo||null; pm.rootCause = r.rootCause||'';
+      pm.notaCatatan = r.notaCatatan||'';
+      pm.contractorName=r.contractorName||''; pm.contractorJawatan=r.contractorJawatan||''; pm.contractorTarikh=r.contractorTarikh||'';
+      pm.clientName=r.clientName||''; pm.clientJawatan=r.clientJawatan||''; pm.clientTarikh=r.clientTarikh||'';
+      pm.client2Name=r.client2Name||''; pm.client2Jawatan=r.client2Jawatan||''; pm.client2Tarikh=r.client2Tarikh||'';
+      if(currentProject.value==='vir') {
+        pm.virRoomNo = r.virRoomNo||''; pm.virRoomNoCustom='';
+        pm.virItems = r.virItems ? JSON.parse(JSON.stringify(r.virItems)) : VIR_CHECKLIST_TEMPLATE.map(t=>({...t, status:'ok', nota:''}));
+        pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
+        pm.support=[
+          {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
+          {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
+          {key:'rack',label:'Management Rack',status:'Baik',nota:''},
+          {key:'kabel',label:'Kabel dan Aksesori Rangkaian',status:'Baik',nota:''},
+          {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
+        ];
+      } else {
+        pm.cameras = r.cameras ? JSON.parse(JSON.stringify(r.cameras)) : [];
+        pm.nvr = r.nvr ? JSON.parse(JSON.stringify(r.nvr)) : [];
+        pm.hdd = r.hdd ? JSON.parse(JSON.stringify(r.hdd)) : [];
+        pm.switches = r.switches ? JSON.parse(JSON.stringify(r.switches)) : [];
+        pm.alarms = r.alarms ? JSON.parse(JSON.stringify(r.alarms)) : [];
+        pm.misc = r.misc ? JSON.parse(JSON.stringify(r.misc)) : [];
+        pm.support = r.support ? JSON.parse(JSON.stringify(r.support)) : [
+          {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
+          {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
+          {key:'rack',label:'Management Rack',status:'Baik',nota:''},
+          {key:'kabel',label:'Kabel dan Aksesori Rangkaian',status:'Baik',nota:''},
+          {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
+        ];
+        pm.virRoomNo=''; pm.virRoomNoCustom=''; pm.virItems=[];
+      }
+      pmStep.value = 1;
+      page.value = 'new-pm';
+    }
 
     // Renders the header QR code (encodes the ref no. only, for quick manual
     // lookup — no deep-link routing exists in this app yet).
@@ -8563,9 +8675,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       // HDD (row 92)
       if(r.hdd && r.hdd[0]){
         const h=r.hdd[0];
-        setCell('D92', h.brand+' '+h.model+' ('+h.capacity+')');
+        setCell('D92', h.brand+' '+h.model+' ('+h.capacity+') — '+(h.raidType||'—'));
         setCell('AN92', h.serial);
-        setTick('W92','Y92', h.download, 'Ya');
         setTick('AF92','AI92', h.status);
       }
 
@@ -8788,8 +8899,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         children.push(sectionHdr('3.  CAKERA KERAS (HARD DISK)'));
         if (r.hdd?.length) {
           children.push(makeTable(
-            ['No.','Brand','Model','No. Siri','Kapasiti','Config','Download','Playback','Masa','Status'],
-            r.hdd.map((h,i)=>[i+1,h.brand,h.model,h.serial,h.capacity,h.config,h.download,h.playback,h.time,h.status])
+            ['No.','Brand','Model','No. Siri','Kapasiti','Jenis RAID','Status'],
+            r.hdd.map((h,i)=>[i+1,h.brand,h.model,h.serial,h.capacity,h.raidType||'—',h.status])
           ));
         } else { children.push(emptyNote('Tiada rekod HDD.')); }
         children.push(spacer());
@@ -10058,7 +10169,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
-      allUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS,
+      allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS,
       contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canViewCredentials,
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
@@ -10081,9 +10192,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
-      startNewPM, loadPMEquip, savePM, viewRecord, deleteRecord,
+      startNewPM, loadPMEquip, savePM, viewRecord, editRecord, deleteRecord,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
-      exportExcel, exportExcelVIR, exportDOCX, exportPDF,
+      exportExcel, exportExcelVIR, exportDOCX, exportPDF, exportUnderMaintenance,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
