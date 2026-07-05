@@ -2059,8 +2059,8 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
           <div class="flex gap-8">
-            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
             <button class="btn btn-primary" @click="loadPMEquip" :disabled="!pm.siteId">Seterusnya →</button>
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2205,18 +2205,24 @@ tr:hover td{background:#f9fbff}
             <div class="card-title">💾 Pemeriksaan Storage</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jenis RAID</th><th>Status</th></tr></thead>
+                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>Total HDD &amp; Konfigurasi</th><th>Jenis RAID</th><th>Status</th></tr></thead>
                 <tbody>
                   <tr v-for="(h,i) in pm.hdd" :key="h._uid||i">
                     <td>{{i+1}}</td>
                     <td><input class="form-control" style="min-width:100px" v-model="h.brand"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="h.model"></td>
-                    <td><input class="form-control" style="min-width:100px" v-model="h.serial"></td>
-                    <td><input class="form-control" style="min-width:80px" v-model="h.capacity"></td>
+                    <td>
+                      <div style="display:flex;align-items:center;gap:4px">
+                        <input class="form-control" style="width:70px" v-model="h.capacity" placeholder="cth: 2TB">
+                        <span>x</span>
+                        <input class="form-control" style="width:55px" v-model="h.totalUnit" placeholder="6">
+                        <span>unit</span>
+                      </div>
+                    </td>
                     <td><select class="form-control" style="min-width:100px" v-model="h.raidType"><option>RAID 0</option><option>RAID 1</option><option>RAID 5</option></select></td>
                     <td><select class="status-sel" v-model="h.status" :class="h.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                   </tr>
-                  <tr v-if="!pm.hdd.length"><td colspan="7" class="empty">Tiada HDD didaftar.</td></tr>
+                  <tr v-if="!pm.hdd.length"><td colspan="6" class="empty">Tiada HDD didaftar.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2231,22 +2237,21 @@ tr:hover td{background:#f9fbff}
         <!-- STEP 4: Network + Server + Alarm -->
         <div v-if="pmStep===4 && currentProject!=='vir'">
           <div class="card">
-            <div class="card-title">🔌 Pemeriksaan Network Switch</div>
+            <div class="card-title">🔌 Pemeriksaan POE/Network Switch</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Error Notification</th><th>Port Status</th><th>Status</th></tr></thead>
+                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Error Notification</th><th>Port Status</th><th>Status</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in pm.switches" :key="s._uid||i">
                     <td>{{i+1}}</td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.brand"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.model"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.serial"></td>
-                    <td><input class="form-control" style="min-width:80px" v-model="s.ports"></td>
                     <td><select class="status-sel" v-model="s.errNotif" :class="s.errNotif==='Tiada'?'status-ok':'status-no'"><option>Tiada</option><option>Ada</option></select></td>
                     <td><select class="status-sel" v-model="s.portStatus" :class="s.portStatus==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                     <td><select class="status-sel" v-model="s.status" :class="s.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                   </tr>
-                  <tr v-if="!pm.switches.length"><td colspan="8" class="empty">Tiada switch didaftar.</td></tr>
+                  <tr v-if="!pm.switches.length"><td colspan="7" class="empty">Tiada switch didaftar.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2614,31 +2619,31 @@ tr:hover td{background:#f9fbff}
           <!-- 3. HDD -->
           <div class="pm-section-hdr">3. &nbsp;CAKERA KERAS (HARD DISK)</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:14%">Brand</th><th style="width:16%">Model</th><th style="width:20%">No. Siri</th><th style="width:14%">Kapasiti</th><th style="width:16%">Jenis RAID</th><th style="width:16%">Status</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:16%">Brand</th><th style="width:18%">Model</th><th style="width:24%">Total HDD &amp; Konfigurasi</th><th style="width:18%">Jenis RAID</th><th style="width:20%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(h,i) in viewPM?.hdd" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td>
-                <td class="ctr" style="font-family:monospace">{{h.serial}}</td><td class="ctr">{{h.capacity}}</td>
+                <td class="ctr">{{h.capacity||'—'}} x{{h.totalUnit||'1'}}unit</td>
                 <td class="ctr">{{h.raidType||'—'}}</td>
                 <td :class="h.status==='Baik'?'ok':'no'">{{h.status}}</td>
               </tr>
-              <tr v-if="!viewPM?.hdd?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</td></tr>
+              <tr v-if="!viewPM?.hdd?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</td></tr>
             </tbody>
           </table>
 
           <!-- 4. SWITCH -->
-          <div class="pm-section-hdr">4. &nbsp;NETWORK SWITCH</div>
+          <div class="pm-section-hdr">4. &nbsp;POE/NETWORK SWITCH</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:13%">Brand</th><th style="width:16%">Model</th><th style="width:18%">No. Siri</th><th style="width:8%">Port</th><th style="width:14%">Error Notification</th><th style="width:14%">Port Status</th><th style="width:12%">Status</th></tr></thead>
+            <thead><tr><th style="width:5%">No.</th><th style="width:14%">Brand</th><th style="width:18%">Model</th><th style="width:20%">No. Siri</th><th style="width:16%">Error Notification</th><th style="width:16%">Port Status</th><th style="width:11%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(s,i) in viewPM?.switches" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}}</td>
-                <td class="ctr" style="font-family:monospace">{{s.serial}}</td><td class="ctr">{{s.ports}}</td>
+                <td class="ctr" style="font-family:monospace">{{s.serial}}</td>
                 <td :class="s.errNotif==='Tiada'?'ok':'no'">{{s.errNotif}}</td>
                 <td :class="s.portStatus==='Baik'?'ok':'no'">{{s.portStatus}}</td>
                 <td :class="s.status==='Baik'?'ok':'no'">{{s.status}}</td>
               </tr>
-              <tr v-if="!viewPM?.switches?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
+              <tr v-if="!viewPM?.switches?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
             </tbody>
           </table>
 
@@ -4824,7 +4829,17 @@ createApp({
       const site = siteList.find(s => s.id === pm.siteId);
       if (!site) return '';
       const proj = currentProject.value === 'vir' ? 'VIR' : 'CCTV';
-      return `SPRM/${proj}/${site.code}/${new Date().getFullYear()}/`;
+      // A No. Rujukan is an official reference and must never silently change
+      // once issued. When editing an existing record, keep its original year
+      // segment — otherwise editing a record from a prior year would rewrite
+      // its ref no. to the current year the moment editRecord() sets pm.siteId
+      // (which triggers the watch below that rebuilds pm.refNo from this prefix).
+      let year = new Date().getFullYear();
+      if(pm._isEdit && pm.refNo) {
+        const parts = pm.refNo.split('/');
+        if(parts.length >= 4 && /^\d{4}$/.test(parts[3])) year = parts[3];
+      }
+      return `SPRM/${proj}/${site.code}/${year}/`;
     });
     watch([() => pm.siteId, refNoSuffix], () => {
       pm.refNo = refNoPrefix.value ? refNoPrefix.value + refNoSuffix.value : '';
@@ -4848,7 +4863,11 @@ createApp({
       return String(next).padStart(3, '0');
     });
     watch(() => pm.siteId, () => {
-      if(pm.siteId) refNoSuffix.value = nextRefNoSuggestion.value;
+      // Skip while editing an existing record — editRecord() also sets
+      // pm.siteId (to populate the form), which would otherwise trigger this
+      // watcher and clobber the record's real suffix with the "next
+      // available" suggestion for that site right as the edit form opens.
+      if(pm.siteId && !pm._isEdit) refNoSuffix.value = nextRefNoSuggestion.value;
     });
     const refNoGapWarning = computed(() => {
       if(!refNoSuffix.value || refNoDuplicate.value) return false;
@@ -8385,7 +8404,7 @@ createApp({
 
       pm.cameras = (eq.cameras||[]).map(c=>({...c,display:'Baik',icam:'Baik',nota:''}));
       pm.nvr = (eq.nvr||[]).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
-      pm.hdd = (eq.hdd||[]).map(h=>({...h,raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'}));
+      pm.hdd = (eq.hdd||[]).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'}));
       pm.switches = (eq.switches||[]).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = (eq.alarms||[]).map(a=>({...a,func:'Baik',status:'Baik'}));
       pm.misc = (eq.misc||[]).map(m=>({...m,status:'Baik',nota:''}));
@@ -8446,7 +8465,13 @@ createApp({
           notaCatatan: pm.notaCatatan||'',
           status, createdBy: authUser.value?.email || '',
           ...(pm.maintType==='CM' && status==='submitted' ? {cmStatus:'open'} : {}),
-          createdAt: pm._createdAt || firebase.firestore.FieldValue.serverTimestamp(),
+          // pm._createdAt round-trips through localStorage JSON if the crash-recovery
+          // draft (checkPmDraftRecovery) saved it mid-edit — that strips the Firestore
+          // Timestamp class down to a plain {seconds,nanoseconds} object. Only trust it
+          // if it's still a real Timestamp (has .toDate); otherwise fall back so we never
+          // write a malformed type into createdAt (only loses the exact original date in
+          // that rare crash+resume-edit case, which beats corrupting the field's type).
+          createdAt: (pm._createdAt && pm._createdAt.toDate) ? pm._createdAt : firebase.firestore.FieldValue.serverTimestamp(),
           ...(pm._isEdit ? { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '' } : {}),
           ...(isVir ? {
             virRoomNo: (pm.virRoomNo==='Lain-lain' && pm.virRoomNoCustom.trim()) ? pm.virRoomNoCustom.trim() : pm.virRoomNo,
@@ -8707,7 +8732,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       // HDD (row 92)
       if(r.hdd && r.hdd[0]){
         const h=r.hdd[0];
-        setCell('D92', h.brand+' '+h.model+' ('+h.capacity+') — '+(h.raidType||'—'));
+        setCell('D92', h.brand+' '+h.model+' ('+(h.capacity||'—')+' x'+(h.totalUnit||'1')+'unit) — '+(h.raidType||'—'));
         setCell('AN92', h.serial);
         setTick('AF92','AI92', h.status);
       }
@@ -8931,18 +8956,18 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         children.push(sectionHdr('3.  CAKERA KERAS (HARD DISK)'));
         if (r.hdd?.length) {
           children.push(makeTable(
-            ['No.','Brand','Model','No. Siri','Kapasiti','Jenis RAID','Status'],
-            r.hdd.map((h,i)=>[i+1,h.brand,h.model,h.serial,h.capacity,h.raidType||'—',h.status])
+            ['No.','Brand','Model','Total HDD & Konfigurasi','Jenis RAID','Status'],
+            r.hdd.map((h,i)=>[i+1,h.brand,h.model,(h.capacity||'—')+' x'+(h.totalUnit||'1')+'unit',h.raidType||'—',h.status])
           ));
         } else { children.push(emptyNote('Tiada rekod HDD.')); }
         children.push(spacer());
 
         // ── 4. Switch ──
-        children.push(sectionHdr('4.  NETWORK SWITCH'));
+        children.push(sectionHdr('4.  POE/NETWORK SWITCH'));
         if (r.switches?.length) {
           children.push(makeTable(
-            ['No.','Brand','Model','No. Siri','Port','Error Notification','Port Status','Status'],
-            r.switches.map((s,i)=>[i+1,s.brand,s.model,s.serial,s.ports,s.errNotif,s.portStatus,s.status])
+            ['No.','Brand','Model','No. Siri','Error Notification','Port Status','Status'],
+            r.switches.map((s,i)=>[i+1,s.brand,s.model,s.serial,s.errNotif,s.portStatus,s.status])
           ));
         } else { children.push(emptyNote('Tiada rekod Switch.')); }
         children.push(spacer());
@@ -8968,7 +8993,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         children.push(spacer());
 
         // ── 7. Support ──
-        children.push(sectionHdr('7.  PERALATAN SOKONGAN'));
+        children.push(sectionHdr('7.  PERKARA LAIN-LAIN'));
         if (r.support?.length) {
           children.push(makeTable(
             ['No.','Perkara','Status','Nota'],
@@ -10115,6 +10140,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     // ── Feature 7: Mobile nav ──
     const mobileNavOpen = ref(false);
+    // Auto-close the slide-out nav after navigating — without this, tapping
+    // a nav item on mobile changes the page but the menu stays open on top
+    // of it, so the user has to manually tap the hamburger again to see
+    // what they just navigated to.
+    watch(page, () => { mobileNavOpen.value = false; });
 
     // ── Feature 8: Dark Mode ──
     const darkMode = ref(localStorage.getItem('pm_darkmode')==='1');
