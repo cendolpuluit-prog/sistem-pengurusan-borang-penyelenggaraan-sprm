@@ -413,11 +413,6 @@ tr:hover td{background:#f9fbff}
 .team-member-chip{display:inline-flex;align-items:center;gap:4px;background:#f0f4ff;border:1px solid #c5cdf0;border-radius:20px;padding:2px 10px;font-size:.78rem;margin:2px 3px 2px 0}
 .team-member-photo{width:20px;height:20px;border-radius:50%;object-fit:cover;background:#c5cdf0}
 
-/* TEAM CHECKBOX LIST */
-.staff-checklist{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;max-height:200px;overflow-y:auto;border:1px solid #e0e0e0;border-radius:6px;padding:8px}
-.staff-check-item{display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;font-size:.85rem}
-.staff-check-item:hover{background:#f0f4ff}
-.staff-check-item input{flex-shrink:0}
 
 /* PDF CORPORATE */
 @page{size:A4;margin:12mm 15mm 20mm 15mm}
@@ -641,7 +636,6 @@ tr:hover td{background:#f9fbff}
   /* Forms — 16px prevents iOS auto-zoom */
   .form-control,.status-sel{font-size:16px}
   .form-row-2,.form-row-3{grid-template-columns:1fr}
-  .staff-checklist{grid-template-columns:1fr}
 
   /* Buttons — min 44px touch target */
   .btn{padding:8px 14px;font-size:.83rem;min-height:44px}
@@ -1676,6 +1670,7 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"></div>
               <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nNVR.ip"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
+              <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.accessUser" autocomplete="off"></div>
                 <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nNVR.accessPw" autocomplete="new-password"></div>
@@ -1697,11 +1692,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="{'highlight-row':equipEditIdx.nvr===i}">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td>
+                    <td>{{i+1}}</td><td>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -1712,7 +1707,7 @@ tr:hover td{background:#f9fbff}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada NVR.</td></tr>
+                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td :colspan="canViewCredentials?12:10" class="empty">Tiada NVR.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1816,6 +1811,7 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
+              <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.accessUser" autocomplete="off"></div>
                 <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nSW.accessPw" autocomplete="new-password"></div>
@@ -1836,11 +1832,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ports}}</td>
+                    <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ports}}</td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -1851,7 +1847,7 @@ tr:hover td{background:#f9fbff}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?9:7" class="empty">Tiada switch.</td></tr>
+                  <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?10:8" class="empty">Tiada switch.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2197,7 +2193,7 @@ tr:hover td{background:#f9fbff}
             <div class="card-title">🖥️ Pemeriksaan NVR</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Software Operation</th><th>Status</th></tr></thead>
+                <thead><tr><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Software Operation</th><th>Status</th><th>Nota</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in pm.nvr" :key="n._uid||i">
                     <td>{{i+1}}</td>
@@ -2207,6 +2203,7 @@ tr:hover td{background:#f9fbff}
                     <td><input class="form-control" style="min-width:100px" v-model="n.serial"></td>
                     <td><select class="status-sel" v-model="n.asmOp" :class="n.asmOp==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                     <td><select class="status-sel" v-model="n.status" :class="n.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
+                    <td><input class="form-control" style="min-width:100px" v-model="n.nota" placeholder="cth: Tingkat 2, Bilik Server"></td>
                   </tr>
                   <tr v-if="!pm.nvr.length"><td colspan="8" class="empty">Tiada NVR didaftar.</td></tr>
                 </tbody>
@@ -2252,7 +2249,7 @@ tr:hover td{background:#f9fbff}
             <div class="card-title">🔌 Pemeriksaan POE/Network Switch</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Error Notification</th><th>Port Status</th><th>Status</th></tr></thead>
+                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Error Notification</th><th>Port Status</th><th>Status</th><th>Nota</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in pm.switches" :key="s._uid||i">
                     <td>{{i+1}}</td>
@@ -2262,8 +2259,9 @@ tr:hover td{background:#f9fbff}
                     <td><select class="status-sel" v-model="s.errNotif" :class="s.errNotif==='Tiada'?'status-ok':'status-no'"><option>Tiada</option><option>Ada</option></select></td>
                     <td><select class="status-sel" v-model="s.portStatus" :class="s.portStatus==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                     <td><select class="status-sel" v-model="s.status" :class="s.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
+                    <td><input class="form-control" style="min-width:100px" v-model="s.nota" placeholder="cth: Tingkat 2, Bilik Server"></td>
                   </tr>
-                  <tr v-if="!pm.switches.length"><td colspan="7" class="empty">Tiada switch didaftar.</td></tr>
+                  <tr v-if="!pm.switches.length"><td colspan="8" class="empty">Tiada switch didaftar.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2616,15 +2614,16 @@ tr:hover td{background:#f9fbff}
           <div class="pm-section-block">
           <div class="pm-section-hdr">2. &nbsp;NETWORK VIDEO RECORDER (NVR)</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:30%">Nama / Jenis</th><th style="width:13%">Brand</th><th style="width:14%">Model</th><th style="width:18%">No. Siri</th><th style="width:12%">Software Operation</th><th style="width:8%">Status</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:22%">Nama / Jenis</th><th style="width:10%">Brand</th><th style="width:11%">Model</th><th style="width:15%">No. Siri</th><th style="width:10%">Software Operation</th><th style="width:8%">Status</th><th style="width:20%">Nota</th></tr></thead>
             <tbody>
               <tr v-for="(n,i) in viewPM?.nvr" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.brand}}</td><td class="ctr">{{n.model}}</td>
                 <td class="ctr" style="font-family:monospace">{{n.serial}}</td>
                 <td :class="n.asmOp==='Baik'?'ok':'no'">{{n.asmOp}}</td>
                 <td :class="n.status==='Baik'?'ok':'no'">{{n.status}}</td>
+                <td>{{n.nota}}</td>
               </tr>
-              <tr v-if="!viewPM?.nvr?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
+              <tr v-if="!viewPM?.nvr?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
             </tbody>
           </table>
           </div>
@@ -2650,7 +2649,7 @@ tr:hover td{background:#f9fbff}
           <div class="pm-section-block">
           <div class="pm-section-hdr">4. &nbsp;POE/NETWORK SWITCH</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:14%">Brand</th><th style="width:18%">Model</th><th style="width:20%">No. Siri</th><th style="width:16%">Error Notification</th><th style="width:16%">Port Status</th><th style="width:11%">Status</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:12%">Brand</th><th style="width:15%">Model</th><th style="width:16%">No. Siri</th><th style="width:13%">Error Notification</th><th style="width:13%">Port Status</th><th style="width:9%">Status</th><th style="width:18%">Nota</th></tr></thead>
             <tbody>
               <tr v-for="(s,i) in viewPM?.switches" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}}</td>
@@ -2658,8 +2657,9 @@ tr:hover td{background:#f9fbff}
                 <td :class="s.errNotif==='Tiada'?'ok':'no'">{{s.errNotif}}</td>
                 <td :class="s.portStatus==='Baik'?'ok':'no'">{{s.portStatus}}</td>
                 <td :class="s.status==='Baik'?'ok':'no'">{{s.status}}</td>
+                <td>{{s.nota}}</td>
               </tr>
-              <tr v-if="!viewPM?.switches?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
+              <tr v-if="!viewPM?.switches?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
             </tbody>
           </table>
           </div>
@@ -3058,23 +3058,34 @@ tr:hover td{background:#f9fbff}
               </select>
             </div>
             <div class="form-group" style="grid-column:1/-1">
-              <label>Anggota Team (pilih satu atau lebih)</label>
-              <div class="staff-checklist">
-                <label v-for="u in allStaff" :key="u.id" class="staff-check-item"
-                  :style="teamModal.data.maintType==='PM'&&teamModalZone&&staffZoneVisits(u.id,teamModalZone)>=ROTATION_LIMIT?'opacity:.6;background:#fff5f5;border-color:#ffcdd2':''">
-                  <input type="checkbox" :value="u.id" v-model="teamModal.selectedUids">
-                  <span>{{u.name||u.username}}</span>
-                  <!-- PM rotation badge — zone-based -->
-                  <template v-if="teamModal.data.maintType==='PM' && teamModalZone">
-                    <span :style="'margin-left:6px;padding:1px 7px;border-radius:8px;font-size:.7rem;font-weight:700;'+(staffZoneVisits(u.id,teamModalZone)===0?'background:#e8f5e9;color:#1b5e20':staffZoneVisits(u.id,teamModalZone)===1?'background:#fff8e1;color:#e65100':'background:#ffebee;color:#b71c1c')">
-                      {{staffZoneVisits(u.id,teamModalZone)}}x
-                    </span>
-                    <span v-if="staffZoneVisits(u.id,teamModalZone)>=ROTATION_LIMIT"
-                      style="font-size:.68rem;color:#b71c1c;font-weight:700">⚠ Rotasi Zon</span>
-                  </template>
-                  <span style="font-size:.72rem;color:#888;margin-left:auto">{{u.role}}</span>
-                </label>
-                <div v-if="!allStaff.length" style="color:#aaa;font-size:.82rem;padding:8px;grid-column:1/-1">Tiada data pengguna. Admin perlu log masuk semula.</div>
+              <label>Anggota Team (pilih satu atau lebih) — {{teamModal.selectedUids.length}} dipilih</label>
+              <div class="tbl-wrap" style="max-height:280px;overflow-y:auto;border:1px solid #e0e4ec;border-radius:6px">
+                <table class="equip-table">
+                  <thead><tr>
+                    <th style="width:30px"></th>
+                    <th>Nama</th>
+                    <th>Peranan</th>
+                    <th>Rotasi Zon</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr v-for="u in allStaff" :key="u.id"
+                      :style="teamModal.data.maintType==='PM'&&teamModalZone&&staffZoneVisits(u.id,teamModalZone)>=ROTATION_LIMIT?'background:#fff5f5':''">
+                      <td><input type="checkbox" :value="u.id" v-model="teamModal.selectedUids"></td>
+                      <td>{{u.name||u.username}}</td>
+                      <td style="font-size:.78rem;color:#888">{{u.role}}</td>
+                      <td>
+                        <template v-if="teamModal.data.maintType==='PM' && teamModalZone">
+                          <span :style="'padding:1px 7px;border-radius:8px;font-size:.7rem;font-weight:700;'+(staffZoneVisits(u.id,teamModalZone)===0?'background:#e8f5e9;color:#1b5e20':staffZoneVisits(u.id,teamModalZone)===1?'background:#fff8e1;color:#e65100':'background:#ffebee;color:#b71c1c')">
+                            {{staffZoneVisits(u.id,teamModalZone)}}x
+                          </span>
+                          <span v-if="staffZoneVisits(u.id,teamModalZone)>=ROTATION_LIMIT"
+                            style="font-size:.68rem;color:#b71c1c;font-weight:700;margin-left:4px">⚠ Rotasi</span>
+                        </template>
+                      </td>
+                    </tr>
+                    <tr v-if="!allStaff.length"><td colspan="4" class="empty">Tiada data pengguna. Admin perlu log masuk semula.</td></tr>
+                  </tbody>
+                </table>
               </div>
               <!-- Legend -->
               <div v-if="teamModal.data.maintType==='PM' && teamModalZone" style="display:flex;gap:10px;margin-top:6px;font-size:.72rem;color:#666;flex-wrap:wrap">
@@ -4757,9 +4768,9 @@ createApp({
     const selSite = ref(null);
     const eqTab = ref('cameras');
     const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
-    const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
+    const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''});
-    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',accessUser:'',accessPw:''});
+    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''});
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
@@ -5811,9 +5822,9 @@ createApp({
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
       nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
-      nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''},
-      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',accessUser:'',accessPw:''},
+      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''},
     };
@@ -8957,8 +8968,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         children.push(sectionHdr('2.  NETWORK VIDEO RECORDER (NVR)'));
         if (r.nvr?.length) {
           children.push(makeTable(
-            ['No.','Nama/Jenis','Brand','Model','No. Siri','Software Operation','Status'],
-            r.nvr.map((n,i)=>[i+1,n.name,n.brand,n.model,n.serial,n.asmOp,n.status])
+            ['No.','Nama/Jenis','Brand','Model','No. Siri','Software Operation','Status','Nota'],
+            r.nvr.map((n,i)=>[i+1,n.name,n.brand,n.model,n.serial,n.asmOp,n.status,n.nota||''])
           ));
         } else { children.push(emptyNote('Tiada rekod NVR.')); }
         children.push(spacer());
@@ -8977,8 +8988,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         children.push(sectionHdr('4.  POE/NETWORK SWITCH'));
         if (r.switches?.length) {
           children.push(makeTable(
-            ['No.','Brand','Model','No. Siri','Error Notification','Port Status','Status'],
-            r.switches.map((s,i)=>[i+1,s.brand,s.model,s.serial,s.errNotif,s.portStatus,s.status])
+            ['No.','Brand','Model','No. Siri','Error Notification','Port Status','Status','Nota'],
+            r.switches.map((s,i)=>[i+1,s.brand,s.model,s.serial,s.errNotif,s.portStatus,s.status,s.nota||''])
           ));
         } else { children.push(emptyNote('Tiada rekod Switch.')); }
         children.push(spacer());
