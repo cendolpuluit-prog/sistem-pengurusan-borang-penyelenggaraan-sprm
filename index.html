@@ -419,7 +419,13 @@ tr:hover td{background:#f9fbff}
 @media print{
   .no-print{display:none!important}
   body{background:#fff!important;margin:0!important;padding:0!important}
-  #print-area{display:block!important;padding:0!important;width:100%!important;transform:none!important}
+  /* padding intentionally left alone here — #print-area IS .pm-print, whose
+     own padding:18px is the buffer between the outer form border and its
+     content (e.g. the corp header logo). Zeroing it made the logo touch
+     the border when printed directly (Ctrl+P on the main page, as opposed
+     to the in-app Export PDF button, which clones into a popup that never
+     carries this id and so never hit this rule). */
+  #print-area{display:block!important;width:100%!important;transform:none!important}
   .pm-print-scale-outer{height:auto!important;overflow:visible!important}
   .pm-print{width:100%!important}
   .pm-preview-wrap{background:transparent!important;border:none!important;padding:0!important;margin:0!important;border-radius:0!important;box-shadow:none!important}
@@ -428,8 +434,15 @@ tr:hover td{background:#f9fbff}
   .pm-corp-header{width:100%!important;display:grid!important;grid-template-columns:110px 1fr 110px!important;box-sizing:border-box}
   .pm-corp-info{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
   .pm-sign-wrap{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr 1fr!important;box-sizing:border-box}
+  .pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr!important}
+  .pm-vir-2col{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
+  .pm-vir-2col>.pm-tbl{min-width:0!important}
   .pm-tbl{table-layout:fixed!important;width:100%!important;border-collapse:collapse!important}
   .pm-tbl td{word-break:break-all!important;overflow-wrap:break-word!important;max-width:0!important}
+  /* Section header labels (e.g. "Adv 4 Way Quad", "SEDANG DIGUNAKAN") only
+     need to wrap onto the next line as whole words, not split mid-word —
+     break-all above is meant for long unbroken data values, not titles. */
+  .pm-tbl td.pm-hdr-lbl{word-break:normal!important;overflow-wrap:break-word!important}
   .pm-tbl th{word-break:break-word!important;overflow-wrap:break-word!important;max-width:0!important;white-space:normal!important}
   .pm-corp-title,.pm-section-hdr,.pm-nota-box .pm-nota-hdr{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .pm-tbl th,.pm-tbl tr:nth-child(even) td{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
@@ -438,6 +451,16 @@ tr:hover td{background:#f9fbff}
      two PDF pages is what reads as "table overlapping the next heading". */
   .pm-corp-header,.pm-corp-info{page-break-inside:avoid}
   .pm-section-hdr{page-break-after:avoid;page-break-inside:avoid}
+  /* A VIR section header stranded with only 1-2 rows before the page
+     break looks broken (header, then almost nothing, then the rest of
+     the section on the next page). Rather than forcing every section
+     onto a fresh page unconditionally (wastes space when a section would
+     mostly fit where it is), chain page-break-after:avoid through the
+     header AND the first several rows of both print columns — the print
+     engine then can't break between any of them, so it's forced to push
+     the whole header+chunk to the next page together whenever it can't
+     fit, but leaves it in place when there's room for a real chunk. */
+  .pm-vir-2col table tbody tr:nth-child(-n+6){page-break-after:avoid}
   .pm-tbl{page-break-inside:auto}
   .pm-tbl tr{page-break-inside:avoid;page-break-after:auto}
   .pm-tbl thead{display:table-header-group}
@@ -463,7 +486,7 @@ tr:hover td{background:#f9fbff}
 /* #print-area shows on screen too — styled via .pm-preview-inner wrapper */
 
 /* IMPROVED PM PRINT */
-.pm-print{font-family:'Times New Roman',Times,serif;font-size:10pt;color:#000;line-height:1.4;border:1px solid #004d26;padding:18px;box-sizing:border-box}
+.pm-print{font-family:'Times New Roman',Times,serif;font-size:10pt;color:#000;line-height:1.4;padding:18px;box-sizing:border-box}
 .pm-preview-wrap{background:#f5f6fa;border:1px solid #d0d5e8;border-radius:10px;padding:20px 24px;margin-top:8px}
 .pm-preview-label{display:flex;align-items:center;gap:10px;margin-bottom:16px;font-size:.78rem;font-weight:700;color:#888;letter-spacing:.12em;text-transform:uppercase}
 .pm-preview-label::before,.pm-preview-label::after{content:'';flex:1;height:1px;background:#d0d5e8}
@@ -487,12 +510,23 @@ tr:hover td{background:#f9fbff}
 .pm-corp-info{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #006633;margin-bottom:10px}
 .pm-info-cell{padding:5px 10px;font-size:9.5pt;border-right:1px solid #b2d8b2;border-bottom:1px solid #b2d8b2;word-break:break-word;overflow-wrap:break-word}
 .pm-info-cell:nth-child(even){border-right:none}
-.pm-info-cell:nth-last-child(-n+2):not(.pm-info-full){border-bottom:none}
+/* Removing the bottom border on "the last row" used to be done by counting
+   DOM position (nth-last-child), which assumed the grid always ends on a
+   normal 2-column row. When a .pm-info-full row (e.g. "Penyelenggaraan
+   Ke-") gets appended after it, that count breaks and strips the border
+   from a cell that isn't actually last — it just looks like the row above
+   sits outside the box. Checking for "no .pm-info-cell sibling follows"
+   is correct regardless of how many rows or full-width rows exist. */
+.pm-info-cell:not(.pm-info-full):not(:has(~ .pm-info-cell)){border-bottom:none}
 .pm-info-full{grid-column:1/-1;border-right:none;border-bottom:none}
 .pm-info-cell b{color:#006633}
 .pm-section-hdr{background:#006633;color:#fff;padding:4px 10px;font-size:9.5pt;font-weight:bold;margin:8px 0 3px;letter-spacing:.3px}
 .pm-section-hdr span{opacity:.75;font-size:8.5pt;font-weight:normal;margin-left:6px}
 .pm-tbl{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:2px;table-layout:fixed}
+.pm-vir-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+.pm-chk-box{display:inline-block;width:11px;height:11px;line-height:10px;border:1px solid #444;text-align:center;font-size:7.5pt;color:transparent;margin:0 1px;vertical-align:middle}
+.pm-chk-box.filled{color:#000;font-weight:700}
+.pm-vir-2col>.pm-tbl{min-width:0}
 .pm-tbl th{background:#cfe8d6;color:#003d1f;padding:3px 4px;text-align:center;border:1px solid #004d26;font-weight:800;font-size:7.3pt;word-break:break-word;overflow-wrap:break-word;max-width:0;white-space:normal;line-height:1.2}
 .pm-tbl td{padding:2px 4px;border:1px solid #b2d8b2;vertical-align:middle;word-break:break-all;overflow-wrap:break-word;max-width:0}
 .pm-tbl tr:nth-child(even) td{background:#f0f9f0}
@@ -504,6 +538,7 @@ tr:hover td{background:#f9fbff}
 .pm-cam-chip b{color:#006633}
 .pm-cam-total{margin-left:auto;font-weight:bold;color:#006633;font-size:9.5pt;background:#e0f2e0;border:1px solid #006633;border-radius:4px;padding:2px 10px}
 .pm-sign-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
+.pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr}
 .pm-sign-box{border:1px solid #006633;padding:10px 12px}
 .pm-sign-box h4{font-size:9pt;color:#006633;margin-bottom:6px;font-weight:bold;border-bottom:1px solid #b2d8b2;padding-bottom:4px}
 .pm-sign-box p{font-size:8.5pt;margin:2px 0;color:#333}
@@ -1461,14 +1496,17 @@ tr:hover td{background:#f9fbff}
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>#</th><th>Nama Site</th><th>Kod</th><th>Peralatan</th><th>Tindakan</th></tr></thead>
+              <thead><tr><th>#</th><th>Nama Site</th><th>Kod</th><th>Tindakan</th></tr></thead>
               <tbody>
                 <tr v-for="(s,i) in VIR_SITES" :key="s.id">
                   <td>{{i+1}}</td>
                   <td>{{s.name}} <span v-if="overdueMap[s.id]" class="badge badge-red" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
-                  <td>{{(virSiteEquip[s.id]?.cameras||[]).length}} kamera · {{(virSiteEquip[s.id]?.nvr||[]).length}} NVR</td>
-                  <td><button class="btn btn-sm btn-primary" @click="openSiteEquip(s)">Urus Peralatan</button></td>
+                  <td class="flex gap-8">
+                    <button class="btn btn-sm btn-outline" @click="openSiteEquip(s,'rooms')" title="Urus senarai bilik & tag sistem">🚪 Bilik &amp; Sistem</button>
+                    <button class="btn btn-sm btn-primary" @click="openSiteEquip(s,'BCD')">BCD</button>
+                    <button class="btn btn-sm btn-primary" @click="openSiteEquip(s,'Optager HD4000')">Optager HD4000</button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -1523,9 +1561,11 @@ tr:hover td{background:#f9fbff}
       <!-- ====== SITE EQUIPMENT ====== -->
       <div v-if="page==='site-equip'">
         <div class="flex justify-between items-center mb-20">
-          <div>
+          <div class="flex items-center gap-8">
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
-            <span class="fw-600" style="margin-left:12px">{{selSite?.name}}</span>
+            <span class="fw-600" style="margin-left:4px">{{selSite?.name}}</span>
+            <span v-if="currentProject==='vir' && eqTab!=='rooms'" class="badge" style="background:#e8f0ff;color:#003366;font-size:.75rem">Sistem: {{equipVirSystem}}</span>
+            <button v-if="currentProject==='vir' && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="equipVirSystem = equipVirSystem==='BCD'?'Optager HD4000':'BCD'">🔀 Tukar ke {{equipVirSystem==='BCD'?'Optager HD4000':'BCD'}}</button>
           </div>
           <button class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
@@ -1536,6 +1576,7 @@ tr:hover td{background:#f9fbff}
           <div class="tab" :class="{active:eqTab==='switch'}" @click="eqTab='switch'">🔌 Network Switch ({{(selSiteEquip.switches||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='alarm'}" @click="eqTab='alarm'">🔔 Alarm SMS ({{(selSiteEquip.alarms||[]).length}})</div>
           <div v-if="currentProject!=='vir'" class="tab" :class="{active:eqTab==='misc'}" @click="eqTab='misc'">📦 Lain-lain ({{(selSiteEquip.misc||[]).length}})</div>
+          <div v-if="currentProject==='vir'" class="tab" :class="{active:eqTab==='rooms'}" @click="eqTab='rooms'">🚪 Bilik &amp; Sistem ({{(selSiteEquip.rooms||[]).length}})</div>
         </div>
 
         <!-- CAMERAS TAB -->
@@ -1984,6 +2025,49 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
         </div>
+
+        <!-- VIR: Bilik & Sistem (BCD / Optager HD4000) — a room's system tag
+             is what drives which checklist a PM borang uses for that room,
+             since a single VIR site can have rooms on different systems. -->
+        <div v-if="eqTab==='rooms' && currentProject==='vir'">
+          <div class="card" id="equip-form-rooms">
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Bilik</div>
+              <button class="btn btn-outline btn-sm" @click="resetForm('nRoom')">↺ Reset</button>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group"><label>Nama Bilik *</label><input class="form-control" v-model="nRoom.name" placeholder="cth: Bilik 1"></div>
+              <div class="form-group"><label>Jenis Sistem *</label>
+                <select class="form-control" v-model="nRoom.system">
+                  <option v-for="sys in VIR_SYSTEMS" :key="sys">{{sys}}</option>
+                </select>
+              </div>
+            </div>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addVirRoom">{{equipEditIdx.rooms!==null?'✓ Kemaskini Bilik':'+ Tambah Bilik'}}</button>
+              <button v-if="equipEditIdx.rooms!==null" class="btn btn-outline" @click="cancelEditEquip('rooms')">✕ Batal Edit</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title" style="margin:0;border:none;padding:0">Senarai Bilik</div>
+            <div class="tbl-wrap">
+              <table class="equip-table">
+                <thead><tr><th>#</th><th>Nama Bilik</th><th>Jenis Sistem</th><th>Tindakan</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r,i) in selSiteEquip.rooms||[]" :key="r._uid||i" :class="{'highlight-row':equipEditIdx.rooms===i}">
+                    <td>{{i+1}}</td><td>{{r.name}}</td>
+                    <td><span :class="'badge '+(r.system==='Optager HD4000'?'badge-blue':'badge-gray')">{{r.system}}</span></td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('rooms',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'rooms',i)" title="Padam">🗑</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!(selSiteEquip.rooms||[]).length"><td colspan="4" class="empty">Tiada bilik didaftar. Borang PM VIR akan guna senarai bilik generik (NO.1-20) tanpa sistem sehingga bilik didaftar di sini.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ====== NEW PM (multi-step) ====== -->
@@ -2007,16 +2091,44 @@ tr:hover td{background:#f9fbff}
                 <option v-for="s in (currentProject==='vir'?VIR_SITES:SITES)" :key="s.id" :value="s.id">{{s.name}}</option>
               </select>
             </div>
+            <div class="form-group" v-if="currentProject==='vir'"><label>No. Bilik VIR</label>
+              <template v-if="pmVirSiteRooms.length">
+                <select class="form-control" v-model="pm.virRoomNo" @change="onVirRoomChange">
+                  <option value="">-- Pilih --</option>
+                  <optgroup v-for="sys in VIR_SYSTEMS" :key="sys" :label="sys">
+                    <option v-for="r in pmVirSiteRooms.filter(x=>x.system===sys)" :key="r._uid" :value="r.name">{{r.name}}</option>
+                  </optgroup>
+                </select>
+                <small v-if="pm.virSystem" style="color:#006633;font-size:.75rem">Sistem: <b>{{pm.virSystem}}</b></small>
+              </template>
+              <template v-else>
+                <select class="form-control" v-model="pm.virRoomNo">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="r in VIR_ROOM_OPTIONS" :key="r">{{r}}</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="pm.virRoomNo==='Lain-lain'" class="form-control" v-model="pm.virRoomNoCustom" placeholder="Nyatakan no. bilik" style="margin-top:6px">
+                <div class="form-group" style="margin-top:8px">
+                  <label>Jenis Sistem <span class="text-muted text-sm">(bilik belum didaftar)</span></label>
+                  <select class="form-control" v-model="pm.virSystem">
+                    <option value="">-- Pilih --</option>
+                    <option v-for="sys in VIR_SYSTEMS" :key="sys">{{sys}}</option>
+                  </select>
+                </div>
+                <small style="color:#e65100;font-size:.75rem">⚠ Site ini belum ada bilik didaftar di Urus Peralatan Site &gt; Bilik &amp; Sistem. Pilih Jenis Sistem manual di atas buat sementara.</small>
+              </template>
+            </div>
             <div class="form-group">
               <label>No. Rujukan</label>
               <div style="display:flex;align-items:center;gap:0">
                 <span v-if="refNoPrefix" style="background:#e8f5e9;border:1px solid #b2d8b2;border-right:none;padding:6px 10px;border-radius:4px 0 0 4px;font-size:.85rem;color:#006633;font-weight:600;white-space:nowrap">{{refNoPrefix}}</span>
-                <input class="form-control" v-model="refNoSuffix" placeholder="001" :style="refNoPrefix?'border-radius:0 4px 4px 0;flex:1;min-width:60px':''" :disabled="!pm.siteId" :title="!pm.siteId?'Pilih site dahulu':''">
+                <input class="form-control" v-model="refNoSuffix" placeholder="001" :style="refNoPrefix?'border-radius:0 4px 4px 0;flex:1;min-width:60px':''" :disabled="currentProject==='vir'?(!pm.siteId||!pm.virRoomNo):!pm.siteId" :title="!pm.siteId?'Pilih site dahulu':(currentProject==='vir'&&!pm.virRoomNo?'Pilih bilik dahulu':'')">
               </div>
               <small v-if="refNoDuplicate" style="color:#c62828;font-size:.75rem;font-weight:600">⚠️ No. rujukan <b>{{pm.refNo}}</b> sudah wujud dalam rekod. Sila guna nombor lain.</small>
               <small v-else-if="refNoGapWarning" style="color:#e65100;font-size:.75rem;font-weight:600">⚠️ No. <b>{{nextRefNoSuggestion}}</b> untuk site ini belum digunakan — guna <b>{{refNoSuffix}}</b> akan tinggalkan gap. Cadangan seterusnya: <b>{{nextRefNoSuggestion}}</b>.</small>
               <small v-else-if="pm.refNo" style="color:#006633;font-size:.75rem">No. Rujukan: <b>{{pm.refNo}}</b></small>
               <small v-else-if="!pm.siteId" style="color:#888;font-size:.75rem">Pilih site dahulu untuk jana no. rujukan</small>
+              <small v-else-if="currentProject==='vir' && !pm.virRoomNo" style="color:#888;font-size:.75rem">Pilih bilik dahulu untuk jana no. rujukan (setiap bilik ada nombor sendiri)</small>
             </div>
             <div class="form-group">
               <label>Bulan</label>
@@ -2057,14 +2169,6 @@ tr:hover td{background:#f9fbff}
                 <option v-for="c in ROOT_CAUSE_CATEGORIES" :key="c">{{c}}</option>
               </select>
             </div>
-            <div class="form-group" v-if="currentProject==='vir'"><label>No. Bilik VIR</label>
-              <select class="form-control" v-model="pm.virRoomNo">
-                <option value="">-- Pilih --</option>
-                <option v-for="r in VIR_ROOM_OPTIONS" :key="r">{{r}}</option>
-                <option value="Lain-lain">Lain-lain</option>
-              </select>
-              <input v-if="pm.virRoomNo==='Lain-lain'" class="form-control" v-model="pm.virRoomNoCustom" placeholder="Nyatakan no. bilik" style="margin-top:6px">
-            </div>
           </div>
           <div class="flex gap-8">
             <button class="btn btn-primary" @click="loadPMEquip" :disabled="!pm.siteId">Seterusnya →</button>
@@ -2074,8 +2178,8 @@ tr:hover td{background:#f9fbff}
 
         <!-- STEP 2: VIR Checklist -->
         <div v-if="pmStep===2 && currentProject==='vir'" class="card">
-          <div class="card-title">✅ Senarai Semak Peralatan VIR</div>
-          <template v-for="section in ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam']" :key="section">
+          <div class="card-title">✅ Senarai Semak Peralatan VIR <span v-if="pm.virSystem" style="font-weight:400;color:#888;font-size:.8rem">({{pm.virSystem}})</span></div>
+          <template v-for="section in virSectionsFor(pm.virSystem)" :key="section">
             <div style="font-weight:700;color:#006633;font-size:.85rem;padding:10px 0 6px;border-bottom:2px solid #006633;margin-bottom:8px;margin-top:14px">
               {{section}}
             </div>
@@ -2084,7 +2188,10 @@ tr:hover td{background:#f9fbff}
                 <thead><tr><th style="width:40px">#</th><th>Item</th><th style="width:100px;text-align:center">Status</th><th>Nota</th></tr></thead>
                 <tbody>
                   <template v-for="(item,idx) in pm.virItems.filter(x=>x.section===section)" :key="item.key">
-                    <tr>
+                    <tr v-if="item.isHeader">
+                      <td colspan="4" style="font-weight:700;background:#f0f7f2;color:#006633;padding:6px 8px">{{item.label}}</td>
+                    </tr>
+                    <tr v-else>
                       <td>{{idx+1}}</td>
                       <td>{{item.label}}</td>
                       <td style="text-align:center">
@@ -2312,7 +2419,7 @@ tr:hover td{background:#f9fbff}
         <!-- STEP 5: Support + Signatures + Submit -->
         <div v-if="pmStep===5 && currentProject!=='vir'">
           <div class="card">
-            <div class="card-title">🧹 Peralatan Sokongan</div>
+            <div class="card-title">🧹 Perkara Lain-Lain</div>
             <div class="tbl-wrap">
               <table>
                 <thead><tr><th>Perkara</th><th>Status</th><th>Nota</th></tr></thead>
@@ -2529,14 +2636,14 @@ tr:hover td{background:#f9fbff}
           <div class="pm-classification">TERHAD &nbsp;—&nbsp; UNTUK KEGUNAAN RASMI SAHAJA</div>
 
           <!-- TITLE BAR -->
-          <div class="pm-corp-title" v-if="viewPM?.project==='vir'">BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR &nbsp;|&nbsp; SURUHANJAYA PENCEGAH RASUAH MALAYSIA (SPRM)</div>
-          <div class="pm-corp-title" v-else>BORANG PENYELENGGARAAN BERJADUAL SISTEM CCTV &nbsp;|&nbsp; SURUHANJAYA PENCEGAH RASUAH MALAYSIA (SPRM)</div>
+          <div class="pm-corp-title" v-if="viewPM?.project==='vir'">BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR &nbsp;|&nbsp; SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)</div>
+          <div class="pm-corp-title" v-else>BORANG PENYELENGGARAAN BERJADUAL SISTEM CCTV &nbsp;|&nbsp; SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)</div>
 
           <!-- INFO BLOCK -->
           <div class="pm-corp-info">
             <div class="pm-info-cell"><b>Cawangan / Site:</b> {{viewPM?.siteName}}</div>
             <div class="pm-info-cell"><b>Tarikh Penyelenggaraan:</b> {{viewPM?.visitDate||'—'}}</div>
-            <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}}</div>
+            <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}} <span v-if="viewPM?.virSystem" style="color:#006633">({{viewPM.virSystem}})</span></div>
             <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{viewPM?.month?MONTHS[viewPM.month-1]:'—'}} {{viewPM?.year}}</div>
             <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#006633">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
             <div class="pm-info-cell pm-info-full" v-if="viewPM?.maintType==='PM'"><b>Penyelenggaraan Ke-:</b>
@@ -2556,27 +2663,40 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
 
-          <!-- VIR CHECKLIST VIEW -->
+          <!-- VIR CHECKLIST VIEW — 2-column layout (mirrors the original
+               paper form's half-page-per-column design, since a granular
+               checklist this long would run to many extra pages as a
+               single column) -->
           <template v-if="viewPM?.project==='vir'">
-            <template v-for="section in ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam']" :key="section">
-              <div class="pm-section-hdr">{{section}}</div>
-              <table class="pm-tbl">
-                <thead><tr><th style="width:4%">No.</th><th>Item</th><th style="width:10%;text-align:center">Status</th><th style="width:30%">Nota</th></tr></thead>
-                <tbody>
-                  <template v-for="(item,idx) in (viewPM?.virItems||[]).filter(x=>x.section===section)" :key="item.key">
-                    <tr>
-                      <td>{{idx+1}}</td>
-                      <td>{{item.label}}</td>
-                      <td style="text-align:center">
-                        <span v-if="item.status==='ok'" style="color:green;font-weight:700">✅ Baik</span>
-                        <span v-else-if="item.status==='nok'" style="color:red;font-weight:700">❌ Rosak</span>
-                        <span v-else style="color:#888">— N/A</span>
-                      </td>
-                      <td>{{item.nota||'—'}}</td>
-                    </tr>
-                  </template>
-                </tbody>
-              </table>
+            <template v-for="section in virSectionsFor(viewPM?.virSystem)" :key="section">
+              <div class="pm-section-hdr pm-vir-sec">{{section}}</div>
+              <div class="pm-vir-2col">
+                <table class="pm-tbl" v-for="(col,ci) in virChecklistCols(section)" :key="ci">
+                  <thead><tr><th style="width:4%"></th><th>Item</th><th style="width:12%;text-align:center">Status</th><th style="width:14%">Nota</th></tr></thead>
+                  <tbody>
+                    <template v-for="(item,idx) in col.items" :key="item.key">
+                      <tr v-if="item.isHeader">
+                        <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#e8f4ee">{{item.label}}</td>
+                        <td style="text-align:center;white-space:nowrap;background:#e8f4ee;font-size:7pt;color:#555;font-weight:400">
+                          <template v-if="idx+1<col.items.length && !col.items[idx+1].isHeader">
+                            <span style="color:#155724">&#10003;</span>&nbsp;/&nbsp;<span style="color:#721c24">&#10007;</span>
+                          </template>
+                        </td>
+                        <td style="background:#e8f4ee"></td>
+                      </tr>
+                      <tr v-else>
+                        <td style="white-space:nowrap;text-align:center;color:#006633">&#8211;</td>
+                        <td>{{item.label}}</td>
+                        <td style="text-align:center;white-space:nowrap">
+                          <span class="pm-chk-box"></span>
+                          <span class="pm-chk-box"></span>
+                        </td>
+                        <td>{{item.nota}}</td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
             </template>
           </template>
 
@@ -2727,7 +2847,12 @@ tr:hover td{background:#f9fbff}
           </div>
 
           <!-- SIGNATURES -->
-          <div class="pm-sign-wrap">
+          <!-- VIR uses 2 boxes (Kontraktor + one merged SPRM box, since VIR
+               sites only need a single SPRM sign-off regardless of whether
+               that's Negeri/Cawangan or HQ); CCTV keeps the original 3
+               separate boxes since its contract requires a distinct
+               Negeri/Cawangan AND HQ sign-off. -->
+          <div class="pm-sign-wrap" :class="{'pm-sign-wrap-2':viewPM?.project==='vir'}">
             <div class="pm-sign-box">
               <h4>WAKIL KONTRAKTOR</h4>
               <p class="pm-sign-desc">Saya sebagai Wakil Kontraktor telah menjalankan kerja-kerja penyelenggaraan seperti yang tertakluk di dalam kontrak.</p>
@@ -2737,14 +2862,14 @@ tr:hover td{background:#f9fbff}
               <p><b>Tarikh:</b> {{viewPM?.contractorTarikh||'................................................'}}</p>
             </div>
             <div class="pm-sign-box">
-              <h4>WAKIL SPRM — NEGERI / CAWANGAN</h4>
+              <h4>{{viewPM?.project==='vir' ? 'WAKIL SPRM — NEGERI / CAWANGAN / HQ' : 'WAKIL SPRM — NEGERI / CAWANGAN'}}</h4>
               <p class="pm-sign-desc">Saya berpuas hati dengan kerja-kerja penyelenggaraan yang telah dilaksanakan oleh pihak kontraktor seperti yang tertakluk di dalam kontrak.</p>
               <div class="sig-space"></div>
               <p><b>Nama:</b> {{viewPM?.clientName||'................................................'}}</p>
               <p><b>Jawatan:</b> {{viewPM?.clientJawatan||'................................................'}}</p>
               <p><b>Tarikh:</b> {{viewPM?.clientTarikh||'................................................'}}</p>
             </div>
-            <div class="pm-sign-box">
+            <div class="pm-sign-box" v-if="viewPM?.project!=='vir'">
               <h4>WAKIL SPRM — IBU PEJABAT (HQ)</h4>
               <p class="pm-sign-desc">Saya berpuas hati dengan kerja-kerja penyelenggaraan yang telah dilaksanakan oleh pihak kontraktor seperti yang tertakluk di dalam kontrak.</p>
               <div class="sig-space"></div>
@@ -3127,7 +3252,10 @@ tr:hover td{background:#f9fbff}
               </div>
               <div style="margin-bottom:4px">
                 <span v-for="m in t.members" :key="m.uid" class="team-member-chip">
-                  <span style="width:18px;height:18px;border-radius:50%;background:#003366;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0">{{m.name?.charAt(0)||'?'}}</span>
+                  <span style="width:18px;height:18px;border-radius:50%;background:#003366;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.65rem;font-weight:700;flex-shrink:0;overflow:hidden">
+                    <img v-if="staffPhoto(m.uid)" :src="staffPhoto(m.uid)" alt="" style="width:100%;height:100%;object-fit:cover">
+                    <span v-else>{{m.name?.charAt(0)||'?'}}</span>
+                  </span>
                   {{m.name}}
                 </span>
                 <span v-if="!t.members?.length" style="color:#aaa;font-size:.82rem;font-style:italic">Tiada anggota ditetapkan</span>
@@ -4771,6 +4899,7 @@ createApp({
     const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''});
     const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',nota:'',accessUser:'',accessPw:''});
+    const nRoom = reactive({name:'', system:'BCD'});
     const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''});
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
@@ -4782,52 +4911,502 @@ createApp({
 
     // ---- PM form state ----
     // VIR checklist master — each item has label, okCell, nokCell (for Excel injection)
-    const VIR_CHECKLIST_TEMPLATE = [
-      // Sistem Rakaman Audio/Video
-      {key:'bcd_dvd',    label:'BCD USA — DVD-1150',                         section:'Sistem Rakaman Audio/Video', okCell:'E18',  nokCell:'G18'},
-      {key:'bcd_vc16b',  label:'BCD USA — VC-16b',                           section:'Sistem Rakaman Audio/Video', okCell:'E34',  nokCell:'G34'},
-      {key:'bcd_tc100',  label:'BCD USA — TC-100',                           section:'Sistem Rakaman Audio/Video', okCell:'E56',  nokCell:'G56'},
-      {key:'bcd_btn',    label:'BCD USA — Buttons',                          section:'Sistem Rakaman Audio/Video', okCell:'E170', nokCell:'G170'},
-      {key:'quad',       label:'Visiontec 4CH Color Quad (CQC-4M)',          section:'Sistem Rakaman Audio/Video', okCell:'M174', nokCell:'O174'},
-      {key:'dlink_sw',   label:'4-port D-Link Network Switch',               section:'Sistem Rakaman Audio/Video', okCell:'E240', nokCell:'G240'},
-      {key:'countdown',  label:'Count Down Timer for Recording Alert',       section:'Sistem Rakaman Audio/Video', okCell:'M240', nokCell:'O240'},
-      {key:'mixer',      label:'Behringer PA Mixer — MIC2200',               section:'Sistem Rakaman Audio/Video', okCell:'E262', nokCell:'G262'},
-      {key:'lcd32',      label:'LCD 32" TV',                                 section:'Sistem Rakaman Audio/Video', okCell:'M264', nokCell:'O264'},
-      {key:'av_tx',      label:'Nyrius / Sarowin AV Transmitter/Receiver',   section:'Sistem Rakaman Audio/Video', okCell:'E284', nokCell:'G284'},
-      {key:'av_sel',     label:'Nyrius / Nippon AV-42 Channel Selector',     section:'Sistem Rakaman Audio/Video', okCell:'E294', nokCell:'G294'},
-      {key:'camera',     label:'Panasonic WV-CW500 / Centrix VV80IR',        section:'Sistem Rakaman Audio/Video', okCell:'E304', nokCell:'G304'},
-      {key:'lcd17',      label:'17" Square LCD Monitor',                     section:'Sistem Rakaman Audio/Video', okCell:'M304', nokCell:'O304'},
-      {key:'ups',        label:'UPS 3kVA',                                   section:'Sistem Rakaman Audio/Video', okCell:'E312', nokCell:'G312'},
-      {key:'cat5e',      label:'CAT-5e Patch Cord',                          section:'Sistem Rakaman Audio/Video', okCell:'M312', nokCell:'O312'},
-      {key:'strobe',     label:'Strobe Light',                               section:'Sistem Rakaman Audio/Video', okCell:'E326', nokCell:'G326'},
-      {key:'digiclock',  label:'Digital Clock',                              section:'Sistem Rakaman Audio/Video', okCell:'M326', nokCell:'O326'},
-      {key:'eq_rack',    label:'Equipment Rack',                             section:'Sistem Rakaman Audio/Video', okCell:'E336', nokCell:'G336'},
-      // Skop Kerja Sivil
-      {key:'gypsum',     label:'Gypsum Board Partition Wall',                section:'Skop Kerja Sivil', okCell:'E352', nokCell:'G352'},
-      {key:'carpet',     label:'Tile Carpet',                                section:'Skop Kerja Sivil', okCell:'M352', nokCell:'O352'},
-      {key:'acoustic_p', label:'Acoustic Panel',                             section:'Skop Kerja Sivil', okCell:'E362', nokCell:'G362'},
-      {key:'acoustic_c', label:'Acoustic Fibreglass Ceiling Board',          section:'Skop Kerja Sivil', okCell:'M362', nokCell:'O362'},
-      {key:'ac_door',    label:'Acoustic Door',                              section:'Skop Kerja Sivil', okCell:'E380', nokCell:'G380'},
-      {key:'eq_cab',     label:'Equipment Cabinet',                          section:'Skop Kerja Sivil', okCell:'M380', nokCell:'O380'},
-      {key:'table',      label:'Discussion Table',                           section:'Skop Kerja Sivil', okCell:'E398', nokCell:'G398'},
-      {key:'chairs',     label:'Chairs',                                     section:'Skop Kerja Sivil', okCell:'M398', nokCell:'O398'},
-      {key:'bcd_faceplate',label:'BCD Button Faceplate',                    section:'Skop Kerja Sivil', okCell:'E408', nokCell:'G408'},
-      {key:'signage',    label:'Acrylic Door Signage',                       section:'Skop Kerja Sivil', okCell:'M408', nokCell:'O408'},
-      {key:'mirror',     label:'Stainless Steel Mirror / Convex Mirror',     section:'Skop Kerja Sivil', okCell:'E420', nokCell:'G420'},
-      {key:'light_t5',   label:'T5 Fluorescent Light',                      section:'Skop Kerja Sivil', okCell:'M420', nokCell:'O420'},
-      {key:'socket',     label:'13A Switch Socket Outlet',                   section:'Skop Kerja Sivil', okCell:'E430', nokCell:'G430'},
-      {key:'ind_light',  label:'Indication Light (IN USE)',                  section:'Skop Kerja Sivil', okCell:'M430', nokCell:'O430'},
-      {key:'rg59',       label:'RG59 for Audio/Video Use',                   section:'Skop Kerja Sivil', okCell:'E440', nokCell:'G440'},
-      {key:'cat6_fp',    label:'CAT-6 Faceplate',                           section:'Skop Kerja Sivil', okCell:'M440', nokCell:'O440'},
-      {key:'mic',        label:'AKG-C52 / B-5 Microphone',                  section:'Skop Kerja Sivil', okCell:'E452', nokCell:'G452'},
-      {key:'emg_light',  label:'Emergency Light',                           section:'Skop Kerja Sivil', okCell:'M452', nokCell:'O452'},
-      {key:'db_box',     label:'Single Phase DB Box',                       section:'Skop Kerja Sivil', okCell:'E464', nokCell:'G464'},
-      // Mekanikal & Awam
-      {key:'split_ac',   label:'Split Aircond',                              section:'Mekanikal & Awam', okCell:'E476', nokCell:'G476'},
-      {key:'central_ac', label:'Centralized Aircond',                       section:'Mekanikal & Awam', okCell:'M476', nokCell:'O476'},
-      {key:'pest',       label:'Pest Control',                               section:'Mekanikal & Awam', okCell:'E492', nokCell:'G492'},
-      {key:'cleaning',   label:'Cleaning Service',                           section:'Mekanikal & Awam', okCell:'M492', nokCell:'O492'},
+    // VIR sites run one of two distinct systems (BCD USA — the original
+    // hardware-based recorder, or Optager HD4000 — Daya One's own
+    // PC/Windows-based replacement). Each has a different checklist since
+    // the physical components differ; which one applies is determined by
+    // the room selected in Step 1 (rooms are tagged BCD/Optager per-site in
+    // Urus Peralatan Site, since a single site can have mixed rooms).
+    const VIR_SYSTEMS = ['BCD', 'Optager HD4000'];
+    const VIR_CHECKLIST_SECTIONS = {
+      'BCD': ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam'],
+      'Optager HD4000': ['Perkakasan (Hardware)','Perisian (Software)','Rangkaian & Sokongan'],
+    };
+    // Expanded from the real "Senarai Pemeriksaan dan Penyelenggaraan VIR"
+    // paper form (SPRM/KUL/VIR/25/004) — every numbered item's individual
+    // sub-checks are now their own checkable row, grouped under `isHeader`
+    // divider rows (pure labels, no checkbox) matching the form's own
+    // numbered-item / roman-numeral-subsection / dash-item structure.
+    // `okCell`/`nokCell` (legacy Excel-template cell injection, see
+    // exportExcelVIR) stay attached ONLY to the header row that corresponds
+    // to the ORIGINAL single-line item those cells were mapped to — the
+    // export function derives that header's effective pass/fail from
+    // whether any of its now-visible descendant checks are marked NOK,
+    // instead of a hardcoded always-OK value.
+    const SEC_AV = 'Sistem Rakaman Audio/Video', SEC_SIVIL = 'Skop Kerja Sivil', SEC_MEK = 'Mekanikal & Awam';
+    const VIR_CHECKLIST_TEMPLATE_BCD = [
+      // ── 1. BCD USA ──
+      {key:'h_bcd', label:'1.  BCD USA', section:SEC_AV, isHeader:true},
+      {key:'h_bcd_dvd', label:'i. DVD-1150', section:SEC_AV, isHeader:true, okCell:'E18', nokCell:'G18'},
+      {key:'bcd_dvd_kuantiti', label:'Kuantiti (4 unit)', section:SEC_AV},
+      {key:'bcd_dvd_operasi', label:'Operasi (4 unit)', section:SEC_AV},
+      {key:'bcd_dvd_ujian', label:'Ujian rakaman (1 minit)', section:SEC_AV},
+      {key:'bcd_dvd_hasil', label:'Hasil ujian rakaman', section:SEC_AV},
+      {key:'bcd_dvd_adapter', label:'Programming adapter (1 unit / bilik)', section:SEC_AV},
+      {key:'bcd_dvd_manual', label:'Manual DVD-1150', section:SEC_AV},
+      {key:'h_bcd_vc16b', label:'ii. VC-16b', section:SEC_AV, isHeader:true, okCell:'E34', nokCell:'G34'},
+      {key:'vc16b_kuantiti', label:'Kuantiti (1 unit)', section:SEC_AV},
+      {key:'vc16b_db25', label:'DB-25 to Timer / Wall Button / Rack Button', section:SEC_AV},
+      {key:'vc16b_rj11', label:'RJ-11 to DB-9 converter to Deck 1', section:SEC_AV},
+      {key:'vc16b_db9gc', label:'DB-9 gender changer', section:SEC_AV},
+      {key:'vc16b_operasi', label:'Operasi (1 unit)', section:SEC_AV},
+      {key:'vc16b_manual', label:'Manual VC-16b', section:SEC_AV},
+      {key:'vc16b_label', label:'Label', section:SEC_AV},
+      {key:'vc16b_adapter_v', label:'Adapter voltage', section:SEC_AV},
+      {key:'vc16b_serial', label:'No. Siri :', section:SEC_AV},
+      {key:'h_bcd_tc100', label:'iii. TC-100', section:SEC_AV, isHeader:true, okCell:'E56', nokCell:'G56'},
+      {key:'tc100_kuantiti', label:'Kuantiti (2 unit)', section:SEC_AV},
+      {key:'tc100_db9gc', label:'DB-9 gender changer', section:SEC_AV},
+      {key:'tc100_db9rj11', label:'DB-9 to RJ11 converter to Splitter', section:SEC_AV},
+      {key:'tc100_rj11split', label:'RJ-11 splitter', section:SEC_AV},
+      {key:'tc100_rj11d5', label:'RJ-11 to Deck 5', section:SEC_AV},
+      {key:'tc100_rj11d6', label:'RJ-11 to Deck 6', section:SEC_AV},
+      {key:'tc100_lain', label:'Lain-lain', section:SEC_AV},
+      {key:'h_bcd_btn', label:'iv. Buttons', section:SEC_AV, isHeader:true, okCell:'E170', nokCell:'G170'},
+      {key:'btn_kuantiti', label:'Kuantiti (6 unit)', section:SEC_AV},
+      {key:'btn_rec', label:'Operasi (Rec Button)', section:SEC_AV},
+      {key:'btn_stop1', label:'Operasi (Stop Button)', section:SEC_AV},
+      {key:'btn_eject', label:'Operasi (Eject Button)', section:SEC_AV},
+      {key:'btn_final', label:'Operasi (Final Button)', section:SEC_AV},
+      {key:'btn_stop2', label:'Operasi (Stop Button)', section:SEC_AV},
+      {key:'btn_play', label:'Operasi (Play Button)', section:SEC_AV},
+      {key:'btn_label', label:'Label', section:SEC_AV},
+      {key:'btn_lain', label:'Lain-lain', section:SEC_AV},
+      {key:'h_deck5', label:'DECK 5', section:SEC_AV, isHeader:true},
+      {key:'d5_switch', label:'Switch (all down) except #4 UP', section:SEC_AV},
+      {key:'d5_vers', label:'Vers (Deck 5)', section:SEC_AV},
+      {key:'d5_dsiz', label:'Dsiz : 0 / Burn 145 / Dcol 175 / Dbak 0', section:SEC_AV},
+      {key:'d5_operasi', label:'Operasi (1 unit)', section:SEC_AV},
+      {key:'d5_manual', label:'Manual VC-16b', section:SEC_AV},
+      {key:'d5_label', label:'Label', section:SEC_AV},
+      {key:'d5_adapter_v', label:'Adapter voltage', section:SEC_AV},
+      {key:'d5_serial', label:'No. Siri :', section:SEC_AV},
+      {key:'h_deck6', label:'DECK 6', section:SEC_AV, isHeader:true},
+      {key:'d6_switch', label:'Switch (all down) except #4 UP', section:SEC_AV},
+      {key:'d6_vers', label:'Vers (Deck 6)', section:SEC_AV},
+      {key:'d6_dsiz', label:'Dsiz : 0 / Burn 145 / Dcol 175 / Dbak 0', section:SEC_AV},
+      {key:'d6_operasi', label:'Operasi (1 unit)', section:SEC_AV},
+      {key:'d6_manual', label:'Manual VC-16b', section:SEC_AV},
+      {key:'d6_label', label:'Label', section:SEC_AV},
+      {key:'d6_adapter_v', label:'Adapter voltage', section:SEC_AV},
+      {key:'d6_serial', label:'No. Siri :', section:SEC_AV},
+      {key:'h_deck1', label:'DECK 1', section:SEC_AV, isHeader:true},
+      {key:'d1_vers_before', label:'Vers (Before Update): D20127B-V2.8', section:SEC_AV},
+      {key:'d1_flash', label:'Flashing Process (if required)', section:SEC_AV},
+      {key:'d1_vers_after', label:'Vers (After Update)', section:SEC_AV},
+      {key:'d1_decn', label:'DECN 1', section:SEC_AV},
+      {key:'d1_grun', label:'GRUN 1', section:SEC_AV},
+      {key:'d1_save', label:'Save / DECK : ... / GRUP : ...', section:SEC_AV},
+      {key:'d1_switch', label:'Switch (all down)', section:SEC_AV},
+      {key:'d1_db9in', label:'DB9 serial in from VC-16b', section:SEC_AV},
+      {key:'d1_db9out', label:'DB9 serial out to Deck 2', section:SEC_AV},
+      {key:'d1_rcavin', label:'RCA Video In from TC-100 (Deck 5)', section:SEC_AV},
+      {key:'d1_rcavout', label:'RCA Video Out to Quad (Port 1)', section:SEC_AV},
+      {key:'d1_rcaainr', label:'RCA Audio In (Right) from MIC-2200', section:SEC_AV},
+      {key:'d1_rcaainl', label:'RCA Audio In (Left) from MIC-2200', section:SEC_AV},
+      {key:'d1_cdopen', label:'CD Deck Open/Close', section:SEC_AV},
+      {key:'d1_fluor', label:'Fluorescent Display', section:SEC_AV},
+      {key:'d1_vidinput', label:'Current Video Input -> Composite', section:SEC_AV},
+      {key:'d1_rectime', label:'Record Time / Qual (2)', section:SEC_AV},
+      {key:'d1_keyinhibit', label:'Key Inhibit -> Off', section:SEC_AV},
+      {key:'d1_erase', label:'Erase DVD (Enter = Erase)', section:SEC_AV},
+      {key:'d1_label', label:'Label', section:SEC_AV},
+      {key:'d1_serial', label:'No. Siri :', section:SEC_AV},
+      {key:'h_deck2', label:'DECK 2', section:SEC_AV, isHeader:true},
+      {key:'d2_vers_before', label:'Vers (Before Update): D20127B-V2.8', section:SEC_AV},
+      {key:'d2_flash', label:'Flashing Process (if required)', section:SEC_AV},
+      {key:'d2_vers_after', label:'Vers (After Update)', section:SEC_AV},
+      {key:'d2_decn', label:'DECN 2', section:SEC_AV},
+      {key:'d2_grun', label:'GRUN 1', section:SEC_AV},
+      {key:'d2_save', label:'Save / DECK : ... / GRUP : ...', section:SEC_AV},
+      {key:'d2_switch', label:'Switch (all down)', section:SEC_AV},
+      {key:'d2_db9in', label:'DB9 serial in from Deck 1', section:SEC_AV},
+      {key:'d2_db9out', label:'DB9 serial out to Deck 3', section:SEC_AV},
+      {key:'d2_rcavin', label:'RCA Video In from TC-100 (Deck 6)', section:SEC_AV},
+      {key:'d2_rcavout', label:'RCA Video Out to Quad (Port 2)', section:SEC_AV},
+      {key:'d2_rcaainr', label:'RCA Audio In (Right) from MIC-2200', section:SEC_AV},
+      {key:'d2_rcaainl', label:'RCA Audio In (Left) from MIC-2200', section:SEC_AV},
+      {key:'d2_cdopen', label:'CD Deck Open/Close', section:SEC_AV},
+      {key:'d2_fluor', label:'Fluorescent Display', section:SEC_AV},
+      {key:'d2_vidinput', label:'Current Video Input -> Composite', section:SEC_AV},
+      {key:'d2_rectime', label:'Record Time / Qual (2)', section:SEC_AV},
+      {key:'d2_rectarget', label:'Record Target -> DVD', section:SEC_AV},
+      {key:'d2_erase', label:'Erase DVD (Enter = Erase)', section:SEC_AV},
+      {key:'d2_label', label:'Label', section:SEC_AV},
+      {key:'d2_serial', label:'No. Siri :', section:SEC_AV},
+      {key:'h_deck3', label:'DECK 3', section:SEC_AV, isHeader:true},
+      {key:'d3_vers_before', label:'Vers (Before Update): D20127B-V2.8', section:SEC_AV},
+      {key:'d3_flash', label:'Flashing Process (if required)', section:SEC_AV},
+      {key:'d3_vers_after', label:'Vers (After Update)', section:SEC_AV},
+      {key:'d3_decn', label:'DECN 3', section:SEC_AV},
+      {key:'d3_grun', label:'GRUN 1', section:SEC_AV},
+      {key:'d3_save', label:'Save / DECK : ... / GRUP : ...', section:SEC_AV},
+      {key:'d3_switch', label:'Switch (all down)', section:SEC_AV},
+      {key:'d3_db9in', label:'DB9 serial in from Deck 2', section:SEC_AV},
+      {key:'d3_db9out', label:'DB9 serial out to Deck 4', section:SEC_AV},
+      {key:'d3_rcavin', label:'RCA Video In from TC-100 (Deck 6)', section:SEC_AV},
+      {key:'d3_rcavout', label:'RCA Video Out to Quad (Port 3)', section:SEC_AV},
+      {key:'d3_rcaainr', label:'RCA Audio In (Right) from MIC-2200', section:SEC_AV},
+      {key:'d3_rcaainl', label:'RCA Audio In (Left) from MIC-2200', section:SEC_AV},
+      {key:'d3_cdopen', label:'CD Deck Open/Close', section:SEC_AV},
+      {key:'d3_fluor', label:'Fluorescent Display', section:SEC_AV},
+      {key:'d3_vidinput', label:'Current Video Input -> Composite', section:SEC_AV},
+      {key:'d3_rectime', label:'Record Time / Qual (2)', section:SEC_AV},
+      {key:'d3_rectarget', label:'Record Target -> DVD', section:SEC_AV},
+      {key:'d3_erase', label:'Erase DVD (Enter = Erase)', section:SEC_AV},
+      {key:'d3_label', label:'Label', section:SEC_AV},
+      {key:'d3_serial', label:'No. Siri :', section:SEC_AV},
+      {key:'h_deck4', label:'DECK 4', section:SEC_AV, isHeader:true},
+      {key:'d4_vers_before', label:'Vers (Before Update): D20127B-V2.8', section:SEC_AV},
+      {key:'d4_flash', label:'Flashing Process (if required)', section:SEC_AV},
+      {key:'d4_vers_after', label:'Vers (After Update)', section:SEC_AV},
+      {key:'d4_decn', label:'DECN 4', section:SEC_AV},
+      {key:'d4_grun', label:'GRUN 2', section:SEC_AV},
+      {key:'d4_save', label:'Save / DECK : ... / GRUP : ...', section:SEC_AV},
+      {key:'d4_switch', label:'Switch (all down)', section:SEC_AV},
+      {key:'d4_db9in', label:'DB9 serial in from Deck 3', section:SEC_AV},
+      {key:'d4_db9out', label:'DB9 serial out to Deck 5', section:SEC_AV},
+      {key:'d4_rcavin', label:'RCA Video In from TC-100 (Deck 6)', section:SEC_AV},
+      {key:'d4_rcavout', label:'RCA Video Out to Quad (Port 4)', section:SEC_AV},
+      {key:'d4_rcaainr', label:'RCA Audio In (Right) from MIC-2200', section:SEC_AV},
+      {key:'d4_rcaainl', label:'RCA Audio In (Left) from MIC-2200', section:SEC_AV},
+      {key:'d4_cdopen', label:'CD Deck Open/Close', section:SEC_AV},
+      {key:'d4_fluor', label:'Fluorescent Display', section:SEC_AV},
+      {key:'d4_vidinput', label:'Current Video Input -> Composite', section:SEC_AV},
+      {key:'d4_rectime', label:'Record Time / Qual (2)', section:SEC_AV},
+      {key:'d4_rectarget', label:'Record Target -> DVD', section:SEC_AV},
+      {key:'d4_erase', label:'Erase DVD (Enter = Erase)', section:SEC_AV},
+      {key:'d4_label', label:'Label', section:SEC_AV},
+      {key:'d4_serial', label:'No. Siri :', section:SEC_AV},
+      // ── 2. Visiontec 4CH Color Quad (CQC-4M) / Adv 4 Way Quad ──
+      {key:'h_quad', label:'2.  Visiontec 4CH Color Quad (CQC-4M) / Adv 4 Way Quad', section:SEC_AV, isHeader:true, okCell:'M174', nokCell:'O174'},
+      {key:'h_quad1', label:'QUAD 1', section:SEC_AV, isHeader:true},
+      {key:'h_quad1_sys', label:'i. System Set', section:SEC_AV, isHeader:true},
+      {key:'q1_time', label:'Time : Set to current time / date', section:SEC_AV},
+      {key:'q1_format', label:'Format : Asia [YYYY/MM/DD]', section:SEC_AV},
+      {key:'q1_livetime', label:'Live Time Disp : Non', section:SEC_AV},
+      {key:'q1_border', label:'Border Disp : Gray', section:SEC_AV},
+      {key:'q1_backcolor', label:'Back Color : Black', section:SEC_AV},
+      {key:'q1_buzzer', label:'Buzzer : Off', section:SEC_AV},
+      {key:'q1_dimension', label:'Dimension : 800 x 600', section:SEC_AV},
+      {key:'q1_freeze', label:'Freeze Time : 010 Sec', section:SEC_AV},
+      {key:'q1_tvformat', label:'TV Format : PAL', section:SEC_AV},
+      {key:'q1_operasi', label:'Operasi', section:SEC_AV},
+      {key:'q1_adapter_v', label:'Adapter voltage', section:SEC_AV},
+      {key:'q1_remote', label:'Remote Control', section:SEC_AV},
+      {key:'q1_battery_v', label:'Battery voltage', section:SEC_AV},
+      {key:'h_quad2', label:'QUAD 2', section:SEC_AV, isHeader:true},
+      {key:'h_quad2_sys', label:'i. System Set', section:SEC_AV, isHeader:true},
+      {key:'q2_time', label:'Time : Set to current time / date', section:SEC_AV},
+      {key:'q2_format', label:'Format : Asia [YYYY/MM/DD]', section:SEC_AV},
+      {key:'q2_livetime', label:'Live Time Disp : Non', section:SEC_AV},
+      {key:'q2_border', label:'Border Disp : Gray', section:SEC_AV},
+      {key:'q2_backcolor', label:'Back Color : Black', section:SEC_AV},
+      {key:'q2_buzzer', label:'Buzzer : Off', section:SEC_AV},
+      {key:'q2_dimension', label:'Dimension : 800 x 600', section:SEC_AV},
+      {key:'q2_freeze', label:'Freeze Time : 010 Sec', section:SEC_AV},
+      {key:'q2_tvformat', label:'TV Format : PAL', section:SEC_AV},
+      {key:'q2_operasi', label:'Operasi', section:SEC_AV},
+      {key:'q2_adapter_v', label:'Adapter voltage', section:SEC_AV},
+      {key:'q2_remote', label:'Remote Control', section:SEC_AV},
+      {key:'q2_battery_v', label:'Battery voltage', section:SEC_AV},
+      {key:'h_quad3', label:'QUAD 3', section:SEC_AV, isHeader:true},
+      {key:'h_quad3_sys', label:'i. System Set', section:SEC_AV, isHeader:true},
+      {key:'q3_time', label:'Time : Set to current time / date', section:SEC_AV},
+      {key:'q3_format', label:'Format : Asia [YYYY/MM/DD]', section:SEC_AV},
+      {key:'q3_livetime', label:'Live Time Disp : Non', section:SEC_AV},
+      {key:'q3_border', label:'Border Disp : Gray', section:SEC_AV},
+      {key:'q3_backcolor', label:'Back Color : Black', section:SEC_AV},
+      {key:'q3_buzzer', label:'Buzzer : Off', section:SEC_AV},
+      {key:'q3_dimension', label:'Dimension : 800 x 600', section:SEC_AV},
+      {key:'q3_freeze', label:'Freeze Time : 010 Sec', section:SEC_AV},
+      {key:'q3_tvformat', label:'TV Format : PAL', section:SEC_AV},
+      {key:'q3_operasi', label:'Operasi', section:SEC_AV},
+      {key:'q3_adapter_v', label:'Adapter voltage', section:SEC_AV},
+      {key:'q3_remote', label:'Remote Control', section:SEC_AV},
+      {key:'q3_battery_v', label:'Battery voltage', section:SEC_AV},
+
+      // ── 3. 4-port D-Link Network Switch ──
+      {key:'h_dlink', label:'3.  4-port D-Link Network Switch', section:SEC_AV, isHeader:true, okCell:'E240', nokCell:'G240'},
+      {key:'h_dlink_cfg', label:'i. Configuration', section:SEC_AV, isHeader:true},
+      {key:'dlink_kuantiti', label:'Kuantiti (1)', section:SEC_AV},
+      {key:'dlink_ssid', label:'SSID : VIR', section:SEC_AV},
+      {key:'dlink_ip', label:'IP Address : 192.168.1.1', section:SEC_AV},
+      {key:'dlink_datetime', label:'Date & Time : Set to current time / date', section:SEC_AV},
+      {key:'dlink_wep', label:'WEP : Disable', section:SEC_AV},
+      {key:'dlink_pw', label:'Password : sprm_V1R', section:SEC_AV},
+      {key:'dlink_operasi', label:'Operasi', section:SEC_AV},
+
+      // ── 4. Count Down Timer for Recording Alert ──
+      {key:'h_countdown', label:'4.  Count Down Timer for Recording Alert', section:SEC_AV, isHeader:true, okCell:'M240', nokCell:'O240'},
+      {key:'h_countdown_cfg', label:'i. Configuration', section:SEC_AV, isHeader:true},
+      {key:'cd_kuantiti', label:'Kuantiti (1)', section:SEC_AV},
+      {key:'cd_15', label:'1-5', section:SEC_AV},
+      {key:'cd_22', label:'2-2', section:SEC_AV},
+      {key:'cd_33', label:'3-3', section:SEC_AV},
+      {key:'cd_48', label:'4-8', section:SEC_AV},
+      {key:'cd_51', label:'5-1', section:SEC_AV},
+      {key:'cd_63', label:'6-3', section:SEC_AV},
+      {key:'cd_operasi', label:'Operasi', section:SEC_AV},
+      {key:'cd_label', label:'Label', section:SEC_AV},
+
+      // ── 5. Behringer PA Mixer - MIC2200 ──
+      {key:'h_mixer', label:'5.  Behringer PA Mixer — MIC2200', section:SEC_AV, isHeader:true, okCell:'E262', nokCell:'G262'},
+      {key:'mixer_kuantiti', label:'Kuantiti (1)', section:SEC_AV},
+      {key:'mixer_noise', label:'Pelarasan Noise Reduction', section:SEC_AV},
+      {key:'mixer_peak', label:'Peakmeter (at least -15dB)', section:SEC_AV},
+      {key:'mixer_xlr_inl', label:'Incoming XLR (Left channel) from mic', section:SEC_AV},
+      {key:'mixer_xlr_inr', label:'Incoming XLR (Right channel) from mic', section:SEC_AV},
+      {key:'mixer_xlr_outl', label:'Outgoing XLR (Left channel) to Deck 1', section:SEC_AV},
+      {key:'mixer_xlr_outr', label:'Outgoing XLR (Right channel) to Deck 2 & 3', section:SEC_AV},
+      {key:'mixer_operasi', label:'Operasi', section:SEC_AV},
+      {key:'mixer_label', label:'Label', section:SEC_AV},
+
+      // ── 6. LCD 32" TV ──
+      {key:'h_lcd32', label:'6.  LCD 32" TV', section:SEC_AV, isHeader:true, okCell:'M264', nokCell:'O264'},
+      {key:'h_lcd32_cfg', label:'i. Configuration', section:SEC_AV, isHeader:true},
+      {key:'lcd32_kuantiti', label:'Kuantiti (1)', section:SEC_AV},
+      {key:'lcd32_viewmode', label:'Viewing mode : Normal', section:SEC_AV},
+      {key:'lcd32_backlight', label:'Backlight : 70', section:SEC_AV},
+      {key:'lcd32_contrast', label:'Contrast : 100', section:SEC_AV},
+      {key:'lcd32_brightness', label:'Brightness : 0', section:SEC_AV},
+      {key:'lcd32_color', label:'Color : 50', section:SEC_AV},
+      {key:'lcd32_sharpness', label:'Sharpness : 50', section:SEC_AV},
+      {key:'lcd32_colorbal', label:'Color Balance : Normal', section:SEC_AV},
+      {key:'lcd32_vividcolor', label:'Vivid Color : On', section:SEC_AV},
+      {key:'lcd32_ecomode', label:'Eco Mode : Off', section:SEC_AV},
+      {key:'lcd32_pnr', label:'P-NR : Min', section:SEC_AV},
+      {key:'lcd32_3dcomb', label:'3D-Comb : On', section:SEC_AV},
+      {key:'lcd32_screendisp', label:'Screen Display : On', section:SEC_AV},
+      {key:'lcd32_overscan', label:'16:9 Overscan : Off', section:SEC_AV},
+      {key:'lcd32_avcolor', label:'AV Colour System : PAL', section:SEC_AV},
+      {key:'lcd32_operasi', label:'Operasi', section:SEC_AV},
+      {key:'lcd32_remote', label:'Remote Control', section:SEC_AV},
+      {key:'lcd32_battery_v', label:'Battery voltage', section:SEC_AV},
+
+      // ── 7-15. Remaining single-level items ──
+      {key:'h_avtx', label:'7.  Nyrius / Sarowin AV Transmitter / Receiver', section:SEC_AV, isHeader:true, okCell:'E284', nokCell:'G284'},
+      {key:'avtx_kuantiti', label:'Kuantiti (1)', section:SEC_AV},
+      {key:'avtx_channel', label:'Channel', section:SEC_AV},
+      {key:'avtx_operasi', label:'Operasi', section:SEC_AV},
+
+      {key:'h_avsel', label:'8.  Nyrius / Nippon Av-42 Channel Selector', section:SEC_AV, isHeader:true, okCell:'E294', nokCell:'G294'},
+      {key:'avsel_kuantiti', label:'Kuantiti (1 unit)', section:SEC_AV},
+      {key:'avsel_operasi', label:'Operasi', section:SEC_AV},
+
+      {key:'h_camera', label:'9.  Panasonic WV-CW500 / Centrix VV80IR', section:SEC_AV, isHeader:true, okCell:'E304', nokCell:'G304'},
+      {key:'cam_kuantiti', label:'Kuantiti (2 unit)', section:SEC_AV},
+      {key:'cam_operasi', label:'Operasi', section:SEC_AV},
+
+      {key:'h_lcd17', label:'10.  17" Square LCD Monitor', section:SEC_AV, isHeader:true, okCell:'M304', nokCell:'O304'},
+      {key:'lcd17_kuantiti', label:'Kuantiti (1 unit)', section:SEC_AV},
+      {key:'lcd17_operasi', label:'Operasi', section:SEC_AV},
+
+      {key:'h_ups', label:'11.  UPS 3kVA', section:SEC_AV, isHeader:true, okCell:'E312', nokCell:'G312'},
+      {key:'ups_kuantiti', label:'Kuantiti (1 unit)', section:SEC_AV},
+      {key:'ups_conn', label:'Connection supply to Equipment Rack', section:SEC_AV},
+      {key:'ups_mod', label:'Pilih Mod Inverter', section:SEC_AV},
+      {key:'ups_ujian', label:'Ujian : Punca Bateri', section:SEC_AV},
+      {key:'ups_operasi', label:'Operasi', section:SEC_AV},
+
+      {key:'h_cat5e', label:'12.  CAT-5e Patch Cord', section:SEC_AV, isHeader:true, okCell:'M312', nokCell:'O312'},
+      {key:'cat5e_kuantiti', label:'Kuantiti (2 unit)', section:SEC_AV},
+      {key:'cat5e_lan01wall', label:'Ujian : LAN-01 to Wall Faceplate', section:SEC_AV},
+      {key:'cat5e_lan02wall', label:'Ujian : LAN-02 to Wall Faceplate', section:SEC_AV},
+      {key:'cat5e_lan01router', label:'Ujian : LAN-01 to D-Link Router', section:SEC_AV},
+      {key:'cat5e_lan02router', label:'Ujian : LAN-02 to D-Link Router', section:SEC_AV},
+
+      {key:'h_strobe', label:'13.  Strobe Light', section:SEC_AV, isHeader:true, okCell:'E326', nokCell:'G326'},
+      {key:'strobe_kuantiti', label:'Kuantiti (2 unit)', section:SEC_AV},
+      {key:'strobe_blue', label:'Ujian : Interruption Light (Blue)', section:SEC_AV},
+      {key:'strobe_red', label:'Ujian : Alarm Light (Red)', section:SEC_AV},
+
+      {key:'h_digiclock', label:'14.  Digital Clock', section:SEC_AV, isHeader:true, okCell:'M326', nokCell:'O326'},
+      {key:'clock_kuantiti', label:'Kuantiti (1 unit)', section:SEC_AV},
+      {key:'clock_time4', label:'4" seven segment for time', section:SEC_AV},
+      {key:'clock_date3', label:'3" seven segment for date', section:SEC_AV},
+      {key:'clock_temp3', label:'3" seven segment for temperature', section:SEC_AV},
+      {key:'clock_remote', label:'Remote Control', section:SEC_AV},
+      {key:'clock_battery_v', label:'Battery voltage', section:SEC_AV},
+
+      {key:'h_eqrack', label:'15.  Equipment Rack', section:SEC_AV, isHeader:true, okCell:'E336', nokCell:'G336'},
+      {key:'eqrack_kuantiti', label:'Kuantiti (1 unit)', section:SEC_AV},
+      {key:'eqrack_wheels', label:'Wheels (4 units)', section:SEC_AV},
+      {key:'eqrack_cagenuts', label:'Cage nuts', section:SEC_AV},
+
+      // ── SKOP KERJA SIVIL ──
+      {key:'h_gypsum', label:'1.  Gypsum Board Partition Wall', section:SEC_SIVIL, isHeader:true, okCell:'E352', nokCell:'G352'},
+      {key:'gypsum_floor', label:'From floor to ceiling', section:SEC_SIVIL},
+      {key:'gypsum_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'gypsum_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_carpet', label:'2.  Tile Carpet', section:SEC_SIVIL, isHeader:true, okCell:'M352', nokCell:'O352'},
+      {key:'carpet_wall', label:'Wall to wall carpet', section:SEC_SIVIL},
+      {key:'carpet_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'carpet_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_acoustic_p', label:'3.  Acoustic Panel', section:SEC_SIVIL, isHeader:true, okCell:'E362', nokCell:'G362'},
+      {key:'acp_wall', label:'From wall to wall & full height', section:SEC_SIVIL},
+      {key:'acp_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'acp_periksa_jam', label:'Periksa panel — Jam digital', section:SEC_SIVIL},
+      {key:'acp_periksa_cctv', label:'Periksa panel — Kamera CCTV', section:SEC_SIVIL},
+      {key:'acp_periksa_lcd', label:'Periksa panel — LCD TV', section:SEC_SIVIL},
+      {key:'acp_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_acoustic_c', label:'4.  Acoustic Fibreglass Ceiling Board', section:SEC_SIVIL, isHeader:true, okCell:'M362', nokCell:'O362'},
+      {key:'acc_wall', label:'From wall to wall', section:SEC_SIVIL},
+      {key:'acc_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'acc_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_acdoor', label:'5.  Acoustic Door', section:SEC_SIVIL, isHeader:true, okCell:'E380', nokCell:'G380'},
+      {key:'acdoor_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'acdoor_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'acdoor_lockset', label:'Lockset & accessories', section:SEC_SIVIL},
+      {key:'acdoor_kunci', label:'Kunci (3 unit)', section:SEC_SIVIL},
+      {key:'acdoor_closer', label:'Door closer', section:SEC_SIVIL},
+      {key:'acdoor_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_eqcab', label:'6.  Equipment Cabinet', section:SEC_SIVIL, isHeader:true, okCell:'M380', nokCell:'O380'},
+      {key:'eqcab_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'eqcab_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'eqcab_lockset', label:'Lockset & accessories', section:SEC_SIVIL},
+      {key:'eqcab_kunci_kab', label:'Kunci kabinet (3 unit)', section:SEC_SIVIL},
+      {key:'eqcab_kunci_drw', label:'Kunci drawer (3 unit)', section:SEC_SIVIL},
+      {key:'eqcab_engsel', label:'Engsel (Hinges)', section:SEC_SIVIL},
+      {key:'eqcab_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_table', label:'7.  Discussion Table', section:SEC_SIVIL, isHeader:true, okCell:'E398', nokCell:'G398'},
+      {key:'table_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'table_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'table_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_chairs', label:'8.  Chairs', section:SEC_SIVIL, isHeader:true, okCell:'M398', nokCell:'O398'},
+      {key:'chairs_kuantiti', label:'Kuantiti (4 unit)', section:SEC_SIVIL},
+      {key:'chairs_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'chairs_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_bcdfaceplate', label:'9.  BCD Button Faceplate', section:SEC_SIVIL, isHeader:true, okCell:'E408', nokCell:'G408'},
+      {key:'bcdfp_kuantiti', label:'Kuantiti (2 unit)', section:SEC_SIVIL},
+      {key:'bcdfp_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'bcdfp_label', label:'Label', section:SEC_SIVIL},
+      {key:'bcdfp_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_signage', label:'10.  Acrylic Door Signage', section:SEC_SIVIL, isHeader:true, okCell:'M408', nokCell:'O408'},
+      {key:'signage_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'signage_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'signage_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_mirror', label:'11.  Stainless Steel Mirror / Convex Mirror', section:SEC_SIVIL, isHeader:true, okCell:'E420', nokCell:'G420'},
+      {key:'mirror_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'mirror_kemasan', label:'Kemasan', section:SEC_SIVIL},
+      {key:'mirror_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_lightt5', label:'12.  T5 Fluorescent Light', section:SEC_SIVIL, isHeader:true, okCell:'M420', nokCell:'O420'},
+      {key:'lightt5_kuantiti', label:'Kuantiti', section:SEC_SIVIL},
+      {key:'lightt5_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'lightt5_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_socket', label:'13.  13A Switch Socket Outlet', section:SEC_SIVIL, isHeader:true, okCell:'E430', nokCell:'G430'},
+      {key:'socket_kuantiti', label:'Kuantiti', section:SEC_SIVIL},
+      {key:'socket_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'socket_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_indlight', label:'14.  Indication Light (IN USE / SEDANG DIGUNAKAN)', section:SEC_SIVIL, isHeader:true, okCell:'M430', nokCell:'O430'},
+      {key:'indlight_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'indlight_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'indlight_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_rg59', label:'15.  RG59 for Audio/Video Use', section:SEC_SIVIL, isHeader:true, okCell:'E440', nokCell:'G440'},
+      {key:'rg59_kuantiti', label:'Kuantiti', section:SEC_SIVIL},
+      {key:'rg59_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'rg59_label', label:'Label', section:SEC_SIVIL},
+      {key:'rg59_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_cat6fp', label:'16.  CAT-6 Faceplate', section:SEC_SIVIL, isHeader:true, okCell:'M440', nokCell:'O440'},
+      {key:'cat6fp_kuantiti', label:'Kuantiti (4 unit)', section:SEC_SIVIL},
+      {key:'cat6fp_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'cat6fp_label', label:'Label', section:SEC_SIVIL},
+      {key:'cat6fp_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_mic', label:'17.  AKG-C52 / B-5 Microphone', section:SEC_SIVIL, isHeader:true, okCell:'E452', nokCell:'G452'},
+      {key:'mic_kuantiti', label:'Kuantiti', section:SEC_SIVIL},
+      {key:'mic_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'mic_label', label:'Label', section:SEC_SIVIL},
+      {key:'mic_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_emglight', label:'18.  Emergency Light', section:SEC_SIVIL, isHeader:true, okCell:'M452', nokCell:'O452'},
+      {key:'emglight_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'emglight_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'emglight_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      {key:'h_dbbox', label:'19.  Single Phase DB Box', section:SEC_SIVIL, isHeader:true, okCell:'E464', nokCell:'G464'},
+      {key:'dbbox_kuantiti', label:'Kuantiti (1 unit)', section:SEC_SIVIL},
+      {key:'dbbox_operasi', label:'Operasi', section:SEC_SIVIL},
+      {key:'dbbox_lain', label:'Lain-lain', section:SEC_SIVIL},
+
+      // ── MEKANIKAL & AWAM ──
+      {key:'h_splitac', label:'20.  Split Aircond', section:SEC_MEK, isHeader:true, okCell:'E476', nokCell:'G476'},
+      {key:'splitac_kuantiti', label:'Kuantiti (1 unit)', section:SEC_MEK},
+      {key:'splitac_operasi', label:'Operasi', section:SEC_MEK},
+      {key:'splitac_remote', label:'Remote Control', section:SEC_MEK},
+      {key:'splitac_battery_v', label:'Battery voltage', section:SEC_MEK},
+      {key:'splitac_chemical', label:'Chemical Service', section:SEC_MEK},
+      {key:'splitac_lain', label:'Lain-lain', section:SEC_MEK},
+
+      {key:'h_centralac', label:'21.  Centralized Aircond', section:SEC_MEK, isHeader:true, okCell:'M476', nokCell:'O476'},
+      {key:'centralac_diffuser', label:'Kuantiti Diffuser', section:SEC_MEK},
+      {key:'centralac_return', label:'Kuantiti Return', section:SEC_MEK},
+      {key:'centralac_silencer', label:'Kuantiti Silencer', section:SEC_MEK},
+      {key:'centralac_vma', label:'VMA Unit', section:SEC_MEK},
+      {key:'centralac_blower', label:'Kuantiti Blower', section:SEC_MEK},
+      {key:'centralac_operasi', label:'Operasi', section:SEC_MEK},
+
+      {key:'h_pest', label:'22.  Pest Control', section:SEC_MEK, isHeader:true, okCell:'E492', nokCell:'G492'},
+      {key:'pest_kuantiti', label:'Kuantiti (1 lot)', section:SEC_MEK},
+
+      {key:'h_cleaning', label:'23.  Cleaning Service', section:SEC_MEK, isHeader:true, okCell:'M492', nokCell:'O492'},
+      {key:'cleaning_vacuum', label:'Vacuuming room', section:SEC_MEK},
     ];
+
+    // PLACEHOLDER — generic checklist for Optager HD4000 (Daya One's own
+    // PC/Windows-based VIR system). Replace with the real component list
+    // once available; no okCell/nokCell needed since the old Excel VIR
+    // template (which those referenced) only ever matched BCD's physical
+    // layout and doesn't apply to Optager anyway.
+    const VIR_CHECKLIST_TEMPLATE_OPTAGER = [
+      {key:'opt_pc',        label:'Server/PC Optager HD4000',        section:'Perkakasan (Hardware)'},
+      {key:'opt_monitor',   label:'Monitor',                          section:'Perkakasan (Hardware)'},
+      {key:'opt_ups',       label:'UPS',                              section:'Perkakasan (Hardware)'},
+      {key:'opt_camera',    label:'Kamera Rakaman',                   section:'Perkakasan (Hardware)'},
+      {key:'opt_mic',       label:'Mikrofon',                         section:'Perkakasan (Hardware)'},
+      {key:'opt_software',  label:'Perisian Rakaman (Recording Software)', section:'Perisian (Software)'},
+      {key:'opt_storage',   label:'Storan / Storage',                 section:'Perisian (Software)'},
+      {key:'opt_backup',    label:'Backup Data',                      section:'Perisian (Software)'},
+      {key:'opt_network',   label:'Rangkaian / Network Switch',       section:'Rangkaian & Sokongan'},
+      {key:'opt_cable',     label:'Pendawaian & Kabel',                section:'Rangkaian & Sokongan'},
+    ];
+    // Picks the right checklist array for a given system tag — falls back
+    // to BCD if the system is unset/unrecognised (e.g. legacy records saved
+    // before this BCD/Optager split existed).
+    function virChecklistFor(system) {
+      return system === 'Optager HD4000' ? VIR_CHECKLIST_TEMPLATE_OPTAGER : VIR_CHECKLIST_TEMPLATE_BCD;
+    }
+    function virSectionsFor(system) {
+      return VIR_CHECKLIST_SECTIONS[system] || VIR_CHECKLIST_SECTIONS['BCD'];
+    }
+    // Splits a section's items into 2 print columns (mirrors the original
+    // paper form's half-page-per-column layout). Nudges the split point
+    // earlier if it would otherwise strand a header row alone at the
+    // bottom of column 1 with none of its sub-checks following it.
+    function virChecklistCols(section) {
+      const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
+      let splitAt = Math.ceil(items.length / 2);
+      while (splitAt > 0 && splitAt < items.length && items[splitAt-1].isHeader) splitAt--;
+      return [
+        { items: items.slice(0, splitAt), offset: 0 },
+        { items: items.slice(splitAt), offset: splitAt },
+      ];
+    }
 
     const pm = reactive({
       _draftId:null, _createdAt:null, _isEdit:false,
@@ -4844,7 +5423,7 @@ createApp({
         {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
       ],
       // VIR fields
-      virRoomNo:'', virRoomNoCustom:'', virItems:[],
+      virRoomNo:'', virRoomNoCustom:'', virSystem:'', virItems:[],
       maintType:'', pmNo:null, rootCause:'',
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
@@ -4874,9 +5453,30 @@ createApp({
         const parts = pm.refNo.split('/');
         if(parts.length >= 4 && /^\d{4}$/.test(parts[3])) year = parts[3];
       }
+      // VIR sites can have several rooms, each with its own independent
+      // numbering (SPRM/VIR/IPJ/2026/Bilik01/001, .../Bilik02/001 — both
+      // "001" since they're different rooms, not a clash). CCTV has no
+      // per-room split, so its prefix is unchanged.
+      if(currentProject.value === 'vir') {
+        if(!pm.virRoomNo) return ''; // ref no. needs a room chosen first
+        // The legacy fallback dropdown (site has no rooms registered yet)
+        // shows "NO.1".."NO.20" for the picker, but the reference format
+        // should still read "Bilik1".."Bilik20" — translate just that shape.
+        // Registered room names (from Bilik & Sistem) are used as-is.
+        const noMatch = pm.virRoomNo.match(/^NO\.(\d+)$/);
+        const roomSeg = noMatch ? ('Bilik' + noMatch[1]) : pm.virRoomNo.replace(/\s+/g, '');
+        return `SPRM/${proj}/${site.code}/${year}/${roomSeg}/`;
+      }
       return `SPRM/${proj}/${site.code}/${year}/`;
     });
-    watch([() => pm.siteId, refNoSuffix], () => {
+    watch([() => pm.siteId, () => pm.virRoomNo, refNoSuffix], () => {
+      // Never during edit — editRecord() sets pm.virRoomNo (which is now
+      // part of the VIR ref-no prefix) to restore the form, and this
+      // watcher firing right after would rebuild pm.refNo from the CURRENT
+      // room/suffix instead of keeping the historical refNo that was just
+      // correctly restored. Same class of bug as the year-preservation and
+      // auto-suggest-suffix fixes above.
+      if(pm._isEdit) return;
       pm.refNo = refNoPrefix.value ? refNoPrefix.value + refNoSuffix.value : '';
     });
 
@@ -4897,11 +5497,13 @@ createApp({
       const next = (nums.length ? Math.max(...nums) : 0) + 1;
       return String(next).padStart(3, '0');
     });
-    watch(() => pm.siteId, () => {
+    watch([() => pm.siteId, () => pm.virRoomNo], () => {
       // Skip while editing an existing record — editRecord() also sets
       // pm.siteId (to populate the form), which would otherwise trigger this
       // watcher and clobber the record's real suffix with the "next
       // available" suggestion for that site right as the edit form opens.
+      // Also re-suggests on virRoomNo change — each VIR room numbers
+      // independently, so switching rooms must refresh the suggestion.
       if(pm.siteId && !pm._isEdit) refNoSuffix.value = nextRefNoSuggestion.value;
     });
     const refNoGapWarning = computed(() => {
@@ -5137,6 +5739,13 @@ createApp({
       }
       return list.filter(u => u && !u.disabled).sort((a,b) => (a.name||a.username).localeCompare(b.name||b.username));
     });
+    // team.members only stores {uid, name} (saved at assignment time), not a
+    // photo — look the current one up live by uid so it stays in sync if
+    // the staff member updates their profile picture later, same concept as
+    // the avatar circles in the Status Rotasi Staff panel.
+    function staffPhoto(uid) {
+      return allStaff.value.find(u => u.id === uid)?.photoURL || '';
+    }
 
     function teamsForDay(day) {
       if(!day) return [];
@@ -5825,6 +6434,7 @@ createApp({
       nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''},
       nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nRoom: {name:'', system:'BCD'},
       nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''},
     };
@@ -5921,13 +6531,26 @@ createApp({
 
     // ---- Project split ----
     const currentProject = ref('cctv');
+    // virSiteEquip now holds ONLY `rooms` per VIR site — shared regardless
+    // of system, since a room's system tag is the whole point of it.
+    // Cameras/NVR/HDD/Switch/Alarm live in two parallel, fully separate
+    // sets (virSiteEquipBCD / virSiteEquipOptager) since BCD's physical
+    // assets and Optager HD4000's don't map to the same categories at all.
+    // All three are stored in the same Firestore doc (virSiteEquipment/{id})
+    // under distinct top-level keys — see _writeSiteEquipToFirestore/loadAll.
     const virSiteEquip   = ref({});
+    const virSiteEquipBCD = ref({});
+    const virSiteEquipOptager = ref({});
+    // Which system's equipment the "Urus Peralatan Site" page is currently
+    // showing/editing for VIR — set by the BCD/Optager buttons on the VIR
+    // site list (openSiteEquip's `mode` param).
+    const equipVirSystem = ref('BCD');
 
     // Equipment draft-recovery autosave trigger (see _saveEquipDraftLocal
     // above) — registered here, after both siteEquip and virSiteEquip
     // exist, so this watch() call doesn't reference virSiteEquip before
     // its own `const` has initialized.
-    watch([siteEquip, virSiteEquip], () => {
+    watch([siteEquip, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager], () => {
       if(page.value !== 'site-equip' || !selSite.value) return;
       clearTimeout(_equipDraftTimer);
       _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
@@ -5942,6 +6565,30 @@ createApp({
     // from site-equip (or to a different site) so a same-second exit can't
     // race the 2s debounce and silently drop the last edit.
     watch(page, (v, old) => { if(old === 'site-equip' && v !== 'site-equip') _flushEquipAutoSave(); });
+
+    // Rooms registered for the currently-selected VIR site (Urus Peralatan
+    // Site > Bilik & Sistem) — empty if that site has none configured yet,
+    // in which case the form falls back to the old generic NO.1-20 dropdown.
+    const pmVirSiteRooms = computed(() => {
+      if(currentProject.value !== 'vir' || !pm.siteId) return [];
+      return virSiteEquip.value[pm.siteId]?.rooms || [];
+    });
+    // Picking a registered room auto-detects its system (BCD/Optager) so
+    // the technician never has to remember which is which per-room.
+    function onVirRoomChange() {
+      const match = pmVirSiteRooms.value.find(r => r.name === pm.virRoomNo);
+      pm.virSystem = match ? match.system : '';
+    }
+    // Regenerates the checklist whenever the system changes — but NEVER
+    // during an edit: editRecord() already restored pm.virItems from the
+    // saved record in the same tick it sets pm.virSystem, and this watcher
+    // (deferred, fires after that) would otherwise clobber that historical
+    // data with a blank freshly-generated template. Same class of bug as
+    // the refNo-prefix/suffix watchers fixed earlier this session.
+    watch(() => pm.virSystem, (sys) => {
+      if(pm._isEdit || currentProject.value !== 'vir' || !sys) return;
+      pm.virItems = virChecklistFor(sys).map(t => ({...t, status:'ok', nota:''}));
+    });
 
     function openSites(proj) {
       currentProject.value = proj;
@@ -5965,7 +6612,9 @@ createApp({
         version: 1,
         exportedAt: new Date().toISOString(),
         siteEquip: siteEquip.value,
-        virSiteEquip: virSiteEquip.value,
+        virSiteEquip: virSiteEquip.value, // rooms only — see virSiteEquipBCD/Optager below
+        virSiteEquipBCD: virSiteEquipBCD.value,
+        virSiteEquipOptager: virSiteEquipOptager.value,
         pmRecords: pmRecords.value,
       };
     }
@@ -6183,9 +6832,9 @@ createApp({
         // next add-equipment click would push() onto undefined and crash
         // (the same bug class just fixed in loadAll()/ensureSite()).
         const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
-        const EQUIP_SHAPE_VIR  = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[]};
+        const EQUIP_SHAPE_VIR  = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
         const restoredSiteEquip = {};
-        const restoredVirSiteEquip = {};
+        const restoredVirRooms = {}, restoredVirBcd = {}, restoredVirOptager = {};
         const batch = db.batch();
         if(data.siteEquip) {
           Object.entries(data.siteEquip).forEach(([id,val])=>{
@@ -6194,17 +6843,34 @@ createApp({
             batch.set(db.collection('siteEquipment').doc(id), merged);
           });
         }
-        if(data.virSiteEquip) {
-          Object.entries(data.virSiteEquip).forEach(([id,val])=>{
-            const merged = {...EQUIP_SHAPE_VIR, ...val};
-            restoredVirSiteEquip[id] = merged;
-            batch.set(db.collection('virSiteEquipment').doc(id), merged);
+        // VIR's rooms + BCD + Optager all live in the SAME Firestore doc
+        // under distinct keys — merge:true so restoring one doesn't wipe
+        // the others out (a backup taken before this split existed, or one
+        // missing one of the systems, must not blank the rest).
+        if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager) {
+          const ids = new Set([
+            ...Object.keys(data.virSiteEquip||{}),
+            ...Object.keys(data.virSiteEquipBCD||{}),
+            ...Object.keys(data.virSiteEquipOptager||{}),
+          ]);
+          ids.forEach(id => {
+            const rooms = data.virSiteEquip?.[id]?.rooms || [];
+            const bcd = {...EQUIP_SHAPE_VIR, ...(data.virSiteEquipBCD?.[id] || {})};
+            const optager = {...EQUIP_SHAPE_VIR, ...(data.virSiteEquipOptager?.[id] || {})};
+            restoredVirRooms[id] = { rooms };
+            restoredVirBcd[id] = bcd;
+            restoredVirOptager[id] = optager;
+            batch.set(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcd, 'Optager HD4000': optager }, { merge: true });
           });
         }
         await _fw(batch.commit());
         // Only mutate local state after Firestore write confirmed
         if(data.siteEquip) siteEquip.value = restoredSiteEquip;
-        if(data.virSiteEquip) virSiteEquip.value = restoredVirSiteEquip;
+        if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager) {
+          virSiteEquip.value = restoredVirRooms;
+          virSiteEquipBCD.value = restoredVirBcd;
+          virSiteEquipOptager.value = restoredVirOptager;
+        }
 
         if(data.pmRecords?.length) {
           await _batchRestoreCollection('pmRecords', data.pmRecords);
@@ -7207,7 +7873,7 @@ createApp({
 
     // ---- Reset form ----
     function resetForm(formName) {
-      const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC };
+      const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC, nRoom };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
       if (ocrState.target === formName) { ocrState.active=false; ocrState.tokens=[]; }
       // Also drop any in-progress edit-in-place — otherwise the blanked
@@ -7698,12 +8364,29 @@ createApp({
         snap.forEach(doc=>{ eq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[], ...doc.data()}; });
         siteEquip.value = eq;
 
-        // VIR site equipment
-        const veq = {};
-        VIR_SITES.forEach(s=>{ veq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[]}; });
+        // VIR site equipment — one doc per site holding `rooms` (shared)
+        // plus two nested, fully separate equipment sets keyed 'BCD' and
+        // 'Optager HD4000' (their physical asset types don't overlap).
+        const VIR_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+        const veqRooms = {}, veqBcd = {}, veqOptager = {};
+        VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={...VIR_EQUIP_SHAPE}; });
         const vsnap = await db.collection('virSiteEquipment').get();
-        vsnap.forEach(doc=>{ veq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[], ...doc.data()}; });
-        virSiteEquip.value = veq;
+        vsnap.forEach(doc=>{
+          const d = doc.data();
+          veqRooms[doc.id] = { rooms: d.rooms || [] };
+          // Legacy docs saved before the BCD/Optager split kept
+          // cameras/nvr/hdd/switches/alarms at the top level — treat those
+          // as BCD (the only system that existed at the time), unless a
+          // 'BCD' key already exists (already-migrated doc).
+          const legacy = !d.BCD && (d.cameras || d.nvr || d.hdd || d.switches || d.alarms)
+            ? {cameras:d.cameras||[], nvr:d.nvr||[], hdd:d.hdd||[], switches:d.switches||[], alarms:d.alarms||[]}
+            : null;
+          veqBcd[doc.id] = {...VIR_EQUIP_SHAPE, ...(d.BCD || legacy || {})};
+          veqOptager[doc.id] = {...VIR_EQUIP_SHAPE, ...(d['Optager HD4000'] || {})};
+        });
+        virSiteEquip.value = veqRooms;
+        virSiteEquipBCD.value = veqBcd;
+        virSiteEquipOptager.value = veqOptager;
 
         const pmSnap = await db.collection('pmRecords').orderBy('createdAt','desc').get();
         pmRecords.value = pmSnap.docs.map(d=>({id:d.id,...d.data()}));
@@ -8057,10 +8740,19 @@ createApp({
     function _genId() { return 'e_' + Date.now().toString(36) + '_' + (_uidCounter++).toString(36); }
     const EQUIP_KINDS = ['cameras','nvr','hdd','switches','alarms','misc'];
 
-    function openSiteEquip(site) {
+    // mode (VIR only): 'BCD' | 'Optager HD4000' — which equipment set to
+    // open into (from the site list's BCD/Optager buttons); 'rooms' — open
+    // straight to the Bilik & Sistem tab without changing which system was
+    // last active. Ignored for CCTV.
+    function openSiteEquip(site, mode) {
       _flushEquipAutoSave(); // persist any pending edits for the site we're leaving
       selSite.value = site;
-      eqTab.value = 'cameras';
+      if(currentProject.value === 'vir') {
+        if(mode === 'rooms') { eqTab.value = 'rooms'; }
+        else { equipVirSystem.value = mode || equipVirSystem.value; eqTab.value = 'cameras'; }
+      } else {
+        eqTab.value = 'cameras';
+      }
       page.value = 'site-equip';
       ensureSite(site.id);
       const eq = activeEquip()[site.id];
@@ -8073,34 +8765,62 @@ createApp({
       // equipEditIdx isn't null) silently overwrites that row instead of
       // adding a new one.
       EQUIP_KINDS.forEach(k => cancelEditEquip(k));
+      // "rooms" (VIR Bilik & Sistem) isn't in EQUIP_KINDS — it has no bulk-
+      // select UI so it's excluded from that list — but it still needs its
+      // in-progress edit cleared for the same reason as above, otherwise
+      // switching VIR sites mid-edit-of-a-room can overwrite the wrong
+      // room in the newly-opened site. Rooms live in virSiteEquip directly
+      // (shared across BCD/Optager), not in `eq` (activeEquip()) above.
+      if(currentProject.value === 'vir') {
+        const rooms = virSiteEquip.value[site.id]?.rooms || [];
+        rooms.forEach(item => { if(!item._uid) item._uid = _genId(); });
+        cancelEditEquip('rooms');
+      }
     }
 
+    // For VIR, this returns whichever system's equipment set is currently
+    // active (equipVirSystem) — cameras/nvr/hdd/switches/alarms/misc only.
+    // Rooms are NOT part of this — they live in virSiteEquip directly,
+    // shared across both systems (see ensureSite/selSiteEquip/addVirRoom).
     function activeEquip() {
-      return currentProject.value === 'vir' ? virSiteEquip.value : siteEquip.value;
+      if(currentProject.value !== 'vir') return siteEquip.value;
+      return equipVirSystem.value === 'Optager HD4000' ? virSiteEquipOptager.value : virSiteEquipBCD.value;
     }
     const selSiteEquip = computed(() => {
-      if(!selSite.value) return {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
-      return activeEquip()[selSite.value.id] || {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      if(!selSite.value) return {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],rooms:[]};
+      const base = activeEquip()[selSite.value.id] || {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      if(currentProject.value === 'vir') {
+        return {...base, rooms: virSiteEquip.value[selSite.value.id]?.rooms || []};
+      }
+      return base;
     });
 
     function ensureSite(id) {
       const eq = activeEquip();
-      if(!eq[id]) { eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; return; }
-      // Backfill any equipment category missing on a site record that
-      // predates that category being added to the schema (e.g. sites saved
-      // to Firestore before "misc" equipment tracking existed have no
-      // `misc` field at all — loadAll() overwrites the full default shape
-      // with doc.data() as-is, so the array never gets created). Without
-      // this, addMisc()/addCamera()/etc push() onto `undefined` and throw,
-      // which aborts the click handler silently — the button looks dead.
-      ['cameras','nvr','hdd','switches','alarms','misc'].forEach(k => {
-        if(!Array.isArray(eq[id][k])) eq[id][k] = [];
-      });
+      if(!eq[id]) { eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; }
+      else {
+        // Backfill any equipment category missing on a site record that
+        // predates that category being added to the schema (e.g. sites saved
+        // to Firestore before "misc" equipment tracking existed have no
+        // `misc` field at all — loadAll() overwrites the full default shape
+        // with doc.data() as-is, so the array never gets created). Without
+        // this, addMisc()/addCamera()/etc push() onto `undefined` and throw,
+        // which aborts the click handler silently — the button looks dead.
+        ['cameras','nvr','hdd','switches','alarms','misc'].forEach(k => {
+          if(!Array.isArray(eq[id][k])) eq[id][k] = [];
+        });
+      }
+      // Rooms live under the real VIR site record regardless of which
+      // system (BCD/Optager) is currently active.
+      if(currentProject.value === 'vir') {
+        if(!virSiteEquip.value[id]) virSiteEquip.value[id] = {rooms:[]};
+        else if(!Array.isArray(virSiteEquip.value[id].rooms)) virSiteEquip.value[id].rooms = [];
+      }
     }
 
     // ---- Edit-in-place for equipment rows (instead of delete + re-add) ----
-    const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null, misc:null });
-    const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM', misc:'nMISC' };
+    const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null, misc:null, rooms:null });
+    const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM', misc:'nMISC', rooms:'nRoom' };
 
     // ---- Bulk select/delete for equipment lists ----
     const equipSelected = reactive({ cameras:new Set(), nvr:new Set(), hdd:new Set(), switches:new Set(), alarms:new Set(), misc:new Set() });
@@ -8180,9 +8900,11 @@ createApp({
     async function editEquipItem(key, idx) {
       const item = (selSiteEquip.value[key]||[])[idx];
       if(!item) return;
-      const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC };
+      const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, rooms:nRoom };
       Object.assign(refs[key], item);
-      if(key === 'misc') {
+      if(key === 'rooms') {
+        // No brand/model/category lookup applies to rooms — just the name+system.
+      } else if(key === 'misc') {
         // Saved category may be a free-text custom value that isn't in
         // MISC_CATEGORIES — reflect that as "Lain-lain" + the custom text.
         if(item.category && !MISC_CATEGORIES.includes(item.category)) {
@@ -8321,6 +9043,21 @@ createApp({
       _maybeAddCustomModel('switches', resolved.brand, resolved.model);
       resetForm('nSW');
     }
+    // VIR rooms are much simpler than equipment (just a name + which system
+    // it runs — no brand/model/serial), so this skips the shared
+    // brand/model dedupe machinery and just checks for a duplicate room
+    // name within the same site.
+    function addVirRoom() {
+      if(!nRoom.name.trim()){ showToast('Sila masukkan nama bilik', 'error'); return; }
+      ensureSite(selSite.value.id);
+      const list = virSiteEquip.value[selSite.value.id].rooms;
+      const dupIdx = list.findIndex((r,i) => r.name.trim().toLowerCase() === nRoom.name.trim().toLowerCase() && i !== equipEditIdx.rooms);
+      if(dupIdx !== -1) { showToast(`Bilik "${nRoom.name}" sudah wujud untuk site ini.`, 'error'); return; }
+      const resolved = { name: nRoom.name.trim(), system: nRoom.system };
+      if(equipEditIdx.rooms !== null) { list[equipEditIdx.rooms] = {...resolved, _uid:list[equipEditIdx.rooms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.rooms = null; showToast('Bilik dikemaskini!'); }
+      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Bilik berjaya ditambah!'); }
+      resetForm('nRoom');
+    }
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
       if(!nALM.model){showToast('Sila masukkan model alarm','error');return;}
@@ -8346,7 +9083,7 @@ createApp({
     }
     function removeItem(siteId, key, idx) {
       if(!confirm('Padam rekod ini?')) return;
-      const list = activeEquip()[siteId][key];
+      const list = key === 'rooms' ? virSiteEquip.value[siteId].rooms : activeEquip()[siteId][key];
       // Deleting a row before the one mid-edit shifts every later index, so
       // equipEditIdx[key] must be re-synced by identity (_uid) — comparing
       // it to the deleted idx directly only caught the exact-match case and
@@ -8367,11 +9104,16 @@ createApp({
     async function _writeSiteEquipToFirestore(opts = {}) {
       if(!selSite.value) return;
       const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
-      const eq  = activeEquip();
       const siteId = selSite.value.id;
       const siteLabel = selSite.value?.name || selSite.value?.id;
+      // VIR keeps rooms + both systems' equipment in ONE doc, under distinct
+      // top-level keys (merge:true so writing one doesn't clobber the
+      // others): { rooms:[...], BCD:{...}, 'Optager HD4000':{...} }.
+      const data = currentProject.value === 'vir'
+        ? { rooms: virSiteEquip.value[siteId]?.rooms || [], [equipVirSystem.value]: activeEquip()[siteId] }
+        : activeEquip()[siteId];
       try {
-        await _fw(db.collection(col).doc(siteId).set(eq[siteId], { merge: true }));
+        await _fw(db.collection(col).doc(siteId).set(data, { merge: true }));
         await logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
         if(opts.toast !== false) showToast('Peralatan berjaya disimpan!');
@@ -8405,7 +9147,8 @@ createApp({
       pm._draftId = null; pm._createdAt = null; pm._isEdit = false;
       if(proj) currentProject.value = proj;
       pm.virRoomNo=''; pm.virRoomNoCustom='';
-      pm.virItems = VIR_CHECKLIST_TEMPLATE.map(t=>({...t, status:'ok', nota:''}));
+      pm.virSystem = 'BCD'; // sane default until a room is picked (or changed via onVirRoomChange)
+      pm.virItems = VIR_CHECKLIST_TEMPLATE_BCD.map(t=>({...t, status:'ok', nota:''}));
       pm.siteId=''; pm.siteName=''; pm.refNo=''; refNoSuffix.value='';
       pm.month=null; pm.year=null;
       pm.visitDate=''; pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
@@ -8510,6 +9253,7 @@ createApp({
           ...(pm._isEdit ? { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '' } : {}),
           ...(isVir ? {
             virRoomNo: (pm.virRoomNo==='Lain-lain' && pm.virRoomNoCustom.trim()) ? pm.virRoomNoCustom.trim() : pm.virRoomNo,
+            virSystem: pm.virSystem || 'BCD',
             virItems: JSON.parse(JSON.stringify(pm.virItems)),
           } : {
             cameras:[...pm.cameras], nvr:[...pm.nvr], hdd:[...pm.hdd],
@@ -8556,7 +9300,10 @@ createApp({
       pm.client2Name=r.client2Name||''; pm.client2Jawatan=r.client2Jawatan||''; pm.client2Tarikh=r.client2Tarikh||'';
       if(currentProject.value==='vir') {
         pm.virRoomNo = r.virRoomNo||''; pm.virRoomNoCustom='';
-        pm.virItems = r.virItems ? JSON.parse(JSON.stringify(r.virItems)) : VIR_CHECKLIST_TEMPLATE.map(t=>({...t, status:'ok', nota:''}));
+        // Legacy records predate the BCD/Optager split — they're always BCD
+        // since that was the only system that existed at the time.
+        pm.virSystem = r.virSystem || 'BCD';
+        pm.virItems = r.virItems ? JSON.parse(JSON.stringify(r.virItems)) : virChecklistFor(pm.virSystem).map(t=>({...t, status:'ok', nota:''}));
         pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
         pm.support=[
           {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
@@ -8579,7 +9326,7 @@ createApp({
           {key:'kabel',label:'Kabel dan Aksesori Rangkaian',status:'Baik',nota:''},
           {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
         ];
-        pm.virRoomNo=''; pm.virRoomNoCustom=''; pm.virItems=[];
+        pm.virRoomNo=''; pm.virRoomNoCustom=''; pm.virSystem=''; pm.virItems=[];
       }
       pmStep.value = 1;
       page.value = 'new-pm';
@@ -8814,11 +9561,29 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         set('E8', r.siteName||'');
         set('B9', r.visitDate||'');
         set('E10', r.virRoomNo||'');
-        // Checklist items
+        // Checklist items — okCell/nokCell now sit only on the group-header
+        // rows (see VIR_CHECKLIST_TEMPLATE_BCD), since each original single
+        // checkable line was expanded into a header + several individual
+        // sub-checks. A header itself has no user-settable status anymore,
+        // so its legacy Excel cell is derived from its descendants instead
+        // of a hardcoded value: NOK if any sub-check under it (up to the
+        // next header that also carries an okCell/nokCell) was marked NOK.
         if(r.virItems && Array.isArray(r.virItems)) {
-          r.virItems.forEach(item => {
-            if(item.okCell)  set(item.okCell,  item.status==='ok'  ? '(√)' : '');
-            if(item.nokCell) set(item.nokCell, item.status==='nok' ? '(x)'  : '');
+          const items = r.virItems;
+          items.forEach((item, i) => {
+            if(!item.okCell && !item.nokCell) return;
+            let groupStatus = item.status;
+            if(item.isHeader) {
+              let hasNok = false;
+              for(let j = i+1; j < items.length; j++) {
+                if(items[j].okCell || items[j].nokCell) break; // next group starts
+                if(items[j].isHeader) continue;
+                if(items[j].status === 'nok') { hasNok = true; break; }
+              }
+              groupStatus = hasNok ? 'nok' : 'ok';
+            }
+            if(item.okCell)  set(item.okCell,  groupStatus==='ok'  ? '(√)' : '');
+            if(item.nokCell) set(item.nokCell, groupStatus==='nok' ? '(x)'  : '');
           });
         }
         // Signatures
@@ -8915,8 +9680,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 
       // ── Title bar ──
       const titleText = r.project === 'vir'
-        ? 'BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR  |  SURUHANJAYA PENCEGAH RASUAH MALAYSIA (SPRM)'
-        : 'BORANG PENYELENGGARAAN BERJADUAL SISTEM CCTV  |  SURUHANJAYA PENCEGAH RASUAH MALAYSIA (SPRM)';
+        ? 'BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR  |  SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)'
+        : 'BORANG PENYELENGGARAAN BERJADUAL SISTEM CCTV  |  SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)';
       children.push(new Paragraph({
         children: [new TextRun({ text: titleText, color: WHITE, bold: true, size: 20 })],
         shading: { type: ShadingType.SOLID, color: BLUE },
@@ -8938,7 +9703,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       children.push(new Table({
         rows: [
           new TableRow({ children: [infoCell('Cawangan / Site:',true), infoCell(r.siteName), infoCell('Tarikh Penyelenggaraan:',true), infoCell(r.visitDate)] }),
-          new TableRow({ children: [infoCell(r.project==='vir'?'No. Bilik VIR:':'Bulan Penyelenggaraan:',true), infoCell(r.project==='vir'?r.virRoomNo:bulan.replace(/^Bulan: /,'')), infoCell('Jenis Penyelenggaraan:',true), infoCell(r.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance')] }),
+          new TableRow({ children: [infoCell(r.project==='vir'?'No. Bilik VIR:':'Bulan Penyelenggaraan:',true), infoCell(r.project==='vir'?`${r.virRoomNo||'—'}${r.virSystem?' ('+r.virSystem+')':''}`:bulan.replace(/^Bulan: /,'')), infoCell('Jenis Penyelenggaraan:',true), infoCell(r.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance')] }),
           ...(r.maintType==='PM' ? [new TableRow({ children: [infoCell('Penyelenggaraan Ke-:',true), infoCell(r.pmNo ? `PM ${r.pmNo}` : '—'), infoCell(''), infoCell('')] })] : []),
         ],
         width: { size: 100, type: WidthType.PERCENTAGE },
@@ -9026,9 +9791,12 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 
       } else {
         // ── VIR Checklist ──
-        ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam'].forEach(sec => {
+        virSectionsFor(r.virSystem).forEach(sec => {
           children.push(sectionHdr(sec));
-          const items = (r.virItems||[]).filter(x=>x.section===sec);
+          // DOCX tables here have no colspan support, so pure sub-heading
+          // divider rows (isHeader, e.g. "DECK 1", "i. Configuration") are
+          // skipped — only the actual checkable lines get a row.
+          const items = (r.virItems||[]).filter(x=>x.section===sec && !x.isHeader);
           if (items.length) {
             children.push(makeTable(
               ['No.','Item','Status','Nota'],
@@ -9057,7 +9825,10 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         });
       }
       children.push(new Table({
-        rows: [new TableRow({ children: [
+        rows: [new TableRow({ children: r.project==='vir' ? [
+          sigCell('WAKIL KONTRAKTOR', r.contractorName, r.contractorJawatan, r.contractorTarikh),
+          sigCell('WAKIL SPRM — NEGERI/CAWANGAN/HQ', r.clientName, r.clientJawatan, r.clientTarikh),
+        ] : [
           sigCell('WAKIL KONTRAKTOR', r.contractorName, r.contractorJawatan, r.contractorTarikh),
           sigCell('WAKIL SPRM — NEGERI/CAWANGAN', r.clientName, r.clientJawatan, r.clientTarikh),
           sigCell('WAKIL SPRM — IBU PEJABAT (HQ)', r.client2Name, r.client2Jawatan, r.client2Tarikh),
@@ -9112,7 +9883,16 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       </head><body class="pm-print">${clone.innerHTML}</body></html>`);
       w.document.close();
       w.focus();
-      setTimeout(()=>{ w.print(); w.close(); }, 600);
+      // The popup is a brand-new document, so its <img> tags (Daya One/SPRM
+      // logos, QR snapshot) have to load fresh — a blind fixed delay before
+      // printing races against that load and can print mid-layout-shift
+      // (logo overlapping the box below it). Wait for every image to
+      // actually finish (or fail) first, capped so a broken image can't
+      // hang the export forever.
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); w.close(); }, 200);
       await logAudit('EXPORT_PDF', `${viewPM.value?.refNo||'-'} — ${viewPM.value?.siteName||''}`);
     }
 
@@ -10214,9 +10994,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     return {
       page, authUser, authProfile, loading, initialLoading, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession,
-      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, virChecklistFor, virSectionsFor, virChecklistCols, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
-      currentProject, virSiteEquip,
+      currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
@@ -10234,7 +11014,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
-      teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams,
+      teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
