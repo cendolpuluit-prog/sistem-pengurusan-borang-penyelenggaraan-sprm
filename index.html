@@ -472,10 +472,11 @@ tr:hover td{background:#f9fbff}
 .pm-corp-center{text-align:center}
 .pm-corp-logo-txt{font-size:12pt;font-weight:bold;color:#006633;letter-spacing:.3px}
 .pm-corp-logo-sub{font-size:8pt;color:#444;margin-top:3px;line-height:1.5}
-.pm-corp-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.pm-corp-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.pm-corp-ref-row{display:flex;align-items:center;gap:6px}
 .pm-corp-ref{text-align:right;font-size:7.5pt;color:#333;white-space:normal;overflow-wrap:break-word}
 .pm-corp-ref .ref-no{font-size:8.5pt;font-weight:bold;color:#006633;display:block;margin-top:1px}
-.pm-qr-canvas{width:46px!important;height:46px!important;flex-shrink:0;margin-top:2px}
+.pm-qr-canvas{width:34px!important;height:34px!important;flex-shrink:0}
 .pm-classification{text-align:right;font-size:7.5pt;font-weight:700;color:#b71c1c;letter-spacing:.06em;margin-bottom:4px}
 .pm-corp-title{background:#006633;color:#fff;text-align:center;padding:6px 0;font-size:10.5pt;font-weight:bold;letter-spacing:.5px;margin-bottom:10px}
 .pm-corp-info{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #006633;margin-bottom:10px}
@@ -505,7 +506,7 @@ tr:hover td{background:#f9fbff}
    own wording vs the 2 SPRM boxes' shared wording) — without a fixed
    height here, whichever wraps to fewer lines pushes its .sig-space (and
    everything below) up, so the 3 boxes stop lining up underneath. */
-.pm-sign-box .pm-sign-desc{font-size:8pt;color:#555;font-style:italic;min-height:2.6em;line-height:1.3}
+.pm-sign-box .pm-sign-desc{font-size:8pt;color:#555;font-style:italic;min-height:3.9em;line-height:1.3}
 .pm-sign-box .sig-space{height:140px;border-bottom:1px dashed #999;margin:8px 0 4px}
 .pm-footer{margin-top:10px;padding-top:6px;border-top:2px solid #006633;font-size:8pt;color:#555;display:flex;justify-content:space-between}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
@@ -1739,6 +1740,7 @@ tr:hover td{background:#f9fbff}
                   <option v-for="c in HDD_CAPACITIES" :key="c">{{c}}</option>
                 </select>
               </div>
+              <div class="form-group"><label>Jumlah Unit</label><input class="form-control" type="number" min="1" v-model="nHDD.totalUnit" placeholder="cth: 10"></div>
               <div class="form-group"><label>Konfigurasi</label>
                 <select class="form-control" v-model="nHDD.config"><option>RAID 5</option><option>RAID 1</option><option>Single</option><option>JBOD</option></select>
               </div>
@@ -1760,17 +1762,17 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('hdd')" @change="toggleEquipSelectAll('hdd')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Config</th><th>NVR</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('hdd')" @change="toggleEquipSelectAll('hdd')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>NVR</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(h,i) in selSiteEquip.hdd||[]" :key="h._uid||i" :class="{'highlight-row':equipEditIdx.hdd===i}">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
-                    <td>{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.config}}</td><td>{{h.nvrRef}}</td>
+                    <td>{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td><td>{{h.nvrRef}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.hdd||[]).length"><td colspan="9" class="empty">Tiada HDD.</td></tr>
+                  <tr v-if="!(selSiteEquip.hdd||[]).length"><td colspan="10" class="empty">Tiada HDD.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2509,10 +2511,12 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="pm-corp-right">
               <img src="logo_sprm.png" alt="SPRM" class="pm-corp-logo-img">
-              <div class="pm-corp-ref">
-                <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
+              <div class="pm-corp-ref-row">
+                <div class="pm-corp-ref">
+                  <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
+                </div>
+                <canvas id="pm-qr-canvas" class="pm-qr-canvas" width="46" height="46" title="Imbas untuk No. Rujukan"></canvas>
               </div>
-              <canvas id="pm-qr-canvas" class="pm-qr-canvas" width="46" height="46" title="Imbas untuk No. Rujukan"></canvas>
             </div>
           </div>
 
@@ -4734,7 +4738,7 @@ createApp({
     const eqTab = ref('cameras');
     const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
-    const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''});
+    const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''});
     const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',accessUser:'',accessPw:''});
     const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''});
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
@@ -5788,7 +5792,7 @@ createApp({
     const FORM_DEFAULTS = {
       nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
       nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',config:'RAID 5',nvrRef:'',installDate:''},
+      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''},
       nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',accessUser:'',accessPw:''},
       nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''},
