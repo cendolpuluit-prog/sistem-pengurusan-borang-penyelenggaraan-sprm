@@ -501,6 +501,11 @@ tr:hover td{background:#f9fbff}
 .pm-sign-box{border:1px solid #006633;padding:10px 12px}
 .pm-sign-box h4{font-size:9pt;color:#006633;margin-bottom:6px;font-weight:bold;border-bottom:1px solid #b2d8b2;padding-bottom:4px}
 .pm-sign-box p{font-size:8.5pt;margin:2px 0;color:#333}
+/* The 3 sign boxes' italic description text differs in length (Kontraktor's
+   own wording vs the 2 SPRM boxes' shared wording) — without a fixed
+   height here, whichever wraps to fewer lines pushes its .sig-space (and
+   everything below) up, so the 3 boxes stop lining up underneath. */
+.pm-sign-box .pm-sign-desc{font-size:8pt;color:#555;font-style:italic;min-height:2.6em;line-height:1.3}
 .pm-sign-box .sig-space{height:140px;border-bottom:1px dashed #999;margin:8px 0 4px}
 .pm-footer{margin-top:10px;padding-top:6px;border-top:2px solid #006633;font-size:8pt;color:#555;display:flex;justify-content:space-between}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
@@ -2560,11 +2565,11 @@ tr:hover td{background:#f9fbff}
           <div class="pm-section-hdr">1. &nbsp;PEMERIKSAAN KAMERA <span>({{viewPM?.cameras?.length||0}} unit)</span></div>
           <table class="pm-tbl">
             <thead><tr>
-              <th style="width:7%">No.</th>
+              <th style="width:4%">No.</th>
               <th style="width:20%">Nama / Lokasi</th>
               <th style="width:13%">IP Address</th>
               <th style="width:9%">Brand</th>
-              <th style="width:13%">Model</th>
+              <th style="width:16%">Model</th>
               <th style="width:14%">No. Siri</th>
               <th style="width:8%">Jenis</th>
               <th style="width:10%">Kualiti Paparan</th>
@@ -2664,7 +2669,7 @@ tr:hover td{background:#f9fbff}
           <!-- 7. SUPPORT -->
           <div class="pm-section-hdr">7. &nbsp;PERALATAN SOKONGAN</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:62%">Perkara</th><th style="width:12%">Status</th><th style="width:22%">Nota</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:45%">Perkara</th><th style="width:12%">Status</th><th style="width:39%">Nota</th></tr></thead>
             <tbody>
               <tr v-for="(s,i) in viewPM?.support" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{s.label}}</td>
@@ -2690,7 +2695,7 @@ tr:hover td{background:#f9fbff}
           <div class="pm-sign-wrap">
             <div class="pm-sign-box">
               <h4>WAKIL KONTRAKTOR</h4>
-              <p style="font-size:8pt;color:#555;font-style:italic">Saya sebagai Wakil Kontraktor telah menjalankan kerja-kerja penyelenggaraan seperti yang tertakluk di dalam kontrak.</p>
+              <p class="pm-sign-desc">Saya sebagai Wakil Kontraktor telah menjalankan kerja-kerja penyelenggaraan seperti yang tertakluk di dalam kontrak.</p>
               <div class="sig-space"></div>
               <p><b>Nama:</b> {{viewPM?.contractorName||'................................................'}}</p>
               <p><b>Jawatan:</b> {{viewPM?.contractorJawatan||'................................................'}}</p>
@@ -2698,7 +2703,7 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="pm-sign-box">
               <h4>WAKIL SPRM — NEGERI / CAWANGAN</h4>
-              <p style="font-size:8pt;color:#555;font-style:italic">Saya berpuas hati dengan kerja-kerja penyelenggaraan yang telah dilaksanakan oleh pihak kontraktor seperti yang tertakluk di dalam kontrak.</p>
+              <p class="pm-sign-desc">Saya berpuas hati dengan kerja-kerja penyelenggaraan yang telah dilaksanakan oleh pihak kontraktor seperti yang tertakluk di dalam kontrak.</p>
               <div class="sig-space"></div>
               <p><b>Nama:</b> {{viewPM?.clientName||'................................................'}}</p>
               <p><b>Jawatan:</b> {{viewPM?.clientJawatan||'................................................'}}</p>
@@ -2706,7 +2711,7 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="pm-sign-box">
               <h4>WAKIL SPRM — IBU PEJABAT (HQ)</h4>
-              <p style="font-size:8pt;color:#555;font-style:italic">Saya berpuas hati dengan kerja-kerja penyelenggaraan yang telah dilaksanakan oleh pihak kontraktor seperti yang tertakluk di dalam kontrak.</p>
+              <p class="pm-sign-desc">Saya berpuas hati dengan kerja-kerja penyelenggaraan yang telah dilaksanakan oleh pihak kontraktor seperti yang tertakluk di dalam kontrak.</p>
               <div class="sig-space"></div>
               <p><b>Nama:</b> {{viewPM?.client2Name||'................................................'}}</p>
               <p><b>Jawatan:</b> {{viewPM?.client2Jawatan||'................................................'}}</p>
