@@ -2096,7 +2096,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8 mt-16">
             <button class="btn btn-outline" @click="pmStep=1">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=3">Seterusnya →</button>
-            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2135,7 +2135,7 @@ tr:hover td{background:#f9fbff}
             <button class="btn btn-outline" @click="pmStep=2">← Balik</button>
             <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
             <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang VIR'}}</button>
-            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
           </div><!-- /card tandatangan vir -->
         </div><!-- /step3 vir wrapper -->
@@ -2175,7 +2175,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8" style="margin-top:16px">
             <button class="btn btn-outline" @click="pmStep=1">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=3">Seterusnya →</button>
-            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2224,7 +2224,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=2">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=4">Seterusnya →</button>
-            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2290,7 +2290,7 @@ tr:hover td{background:#f9fbff}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=3">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=5">Seterusnya →</button>
-            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
 
@@ -2345,7 +2345,7 @@ tr:hover td{background:#f9fbff}
             <button class="btn btn-outline" @click="pmStep=4">← Balik</button>
             <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
             <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang'}}</button>
-            <button class="btn btn-outline" style="margin-left:auto" @click="cancelPmForm">✕ Batal</button>
+            <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
         </div>
       </div>
