@@ -447,10 +447,23 @@ tr:hover td{background:#f9fbff}
   .pm-tbl tr{page-break-inside:avoid;page-break-after:auto}
   .pm-tbl thead{display:table-header-group}
   .pm-sign-wrap,.pm-nota-box{page-break-inside:avoid}
-  /* Running footer — repeats on every printed page (CSS paged-media: a
-     position:fixed element inside the page box reflows per page). */
-  .pm-footer{position:fixed!important;bottom:4mm!important;left:0!important;right:0!important;background:#fff!important;margin-top:0!important}
-  .pm-print{padding-bottom:14mm!important;border:none!important}
+  /* Short sections (NVR/HDD/Switch/Alarm/Misc/Support each usually have only
+     a handful of rows) are wrapped as one keep-together unit — if the whole
+     section doesn't fit in the space left on the current page, it jumps to
+     the next page as a block instead of splitting awkwardly mid-table.
+     Section 1 (Kamera) is deliberately NOT wrapped this way since it can run
+     to dozens of rows and must still be able to flow/split across pages. */
+  .pm-section-block{page-break-inside:avoid}
+  /* The footer used to be position:fixed to repeat on every printed page,
+     but a fixed element's "reserved space" (padding-bottom on .pm-print)
+     only applies once in the document flow, not once per physical page —
+     so on any page other than the one where that padding happened to land,
+     the fixed footer had no reserved gap and could overlap onto real
+     content underneath it. Simplest reliable fix: let it flow normally and
+     only appear once, at the very end of the form, like the rest of the
+     document. page-break-inside:avoid still keeps it from splitting if it
+     happens to land right at a page boundary.  */
+  .pm-footer{page-break-inside:avoid}
 }
 /* #print-area shows on screen too — styled via .pm-preview-inner wrapper */
 
@@ -2600,6 +2613,7 @@ tr:hover td{background:#f9fbff}
           </table>
 
           <!-- 2. NVR -->
+          <div class="pm-section-block">
           <div class="pm-section-hdr">2. &nbsp;NETWORK VIDEO RECORDER (NVR)</div>
           <table class="pm-tbl">
             <thead><tr><th style="width:5%">No.</th><th style="width:30%">Nama / Jenis</th><th style="width:13%">Brand</th><th style="width:14%">Model</th><th style="width:18%">No. Siri</th><th style="width:12%">Software Operation</th><th style="width:8%">Status</th></tr></thead>
@@ -2613,8 +2627,10 @@ tr:hover td{background:#f9fbff}
               <tr v-if="!viewPM?.nvr?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
             </tbody>
           </table>
+          </div>
 
           <!-- 3. HDD -->
+          <div class="pm-section-block">
           <div class="pm-section-hdr">3. &nbsp;CAKERA KERAS (HARD DISK)</div>
           <table class="pm-tbl">
             <thead><tr><th style="width:4%">No.</th><th style="width:16%">Brand</th><th style="width:18%">Model</th><th style="width:24%">Total HDD &amp; Konfigurasi</th><th style="width:18%">Jenis RAID</th><th style="width:20%">Status</th></tr></thead>
@@ -2628,8 +2644,10 @@ tr:hover td{background:#f9fbff}
               <tr v-if="!viewPM?.hdd?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</td></tr>
             </tbody>
           </table>
+          </div>
 
           <!-- 4. SWITCH -->
+          <div class="pm-section-block">
           <div class="pm-section-hdr">4. &nbsp;POE/NETWORK SWITCH</div>
           <table class="pm-tbl">
             <thead><tr><th style="width:5%">No.</th><th style="width:14%">Brand</th><th style="width:18%">Model</th><th style="width:20%">No. Siri</th><th style="width:16%">Error Notification</th><th style="width:16%">Port Status</th><th style="width:11%">Status</th></tr></thead>
@@ -2644,8 +2662,10 @@ tr:hover td{background:#f9fbff}
               <tr v-if="!viewPM?.switches?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
             </tbody>
           </table>
+          </div>
 
           <!-- 5. ALARM -->
+          <div class="pm-section-block">
           <div class="pm-section-hdr">5. &nbsp;SMS ALARM SYSTEM</div>
           <table class="pm-tbl">
             <thead><tr><th style="width:5%">No.</th><th style="width:20%">Nama</th><th style="width:15%">Jenis</th><th style="width:15%">Model</th><th style="width:17%">No. Siri</th><th style="width:14%">Functionality</th><th style="width:14%">Status</th></tr></thead>
@@ -2659,8 +2679,10 @@ tr:hover td{background:#f9fbff}
               <tr v-if="!viewPM?.alarms?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod Alarm</td></tr>
             </tbody>
           </table>
+          </div>
 
           <!-- 6. LAIN-LAIN PERALATAN -->
+          <div class="pm-section-block">
           <div class="pm-section-hdr">6. &nbsp;PERALATAN LAIN-LAIN</div>
           <table class="pm-tbl">
             <thead><tr><th style="width:5%">No.</th><th style="width:22%">Nama/Lokasi</th><th style="width:10%">Kategori</th><th style="width:9%">Brand</th><th style="width:16%">Model</th><th style="width:16%">No. Siri</th><th style="width:9%">Status</th><th style="width:13%">Nota</th></tr></thead>
@@ -2674,8 +2696,10 @@ tr:hover td{background:#f9fbff}
               <tr v-if="!viewPM?.misc?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod peralatan lain-lain</td></tr>
             </tbody>
           </table>
+          </div>
 
           <!-- 7. SUPPORT -->
+          <div class="pm-section-block">
           <div class="pm-section-hdr">7. &nbsp;PERKARA LAIN-LAIN</div>
           <table class="pm-tbl">
             <thead><tr><th style="width:7%">No.</th><th style="width:35%">Perkara</th><th style="width:12%">Status</th><th style="width:46%">Nota</th></tr></thead>
@@ -2685,8 +2709,10 @@ tr:hover td{background:#f9fbff}
                 <td :class="s.status==='Baik'?'ok':'no'">{{s.status}}</td>
                 <td>{{s.nota}}</td>
               </tr>
+              <tr v-if="!viewPM?.support?.length"><td colspan="4" class="ctr" style="padding:8px;color:#888">Tiada rekod</td></tr>
             </tbody>
           </table>
+          </div>
 
           </template><!-- end CCTV-only -->
 
