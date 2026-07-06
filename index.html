@@ -3733,7 +3733,10 @@ tr:hover td{background:#f9fbff}
             <div style="font-size:1.1rem;font-weight:700;color:#002244">🛠️ Senarai Kontraktor Luar</div>
             <div style="font-size:.8rem;color:#888;margin-top:2px">Rujukan pantas bidang kerja &amp; no. telefon kontraktor pihak ketiga untuk kerja-kerja urgent</div>
           </div>
-          <button v-if="canEditKontraktor" class="btn btn-primary btn-sm" @click="openKModal(null)">+ Tambah Kontraktor</button>
+          <div class="flex gap-8">
+            <button class="btn btn-outline btn-sm" @click="exportKontraktorPdf">🖨️ Export PDF</button>
+            <button v-if="canEditKontraktor" class="btn btn-primary btn-sm" @click="openKModal(null)">+ Tambah Kontraktor</button>
+          </div>
         </div>
 
         <div class="flex gap-8" style="margin-bottom:16px">
@@ -3744,19 +3747,20 @@ tr:hover td{background:#f9fbff}
         <div class="card">
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th style="width:40px">#</th><th>Nama Kontraktor</th><th>Bidang Kerja</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
+              <thead><tr><th style="width:40px">#</th><th>Nama Kontraktor</th><th>Bidang Kerja</th><th>Area Service</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
               <tbody>
                 <tr v-for="(c,i) in (kontraktorLuar[kontraktorLuarProject]||[])" :key="c.id">
                   <td style="text-align:center;color:#888;font-size:.8rem">{{i+1}}</td>
                   <td style="font-weight:600;color:#002244">{{c.name}}</td>
                   <td>{{c.bidangKerja}}</td>
+                  <td>{{c.areaService}}</td>
                   <td><a v-if="c.phone" :href="'tel:'+c.phone" style="color:#005599;text-decoration:none;font-weight:600">📱 {{c.phone}}</a></td>
                   <td v-if="canEditKontraktor" class="flex gap-8" style="justify-content:center">
                     <button class="btn btn-outline btn-sm btn-icon" @click="openKModal(c)" title="Edit">✏️</button>
                     <button class="btn btn-danger btn-sm btn-icon" @click="deleteKontraktor(c.id)" title="Padam">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!(kontraktorLuar[kontraktorLuarProject]||[]).length"><td :colspan="canEditKontraktor?5:4" style="text-align:center;color:#bbb;font-style:italic;padding:20px">Tiada kontraktor lagi. Tambah di atas.</td></tr>
+                <tr v-if="!(kontraktorLuar[kontraktorLuarProject]||[]).length"><td :colspan="canEditKontraktor?6:5" style="text-align:center;color:#bbb;font-style:italic;padding:20px">Tiada kontraktor lagi. Tambah di atas.</td></tr>
               </tbody>
             </table>
           </div>
@@ -3765,10 +3769,11 @@ tr:hover td{background:#f9fbff}
 
       <!-- Kontraktor Luar add/edit modal -->
       <div v-if="kModal.show" class="modal-bg" @click.self="kModal.show=false">
-        <div class="modal-box">
+        <div class="modal">
           <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor — {{kontraktorLuarProject==='vir'?'VIR':'CCTV'}}</h3>
           <div class="form-group"><label>Nama Kontraktor</label><input class="form-control" v-model="kModal.name" placeholder="cth: ABC Aircond Services"></div>
           <div class="form-group"><label>Bidang Kerja</label><input class="form-control" v-model="kModal.bidangKerja" placeholder="cth: Servis & Baiki Aircond"></div>
+          <div class="form-group"><label>Area Service</label><input class="form-control" v-model="kModal.areaService" placeholder="cth: Selangor & Kuala Lumpur"></div>
           <div class="form-group"><label>No. Telefon</label><input class="form-control" v-model="kModal.phone" placeholder="cth: 012-3456789"></div>
           <p v-if="kModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{kModal.err}}</p>
           <div class="flex gap-8 justify-end">
@@ -6474,20 +6479,32 @@ createApp({
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
           h2{color:#003366;margin-bottom:2px}
           p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
           table{width:100%;border-collapse:collapse;margin-top:12px}
           th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
           td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt}
           tr:nth-child(even) td{background:#f7f9fc}
         </style>
       </head><body>
-        <h2>Kontrak &amp; SLA — ${currentProject.value==='vir'?'VIR':'CCTV'} SPRM</h2>
-        <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
+        <div class="header">
+          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Kontrak &amp; SLA — ${currentProject.value==='vir'?'VIR':'CCTV'} SPRM</h2>
+            <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
+          </div>
+          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+        </div>
         <table><thead><tr><th>#</th><th>Tajuk Kontrak</th><th>No. Kontrak</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Status</th><th>Nota</th></tr></thead>
         <tbody>${tableRows}</tbody></table>
       </body></html>`);
       w.document.close();
       w.focus();
-      setTimeout(()=>{ w.print(); w.close(); }, 600);
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); w.close(); }, 200);
       await logAudit('CONTRACT_EXPORT_PDF', `${list.length} rekod (${currentProject.value.toUpperCase()})`);
     }
     const resetPwModal = reactive({ show:false, userId:'', username:'', userEmail:'', err:'' });
@@ -7365,20 +7382,32 @@ createApp({
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
           h2{color:#003366;margin-bottom:2px}
           p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
           table{width:100%;border-collapse:collapse;margin-top:12px}
           th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
           td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt}
           tr:nth-child(even) td{background:#f7f9fc}
         </style>
       </head><body>
-        <h2>Log Audit — Sistem PM CCTV/VIR SPRM</h2>
-        <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${rows.length} rekod</p>
+        <div class="header">
+          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Log Audit — Sistem PM CCTV/VIR SPRM</h2>
+            <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${rows.length} rekod</p>
+          </div>
+          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+        </div>
         <table><thead><tr><th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th></tr></thead>
         <tbody>${tableRows}</tbody></table>
       </body></html>`);
       w.document.close();
       w.focus();
-      setTimeout(()=>{ w.print(); w.close(); }, 600);
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); w.close(); }, 200);
       await logAudit('EXPORT_AUDIT_PDF', `${rows.length} rekod`);
     }
 
@@ -8689,7 +8718,7 @@ createApp({
     );
     const kontraktorLuar = ref({ cctv:[], vir:[] });
     const kontraktorLuarProject = ref('cctv'); // internal CCTV/VIR toggle within the one shared page
-    const kModal = reactive({ show:false, editId:null, name:'', bidangKerja:'', phone:'', err:'' });
+    const kModal = reactive({ show:false, editId:null, name:'', bidangKerja:'', areaService:'', phone:'', err:'' });
 
     async function loadKontraktorLuar() {
       try {
@@ -8710,10 +8739,11 @@ createApp({
         kModal.editId = existing.id;
         kModal.name = existing.name;
         kModal.bidangKerja = existing.bidangKerja;
+        kModal.areaService = existing.areaService || '';
         kModal.phone = existing.phone;
       } else {
         kModal.editId = null;
-        kModal.name = ''; kModal.bidangKerja = ''; kModal.phone = '';
+        kModal.name = ''; kModal.bidangKerja = ''; kModal.areaService = ''; kModal.phone = '';
       }
       kModal.show = true;
     }
@@ -8724,7 +8754,7 @@ createApp({
       if(!isValidPhone(kModal.phone)) { kModal.err = 'Format no. telefon tidak sah.'; return; }
       const proj = kontraktorLuarProject.value;
       const list = [...(kontraktorLuar.value[proj] || [])];
-      const entry = { id: kModal.editId || _genId(), name: kModal.name.trim(), bidangKerja: kModal.bidangKerja.trim(), phone: kModal.phone.trim() };
+      const entry = { id: kModal.editId || _genId(), name: kModal.name.trim(), bidangKerja: kModal.bidangKerja.trim(), areaService: kModal.areaService.trim(), phone: kModal.phone.trim() };
       const idx = list.findIndex(c => c.id === entry.id);
       if(idx !== -1) list[idx] = entry; else list.push(entry);
       try {
@@ -8746,6 +8776,67 @@ createApp({
         await logAudit('KONTRAKTOR_LUAR_DELETE', proj.toUpperCase());
         showToast('Kontraktor dipadam.');
       } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
+    }
+
+    // Mirrors printJadual()'s header layout (Daya One logo left, title
+    // centre, SPRM logo right) for visual consistency across the app's PDF
+    // exports.
+    async function exportKontraktorPdf() {
+      const proj = kontraktorLuarProject.value;
+      const projLabel = proj === 'vir' ? 'VIR' : 'CCTV';
+      const list = kontraktorLuar.value[proj] || [];
+      const rows = list.length ? list.map((c,i) => `<tr>
+          <td style="text-align:center">${i+1}</td>
+          <td>${esc(c.name)}</td>
+          <td>${esc(c.bidangKerja)}</td>
+          <td>${esc(c.areaService)}</td>
+          <td>${esc(c.phone)}</td>
+        </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#888;padding:12px">Tiada kontraktor direkodkan.</td></tr>';
+
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
+        <title>Senarai Kontraktor Luar ${projLabel}</title>
+        <style>
+          *{box-sizing:border-box;margin:0;padding:0}
+          body{font-family:Arial,sans-serif;font-size:10pt;color:#000;padding:14mm 16mm}
+          h2{font-size:15pt;font-weight:bold;color:#003366}
+          p.sub{font-size:9pt;color:#555;margin-top:3px}
+          .header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:16px}
+          .header-logo{height:46px;max-width:150px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
+          table{width:100%;border-collapse:collapse;font-size:9pt}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-weight:600}
+          td{padding:5px 8px;border-bottom:1px solid #ddd;vertical-align:top}
+          tr:nth-child(even) td{background:#f5f7ff}
+          .footer{margin-top:18px;border-top:1px solid #ccc;padding-top:7px;font-size:8pt;color:#888;display:flex;justify-content:space-between}
+          @media print{@page{size:A4;margin:12mm 15mm}}
+        </style></head><body>
+        <div class="header">
+          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Senarai Kontraktor Luar — ${projLabel}</h2>
+            <p class="sub">Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
+          </div>
+          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+        </div>
+        <table><thead><tr>
+          <th style="width:6%">#</th><th style="width:26%">Nama Kontraktor</th><th style="width:26%">Bidang Kerja</th><th style="width:26%">Area Service</th><th style="width:16%">No. Telefon</th>
+        </tr></thead><tbody>${rows}</tbody></table>
+        <div class="footer"><span>Sistem Pengurusan Borang PM — SPRM</span><span>Senarai Kontraktor Luar ${projLabel}</span></div>
+      </body></html>`;
+
+      const w = window.open('','_blank','width=900,height=700');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(html);
+      w.document.close();
+      w.focus();
+      // See exportPDF()'s comment on the same fix — a fresh popup document
+      // has to (re)load its own <img> tags, so wait for them rather than
+      // racing a blind fixed delay before printing.
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); }, 200);
+      await logAudit('EXPORT_PDF', 'Senarai Kontraktor Luar '+projLabel);
     }
 
     async function toggleFreeze(u) {
@@ -10242,7 +10333,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       }, options:{ responsive:true, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true,ticks:{stepSize:1}}} }});
     }
 
-    function printLaporan() {
+    async function printLaporan() {
       const recs = laporanFiltered.value;
       const months = _getLaporanMonthRange(laporanTempoh.value);
       // Capture chart canvases as base64 images
@@ -10265,9 +10356,9 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.visitDate)}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#7A841A'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
       }).join('') : '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:12px">Tiada data nota yang mengandungi format MASALAH/TINDAKAN/STATUS</td></tr>';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Penyelenggaraan</title>
-<style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.co{font-size:13px;font-weight:800;color:#7A841A}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
+<style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}.header-mid{flex:1}.co{font-size:13px;font-weight:800;color:#7A841A}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
 </head><body>
-<div class="header"><div class="co">DAYA ONE RESOURCES SDN BHD</div><div class="sub">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor</div><h1 style="margin-top:8px">LAPORAN PENYELENGGARAAN — ${months[0]?months[0].label:''} hingga ${months[months.length-1]?months[months.length-1].label:''}</h1><div class="sub">Projek: ${laporanProject.value==='all'?'Semua':laporanProject.value.toUpperCase()} &nbsp;|&nbsp; Site: ${laporanSite.value==='all'?'Semua':laporanSite.value} &nbsp;|&nbsp; Jana: ${new Date().toLocaleDateString('ms-MY')}</div></div>
+<div class="header"><img src="logo_dayaone.png" alt="Daya One" class="header-logo"><div class="header-mid"><div class="co">DAYA ONE RESOURCES SDN BHD</div><div class="sub">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor</div><h1 style="margin-top:8px">LAPORAN PENYELENGGARAAN — ${months[0]?months[0].label:''} hingga ${months[months.length-1]?months[months.length-1].label:''}</h1><div class="sub">Projek: ${laporanProject.value==='all'?'Semua':laporanProject.value.toUpperCase()} &nbsp;|&nbsp; Site: ${laporanSite.value==='all'?'Semua':laporanSite.value} &nbsp;|&nbsp; Jana: ${new Date().toLocaleDateString('ms-MY')}</div></div><img src="logo_sprm.png" alt="SPRM" class="header-logo"></div>
 <div class="stats"><div class="stat"><div class="n" style="color:#003366">${recs.length}</div><div class="l">Jumlah Rekod</div></div><div class="stat"><div class="n" style="color:#7A841A">${pmCount}</div><div class="l">Rekod PM</div></div><div class="stat"><div class="n" style="color:#b71c1c">${cmCount}</div><div class="l">Rekod CM</div></div><div class="stat"><div class="n" style="color:#4a148c">${siteCount}</div><div class="l">Site Diliputi</div></div></div>
 <div class="charts"><div class="chart-box"><h2>Trend PM vs CM per Bulan</h2>${img1?`<img src="${img1}">`:''}</div><div class="chart-box"><h2>Nisbah PM : CM</h2>${img2?`<img src="${img2}">`:''}</div></div>
 <div class="charts"><div class="chart-box"><h2>Top Site — CM Tertinggi</h2>${img3?`<img src="${img3}">`:''}</div><div class="chart-box"><h2>Peralatan Kerap Gagal</h2>${img4?`<img src="${img4}">`:''}</div></div>
@@ -10278,7 +10369,10 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const w = window.open('','_blank','width=1000,height=750');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(html); w.document.close(); w.focus();
-      setTimeout(()=>{ w.print(); }, 700);
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); }, 200);
     }
 
     // ── Laporan: Nota Parser ──
@@ -10369,7 +10463,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       };
     });
 
-    function printLaporanBulanan() {
+    async function printLaporanBulanan() {
       const recs = lbRecords.value;
       const monthName = MONTHS[lbMonth.value - 1];
       const yr = lbYear.value;
@@ -10440,10 +10534,10 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5px;color:#1a1a1a;background:#fff;padding:24px 28px}
   .header{display:flex;align-items:center;gap:16px;border-bottom:3px solid #003366;padding-bottom:14px;margin-bottom:18px}
-  .logo-box{width:52px;height:52px;background:#003366;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:900;flex-shrink:0}
+  .header-logo{height:46px;max-width:130px;object-fit:contain;flex-shrink:0}
   .co-name{font-size:14px;font-weight:800;color:#003366;letter-spacing:.02em}
   .co-addr{font-size:9px;color:#666;margin-top:2px}
-  .doc-title{margin-left:auto;text-align:right}
+  .doc-title{flex:1;text-align:center}
   .doc-title h1{font-size:13px;font-weight:800;color:#003366}
   .doc-title .sub{font-size:9px;color:#888;margin-top:3px}
   .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
@@ -10472,7 +10566,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 </head><body>
 
 <div class="header">
-  <div class="logo-box">D1</div>
+  <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
   <div>
     <div class="co-name">DAYA ONE RESOURCES SDN BHD</div>
     <div class="co-addr">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor &nbsp;|&nbsp; Tel: 03-XXXX XXXX</div>
@@ -10482,6 +10576,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     <div class="sub">${monthName.toUpperCase()} ${yr} &nbsp;|&nbsp; ${projLabel.toUpperCase()}</div>
     <div class="sub" style="margin-top:2px">Tarikh Jana: ${genDate}</div>
   </div>
+  <img src="logo_sprm.png" alt="SPRM" class="header-logo">
 </div>
 
 <div class="stats-row">
@@ -10547,13 +10642,16 @@ ${allIssues.length > 0 ? `
       w.document.write(html);
       w.document.close();
       w.focus();
-      setTimeout(() => { w.print(); }, 700);
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(() => { w.print(); }, 200);
     }
 
     // ── Year-in-Review ──
     const yirYear = ref(new Date().getFullYear());
 
-    function printYearInReview() {
+    async function printYearInReview() {
       const yr = yirYear.value;
       const recs = pmRecords.value.filter(r => {
         const recYear = r.visitDate ? new Date(r.visitDate).getFullYear() : Number(r.year);
@@ -10634,7 +10732,9 @@ ${allIssues.length > 0 ? `
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5px;color:#1a1a1a;padding:24px 28px}
-.cover{text-align:center;padding:40px 20px;border-bottom:3px solid #003366;margin-bottom:24px}
+.cover{text-align:center;padding:24px 20px;border-bottom:3px solid #003366;margin-bottom:24px}
+.cover-logos{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cover-logo{height:48px;max-width:140px;object-fit:contain}
 .cover .co{font-size:16px;font-weight:900;color:#003366;letter-spacing:.03em}
 .cover .addr{font-size:9.5px;color:#666;margin-top:4px}
 .cover h1{font-size:22px;font-weight:900;color:#003366;margin:16px 0 6px;letter-spacing:.04em}
@@ -10660,6 +10760,10 @@ tr:nth-child(even) td{background:#f9fafc}
 </style></head><body>
 
 <div class="cover">
+  <div class="cover-logos">
+    <img src="logo_dayaone.png" alt="Daya One" class="cover-logo">
+    <img src="logo_sprm.png" alt="SPRM" class="cover-logo">
+  </div>
   <div class="co">DAYA ONE RESOURCES SDN BHD</div>
   <div class="addr">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor</div>
   <h1>LAPORAN TAHUNAN PENYELENGGARAAN ${yr}</h1>
@@ -10722,7 +10826,10 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const w = window.open('','_blank','width=1050,height=780');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(html); w.document.close(); w.focus();
-      setTimeout(()=>{ w.print(); },700);
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); },200);
     }
 
     // ══════════════════════════════════════════════════════════════
@@ -10794,7 +10901,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     });
 
     // ── 3. Ringkasan Eksekutif (1 halaman, print) ──
-    function printExecutiveSummary() {
+    async function printExecutiveSummary() {
       const yr = new Date().getFullYear();
       const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
       const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
@@ -10808,6 +10915,8 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5px;color:#1a1a1a;padding:26px 30px}
 .hdr{text-align:center;border-bottom:3px solid #003366;padding-bottom:12px;margin-bottom:18px}
+.hdr-logos{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.hdr-logo{height:44px;max-width:130px;object-fit:contain}
 .hdr .co{font-size:15px;font-weight:900;color:#003366}
 .hdr h1{font-size:19px;font-weight:900;color:#003366;margin:8px 0 4px}
 .hdr .sub{font-size:10px;color:#888}
@@ -10823,7 +10932,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 .footer{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;font-size:8.5px;color:#aaa;text-align:center}
 @media print{@page{margin:12mm;size:A4}}
 </style></head><body>
-<div class="hdr"><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>RINGKASAN EKSEKUTIF PENYELENGGARAAN</h1><div class="sub">SPRM — CCTV &amp; VIR &nbsp;|&nbsp; ${genDate}</div></div>
+<div class="hdr"><div class="hdr-logos"><img src="logo_dayaone.png" alt="Daya One" class="hdr-logo"><img src="logo_sprm.png" alt="SPRM" class="hdr-logo"></div><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>RINGKASAN EKSEKUTIF PENYELENGGARAAN</h1><div class="sub">SPRM — CCTV &amp; VIR &nbsp;|&nbsp; ${genDate}</div></div>
 <div class="kpi-grid">
   <div class="kpi"><div class="n" style="color:${cctvCompliance>=75?'#7A841A':cctvCompliance>=45?'#e65100':'#b71c1c'}">${cctvCompliance}</div><div class="l">Skor CCTV</div></div>
   <div class="kpi"><div class="n" style="color:${virCompliance>=75?'#7A841A':virCompliance>=45?'#e65100':'#b71c1c'}">${virCompliance}</div><div class="l">Skor VIR</div></div>
@@ -10841,7 +10950,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const w = window.open('','_blank','width=850,height=900');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(html); w.document.close(); w.focus();
-      setTimeout(()=>{ w.print(); }, 600);
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); }, 200);
     }
 
     // ── 4. Analisis Kegagalan ikut Brand/Model ──
@@ -11249,7 +11361,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, canEditContact, cpSites,
-      kontraktorLuar, kontraktorLuarProject, kModal, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor,
+      kontraktorLuar, kontraktorLuarProject, kModal, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       mobileNavOpen,
       darkMode,
       setTimeout
