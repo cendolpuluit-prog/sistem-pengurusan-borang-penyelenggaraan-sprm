@@ -87,6 +87,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .card:hover{box-shadow:0 6px 26px rgba(0,40,100,.1)}
 .card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px;padding-left:10px;border-left:3px solid #003366;position:relative}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
+.laporan-chart-row{display:grid;gap:16px;margin-bottom:16px}
 .stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);transition:transform .15s,box-shadow .15s}
 .stat-card-clickable{cursor:pointer}
 .stat-card-clickable:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,40,100,.14)}
@@ -666,6 +667,11 @@ tr:hover td{background:#f9fbff}
 
   /* Stats */
   .stat-grid{grid-template-columns:1fr 1fr}
+  /* Laporan Lanjutan chart rows (Trend PM vs CM / Nisbah, Top Site CM /
+     Peralatan Kerap Gagal) were fixed 2-column grids with no mobile
+     fallback, so the right-hand card got squeezed off-screen with no way
+     to scroll to it on a phone. Stack them on narrow screens instead. */
+  .laporan-chart-row{grid-template-columns:1fr!important}
   .stat-card .num{font-size:1.6rem}
 
   /* Forms — 16px prevents iOS auto-zoom */
@@ -990,6 +996,9 @@ tr:hover td{background:#f9fbff}
       </div>
       <div class="nav-item" :class="{active:page==='laporan-lanjutan'}" @click="page='laporan-lanjutan'" v-if="['superadmin','admin'].includes(authProfile?.role)">
         <span class="icon">📈</span> Laporan Lanjutan
+      </div>
+      <div class="nav-item" :class="{active:page==='kontraktor-luar'}" @click="loadKontraktorLuar();page='kontraktor-luar'">
+        <span class="icon">🛠️</span> Senarai Kontraktor Luar
       </div>
       <div class="nav-divider"></div>
       <div class="nav-item" :class="{active:page==='audit-log'}" @click="loadAuditLogs();page='audit-log'" v-if="['superadmin','admin'].includes(authProfile?.role)">
@@ -1851,6 +1860,7 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.ip" placeholder="cth: 192.168.1.10"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
@@ -1873,11 +1883,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>IP Address</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ports}}</td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ports}}</td><td>{{s.ip}}</td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -1913,6 +1923,7 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nALM.type"><option>SMS Power Alert</option><option>SMS iNotifi</option><option>iNotifi Appliance</option></select>
               </div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.ip" placeholder="cth: 192.168.1.20"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nALM.installDate"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.accessUser" autocomplete="off"></div>
@@ -1934,11 +1945,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="{'highlight-row':equipEditIdx.alarms===i}">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
-                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td>
+                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td><td>{{a.ip}}</td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
@@ -1983,6 +1994,7 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.brand"></div>
               <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.model"></div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.ip" placeholder="cth: 192.168.1.30"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan, cth: PC)</span></label><input class="form-control" v-model="nMISC.accessUser" autocomplete="off"></div>
@@ -2004,11 +2016,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="{'highlight-row':equipEditIdx.misc===i}">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
-                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td>
+                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td><td>{{m.ip}}</td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{m.accessPw ? (revealedPw.misc.has(m._uid) ? m.accessPw : '••••••') : '-'}}</span>
@@ -2672,7 +2684,7 @@ tr:hover td{background:#f9fbff}
               <div class="pm-section-hdr pm-vir-sec">{{section}}</div>
               <div class="pm-vir-2col">
                 <table class="pm-tbl" v-for="(col,ci) in virChecklistCols(section)" :key="ci">
-                  <thead><tr><th style="width:4%"></th><th>Item</th><th style="width:12%;text-align:center">Status</th><th style="width:14%">Nota</th></tr></thead>
+                  <thead><tr><th style="width:4%"></th><th>Item</th><th style="width:18%;text-align:center">Status</th><th style="width:14%">Nota</th></tr></thead>
                   <tbody>
                     <template v-for="(item,idx) in col.items" :key="item.key">
                       <tr v-if="item.isHeader">
@@ -3656,7 +3668,7 @@ tr:hover td{background:#f9fbff}
           <div style="background:linear-gradient(90deg,#002855,#003a80);color:#fff;border-radius:8px 8px 0 0;padding:9px 16px;font-size:.83rem;font-weight:700;letter-spacing:.04em;display:flex;align-items:center;gap:8px">
             <span>🗺</span> Zon {{zoneInfo.label}} <span style="font-size:.72rem;opacity:.7;font-weight:400;margin-left:4px">· {{zoneInfo.states}}</span>
           </div>
-          <div class="tbl-wrap" style="border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;overflow:hidden">
+          <div class="tbl-wrap" style="border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;overflow-x:auto">
             <table style="min-width:520px">
               <thead>
                 <tr>
@@ -3714,6 +3726,58 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
 
+      <!-- ====== SENARAI KONTRAKTOR LUAR ====== -->
+      <div v-if="page==='kontraktor-luar'">
+        <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
+          <div>
+            <div style="font-size:1.1rem;font-weight:700;color:#002244">🛠️ Senarai Kontraktor Luar</div>
+            <div style="font-size:.8rem;color:#888;margin-top:2px">Rujukan pantas bidang kerja &amp; no. telefon kontraktor pihak ketiga untuk kerja-kerja urgent</div>
+          </div>
+          <button v-if="canEditKontraktor" class="btn btn-primary btn-sm" @click="openKModal(null)">+ Tambah Kontraktor</button>
+        </div>
+
+        <div class="flex gap-8" style="margin-bottom:16px">
+          <button class="btn btn-sm" :style="kontraktorLuarProject==='cctv' ? 'background:#005599;color:#fff' : ''" :class="kontraktorLuarProject!=='cctv' ? 'btn-outline' : ''" @click="kontraktorLuarProject='cctv'">📹 Sistem CCTV</button>
+          <button class="btn btn-sm" :style="kontraktorLuarProject==='vir' ? 'background:#7a2e00;color:#fff' : ''" :class="kontraktorLuarProject!=='vir' ? 'btn-outline' : ''" @click="kontraktorLuarProject='vir'">🖥️ Sistem VIR</button>
+        </div>
+
+        <div class="card">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th style="width:40px">#</th><th>Nama Kontraktor</th><th>Bidang Kerja</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="(c,i) in (kontraktorLuar[kontraktorLuarProject]||[])" :key="c.id">
+                  <td style="text-align:center;color:#888;font-size:.8rem">{{i+1}}</td>
+                  <td style="font-weight:600;color:#002244">{{c.name}}</td>
+                  <td>{{c.bidangKerja}}</td>
+                  <td><a v-if="c.phone" :href="'tel:'+c.phone" style="color:#005599;text-decoration:none;font-weight:600">📱 {{c.phone}}</a></td>
+                  <td v-if="canEditKontraktor" class="flex gap-8" style="justify-content:center">
+                    <button class="btn btn-outline btn-sm btn-icon" @click="openKModal(c)" title="Edit">✏️</button>
+                    <button class="btn btn-danger btn-sm btn-icon" @click="deleteKontraktor(c.id)" title="Padam">🗑</button>
+                  </td>
+                </tr>
+                <tr v-if="!(kontraktorLuar[kontraktorLuarProject]||[]).length"><td :colspan="canEditKontraktor?5:4" style="text-align:center;color:#bbb;font-style:italic;padding:20px">Tiada kontraktor lagi. Tambah di atas.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kontraktor Luar add/edit modal -->
+      <div v-if="kModal.show" class="modal-bg" @click.self="kModal.show=false">
+        <div class="modal-box">
+          <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor — {{kontraktorLuarProject==='vir'?'VIR':'CCTV'}}</h3>
+          <div class="form-group"><label>Nama Kontraktor</label><input class="form-control" v-model="kModal.name" placeholder="cth: ABC Aircond Services"></div>
+          <div class="form-group"><label>Bidang Kerja</label><input class="form-control" v-model="kModal.bidangKerja" placeholder="cth: Servis & Baiki Aircond"></div>
+          <div class="form-group"><label>No. Telefon</label><input class="form-control" v-model="kModal.phone" placeholder="cth: 012-3456789"></div>
+          <p v-if="kModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{kModal.err}}</p>
+          <div class="flex gap-8 justify-end">
+            <button class="btn btn-outline" @click="kModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="saveKModal">Simpan</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== LAPORAN ====== -->
       <div v-if="page==='laporan'">
         <!-- Filter bar -->
@@ -3753,7 +3817,7 @@ tr:hover td{background:#f9fbff}
         </div>
 
         <!-- Stat cards -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px">
+        <div class="stat-grid">
           <div class="stat-card"><div class="num" style="color:#003366">{{laporanFiltered.length}}</div><div class="lbl">Jumlah Rekod</div></div>
           <div class="stat-card"><div class="num" style="color:#1b5e20">{{laporanFiltered.filter(r=>r.maintType!=='CM').length}}</div><div class="lbl">Rekod PM</div></div>
           <div class="stat-card"><div class="num" style="color:#b71c1c">{{laporanFiltered.filter(r=>r.maintType==='CM').length}}</div><div class="lbl">Rekod CM</div></div>
@@ -3761,7 +3825,7 @@ tr:hover td{background:#f9fbff}
         </div>
 
         <!-- Charts row 1 -->
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="laporan-chart-row" style="grid-template-columns:2fr 1fr">
           <div class="card">
             <div style="font-weight:700;font-size:.88rem;color:#003366;margin-bottom:12px">📊 Trend PM vs CM per Bulan</div>
             <canvas id="chart-bar-pmcm" height="200"></canvas>
@@ -3773,7 +3837,7 @@ tr:hover td{background:#f9fbff}
         </div>
 
         <!-- Charts row 2 -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="laporan-chart-row" style="grid-template-columns:1fr 1fr">
           <div class="card">
             <div style="font-weight:700;font-size:.88rem;color:#003366;margin-bottom:12px">🏢 Top Site — Paling Banyak CM</div>
             <canvas id="chart-site-cm" height="220"></canvas>
@@ -4747,9 +4811,11 @@ const NVR_MODELS = {
 
 // Surveillance/NAS-grade HDD brands & models available in the Malaysian
 // market over roughly the last 5 years (2020-2025).
-const HDD_BRANDS = ['Western Digital','Seagate','Toshiba','Lain-lain'];
+const HDD_BRANDS = ['Western Digital','Seagate','Toshiba','Bosch','Lain-lain'];
 const HDD_MODELS = {
   'Western Digital': [
+    'Purple Pro (18TB, Surveillance-rated, 7200RPM)',
+    'Gold/Red Pro (Enterprise/NAS-rated)',
     'WD10PURZ','WD11PURZ','WD20PURZ','WD30PURZ','WD40PURZ','WD43PURZ','WD60PURZ','WD64PURZ',
     'WD80PURZ','WD82PURZ','WD84PURZ','WD100PURZ','WD101PURP','WD102PURZ','WD102PURP',
     'WD121PURZ','WD121PURP','WD122PURP','WD140PURZ','WD141PURP','WD142PURP',
@@ -4758,6 +4824,8 @@ const HDD_MODELS = {
     'Lain-lain',
   ],
   'Seagate': [
+    'SkyHawk / SkyHawk AI (18TB, Surveillance-rated, 7200RPM)',
+    'Exos (Enterprise, 7200RPM)',
     'ST1000VX005','ST1000VX013','ST2000VX003','ST2000VX008','ST2000VX012','ST2000VX015','ST2000VX017',
     'ST3000VX006','ST3000VX009','ST3000VX010','ST3000VX015',
     'ST4000VX000','ST4000VX007','ST4000VX016',
@@ -4768,11 +4836,16 @@ const HDD_MODELS = {
     'Lain-lain',
   ],
   'Toshiba': [
+    'MG Series (Enterprise, 7200RPM)',
     'HDWT120UZSVA','HDWT140UZSVA','HDWT160UZSVA','HDWT180UZSVA',
     'HDWT720UZSVA','HDWT740UZSVA','HDWT760UZSVA','HDWT780UZSVA','HDWTA80UZSVA',
     'HDWT840UZSVA','HDWT860UZSVA','HDWT880UZSVA','HDWT31AUZSVA',
     'MD04ACA500','MD04ACA600',
     'MG07ACA14TE','MG08ACA16TE','MG09ACA14TE','MG09ACA16TE','MG09ACA18TE','MG10ACA20TE',
+    'Lain-lain',
+  ],
+  'Bosch': [
+    'HDD 18TB (DIP-AIO18-HDD)',
     'Lain-lain',
   ],
   'Lain-lain': [],
@@ -4898,10 +4971,10 @@ createApp({
     const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''});
-    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',nota:'',accessUser:'',accessPw:''});
+    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nRoom = reactive({name:'', system:'BCD'});
-    const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''});
-    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+    const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',ip:'',installDate:'',accessUser:'',accessPw:''});
+    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
     const ROOT_CAUSE_CATEGORIES = ['Litup/Bekalan Kuasa','Cuaca/Petir','Kabel Rosak','Vandalism/Kerosakan Fizikal','Umur Peralatan','Software/Firmware','Lain-lain'];
     // HQ Putrajaya has up to 16 VIR rooms; other sites normally have 1-2 —
@@ -6433,10 +6506,10 @@ createApp({
       nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
       nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''},
-      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', system:'BCD'},
-      nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',installDate:'',accessUser:'',accessPw:''},
-      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''},
+      nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
     };
 
     // ---- Crowdsourced brand/model dropdown growth ----
@@ -6916,7 +6989,8 @@ createApp({
       'user-mgmt':'Pengurusan Pengguna', profile:'Profil Saya', backup:'Backup & Restore',
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
       'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
-      'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV')
+      'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV'),
+      'kontraktor-luar': 'Senarai Kontraktor Luar'
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
@@ -8606,6 +8680,74 @@ createApp({
       await logAudit('EXPORT_CSV', 'Contact Person '+currentProject.value.toUpperCase());
     }
 
+    // ---- Senarai Kontraktor Luar (3rd-party contractor directory) ----
+    // A flat per-project list (no site grouping needed — a contractor like
+    // an aircond vendor isn't tied to one site) that staff can look up fast
+    // for urgent work instead of Daya One driving out to site themselves.
+    const canEditKontraktor = computed(()=>
+      ['superadmin','admin','staff'].includes(authProfile.value?.role)
+    );
+    const kontraktorLuar = ref({ cctv:[], vir:[] });
+    const kontraktorLuarProject = ref('cctv'); // internal CCTV/VIR toggle within the one shared page
+    const kModal = reactive({ show:false, editId:null, name:'', bidangKerja:'', phone:'', err:'' });
+
+    async function loadKontraktorLuar() {
+      try {
+        const [cctvDoc, virDoc] = await Promise.all([
+          db.collection('kontraktorLuar').doc('cctv').get(),
+          db.collection('kontraktorLuar').doc('vir').get(),
+        ]);
+        kontraktorLuar.value = {
+          cctv: cctvDoc.exists ? (cctvDoc.data().list || []) : [],
+          vir: virDoc.exists ? (virDoc.data().list || []) : [],
+        };
+      } catch(e) { console.warn('loadKontraktorLuar:', e); }
+    }
+
+    function openKModal(existing) {
+      kModal.err = '';
+      if(existing) {
+        kModal.editId = existing.id;
+        kModal.name = existing.name;
+        kModal.bidangKerja = existing.bidangKerja;
+        kModal.phone = existing.phone;
+      } else {
+        kModal.editId = null;
+        kModal.name = ''; kModal.bidangKerja = ''; kModal.phone = '';
+      }
+      kModal.show = true;
+    }
+
+    async function saveKModal() {
+      kModal.err = '';
+      if(!kModal.name.trim()) { kModal.err = 'Sila masukkan nama kontraktor.'; return; }
+      if(!isValidPhone(kModal.phone)) { kModal.err = 'Format no. telefon tidak sah.'; return; }
+      const proj = kontraktorLuarProject.value;
+      const list = [...(kontraktorLuar.value[proj] || [])];
+      const entry = { id: kModal.editId || _genId(), name: kModal.name.trim(), bidangKerja: kModal.bidangKerja.trim(), phone: kModal.phone.trim() };
+      const idx = list.findIndex(c => c.id === entry.id);
+      if(idx !== -1) list[idx] = entry; else list.push(entry);
+      try {
+        await _fw(db.collection('kontraktorLuar').doc(proj).set({ list }, { merge: true }));
+        kontraktorLuar.value[proj] = list;
+        await logAudit('KONTRAKTOR_LUAR_EDIT', `[${proj.toUpperCase()}] ${entry.name}`);
+        kModal.show = false;
+        showToast('Kontraktor disimpan!', 'success');
+      } catch(e) { kModal.err = 'Gagal simpan: ' + e.message; }
+    }
+
+    async function deleteKontraktor(id) {
+      if(!confirm('Padam kontraktor ini?')) return;
+      const proj = kontraktorLuarProject.value;
+      const list = (kontraktorLuar.value[proj] || []).filter(c => c.id !== id);
+      try {
+        await _fw(db.collection('kontraktorLuar').doc(proj).set({ list }, { merge: false }));
+        kontraktorLuar.value[proj] = list;
+        await logAudit('KONTRAKTOR_LUAR_DELETE', proj.toUpperCase());
+        showToast('Kontraktor dipadam.');
+      } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
+    }
+
     async function toggleFreeze(u) {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const newState = !u.disabled;
@@ -8776,6 +8918,41 @@ createApp({
         rooms.forEach(item => { if(!item._uid) item._uid = _genId(); });
         cancelEditEquip('rooms');
       }
+    }
+
+    // ---- Remember last-visited page across browser refresh ----
+    // Pages that need no extra reconstructed context (a specific record,
+    // an in-progress draft) are safe to restore directly. site-equip needs
+    // its site re-looked-up by id since `selSite` itself can't survive a
+    // refresh. Everything else (a specific PM record view, an in-progress
+    // new-PM draft, the site-compare picker) can't be safely reconstructed
+    // from just a page name, so those fall back to their parent list page
+    // instead of silently landing on a broken/blank view.
+    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar'];
+    const LAST_PAGE_KEY = 'pmapp_lastPage';
+    watch([page, currentProject, selSite], () => {
+      try {
+        localStorage.setItem(LAST_PAGE_KEY, JSON.stringify({
+          page: page.value,
+          project: currentProject.value,
+          siteId: selSite.value?.id || null,
+        }));
+      } catch(e) {}
+    });
+    function restoreLastPage() {
+      let saved;
+      try { saved = JSON.parse(localStorage.getItem(LAST_PAGE_KEY) || 'null'); } catch(e) { return; }
+      if(!saved || !saved.page) return;
+      if(saved.project) currentProject.value = saved.project;
+      if(saved.page === 'site-equip') {
+        const list = saved.project === 'vir' ? VIR_SITES : SITES;
+        const site = list.find(s => s.id === saved.siteId);
+        if(site) openSiteEquip(site, saved.project === 'vir' ? 'rooms' : undefined);
+        else page.value = 'sites'; // site was removed/renamed since last visit
+        return;
+      }
+      if(RESTORABLE_PAGES.includes(saved.page)) page.value = saved.page;
+      // else (new-pm/pm-view/compare/etc): leave page.value at its 'dashboard' default
     }
 
     // For VIR, this returns whichever system's equipment set is currently
@@ -9032,6 +9209,7 @@ createApp({
     function addSwitch() {
       if(!nSW.brand){showToast('Sila masukkan brand switch','error');return;}
       if(!nSW.model){showToast('Sila masukkan model switch','error');return;}
+      if(!isValidIp(nSW.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _resolveBrandModel(nSW);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].switches;
@@ -9061,6 +9239,7 @@ createApp({
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
       if(!nALM.model){showToast('Sila masukkan model alarm','error');return;}
+      if(!isValidIp(nALM.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].alarms;
       const dup = _findDupConflict('alarms', list, nALM, equipEditIdx.alarms);
@@ -9071,10 +9250,11 @@ createApp({
     }
     function addMisc() {
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
+      if(!isValidIp(nMISC.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
       const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
-      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, installDate:nMISC.installDate, accessUser:nMISC.accessUser, accessPw:nMISC.accessPw, _ts:Date.now() };
+      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, ip:nMISC.ip, installDate:nMISC.installDate, accessUser:nMISC.accessUser, accessPw:nMISC.accessPw, _ts:Date.now() };
       const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
@@ -10986,6 +11166,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           loadCustomEquipmentOptions();
           checkPmDraftRecovery();
           checkEquipDraftRecovery();
+          restoreLastPage();
         } else {
           authProfile.value = null;
         }
@@ -11068,6 +11249,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, canEditContact, cpSites,
+      kontraktorLuar, kontraktorLuarProject, kModal, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor,
       mobileNavOpen,
       darkMode,
       setTimeout
