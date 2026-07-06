@@ -1595,17 +1595,19 @@ tr:hover td{background:#f9fbff}
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
             <span class="fw-600" style="margin-left:4px">{{selSite?.name}}</span>
             <span v-if="currentProject==='vir' && eqTab!=='rooms'" class="badge" style="background:#e8f0ff;color:#003366;font-size:.75rem">Sistem: {{equipVirSystem}}</span>
-            <button v-if="currentProject==='vir' && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="equipVirSystem = equipVirSystem==='BCD'?'Optager HD4000':'BCD'">🔀 Tukar ke {{equipVirSystem==='BCD'?'Optager HD4000':'BCD'}}</button>
+            <button v-if="currentProject==='vir' && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="toggleVirSystem">🔀 Tukar ke {{equipVirSystem==='BCD'?'Optager HD4000':'BCD'}}</button>
           </div>
           <button class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
         <div class="tabs">
+          <div v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Server ({{(selSiteEquip.servers||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
-          <div class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ NVR ({{(selSiteEquip.nvr||[]).length}})</div>
-          <div class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
-          <div class="tab" :class="{active:eqTab==='switch'}" @click="eqTab='switch'">🔌 Network Switch ({{(selSiteEquip.switches||[]).length}})</div>
-          <div class="tab" :class="{active:eqTab==='alarm'}" @click="eqTab='alarm'">🔔 Alarm SMS ({{(selSiteEquip.alarms||[]).length}})</div>
-          <div v-if="currentProject!=='vir'" class="tab" :class="{active:eqTab==='misc'}" @click="eqTab='misc'">📦 Lain-lain ({{(selSiteEquip.misc||[]).length}})</div>
+          <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ NVR ({{(selSiteEquip.nvr||[]).length}})</div>
+          <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
+          <div class="tab" :class="{active:eqTab==='switch'}" @click="eqTab='switch'">🔌 POE/Network Switch ({{(selSiteEquip.switches||[]).length}})</div>
+          <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='alarm'}" @click="eqTab='alarm'">🔔 Alarm SMS ({{(selSiteEquip.alarms||[]).length}})</div>
+          <div v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="tab" :class="{active:eqTab==='tablets'}" @click="eqTab='tablets'">📱 Tablet ({{(selSiteEquip.tablets||[]).length}})</div>
+          <div class="tab" :class="{active:eqTab==='misc'}" @click="eqTab='misc'">📦 Lain-lain ({{(selSiteEquip.misc||[]).length}})</div>
           <div v-if="currentProject==='vir'" class="tab" :class="{active:eqTab==='rooms'}" @click="eqTab='rooms'">🚪 Bilik &amp; Sistem ({{(selSiteEquip.rooms||[]).length}})</div>
         </div>
 
@@ -1988,8 +1990,169 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
 
+        <!-- SERVER TAB (VIR Optager HD4000 only) -->
+        <div v-if="eqTab==='servers'">
+          <div class="card" id="equip-form-servers">
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Server Optager HD4000</div>
+              <button class="btn btn-outline btn-sm" @click="resetForm('nServer')">↺ Reset</button>
+            </div>
+            <div class="form-group"><label>Nama/Label Server</label><input class="form-control" v-model="nServer.name" placeholder="cth: Server Optager Bilik VIR 1"></div>
+
+            <div class="fw-600 mb-8" style="color:#003366">Hardware</div>
+            <div class="form-row form-row-3">
+              <div class="form-group"><label>Processor</label>
+                <select class="form-control" v-model="nServer.processor"><option value="">— Pilih —</option><option v-for="o in OPTAGER_PROCESSORS" :key="o">{{o}}</option></select>
+                <input v-if="nServer.processor==='Lain-lain'" class="form-control" v-model="nServer.processorCustom" placeholder="Nyatakan processor sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>RAM</label>
+                <select class="form-control" v-model="nServer.ram"><option value="">— Pilih —</option><option v-for="o in OPTAGER_RAM" :key="o">{{o}}</option></select>
+                <input v-if="nServer.ram==='Lain-lain'" class="form-control" v-model="nServer.ramCustom" placeholder="Nyatakan RAM sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>Storage</label>
+                <select class="form-control" v-model="nServer.storage">
+                  <option value="">— Pilih —</option>
+                  <optgroup v-for="type in OPTAGER_STORAGE_TYPES" :key="type" :label="type">
+                    <option v-for="size in OPTAGER_STORAGE_SIZES[type]" :key="type+size" :value="type+' '+size">{{size}}</option>
+                  </optgroup>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="nServer.storage==='Lain-lain'" class="form-control" v-model="nServer.storageCustom" placeholder="Nyatakan storage sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>GPU</label>
+                <select class="form-control" v-model="nServer.gpu"><option value="">— Pilih —</option><option v-for="o in OPTAGER_GPU" :key="o">{{o}}</option></select>
+                <input v-if="nServer.gpu==='Lain-lain'" class="form-control" v-model="nServer.gpuCustom" placeholder="Nyatakan GPU sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>Motherboard</label>
+                <select class="form-control" v-model="nServer.mobo"><option value="">— Pilih —</option><option v-for="o in OPTAGER_MOBO" :key="o">{{o}}</option></select>
+                <input v-if="nServer.mobo==='Lain-lain'" class="form-control" v-model="nServer.moboCustom" placeholder="Nyatakan motherboard sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>Motherboard Type</label>
+                <select class="form-control" v-model="nServer.moboType"><option value="">— Pilih —</option><option v-for="o in OPTAGER_MOBO_TYPE" :key="o">{{o}}</option></select>
+                <input v-if="nServer.moboType==='Lain-lain'" class="form-control" v-model="nServer.moboTypeCustom" placeholder="Nyatakan jenis motherboard" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>Networking</label>
+                <select class="form-control" v-model="nServer.networking"><option value="">— Pilih —</option><option>Wifi</option><option>LAN</option><option>Wifi + LAN</option></select>
+              </div>
+            </div>
+
+            <div class="fw-600 mb-8" style="color:#003366;margin-top:12px">Software</div>
+            <div class="form-row form-row-3">
+              <div class="form-group"><label>OS</label>
+                <select class="form-control" v-model="nServer.os"><option value="">— Pilih —</option><option v-for="o in OPTAGER_OS" :key="o">{{o}}</option></select>
+                <input v-if="nServer.os==='Lain-lain'" class="form-control" v-model="nServer.osCustom" placeholder="Nyatakan OS sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>OS Product Key <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nServer.osProductKey"></div>
+              <div class="form-group"><label>Optager Version</label><input class="form-control" v-model="nServer.optagerVersion"></div>
+              <div class="form-group"><label>Optager Machine ID</label><input class="form-control" v-model="nServer.optagerMachineId"></div>
+              <div class="form-group"><label>Optager License Key</label><input class="form-control" v-model="nServer.optagerLicenseKey"></div>
+              <div class="form-group"><label>Optager License Key Expiry</label><input class="form-control" type="date" v-model="nServer.optagerLicenseExpiry"></div>
+              <div class="form-group">
+                <label>Fail Lesen (.lic) <span class="text-muted text-sm">(pilihan)</span></label>
+                <label class="btn btn-outline btn-sm" style="cursor:pointer;display:inline-flex">📎 Upload .lic<input type="file" accept=".lic" style="display:none" @change="uploadServerLicense">
+                </label>
+                <div v-if="nServer.optagerLicenseFile" class="flex items-center gap-8" style="margin-top:6px;font-size:.82rem">
+                  <span>📄 {{nServer.optagerLicenseFile.name}}</span>
+                  <button class="btn btn-outline btn-sm btn-icon" @click="removeServerLicenseFile" title="Buang">✕</button>
+                </div>
+              </div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nServer.installDate"></div>
+            </div>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addServer">{{equipEditIdx.servers!==null?'✓ Kemaskini Server':'+ Tambah Server'}}</button>
+              <button v-if="equipEditIdx.servers!==null" class="btn btn-outline" @click="cancelEditEquip('servers')">✕ Batal Edit</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Server</div>
+              <button v-if="equipSelected.servers.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('servers')">🗑 Padam Terpilih ({{equipSelected.servers.size}})</button>
+            </div>
+            <div class="tbl-wrap">
+              <table class="equip-table">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>OS</th><th>Optager Version</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+                <tbody>
+                  <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
+                    <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
+                    <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
+                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{s.storage}}</td><td>{{s.gpu}}</td><td>{{s.os}}</td><td>{{s.optagerVersion}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                    <td>
+                      <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
+                      <span v-else class="text-muted text-sm">-</span>
+                    </td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('servers',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',i)" title="Padam">🗑</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="11" class="empty">Tiada server.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TABLET TAB (VIR Optager HD4000 only) -->
+        <div v-if="eqTab==='tablets'">
+          <div class="card" id="equip-form-tablets">
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Android Tablet</div>
+              <button class="btn btn-outline btn-sm" @click="resetForm('nTablet')">↺ Reset</button>
+            </div>
+            <div class="form-row form-row-3">
+              <div class="form-group"><label>Nama/Label</label><input class="form-control" v-model="nTablet.name" placeholder="cth: Tablet Kawalan Bilik VIR 1"></div>
+              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.brand"></div>
+              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.model"></div>
+              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.serial"></div>
+              <div class="form-group"><label>Optager HD4000 Control APP (Versi) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.controlAppVersion"></div>
+              <div class="form-group">
+                <label>Optager HD4000 Control APP License Key <span class="text-muted text-sm">(pilihan)</span></label>
+                <input class="form-control" v-model="nTablet.controlAppLicenseKey">
+                <label class="btn btn-outline btn-sm" style="cursor:pointer;display:inline-flex;margin-top:6px">📎 Upload .lic<input type="file" accept=".lic" style="display:none" @change="uploadTabletLicense">
+                </label>
+                <div v-if="nTablet.controlAppLicenseFile" class="flex items-center gap-8" style="margin-top:6px;font-size:.82rem">
+                  <span>📄 {{nTablet.controlAppLicenseFile.name}}</span>
+                  <button class="btn btn-outline btn-sm btn-icon" @click="removeTabletLicenseFile" title="Buang">✕</button>
+                </div>
+              </div>
+              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nTablet.installDate"></div>
+            </div>
+            <div class="flex gap-8">
+              <button class="btn btn-primary" @click="addTablet">{{equipEditIdx.tablets!==null?'✓ Kemaskini Tablet':'+ Tambah Tablet'}}</button>
+              <button v-if="equipEditIdx.tablets!==null" class="btn btn-outline" @click="cancelEditEquip('tablets')">✕ Batal Edit</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="flex justify-between items-center mb-16">
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Tablet</div>
+              <button v-if="equipSelected.tablets.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('tablets')">🗑 Padam Terpilih ({{equipSelected.tablets.size}})</button>
+            </div>
+            <div class="tbl-wrap">
+              <table class="equip-table">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Control APP</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+                <tbody>
+                  <tr v-for="(t,i) in selSiteEquip.tablets||[]" :key="t._uid||i" :class="{'highlight-row':equipEditIdx.tablets===i}">
+                    <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
+                    <td>{{i+1}}</td><td>{{t.name}} <span v-if="isRecentEquip(t)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
+                    <td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td><td>{{t.controlAppVersion}}</td>
+                    <td>
+                      <button v-if="t.controlAppLicenseFile" class="btn btn-outline btn-sm" @click="downloadTabletLicense(t)" title="Muat turun fail .lic">⬇ {{t.controlAppLicenseFile.name}}</button>
+                      <span v-else class="text-muted text-sm">-</span>
+                    </td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('tablets',i)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',i)" title="Padam">🗑</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="8" class="empty">Tiada tablet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- LAIN-LAIN PERALATAN TAB (CCTV only — Monitor/TV/PC/UPS/POE dll.) -->
-        <div v-if="eqTab==='misc' && currentProject!=='vir'">
+        <div v-if="eqTab==='misc'">
           <div class="card" id="equip-form-misc">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Peralatan Lain-lain</div>
@@ -2007,7 +2170,7 @@ tr:hover td{background:#f9fbff}
               <div class="form-group"><label>Nama / Lokasi *</label><input class="form-control" v-model="nMISC.name" placeholder="cth: Monitor Bilik Kawalan"></div>
               <div class="form-group"><label>Kategori</label>
                 <select class="form-control" v-model="nMISC.category">
-                  <option v-for="c in MISC_CATEGORIES" :key="c">{{c}}</option>
+                  <option v-for="c in miscCategoriesShown" :key="c">{{c}}</option>
                   <option value="Lain-lain">Lain-lain</option>
                 </select>
                 <input v-if="nMISC.category==='Lain-lain'" class="form-control" v-model="nMISC.categoryCustom" placeholder="Nyatakan kategori" style="margin-top:6px">
@@ -3194,7 +3357,9 @@ tr:hover td{background:#f9fbff}
               <select class="form-control" v-model="teamModal.data.project">
                 <option value="SPRM - CCTV">SPRM - CCTV</option>
                 <option value="SPRM - VIR">SPRM - VIR</option>
+                <option value="DOSM-Server">DOSM-Server</option>
               </select>
+              <small v-if="teamModal.data.project==='DOSM-Server'" style="color:#888;font-size:.72rem">Untuk paparan Jadual sahaja — tidak dikira dalam mana-mana Laporan.</small>
             </div>
             <div class="form-group">
               <label>Jenis Penyelenggaraan *</label>
@@ -3203,7 +3368,7 @@ tr:hover td{background:#f9fbff}
                 <option value="CM">CM — Corrective Maintenance</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" v-if="teamModal.data.project!=='DOSM-Server'">
               <label>Site SPRM *</label>
               <select class="form-control" v-model="teamModal.data.siteId" @change="onTeamSiteChange">
                 <option value="">-- Pilih Site --</option>
@@ -3214,6 +3379,10 @@ tr:hover td{background:#f9fbff}
                   <option v-for="s in VIR_SITES" :key="s.id" :value="s.id">{{s.name}}</option>
                 </optgroup>
               </select>
+            </div>
+            <div class="form-group" v-else>
+              <label>Nama Server / Lokasi *</label>
+              <input class="form-control" v-model="teamModal.data.siteName" placeholder="cth: DOSM Server Room 2">
             </div>
             <div class="form-group" style="grid-column:1/-1">
               <label>Anggota Team (pilih satu atau lebih) — {{teamModal.selectedUids.length}} dipilih</label>
@@ -4957,6 +5126,26 @@ const SWITCH_MODELS = {
   'Lain-lain': [],
 };
 
+// VIR Optager HD4000 — Server hardware/software spec dropdowns. Reflects
+// the actual PC-based hardware used for this system (unlike BCD, which is
+// a fixed closed hardware set shared identically across every site).
+const OPTAGER_PROCESSORS = ['Intel Core i5 14600KF','Intel Core i7 14700KF','Intel Core i7 14700K','Lain-lain'];
+const OPTAGER_RAM = ['16GB (8GB x2) DDR5 4800MHz','32GB (16GB x2) DDR5 4400MT/s','Lain-lain'];
+// Storage is grouped two levels deep — type (NVMe/2.5"/3.5") as the dropdown
+// group heading, size as the actual selectable option — so the saved value
+// always combines both, e.g. "SSD (NVMe) 512GB".
+const OPTAGER_STORAGE_TYPES = ['SSD (NVMe)','SSD (2.5")','HDD (3.5")'];
+const OPTAGER_STORAGE_SIZES = {
+  'SSD (NVMe)': ['128GB','256GB','512GB','1TB'],
+  'SSD (2.5")': ['512GB','1TB','2TB'],
+  'HDD (3.5")': ['1TB','2TB','3TB','4TB','6TB'],
+};
+const OPTAGER_STORAGE = OPTAGER_STORAGE_TYPES.flatMap(t => OPTAGER_STORAGE_SIZES[t].map(s => t+' '+s)).concat('Lain-lain');
+const OPTAGER_GPU = ['Nvidia GeForce GTX 1650','Nvidia GeForce RTX 4060','Nvidia GeForce RTX 5060','Lain-lain'];
+const OPTAGER_MOBO = ['Gigabyte B760 DS3H AX (LGA1700)','Gigabyte B760M DS3H AX (LGA1700)','Asrock Rack W680D4U (LGA1700)','Lain-lain'];
+const OPTAGER_MOBO_TYPE = ['ATX','m-ATX','Lain-lain'];
+const OPTAGER_OS = ['Windows 10 Pro x64','Windows 11 Pro x64','Lain-lain'];
+
 const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
 
 createApp({
@@ -5008,7 +5197,25 @@ createApp({
     const nRoom = reactive({name:'', system:'BCD'});
     const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',ip:'',installDate:'',accessUser:'',accessPw:''});
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
-    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter'];
+    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Rack','AP/Router'];
+    // Optager already has its own dedicated POE/Network Switch tab, so the
+    // POE-related Lain-lain categories are redundant clutter there — hidden
+    // for that context only, CCTV/BCD keep the full list unchanged.
+    const miscCategoriesShown = computed(() =>
+      (currentProject.value === 'vir' && equipVirSystem.value === 'Optager HD4000')
+        ? MISC_CATEGORIES.filter(c => !c.startsWith('POE'))
+        : MISC_CATEGORIES
+    );
+    // VIR Optager HD4000 — Server & Android Tablet, the two equipment types
+    // specific enough (nested hardware/software specs, license tracking)
+    // that they don't fit the generic misc schema.
+    const nServer = reactive({
+      name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:'', storageCustom:'',
+      gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
+      os:'', osCustom:'', osProductKey:'', optagerVersion:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
+      installDate:'', optagerLicenseFile:null,
+    });
+    const nTablet = reactive({name:'',brand:'',model:'',serial:'',controlAppVersion:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''});
     const ROOT_CAUSE_CATEGORIES = ['Litup/Bekalan Kuasa','Cuaca/Petir','Kabel Rosak','Vandalism/Kerosakan Fizikal','Umur Peralatan','Software/Firmware','Lain-lain'];
     // HQ Putrajaya has up to 16 VIR rooms; other sites normally have 1-2 —
     // 20 covers every realistic case with room to spare, plus "Lain-lain"
@@ -5926,7 +6133,9 @@ createApp({
       if(!teamModal.data.team || !teamModal.data.date) {
         teamModal.err = 'Team dan tarikh wajib diisi.'; return;
       }
-      if(!teamModal.data.siteId) {
+      if(teamModal.data.project === 'DOSM-Server') {
+        if(!teamModal.data.siteName?.trim()) { teamModal.err = 'Sila isi nama server/lokasi.'; return; }
+      } else if(!teamModal.data.siteId) {
         teamModal.err = 'Sila pilih site.'; return;
       }
       teamModal.err = '';
@@ -6152,7 +6361,7 @@ createApp({
 
     // ---- Schedule / Jadual PM ----
     const PROJECT_TYPES = [
-      {val:'SPRM - CCTV'}, {val:'SPRM - VIR'}
+      {val:'SPRM - CCTV'}, {val:'SPRM - VIR'}, {val:'DOSM-Server'}
     ];
     const calYear  = ref(new Date().getFullYear());
     const calMonth = ref(new Date().getMonth());
@@ -6555,6 +6764,11 @@ createApp({
       nRoom: {name:'', system:'BCD'},
       nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',ip:'',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:'', storageCustom:'',
+        gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
+        os:'', osCustom:'', osProductKey:'', optagerVersion:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
+        installDate:'', optagerLicenseFile:null},
+      nTablet: {name:'',brand:'',model:'',serial:'',controlAppVersion:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''},
     };
 
     // ---- Crowdsourced brand/model dropdown growth ----
@@ -6663,6 +6877,20 @@ createApp({
     // showing/editing for VIR — set by the BCD/Optager buttons on the VIR
     // site list (openSiteEquip's `mode` param).
     const equipVirSystem = ref('BCD');
+    // Server/Tablet tabs only exist for Optager HD4000; NVR/Hard Disk/Alarm
+    // SMS tabs only exist for BCD (Optager has none of that equipment) — so
+    // switching systems can leave eqTab pointing at a tab that just got
+    // hidden, with no matching content shown. Fall back to Kamera whenever
+    // the current tab wouldn't exist under the system being switched to.
+    function toggleVirSystem() {
+      equipVirSystem.value = equipVirSystem.value === 'BCD' ? 'Optager HD4000' : 'BCD';
+      const invalidForBcd = ['servers','tablets'];
+      const invalidForOptager = ['nvr','hdd','alarm'];
+      const nowInvalid = equipVirSystem.value === 'BCD' ? invalidForBcd : invalidForOptager;
+      if(nowInvalid.includes(eqTab.value)) {
+        eqTab.value = 'cameras';
+      }
+    }
 
     // Equipment draft-recovery autosave trigger (see _saveEquipDraftLocal
     // above) — registered here, after both siteEquip and virSiteEquip
@@ -6950,7 +7178,7 @@ createApp({
         // next add-equipment click would push() onto undefined and crash
         // (the same bug class just fixed in loadAll()/ensureSite()).
         const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
-        const EQUIP_SHAPE_VIR  = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+        const EQUIP_SHAPE_VIR  = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
         const restoredSiteEquip = {};
         const restoredVirRooms = {}, restoredVirBcd = {}, restoredVirOptager = {};
         const batch = db.batch();
@@ -8004,7 +8232,7 @@ createApp({
 
     // ---- Reset form ----
     function resetForm(formName) {
-      const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC, nRoom };
+      const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC, nServer, nTablet, nRoom };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
       if (ocrState.target === formName) { ocrState.active=false; ocrState.tokens=[]; }
       // Also drop any in-progress edit-in-place — otherwise the blanked
@@ -8057,6 +8285,8 @@ createApp({
       switches: ['brand','model','serial','ports'],
       alarms:   ['name','type','brand','model','serial'],
       misc:     ['name','category','brand','model','serial'],
+      servers:  ['name','processor','ram','storage','gpu','mobo','os','optagerMachineId','optagerLicenseKey'],
+      tablets:  ['name','brand','model','serial','controlAppVersion'],
     };
     const IMPORT_HEADER_HINTS = {
       name:     ['name','nama','lokasi','location','channel','device','desc'],
@@ -8349,7 +8579,7 @@ createApp({
     // the user has since navigated to, not the one the file was scanned for.
     function _autoAddRows(rows, kind, targetProj, targetSiteId) {
       const store = targetProj === 'vir' ? virSiteEquip.value : siteEquip.value;
-      if(!store[targetSiteId]) store[targetSiteId] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      if(!store[targetSiteId]) store[targetSiteId] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
       const list = store[targetSiteId][kind];
       const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
       const seen = new Map(list.map(x => [String(x[dupField]||'').trim().toLowerCase(), x]).filter(([k])=>k));
@@ -8498,7 +8728,7 @@ createApp({
         // VIR site equipment — one doc per site holding `rooms` (shared)
         // plus two nested, fully separate equipment sets keyed 'BCD' and
         // 'Optager HD4000' (their physical asset types don't overlap).
-        const VIR_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+        const VIR_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
         const veqRooms = {}, veqBcd = {}, veqOptager = {};
         VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={...VIR_EQUIP_SHAPE}; });
         const vsnap = await db.collection('virSiteEquipment').get();
@@ -8999,7 +9229,7 @@ createApp({
     // whenever an item above them was deleted, since Vue re-used the DOM
     // node for whatever index landed there next.
     function _genId() { return 'e_' + Date.now().toString(36) + '_' + (_uidCounter++).toString(36); }
-    const EQUIP_KINDS = ['cameras','nvr','hdd','switches','alarms','misc'];
+    const EQUIP_KINDS = ['cameras','nvr','hdd','switches','alarms','misc','servers','tablets'];
 
     // mode (VIR only): 'BCD' | 'Optager HD4000' — which equipment set to
     // open into (from the site list's BCD/Optager buttons); 'rooms' — open
@@ -9083,8 +9313,8 @@ createApp({
       return equipVirSystem.value === 'Optager HD4000' ? virSiteEquipOptager.value : virSiteEquipBCD.value;
     }
     const selSiteEquip = computed(() => {
-      if(!selSite.value) return {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],rooms:[]};
-      const base = activeEquip()[selSite.value.id] || {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      if(!selSite.value) return {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[],rooms:[]};
+      const base = activeEquip()[selSite.value.id] || {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
       if(currentProject.value === 'vir') {
         return {...base, rooms: virSiteEquip.value[selSite.value.id]?.rooms || []};
       }
@@ -9093,7 +9323,7 @@ createApp({
 
     function ensureSite(id) {
       const eq = activeEquip();
-      if(!eq[id]) { eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; }
+      if(!eq[id]) { eq[id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]}; }
       else {
         // Backfill any equipment category missing on a site record that
         // predates that category being added to the schema (e.g. sites saved
@@ -9102,7 +9332,7 @@ createApp({
         // with doc.data() as-is, so the array never gets created). Without
         // this, addMisc()/addCamera()/etc push() onto `undefined` and throw,
         // which aborts the click handler silently — the button looks dead.
-        ['cameras','nvr','hdd','switches','alarms','misc'].forEach(k => {
+        ['cameras','nvr','hdd','switches','alarms','misc','servers','tablets'].forEach(k => {
           if(!Array.isArray(eq[id][k])) eq[id][k] = [];
         });
       }
@@ -9115,15 +9345,15 @@ createApp({
     }
 
     // ---- Edit-in-place for equipment rows (instead of delete + re-add) ----
-    const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null, misc:null, rooms:null });
-    const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM', misc:'nMISC', rooms:'nRoom' };
+    const equipEditIdx = reactive({ cameras:null, nvr:null, hdd:null, switches:null, alarms:null, misc:null, servers:null, tablets:null, rooms:null });
+    const EQUIP_KEY_TO_FORM = { cameras:'nCam', nvr:'nNVR', hdd:'nHDD', switches:'nSW', alarms:'nALM', misc:'nMISC', servers:'nServer', tablets:'nTablet', rooms:'nRoom' };
 
     // ---- Bulk select/delete for equipment lists ----
-    const equipSelected = reactive({ cameras:new Set(), nvr:new Set(), hdd:new Set(), switches:new Set(), alarms:new Set(), misc:new Set() });
+    const equipSelected = reactive({ cameras:new Set(), nvr:new Set(), hdd:new Set(), switches:new Set(), alarms:new Set(), misc:new Set(), servers:new Set(), tablets:new Set() });
     // Per-row password reveal toggle in the equipment tables — masked by
     // default even for roles allowed to view credentials, so a passer-by
     // glancing at the screen doesn't see every password at once.
-    const revealedPw = reactive({ cameras:new Set(), nvr:new Set(), switches:new Set(), alarms:new Set(), misc:new Set() });
+    const revealedPw = reactive({ cameras:new Set(), nvr:new Set(), switches:new Set(), alarms:new Set(), misc:new Set(), tablets:new Set() });
     function togglePwReveal(kind, uid) {
       if(!uid) return;
       revealedPw[kind].has(uid) ? revealedPw[kind].delete(uid) : revealedPw[kind].add(uid);
@@ -9196,10 +9426,26 @@ createApp({
     async function editEquipItem(key, idx) {
       const item = (selSiteEquip.value[key]||[])[idx];
       if(!item) return;
-      const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, rooms:nRoom };
+      const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet, rooms:nRoom };
       Object.assign(refs[key], item);
       if(key === 'rooms') {
         // No brand/model/category lookup applies to rooms — just the name+system.
+      } else if(key === 'servers') {
+        // Same "Lain-lain + custom text" reconciliation as brand/model
+        // dropdowns, but across all 7 of the server's spec dropdowns.
+        const specs = [
+          ['processor', OPTAGER_PROCESSORS], ['ram', OPTAGER_RAM], ['storage', OPTAGER_STORAGE],
+          ['gpu', OPTAGER_GPU], ['mobo', OPTAGER_MOBO], ['moboType', OPTAGER_MOBO_TYPE], ['os', OPTAGER_OS],
+        ];
+        specs.forEach(([field, options]) => {
+          const val = item[field];
+          if(val && !options.includes(val)) {
+            nServer[field] = 'Lain-lain';
+            nServer[field+'Custom'] = val;
+          } else {
+            nServer[field+'Custom'] = '';
+          }
+        });
       } else if(key === 'misc') {
         // Saved category may be a free-text custom value that isn't in
         // MISC_CATEGORIES — reflect that as "Lain-lain" + the custom text.
@@ -9379,6 +9625,108 @@ createApp({
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Peralatan berjaya ditambah!'); }
       Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+    }
+    // Resolves one "dropdown value + optional custom text" pair the same
+    // way brand/model dropdowns do elsewhere — falls back to the typed
+    // custom text only when "Lain-lain" was picked and something was typed.
+    function _resolveDropdownCustom(value, custom) {
+      return (value === 'Lain-lain' && custom && custom.trim()) ? custom.trim() : value;
+    }
+    function addServer() {
+      if(!nServer.name){showToast('Sila masukkan nama/label server','error');return;}
+      ensureSite(selSite.value.id);
+      const list = activeEquip()[selSite.value.id].servers;
+      const item = {
+        name: nServer.name,
+        processor: _resolveDropdownCustom(nServer.processor, nServer.processorCustom),
+        ram: _resolveDropdownCustom(nServer.ram, nServer.ramCustom),
+        storage: _resolveDropdownCustom(nServer.storage, nServer.storageCustom),
+        gpu: _resolveDropdownCustom(nServer.gpu, nServer.gpuCustom),
+        mobo: _resolveDropdownCustom(nServer.mobo, nServer.moboCustom),
+        moboType: _resolveDropdownCustom(nServer.moboType, nServer.moboTypeCustom),
+        networking: nServer.networking,
+        os: _resolveDropdownCustom(nServer.os, nServer.osCustom),
+        osProductKey: nServer.osProductKey,
+        optagerVersion: nServer.optagerVersion,
+        optagerMachineId: nServer.optagerMachineId,
+        optagerLicenseKey: nServer.optagerLicenseKey,
+        optagerLicenseExpiry: nServer.optagerLicenseExpiry,
+        optagerLicenseFile: nServer.optagerLicenseFile,
+        installDate: nServer.installDate,
+        _ts: Date.now(),
+      };
+      const dup = _findDupConflict('servers', list, item, equipEditIdx.servers);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.servers !== null) { item._uid = list[equipEditIdx.servers]._uid||_genId(); list[equipEditIdx.servers] = item; equipEditIdx.servers = null; showToast('Server dikemaskini!'); }
+      else { item._uid = _genId(); list.push(item); showToast('Server berjaya ditambah!'); }
+      resetForm('nServer');
+    }
+    // Optager license (.lic) file upload/download — stored as a base64 data
+    // URL directly on the server's equipment record, same pattern already
+    // used for profile photos (this app moved away from Firebase Storage
+    // to Firestore-only storage — see the auto-backup redesign). .lic files
+    // are tiny (license text), so this comfortably fits Firestore's 1MB
+    // document limit; 500KB cap here is just a sane sanity guard.
+    async function uploadServerLicense(evt) {
+      const file = evt.target.files[0];
+      evt.target.value = '';
+      if(!file) return;
+      if(file.size > 500 * 1024) { showToast('Fail .lic terlalu besar. Max 500KB.','error'); return; }
+      try {
+        const data = await new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = e => res(e.target.result);
+          r.onerror = () => rej(new Error('Gagal baca fail'));
+          r.readAsDataURL(file);
+        });
+        nServer.optagerLicenseFile = { name: file.name, data, uploadedAt: Date.now() };
+        showToast('Fail .lic dimuat naik! Jangan lupa klik "Tambah/Kemaskini Server" untuk simpan.');
+      } catch(e) { showToast('Gagal muat naik fail: '+e.message, 'error'); }
+    }
+    function removeServerLicenseFile() { nServer.optagerLicenseFile = null; }
+    function downloadServerLicense(item) {
+      if(!item?.optagerLicenseFile?.data) return;
+      const a = document.createElement('a');
+      a.href = item.optagerLicenseFile.data;
+      a.download = item.optagerLicenseFile.name || 'optager-license.lic';
+      a.click();
+    }
+    function addTablet() {
+      if(!nTablet.name){showToast('Sila masukkan nama/label tablet','error');return;}
+      ensureSite(selSite.value.id);
+      const list = activeEquip()[selSite.value.id].tablets;
+      const item = { name:nTablet.name, brand:nTablet.brand, model:nTablet.model, serial:nTablet.serial, controlAppVersion:nTablet.controlAppVersion, controlAppLicenseKey:nTablet.controlAppLicenseKey, controlAppLicenseFile:nTablet.controlAppLicenseFile, installDate:nTablet.installDate, _ts:Date.now() };
+      const dup = _findDupConflict('tablets', list, item, equipEditIdx.tablets);
+      if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      if(equipEditIdx.tablets !== null) { item._uid = list[equipEditIdx.tablets]._uid||_genId(); list[equipEditIdx.tablets] = item; equipEditIdx.tablets = null; showToast('Tablet dikemaskini!'); }
+      else { item._uid = _genId(); list.push(item); showToast('Tablet berjaya ditambah!'); }
+      resetForm('nTablet');
+    }
+    // Control APP license (.lic) upload/download — same base64-in-Firestore
+    // pattern as the Server's Optager license file (see uploadServerLicense).
+    async function uploadTabletLicense(evt) {
+      const file = evt.target.files[0];
+      evt.target.value = '';
+      if(!file) return;
+      if(file.size > 500 * 1024) { showToast('Fail .lic terlalu besar. Max 500KB.','error'); return; }
+      try {
+        const data = await new Promise((res, rej) => {
+          const r = new FileReader();
+          r.onload = e => res(e.target.result);
+          r.onerror = () => rej(new Error('Gagal baca fail'));
+          r.readAsDataURL(file);
+        });
+        nTablet.controlAppLicenseFile = { name: file.name, data, uploadedAt: Date.now() };
+        showToast('Fail .lic dimuat naik! Jangan lupa klik "Tambah/Kemaskini Tablet" untuk simpan.');
+      } catch(e) { showToast('Gagal muat naik fail: '+e.message, 'error'); }
+    }
+    function removeTabletLicenseFile() { nTablet.controlAppLicenseFile = null; }
+    function downloadTabletLicense(item) {
+      if(!item?.controlAppLicenseFile?.data) return;
+      const a = document.createElement('a');
+      a.href = item.controlAppLicenseFile.data;
+      a.download = item.controlAppLicenseFile.name || 'vir-control-app-license.lic';
+      a.click();
     }
     function removeItem(siteId, key, idx) {
       if(!confirm('Padam rekod ini?')) return;
@@ -11016,7 +11364,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // ── 6. Laporan Prestasi Team ──
     const teamPerformance = computed(() => {
       const perTeam = {};
-      teamAssignments.value.forEach(t => {
+      // DOSM-Server assignments are schedule-only (not an SPRM CCTV/VIR
+      // project) — excluded from every report, this one included.
+      teamAssignments.value.filter(t => t.project !== 'DOSM-Server').forEach(t => {
         const team = t.team;
         if(!team) return;
         if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, members:new Set() };
@@ -11035,7 +11385,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // PM/CM individu, untuk agihan kerja lebih adil selain rotation tracking ──
     const staffWorkload = computed(() => {
       const per = {};
-      teamAssignments.value.forEach(t => {
+      teamAssignments.value.filter(t => t.project !== 'DOSM-Server').forEach(t => {
         const isCm = t.maintType === 'CM';
         // Dedup by uid within this one assignment first — a malformed/
         // duplicate member entry on a single doc would otherwise inflate
@@ -11325,9 +11675,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, virChecklistFor, virSectionsFor, virChecklistCols, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
-      currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
+      currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem, toggleVirSystem,
       siteEquip, selSite, eqTab,
-      nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES,
+      nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown,
+      nServer, nTablet, addServer, addTablet, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
+      uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
+      OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
       pmRecords, viewPM, filterSite, filterYear, filterMaintType, filterPmNo,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
