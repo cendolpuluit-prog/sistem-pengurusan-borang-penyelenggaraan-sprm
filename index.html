@@ -1638,21 +1638,21 @@ tr:hover td{background:#f9fbff}
               </div>
             </div>
             <div class="form-row form-row-3">
-              <div class="form-group"><label>Nama/Lokasi Kamera</label><input class="form-control" v-model="nCam.name" placeholder="cth: D bilik mesyuarat"></div>
-              <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nCam.ip" placeholder="192.168.0.11"></div>
+              <div class="form-group"><label>Nama/Lokasi Kamera *</label><input class="form-control" v-model="nCam.name" placeholder="cth: D bilik mesyuarat"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.ip" placeholder="192.168.0.11"></div>
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nCam.camType">
                   <option>Indoor</option><option>Outdoor</option><option>IR Cam</option><option>PTZ</option>
                 </select>
               </div>
-              <div class="form-group"><label>Brand</label>
+              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nCam.brand" @change="nCam.model=''">
                   <option value="">-- Pilih --</option>
                   <option v-for="b in brandOptionsFor('BRANDS')" :key="b">{{b}}</option>
                 </select>
                 <input v-if="nCam.brand==='Lain-lain'" class="form-control" v-model="nCam.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Model</label>
+              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label>
                 <select v-if="nCam.brand && nCam.brand!=='Lain-lain'" class="form-control" v-model="nCam.model">
                   <option value="">-- Pilih Model --</option>
                   <option v-for="m in modelOptionsFor('cameras', nCam.brand)" :key="m">{{m}}</option>
@@ -1721,18 +1721,18 @@ tr:hover td{background:#f9fbff}
               <div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nNVR','serial',t)">{{t}}</span></div></div>
             </div>
             <div class="form-row form-row-3">
-              <div class="form-group"><label>Nama</label><input class="form-control" v-model="nNVR.name" placeholder="cth: Network Video Recorder (NVR) 1"></div>
+              <div class="form-group"><label>Nama *</label><input class="form-control" v-model="nNVR.name" placeholder="cth: Network Video Recorder (NVR) 1"></div>
               <div class="form-group"><label>Jenis</label>
-                <select class="form-control" v-model="nNVR.type"><option>NVR</option><option>Extension NVR</option></select>
+                <select class="form-control" v-model="nNVR.type"><option>NVR</option><option>NVR (Server)</option><option>Extension NVR</option></select>
               </div>
-              <div class="form-group"><label>Brand</label>
+              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nNVR.brand">
                   <option value="">-- Pilih --</option>
                   <option v-for="b in brandOptionsFor('BRANDS')" :key="b">{{b}}</option>
                 </select>
                 <input v-if="nNVR.brand==='Lain-lain'" class="form-control" v-model="nNVR.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Model</label>
+              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label>
                 <select v-if="nNVR.brand && nNVR.brand!=='Lain-lain'" class="form-control" v-model="nNVR.model">
                   <option value="">-- Pilih Model --</option>
                   <option v-for="m in modelOptionsFor('nvr', nNVR.brand)" :key="m">{{m}}</option>
@@ -1741,7 +1741,7 @@ tr:hover td{background:#f9fbff}
                 <input v-if="nNVR.model==='Lain-lain'" class="form-control" v-model="nNVR.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"></div>
-              <div class="form-group"><label>IP Address</label><input class="form-control" v-model="nNVR.ip"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.ip"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
@@ -4954,8 +4954,8 @@ const NVR_MODELS = {
     'DIVAR IP 2000','DIP-2042-2HD',
     'DIVAR IP 3000','DIP-3040-00N','DIP-3042-2HD','DIP-3042-4HD',
     'DIVAR IP 5000 2U',
-    'DIVAR IP 6000','DIP-6082-8HD',
-    'DIVAR IP 7000','DIVAR IP 7000 2U','DIP-7080-00N','DIP-7082-8HD','DIP-7083-8HD',
+    'DIVAR IP 6000 AIO','DIP-6082-8HD',
+    'DIVAR IP 7000 AIO','DIVAR IP 7000 2U','DIP-7080-00N','DIP-7082-8HD','DIP-7083-8HD',
     'DIP-7180-00N','DIP-7183-4HD','DIP-7183-8HD','DIP-7184-8HD',
     'DIP-71F0-00N','DIP-71F6-16HD','DIP-738C-8HD','DIP-73GC-16HD','DIP-74C4-8HD',
     'DSA-N2P4X8HDD',
@@ -5040,6 +5040,9 @@ const HDD_MODELS = {
     'Lain-lain',
   ],
   'Bosch': [
+    'HDD 4TB (DIP-AIO4-HDD)',
+    'HDD 8TB (DIP-AIO8-HDD)',
+    'HDD 12TB (DIP-AIO12-HDD)',
     'HDD 18TB (DIP-AIO18-HDD)',
     'Lain-lain',
   ],
@@ -9530,7 +9533,6 @@ createApp({
     function addCamera() {
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
       if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
-      if(!nCam.model){showToast('Sila masukkan model kamera','error');return;}
       const resolved = _resolveBrandModel(nCam);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
@@ -9545,7 +9547,6 @@ createApp({
     function addNVR() {
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
-      if(!nNVR.model){showToast('Sila masukkan model NVR','error');return;}
       const resolved = _resolveBrandModel(nNVR);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
