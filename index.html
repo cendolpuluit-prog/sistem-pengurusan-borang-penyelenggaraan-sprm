@@ -1723,7 +1723,7 @@ tr:hover td{background:#f9fbff}
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama *</label><input class="form-control" v-model="nNVR.name" placeholder="cth: Network Video Recorder (NVR) 1"></div>
               <div class="form-group"><label>Jenis</label>
-                <select class="form-control" v-model="nNVR.type"><option>NVR</option><option>NVR (Server)</option><option>Extension NVR</option></select>
+                <select class="form-control" v-model="nNVR.type"><option>NVR</option><option>NVR (Server)</option><option>Server</option><option>Extension NVR</option></select>
               </div>
               <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nNVR.brand">
@@ -4992,6 +4992,7 @@ const NVR_MODELS = {
     'DIP-7180-00N','DIP-7183-4HD','DIP-7183-8HD','DIP-7184-8HD',
     'DIP-71F0-00N','DIP-71F6-16HD','DIP-738C-8HD','DIP-73GC-16HD','DIP-74C4-8HD',
     'DSA-N2P4X8HDD',
+    'MHW-S380RA-SC',
     'Lain-lain',
   ],
   'Hikvision': [
@@ -5249,7 +5250,7 @@ createApp({
     const PC_MODELS = {
       'HP': ['Lain-lain'],
       'Dell': ['Precision 5860 Tower','OptiPlex 7020','Lain-lain'],
-      'Acer': ['Veriton X2720G','Altos P130 F9','Lain-lain'],
+      'Acer': ['Veriton X2720G','Altos P130 F9','Altos P130 F7','Veriton Vero 4000 All-in-One Z4724GT','Lain-lain'],
       'Lenovo': ['Lain-lain'],
       'Lain-lain': [],
     };
@@ -5286,18 +5287,24 @@ createApp({
       'Neuropower': ['EBM For Cronus 2KR','Lain-lain'],
       'Lain-lain': [],
     };
+    // Same idea for Kategori "Surge Protector".
+    const SURGE_PROTECTOR_BRANDS = ['DUVAL','Lain-lain'];
+    const SURGE_PROTECTOR_MODELS = {
+      'DUVAL': ['DSP RJ45-CAT6-48V','Lain-lain'],
+      'Lain-lain': [],
+    };
     // Lookup so the Brand/Model fields can pick the right fixed dropdown
     // per Kategori without a growing v-if chain in the template — add a
     // new category's dicts here and it's wired up automatically.
-    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS };
-    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS };
+    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS, 'Surge Protector': SURGE_PROTECTOR_BRANDS };
+    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS, 'Surge Protector': SURGE_PROTECTOR_MODELS };
     const miscBrandOptions = computed(() => MISC_BRAND_DICTS[nMISC.category] || null);
     const miscModelOptions = computed(() => (MISC_MODEL_DICTS[nMISC.category] || {})[nMISC.brand] || []);
     // CCTV's "Lain-lain" categories were pared down to what's actually used
     // in the field, plus HDMI Ethernet Extender which wasn't tracked before.
     // AP/Router was re-added after initially being removed; UPS Battery Pack
-    // is a new category (separate from UPS itself).
-    const MISC_CATEGORIES_CCTV = ['Monitor','TV','PC','UPS','Rack','HDMI Ethernet Extender','AP/Router','UPS Battery Pack'];
+    // and Surge Protector are new categories.
+    const MISC_CATEGORIES_CCTV = ['Monitor','TV','PC','UPS','Rack','HDMI Ethernet Extender','AP/Router','UPS Battery Pack','Surge Protector'];
     // Optager already has its own dedicated POE/Network Switch tab, so the
     // POE-related Lain-lain categories are redundant clutter there — hidden
     // for that context only, VIR/BCD keeps the full list unchanged.
