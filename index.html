@@ -1866,6 +1866,7 @@ tr:hover td{background:#f9fbff}
             </div>
             <div v-if="ocrState.active && ocrState.target==='nSW'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nSW','serial',t)">{{t}}</span></div></div></div>
             <div class="form-row form-row-3">
+              <div class="form-group"><label>Nama</label><input class="form-control" v-model="nSW.name" placeholder="cth: Switch Bilik Server"></div>
               <div class="form-group"><label>Brand</label>
                 <select class="form-control" v-model="nSW.brand" @change="nSW.model=''">
                   <option value="">-- Pilih --</option>
@@ -1882,7 +1883,6 @@ tr:hover td{background:#f9fbff}
                 <input v-if="nSW.model==='Lain-lain'" class="form-control" v-model="nSW.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"></div>
-              <div class="form-group"><label>Bilangan Port</label><input class="form-control" v-model="nSW.ports" placeholder="cth: 24 Port POE"></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.ip" placeholder="cth: 192.168.1.10"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
@@ -1906,11 +1906,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Port</th><th>IP Address</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ports}}</td><td>{{s.ip}}</td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{s.serial}}</td><td>{{s.ip}}</td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -1940,11 +1940,30 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="nALM.name" placeholder="cth: GSM SMS Controller-Alarm S130"></div>
-              <div class="form-group"><label>Brand</label><input class="form-control" v-model="nALM.brand"></div>
-              <div class="form-group"><label>Model</label><input class="form-control" v-model="nALM.model"></div>
+              <div class="form-group"><label>Brand</label>
+                <select class="form-control" v-model="nALM.brand" @change="nALM.model=''">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="b in ALARM_BRANDS" :key="b">{{b}}</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="nALM.brand==='Lain-lain'" class="form-control" v-model="nALM.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>Model</label>
+                <select v-if="nALM.brand && nALM.brand!=='Lain-lain'" class="form-control" v-model="nALM.model">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="m in (ALARM_BRAND_MODELS[nALM.brand]||[])" :key="m">{{m}}</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-else class="form-control" v-model="nALM.model" placeholder="cth: MAX BR1 Mini">
+                <input v-if="nALM.model==='Lain-lain'" class="form-control" v-model="nALM.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
+              </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.serial"></div>
               <div class="form-group"><label>Jenis</label>
-                <select class="form-control" v-model="nALM.type"><option>SMS Power Alert</option><option>SMS iNotifi</option><option>iNotifi Appliance</option></select>
+                <select class="form-control" v-model="nALM.type">
+                  <option>SMS Alert System</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="nALM.type==='Lain-lain'" class="form-control" v-model="nALM.typeCustom" placeholder="Nyatakan jenis sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.ip" placeholder="cth: 192.168.1.20"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nALM.installDate"></div>
@@ -2175,8 +2194,22 @@ tr:hover td{background:#f9fbff}
                 </select>
                 <input v-if="nMISC.category==='Lain-lain'" class="form-control" v-model="nMISC.categoryCustom" placeholder="Nyatakan kategori" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.brand"></div>
-              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.model"></div>
+              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
+                <select v-if="miscBrandOptions" class="form-control" v-model="nMISC.brand" @change="nMISC.model=''">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="b in miscBrandOptions" :key="b">{{b}}</option>
+                </select>
+                <input v-else class="form-control" v-model="nMISC.brand">
+                <input v-if="miscBrandOptions && nMISC.brand==='Lain-lain'" class="form-control" v-model="nMISC.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label>
+                <select v-if="miscBrandOptions && nMISC.brand && nMISC.brand!=='Lain-lain'" class="form-control" v-model="nMISC.model">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="m in miscModelOptions" :key="m">{{m}}</option>
+                </select>
+                <input v-else class="form-control" v-model="nMISC.model">
+                <input v-if="miscBrandOptions && nMISC.model==='Lain-lain'" class="form-control" v-model="nMISC.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
+              </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.ip" placeholder="cth: 192.168.1.30"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
@@ -4809,7 +4842,7 @@ const CAMERA_MODELS = {
     'QNO-6012R','QNO-6022R','QNO-7010R','QNO-7080R','QNO-8010R','QNO-8020R','QNO-8030R','QNO-8080R',
     'XND-6010','XND-6020R','XND-6080R','XND-8020R','XND-8080RV','XND-8082RV',
     'XNV-6010','XNV-6020R','XNV-6080R','XNV-6120R','XNV-6123R',
-    'XNV-8020R','XNV-8080R','XNV-8090R','XNV-8120R','XNV-8123R','XNV-8124R',
+    'XNV-8020R','XNV-8080R','XNV-8090R','XNV-8120R','XNV-8123R','XNV-8124R','XNV-C8083R',
     'XNO-6010R','XNO-6080R','XNO-6123R','XNO-8080R',
     'XNP-6320','XNP-6400','XNP-8250',
     'TNV-7010RC','TNV-7011RC','TNV-8011RC','TNB-9000',
@@ -4883,21 +4916,21 @@ const CAMERA_MODELS = {
     'Lain-lain',
   ],
   'Axis': [
-    'AXIS M2025-LE','AXIS M2026-LE Mk II','AXIS M3045-V','AXIS M3046-V',
-    'AXIS M3105-LVE','AXIS M3106-L MkII','AXIS M3106-LME','AXIS M3106-LVE','AXIS M3116-R MkII',
-    'AXIS M3205-LVE','AXIS M3206-LVE','AXIS M5525-E',
-    'AXIS P1435-LE','AXIS P1445-LE','AXIS P1447-LE','AXIS P1448-LE','AXIS P1455-LE',
-    'AXIS P3225-LV','AXIS P3225-LVE','AXIS P3225-V','AXIS P3225-VE',
-    'AXIS P3227-LV','AXIS P3227-LVE','AXIS P3228-LV MkII','AXIS P3228-LVE MkII',
-    'AXIS P3235-LVE','AXIS P3245-LV','AXIS P3245-LVE','AXIS P3245-V',
-    'AXIS P3247-LV','AXIS P3247-LVE','AXIS P3255-LVE',
-    'AXIS P3265-LV','AXIS P3265-LVE','AXIS P3267-LV','AXIS P3267-LVE','AXIS P3268-LV','AXIS P3268-LVE',
-    'AXIS P3343-VE','AXIS P3344-VE','AXIS P3364-VE',
-    'AXIS P3717-PLE','AXIS P3719-PLE','AXIS P3727-PLE',
-    'AXIS Q1615-LE Mk III','AXIS Q1645','AXIS Q1647','AXIS Q1656','AXIS Q1659',
-    'AXIS Q3505-V','AXIS Q3505-VE','AXIS Q3515-LV','AXIS Q3517-LVE','AXIS Q3517-SLVE','AXIS Q3527-LVE',
-    'AXIS Q3626-VE','AXIS Q3628-VE',
-    'AXIS Q6114-E','AXIS Q6115-E','AXIS Q6135-LE','AXIS Q6155-E','AXIS Q6315-LE',
+    'M2025-LE','M2026-LE Mk II','M3045-V','M3046-V',
+    'M3105-LVE','M3106-L MkII','M3106-LME','M3106-LVE','M3116-R MkII',
+    'M3205-LVE','M3206-LVE','M5525-E',
+    'P1435-LE','P1445-LE','P1447-LE','P1448-LE','P1455-LE',
+    'P3225-LV','P3225-LVE','P3225-V','P3225-VE',
+    'P3227-LV','P3227-LVE','P3228-LV MkII','P3228-LVE MkII',
+    'P3235-LVE','P3245-LV','P3245-LVE','P3245-V',
+    'P3247-LV','P3247-LVE','P3255-LVE',
+    'P3265-LV','P3265-LVE','P3267-LV','P3267-LVE','P3268-LV','P3268-LVE',
+    'P3343-VE','P3344-VE','P3364-VE',
+    'P3717-PLE','P3719-PLE','P3727-PLE',
+    'Q1615-LE Mk III','Q1645','Q1647','Q1656','Q1659',
+    'Q3505-V','Q3505-VE','Q3515-LV','Q3517-LVE','Q3517-SLVE','Q3527-LVE',
+    'Q3626-VE','Q3628-VE',
+    'Q6114-E','Q6115-E','Q6135-LE','Q6155-E','Q6315-LE',
     'Lain-lain',
   ],
   'Uniview': [
@@ -5124,6 +5157,7 @@ const SWITCH_MODELS = {
   'Allied Telesis': [
     'x950-28XSQ (Core Switch, 24-Port + 4x25G SFP28)',
     'GS980MX/28PSM (24/8-Port PoE)',
+    'GS980MX/10HSm',
     'Lain-lain',
   ],
   'Lain-lain': [],
@@ -5196,19 +5230,76 @@ createApp({
     const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''});
-    const nSW  = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
+    const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nRoom = reactive({name:'', system:'BCD'});
-    const nALM = reactive({name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',ip:'',installDate:'',accessUser:'',accessPw:''});
-    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
+    const nALM = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''});
+    // Alarm SMS System brand → model options (fixed short lists, not the
+    // crowdsourced BRANDS/HDD_BRANDS-style dictionaries).
+    const ALARM_BRAND_MODELS = {
+      'Peplink': ['MAX BR1 Mini'],
+      'Teltonika Networks': ['TRM240'],
+    };
+    const ALARM_BRANDS = Object.keys(ALARM_BRAND_MODELS);
+    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Rack','AP/Router'];
+    // Workstation-level PC brand/model dropdowns — only shown when Kategori
+    // is "PC" (other categories keep the free-text brand/model inputs since
+    // they cover too wide a range of devices for a fixed dropdown to help).
+    const PC_BRANDS = ['HP','Dell','Acer','Lenovo','Lain-lain'];
+    const PC_MODELS = {
+      'HP': ['Lain-lain'],
+      'Dell': ['Precision 5860 Tower','OptiPlex 7020','Lain-lain'],
+      'Acer': ['Veriton X2720G','Altos P130 F9','Lain-lain'],
+      'Lenovo': ['Lain-lain'],
+      'Lain-lain': [],
+    };
+    // Same idea for Kategori "TV".
+    const TV_BRANDS = ['LG','SONY','Hisense','Lain-lain'];
+    const TV_MODELS = {
+      'LG': ['55UM5N-H','Lain-lain'],
+      'SONY': ['Lain-lain'],
+      'Hisense': ['50DM66D','Lain-lain'],
+      'Lain-lain': [],
+    };
+    // Same idea for Kategori "AP/Router".
+    const AP_ROUTER_BRANDS = ['TP-Link','Lain-lain'];
+    const AP_ROUTER_MODELS = {
+      'TP-Link': ['TL-MR105','Lain-lain'],
+      'Lain-lain': [],
+    };
+    // Same idea for Kategori "Monitor".
+    const MONITOR_BRANDS = ['Acer','Lain-lain'];
+    const MONITOR_MODELS = {
+      'Acer': ['EK221Q','Lain-lain'],
+      'Lain-lain': [],
+    };
+    // Same idea for Kategori "UPS".
+    const UPS_BRANDS = ['Neuropower','MyCamExpert','Lain-lain'];
+    const UPS_MODELS = {
+      'Neuropower': ['Cronus 2KR (2kVA)','Lain-lain'],
+      'MyCamExpert': ['MC10930','Lain-lain'],
+      'Lain-lain': [],
+    };
+    // Lookup so the Brand/Model fields can pick the right fixed dropdown
+    // per Kategori without a growing v-if chain in the template — add a
+    // new category's dicts here and it's wired up automatically.
+    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS };
+    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS };
+    const miscBrandOptions = computed(() => MISC_BRAND_DICTS[nMISC.category] || null);
+    const miscModelOptions = computed(() => (MISC_MODEL_DICTS[nMISC.category] || {})[nMISC.brand] || []);
+    // CCTV's "Lain-lain" categories were pared down to what's actually used
+    // in the field, plus HDMI Ethernet Extender which wasn't tracked before.
+    // AP/Router was re-added after initially being removed.
+    const MISC_CATEGORIES_CCTV = ['Monitor','TV','PC','UPS','Rack','HDMI Ethernet Extender','AP/Router'];
     // Optager already has its own dedicated POE/Network Switch tab, so the
     // POE-related Lain-lain categories are redundant clutter there — hidden
-    // for that context only, CCTV/BCD keep the full list unchanged.
-    const miscCategoriesShown = computed(() =>
-      (currentProject.value === 'vir' && equipVirSystem.value === 'Optager HD4000')
+    // for that context only, VIR/BCD keeps the full list unchanged.
+    const miscCategoriesShown = computed(() => {
+      if(currentProject.value !== 'vir') return MISC_CATEGORIES_CCTV;
+      return equipVirSystem.value === 'Optager HD4000'
         ? MISC_CATEGORIES.filter(c => !c.startsWith('POE'))
-        : MISC_CATEGORIES
-    );
+        : MISC_CATEGORIES;
+    });
     // VIR Optager HD4000 — Server & Android Tablet, the two equipment types
     // specific enough (nested hardware/software specs, license tracking)
     // that they don't fit the generic misc schema.
@@ -6763,10 +6854,10 @@ createApp({
       nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
       nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''},
-      nSW:   {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ports:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', system:'BCD'},
-      nALM:  {name:'',brand:'',model:'',serial:'',type:'SMS Power Alert',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:'', storageCustom:'',
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
         os:'', osCustom:'', osProductKey:'', optagerVersion:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
@@ -8285,7 +8376,7 @@ createApp({
       cameras:  ['name','ip','camType','brand','model','serial'],
       nvr:      ['name','type','brand','model','serial','ip'],
       hdd:      ['brand','model','serial','capacity','config','nvrRef'],
-      switches: ['brand','model','serial','ports'],
+      switches: ['name','brand','model','serial'],
       alarms:   ['name','type','brand','model','serial'],
       misc:     ['name','category','brand','model','serial'],
       servers:  ['name','processor','ram','storage','gpu','mobo','os','optagerMachineId','optagerLicenseKey'],
@@ -8302,7 +8393,6 @@ createApp({
       capacity: ['capacity','kapasiti','size'],
       config:   ['config','configuration','konfigurasi','raid'],
       nvrRef:   ['nvr','nvr ref','nvr berkaitan'],
-      ports:    ['port','ports','bilangan port'],
     };
     // Product-line names / model-number prefixes that reliably identify a
     // brand even when the brand itself was never typed or OCR'd — e.g. a
@@ -8416,7 +8506,6 @@ createApp({
         const brandHit = BRANDS.find(b => v.toLowerCase() === b.toLowerCase() || v.toLowerCase().includes(b.toLowerCase().split(' ')[0].toLowerCase()));
         if('brand' in row && !row.brand && brandHit && v.length < 30) { row.brand = brandHit; return; }
         if('serial' in row && !row.serial && serialRe.test(v) && /\d/.test(v) && /[A-Za-z]/.test(v)) { row.serial = v; return; }
-        if('ports' in row && !row.ports && /^\d+\s*port/i.test(v)) { row.ports = v; return; }
         if('capacity' in row && !row.capacity && /^\d+(\.\d+)?\s*(TB|GB)$/i.test(v)) { row.capacity = v; return; }
         // Generic status/result words from a source table's own Status
         // column — no field for these here, and if a poorly-split row
@@ -9450,14 +9539,34 @@ createApp({
           }
         });
       } else if(key === 'misc') {
-        // Saved category may be a free-text custom value that isn't in
-        // MISC_CATEGORIES — reflect that as "Lain-lain" + the custom text.
-        if(item.category && !MISC_CATEGORIES.includes(item.category)) {
+        // Saved category may be a free-text custom value, or one from a
+        // DIFFERENT context's list (e.g. a VIR-only category on a CCTV
+        // site) — either way, if it's not in what's actually shown for the
+        // current project/system, reflect it as "Lain-lain" + the custom text.
+        if(item.category && !miscCategoriesShown.value.includes(item.category)) {
           nMISC.category = 'Lain-lain';
           nMISC.categoryCustom = item.category;
         } else {
           nMISC.categoryCustom = '';
         }
+        // Categories with a fixed brand dropdown (PC, TV) use the same
+        // "reflect unknown values as Lain-lain" idea as everywhere else.
+        const fixedBrands = MISC_BRAND_DICTS[nMISC.category];
+        if(fixedBrands) {
+          if(item.brand && !fixedBrands.includes(item.brand)) { nMISC.brand = 'Lain-lain'; nMISC.brandCustom = item.brand; } else { nMISC.brandCustom = ''; }
+          const knownModels = (MISC_MODEL_DICTS[nMISC.category] || {})[nMISC.brand] || [];
+          if(item.model && !knownModels.includes(item.model)) { nMISC.model = 'Lain-lain'; nMISC.modelCustom = item.model; } else { nMISC.modelCustom = ''; }
+        } else {
+          nMISC.brandCustom = ''; nMISC.modelCustom = '';
+        }
+      } else if(key === 'alarms') {
+        // Alarm brand/model/type are short fixed lists (not the crowdsourced
+        // BRANDS/HDD_BRANDS-style dictionaries), so this checks against
+        // those hardcoded options directly rather than brandOptionsFor().
+        if(item.brand && !ALARM_BRANDS.includes(item.brand)) { nALM.brand = 'Lain-lain'; nALM.brandCustom = item.brand; } else { nALM.brandCustom = ''; }
+        const knownAlmModels = ALARM_BRAND_MODELS[nALM.brand] || [];
+        if(item.model && !knownAlmModels.includes(item.model)) { nALM.model = 'Lain-lain'; nALM.modelCustom = item.model; } else { nALM.modelCustom = ''; }
+        if(item.type && item.type !== 'SMS Alert System') { nALM.type = 'Lain-lain'; nALM.typeCustom = item.type; } else { nALM.typeCustom = ''; }
       } else {
         // Same idea for Kamera/NVR/HDD/Switch: saved brand/model may be a
         // crowdsourced custom value — reflect that as "Lain-lain" + the
@@ -9608,10 +9717,12 @@ createApp({
       if(!isValidIp(nALM.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].alarms;
-      const dup = _findDupConflict('alarms', list, nALM, equipEditIdx.alarms);
+      const resolved = _resolveBrandModel(nALM);
+      resolved.type = (resolved.type === 'Lain-lain' && resolved.typeCustom && resolved.typeCustom.trim()) ? resolved.typeCustom.trim() : resolved.type;
+      const dup = _findDupConflict('alarms', list, resolved, equipEditIdx.alarms);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...nALM, _uid:list[equipEditIdx.alarms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
-      else { list.push({...nALM, _uid:_genId(), _ts:Date.now()}); showToast('Alarm berjaya ditambah!'); }
+      if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...resolved, _uid:list[equipEditIdx.alarms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
+      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Alarm berjaya ditambah!'); }
       resetForm('nALM');
     }
     function addMisc() {
@@ -9620,12 +9731,14 @@ createApp({
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
       const category = (nMISC.category==='Lain-lain' && nMISC.categoryCustom.trim()) ? nMISC.categoryCustom.trim() : nMISC.category;
-      const item = { name:nMISC.name, category, brand:nMISC.brand, model:nMISC.model, serial:nMISC.serial, ip:nMISC.ip, installDate:nMISC.installDate, accessUser:nMISC.accessUser, accessPw:nMISC.accessPw, _ts:Date.now() };
+      const brand = (nMISC.brand==='Lain-lain' && nMISC.brandCustom.trim()) ? nMISC.brandCustom.trim() : nMISC.brand;
+      const model = (nMISC.model==='Lain-lain' && nMISC.modelCustom.trim()) ? nMISC.modelCustom.trim() : nMISC.model;
+      const item = { name:nMISC.name, category, brand, model, serial:nMISC.serial, ip:nMISC.ip, installDate:nMISC.installDate, accessUser:nMISC.accessUser, accessPw:nMISC.accessPw, _ts:Date.now() };
       const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Peralatan berjaya ditambah!'); }
-      Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',model:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+      Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     }
     // Resolves one "dropdown value + optional custom text" pair the same
     // way brand/model dropdowns do elsewhere — falls back to the typed
@@ -11225,7 +11338,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         (eq.cameras||[]).forEach(c => rows.push({ site:site.name, proj, cat:'Kamera', name:c.name||'-', brand:c.brand||'-', model:c.model||'-', serial:c.serial||'-', extra:c.ip||c.camType||'-' }));
         (eq.nvr||[]).forEach(n => rows.push({ site:site.name, proj, cat:'NVR', name:n.name||'-', brand:n.brand||'-', model:n.model||'-', serial:n.serial||'-', extra:n.ip||n.type||'-' }));
         (eq.hdd||[]).forEach(h => rows.push({ site:site.name, proj, cat:'HDD', name:h.nvrRef||'-', brand:h.brand||'-', model:h.model||'-', serial:h.serial||'-', extra:h.capacity||'-' }));
-        (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch', name:'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:s.ports||'-' }));
+        (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch', name:s.name||'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:'-' }));
         (eq.alarms||[]).forEach(a => rows.push({ site:site.name, proj, cat:'Alarm', name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
         (eq.misc||[]).forEach(m => rows.push({ site:site.name, proj, cat:'Lain-lain', name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
       };
@@ -11678,7 +11791,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem, toggleVirSystem,
       siteEquip, selSite, eqTab,
-      nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown,
+      nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown, miscBrandOptions, miscModelOptions, ALARM_BRANDS, ALARM_BRAND_MODELS,
       nServer, nTablet, addServer, addTablet, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
