@@ -1605,7 +1605,7 @@ tr:hover td{background:#f9fbff}
         <div class="tabs">
           <div v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Server ({{(selSiteEquip.servers||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
-          <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ NVR ({{(selSiteEquip.nvr||[]).length}})</div>
+          <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ {{currentProject==='vir'?'NVR':'Server/NVR/SAN'}} ({{(selSiteEquip.nvr||[]).length}})</div>
           <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='switch'}" @click="eqTab='switch'">🔌 POE/Network Switch ({{(selSiteEquip.switches||[]).length}})</div>
           <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='alarm'}" @click="eqTab='alarm'">🔔 Alarm SMS ({{(selSiteEquip.alarms||[]).length}})</div>
@@ -1736,12 +1736,12 @@ tr:hover td{background:#f9fbff}
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama *</label><input class="form-control" v-model="nNVR.name" placeholder="cth: Network Video Recorder (NVR) 1"></div>
               <div class="form-group"><label>Jenis</label>
-                <select class="form-control" v-model="nNVR.type"><option>NVR</option><option>NVR (Server)</option><option>Server</option><option>Extension NVR</option></select>
+                <select class="form-control" v-model="nNVR.type"><option>NVR</option><option>NVR (Server)</option><option>Server</option><option>Extension NVR</option><option>SAN Appliance (Head Unit)</option><option>SAN Appliance (Expansion Unit)</option></select>
               </div>
               <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nNVR.brand">
                   <option value="">-- Pilih --</option>
-                  <option v-for="b in brandOptionsFor('BRANDS')" :key="b">{{b}}</option>
+                  <option v-for="b in brandOptionsFor('NVR_BRANDS')" :key="b">{{b}}</option>
                 </select>
                 <input v-if="nNVR.brand==='Lain-lain'" class="form-control" v-model="nNVR.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
               </div>
@@ -4888,6 +4888,10 @@ const MAX_AUTO_BACKUPS = 3;
 
 const MONTHS = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
 const BRANDS = ['Panasonic','Hanwha (Samsung)','Bosch','Hikvision','Dahua','Axis','Uniview','Vivotek','Lain-lain'];
+// NVR/Server tab uses its own brand list (not the shared camera BRANDS)
+// since it now also covers rack-server hardware (e.g. Dell) that isn't a
+// CCTV camera brand and shouldn't leak into the Kamera tab's dropdown.
+const NVR_BRANDS = ['Panasonic','Hanwha (Samsung)','Bosch','Hikvision','Dahua','Axis','Uniview','Vivotek','Dell','Promise Technology','Lain-lain'];
 
 const CAMERA_MODELS = {
   'Panasonic': [
@@ -4917,8 +4921,8 @@ const CAMERA_MODELS = {
     'XND-6010','XND-6020R','XND-6080R','XND-8020R','XND-8080RV','XND-8082RV',
     'XNV-6010','XNV-6020R','XNV-6080R','XNV-6120R','XNV-6123R',
     'XNV-8020R','XNV-8080R','XNV-8090R','XNV-8120R','XNV-8123R','XNV-8124R','XNV-C8083R',
-    'XNO-6010R','XNO-6080R','XNO-6123R','XNO-8080R',
-    'XNP-6320','XNP-6400','XNP-8250',
+    'XNO-6010R','XNO-6080R','XNO-6123R','XNO-8080R','XNO-C8083R',
+    'XNP-6320','XNP-6400','XNP-8250','XNP-C8253R',
     'TNV-7010RC','TNV-7011RC','TNV-8011RC','TNB-9000',
     'PNM-9020V','PNM-9080VQ','PNM-9081VQ','PNM-9084RQZ','PNM-12082RVD',
     'PNM-C16013RVQ','PNM-C16083RVQ','PNM-C32083RVQ',
@@ -4980,7 +4984,7 @@ const CAMERA_MODELS = {
   'Axis': [
     'M2025-LE','M2026-LE Mk II','M3045-V','M3046-V',
     'M3105-LVE','M3106-L MkII','M3106-LME','M3106-LVE','M3116-R MkII',
-    'M3205-LVE','M3206-LVE','M5525-E',
+    'M3205-LVE','M3206-LVE','M4308-PLE','M5525-E',
     'P1435-LE','P1445-LE','P1447-LE','P1448-LE','P1455-LE',
     'P3225-LV','P3225-LVE','P3225-V','P3225-VE',
     'P3227-LV','P3227-LVE','P3228-LV MkII','P3228-LVE MkII',
@@ -4988,7 +4992,8 @@ const CAMERA_MODELS = {
     'P3247-LV','P3247-LVE','P3255-LVE',
     'P3265-LV','P3265-LVE','P3267-LV','P3267-LVE','P3268-LV','P3268-LVE',
     'P3343-VE','P3344-VE','P3364-VE',
-    'P3717-PLE','P3719-PLE','P3727-PLE',
+    'P3717-PLE','P3719-PLE','P3727-PLE','P3737-PLE',
+    'P9117-PV',
     'Q1615-LE Mk III','Q1645','Q1647','Q1656','Q1659',
     'Q3505-V','Q3505-VE','Q3515-LV','Q3517-LVE','Q3517-SLVE','Q3527-LVE',
     'Q3626-VE','Q3628-VE',
@@ -5041,7 +5046,7 @@ const NVR_MODELS = {
   'Hanwha (Samsung)': [
     'QRN-410S','QRN-430S','QRN-810S','QRN-830S','QRN-1610S','QRN-1620S','QRN-1630S',
     'XRN-420S','XRN-810S','XRN-820S','XRN-1620S','XRN-1620SB1',
-    'XRN-2010','XRN-2010A','XRN-2011A','XRN-3010A','XRN-3210B2','XRN-6410B2','XRN-6410RB2',
+    'XRN-2010','XRN-2010A','XRN-2011A','XRN-3010A','XRN-3210B2','XRN-3220B4','XRN-3210RB2','XRN-6410B2','XRN-6410RB2',
     'PRN-3200B4','PRN-6400B4',
     'Lain-lain',
   ],
@@ -5097,6 +5102,15 @@ const NVR_MODELS = {
     'NR8401',
     'Lain-lain',
   ],
+  'Dell': [
+    'PowerEdge R760',
+    'Lain-lain',
+  ],
+  'Promise Technology': [
+    'Vess R3600xiD',
+    'Vess J3600sD',
+    'Lain-lain',
+  ],
   'Lain-lain': [],
 };
 
@@ -5148,7 +5162,7 @@ const HDD_CAPACITIES = ['500GB','1TB','2TB','3TB','4TB','6TB','8TB','10TB','12TB
 
 // PoE/network switch brands & models commonly used by CCTV integrators over
 // roughly the last 5 years (2020-2025).
-const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Allied Telesis','Lain-lain'];
+const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Allied Telesis','Huawei','Lain-lain'];
 const SWITCH_MODELS = {
   'Hikvision': [
     'DS-3E0105P-E (5-Port PoE)','DS-3E0109P-E (8-Port PoE)','DS-3E0510HP-E (8-Port PoE)',
@@ -5221,6 +5235,10 @@ const SWITCH_MODELS = {
     'x950-28XSQ (Core Switch, 24-Port + 4x25G SFP28)',
     'GS980MX/28PSM (24/8-Port PoE)',
     'GS980MX/10HSm (8 Port)',
+    'Lain-lain',
+  ],
+  'Huawei': [
+    'CloudEngine S5735-L24P4XE-A-V2',
     'Lain-lain',
   ],
   'Lain-lain': [],
@@ -5311,7 +5329,7 @@ createApp({
     const PC_BRANDS = ['HP','Dell','Acer','Lenovo','Lain-lain'];
     const PC_MODELS = {
       'HP': ['Lain-lain'],
-      'Dell': ['Precision 5860 Tower','OptiPlex 7020','Lain-lain'],
+      'Dell': ['Precision 5860 Tower','OptiPlex SFF 7020','OptiPlex SFF+ 7020','Lain-lain'],
       'Acer': ['Veriton X2720G','Altos P130 F9','Altos P130 F7','Veriton Vero 4000 All-in-One Z4724GT','Lain-lain'],
       'Lenovo': ['Lain-lain'],
       'Lain-lain': [],
@@ -5340,7 +5358,7 @@ createApp({
     const UPS_BRANDS = ['Neuropower','MyCamExpert','Lain-lain'];
     const UPS_MODELS = {
       'Neuropower': ['Cronus 2KR (2kVA)','Cronus 3KR','Cronus 1KR','Lain-lain'],
-      'MyCamExpert': ['MC10930','Lain-lain'],
+      'MyCamExpert': ['MC10930','MC10930R','MC800VA','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "UPS Battery Pack".
@@ -6987,9 +7005,9 @@ createApp({
     // session. "Lain-lain" always stays as the last option so there's
     // always an escape hatch to add the next one.
     const CUSTOM_EQUIP_OPTIONS_COLLECTION = 'customEquipmentOptions';
-    const BRAND_LISTS = { BRANDS, HDD_BRANDS, SWITCH_BRANDS };
+    const BRAND_LISTS = { BRANDS, NVR_BRANDS, HDD_BRANDS, SWITCH_BRANDS };
     const EQUIP_MODEL_DICTS = { cameras: CAMERA_MODELS, nvr: NVR_MODELS, hdd: HDD_MODELS, switches: SWITCH_MODELS };
-    const customBrands = reactive({ BRANDS: [], HDD_BRANDS: [], SWITCH_BRANDS: [] });
+    const customBrands = reactive({ BRANDS: [], NVR_BRANDS: [], HDD_BRANDS: [], SWITCH_BRANDS: [] });
     // Crowdsourced MODELS are split per project (cctv/vir) — the Kamera/NVR/
     // HDD/Switch tabs are shared UI between CCTV and VIR (BCD) sites, but a
     // brand like Bosch is CCTV-only in practice, so a model typed in while
@@ -7084,7 +7102,7 @@ createApp({
 
     // ---- Urus Model Custom (superadmin cleanup tool) ----
     const customEquipCleanup = reactive({ equipType: 'cameras', project: 'cctv', brand: '' });
-    const CLEANUP_BRAND_LIST_KEY = { cameras: 'BRANDS', nvr: 'BRANDS', hdd: 'HDD_BRANDS', switches: 'SWITCH_BRANDS' };
+    const CLEANUP_BRAND_LIST_KEY = { cameras: 'BRANDS', nvr: 'NVR_BRANDS', hdd: 'HDD_BRANDS', switches: 'SWITCH_BRANDS' };
     const customEquipCleanupBrandList = computed(() => {
       const listKey = CLEANUP_BRAND_LIST_KEY[customEquipCleanup.equipType];
       return brandOptionsFor(listKey).filter(b => b !== 'Lain-lain');
@@ -7545,7 +7563,10 @@ createApp({
     setInterval(() => { currentTime.value = new Date().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}); }, 30000);
 
     const totalCameras = computed(() => Object.values(siteEquip.value).reduce((sum,s)=>sum+(s?.cameras?.length||0),0));
-    const totalVirCameras = computed(() => Object.values(virSiteEquip.value).reduce((sum,s)=>sum+(s?.cameras?.length||0),0));
+    const totalVirCameras = computed(() => {
+      const countFrom = (obj) => Object.values(obj).reduce((sum,s)=>sum+(s?.cameras?.length||0),0);
+      return countFrom(virSiteEquipBCD.value) + countFrom(virSiteEquipOptager.value);
+    });
 
     const pmThisYear = computed(() => pmRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
     const pmCCTV = computed(() => pmRecords.value.filter(r=>(r.project||'cctv')==='cctv'));
@@ -9809,7 +9830,7 @@ createApp({
         // custom text so editing shows it correctly. brandOptionsFor/
         // modelOptionsFor already include known crowdsourced entries, so
         // this only trips "Lain-lain" for values still unknown right now.
-        const brandListKey = { cameras:'BRANDS', nvr:'BRANDS', hdd:'HDD_BRANDS', switches:'SWITCH_BRANDS' }[key];
+        const brandListKey = { cameras:'BRANDS', nvr:'NVR_BRANDS', hdd:'HDD_BRANDS', switches:'SWITCH_BRANDS' }[key];
         if(brandListKey) {
           const knownBrands = brandOptionsFor(brandListKey).map(b => b.trim().toLowerCase());
           if(item.brand && !knownBrands.includes(item.brand.trim().toLowerCase())) {
@@ -9915,7 +9936,7 @@ createApp({
       if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId(), _ts:Date.now()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('NVR berjaya ditambah!'); }
       _sortByName(list);
-      _maybeAddCustomBrand('BRANDS', resolved.brand);
+      _maybeAddCustomBrand('NVR_BRANDS', resolved.brand);
       _maybeAddCustomModel('nvr', resolved.brand, resolved.model);
       resetForm('nNVR');
     }
