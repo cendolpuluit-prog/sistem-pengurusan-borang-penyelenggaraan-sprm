@@ -1660,6 +1660,16 @@ tr:hover td{background:#f9fbff}
                 <input v-else class="form-control" v-model="nCam.model" placeholder="cth: WV-SF335, QNV-8080R">
                 <input v-if="nCam.model==='Lain-lain'" class="form-control" v-model="nCam.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
+              <div class="form-group"><label>Aksesori <span class="text-muted text-sm">(pilihan)</span></label>
+                <select class="form-control" v-model="nCam.accessory">
+                  <option value="">-- Tiada --</option>
+                  <option>NDA-3083-PLEN</option>
+                  <option>NDA-U-PMAS</option>
+                  <option>NDA-7100-PEN</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="nCam.accessory==='Lain-lain'" class="form-control" v-model="nCam.accessoryCustom" placeholder="Nyatakan aksesori" style="margin-top:6px">
+              </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
               <template v-if="canViewCredentials">
@@ -1683,11 +1693,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>Aksesori</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="c._uid||i" :class="{'highlight-row':equipEditIdx.cameras===i}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{i+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.serial}}</td>
+                    <td>{{i+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.accessory||'-'}}</td><td>{{c.serial}}</td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
@@ -1698,7 +1708,7 @@ tr:hover td{background:#f9fbff}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada kamera. Tambah di atas.</td></tr>
+                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td :colspan="canViewCredentials?12:10" class="empty">Tiada kamera. Tambah di atas.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2272,6 +2282,15 @@ tr:hover td{background:#f9fbff}
                 </select>
               </div>
             </div>
+            <div class="form-group">
+              <label>Peralatan tidak berkenaan untuk bilik ini <span class="text-muted text-sm">(pilihan — nyahtanda peralatan yang tiada di bilik ini)</span></label>
+              <div class="staff-checklist" style="grid-template-columns:repeat(2,1fr)">
+                <label v-for="g in virChecklistGroups(nRoom.system)" :key="g.key" class="staff-check-item">
+                  <input type="checkbox" :checked="!nRoom.excludedGroups.includes(g.key)" @change="toggleRoomGroup(g.key)">
+                  {{g.label}}
+                </label>
+              </div>
+            </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addVirRoom">{{equipEditIdx.rooms!==null?'✓ Kemaskini Bilik':'+ Tambah Bilik'}}</button>
               <button v-if="equipEditIdx.rooms!==null" class="btn btn-outline" @click="cancelEditEquip('rooms')">✕ Batal Edit</button>
@@ -2281,17 +2300,21 @@ tr:hover td{background:#f9fbff}
             <div class="card-title" style="margin:0;border:none;padding:0">Senarai Bilik</div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th>#</th><th>Nama Bilik</th><th>Jenis Sistem</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th>#</th><th>Nama Bilik</th><th>Jenis Sistem</th><th>Peralatan Dikecualikan</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(r,i) in selSiteEquip.rooms||[]" :key="r._uid||i" :class="{'highlight-row':equipEditIdx.rooms===i}">
                     <td>{{i+1}}</td><td>{{r.name}}</td>
                     <td><span :class="'badge '+(r.system==='Optager HD4000'?'badge-blue':'badge-gray')">{{r.system}}</span></td>
+                    <td>
+                      <span v-if="(r.excludedGroups||[]).length" class="badge badge-red" style="font-size:.72rem">{{r.excludedGroups.length}} item tak berkenaan</span>
+                      <span v-else class="text-muted text-sm">Semua peralatan berkenaan</span>
+                    </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('rooms',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'rooms',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.rooms||[]).length"><td colspan="4" class="empty">Tiada bilik didaftar. Borang PM VIR akan guna senarai bilik generik (NO.1-20) tanpa sistem sehingga bilik didaftar di sini.</td></tr>
+                  <tr v-if="!(selSiteEquip.rooms||[]).length"><td colspan="5" class="empty">Tiada bilik didaftar. Borang PM VIR akan guna senarai bilik generik (NO.1-20) tanpa sistem sehingga bilik didaftar di sini.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4855,19 +4878,7 @@ const CAMERA_MODELS = {
     'Lain-lain',
   ],
   'Bosch': [
-    'NDN-733V03-P','NDN-733V09-IP','NDN-921V03-P','NDN-932V03-IP','NDN-932V09-IP',
-    'NDE-3502-F','NDE-3502-AL','NDE-4502-A','NDE-4502-AL','NDE-4503-AL',
-    'NDE-5502-A','NDE-5503-A','NDE-5503-AL','NDE-5702-AL','NDE-5702-AL-GOV',
-    'NDE-8502-R','NDE-8502-RT','NDE-8503-R','NDE-8503-RT','NDE-8504-R','NDE-8504-RT',
-    'NBE-3502-AL','NBE-4502-AL','NBE-5502-AL','NBE-5503-AL','NBE-6502-AL',
-    'NBN-733V03-P','NBN-832-IP','NBN-832V-IP','NBN-932V-IP','NBN-73023-BA','NBN-80122-IS',
-    'NIN-733-V03IP','NIN-733-V10IP','NIN-63013-A3','NIN-63023-A3',
-    'NDV-3503-F03','NDV-5503-A',
-    'NDI-4502-AL','NDI-4512-AL','NDI-5503-AL','NDI-5583-ALE3',
-    'NDP-5512-Z12','NDP-7512-Z30','NDS-5703-F360LE',
-    'MIC-550IR','MIC-7230-Z30','MIC-7522-Z30B',
-    'FLEXIDOME IP outdoor 4000i','FLEXIDOME IP outdoor 5000i','FLEXIDOME IP indoor 5000i',
-    'DINION 3100i IR','FLEXIDOME outdoor 3100i IR',
+    'NDE-3703-AL (Dome)','NBE-3703-AL (Bullet)',
     'Lain-lain',
   ],
   'Hikvision': [
@@ -5228,11 +5239,11 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
-    const nRoom = reactive({name:'', system:'BCD'});
+    const nRoom = reactive({name:'', system:'BCD', excludedGroups:[]});
     const nALM = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''});
     // Alarm SMS System brand → model options (fixed short lists, not the
     // crowdsourced BRANDS/HDD_BRANDS-style dictionaries).
@@ -5815,6 +5826,43 @@ createApp({
     function virSectionsFor(system) {
       return VIR_CHECKLIST_SECTIONS[system] || VIR_CHECKLIST_SECTIONS['BCD'];
     }
+    // Groups a system's checklist by top-level equipment item (e.g. "1. BCD
+    // USA", "2. Visiontec 4CH...") so a room can mark whole pieces of gear as
+    // "not applicable" without touching the fixed Excel cell mapping — every
+    // item keeps its original okCell/nokCell; excluded ones just never get
+    // included in pm.virItems, so their cell stays blank (a legitimate N/A
+    // state) instead of the export needing to know about a changed layout.
+    // A top-level header is any isHeader row whose label starts with a
+    // number + period (e.g. "1.  BCD USA") — sub-items use roman numerals
+    // ("i.", "ii.") or plain names and never match this.
+    const TOP_LEVEL_RE = /^\d+\.\s/;
+    function virChecklistGroups(system) {
+      const items = virChecklistFor(system);
+      const groups = [];
+      let current = null;
+      items.forEach(item => {
+        if(item.isHeader && TOP_LEVEL_RE.test(item.label)) {
+          current = { key: item.key, label: item.label.replace(TOP_LEVEL_RE, ''), itemKeys: [item.key] };
+          groups.push(current);
+        } else if(current) {
+          current.itemKeys.push(item.key);
+        }
+      });
+      return groups;
+    }
+    // Removes every item belonging to an excluded top-level group from a
+    // freshly-generated checklist (used when starting a new PM for a room
+    // that's registered with some equipment marked not-applicable).
+    function virFilterExcluded(items, excludedGroupKeys) {
+      if(!excludedGroupKeys || !excludedGroupKeys.length) return items;
+      const excludedSet = new Set();
+      Object.keys(VIR_CHECKLIST_SECTIONS).forEach(sys => {
+        virChecklistGroups(sys).forEach(g => {
+          if(excludedGroupKeys.includes(g.key)) g.itemKeys.forEach(k => excludedSet.add(k));
+        });
+      });
+      return items.filter(item => !excludedSet.has(item.key));
+    }
     // Splits a section's items into 2 print columns (mirrors the original
     // paper form's half-page-per-column layout). Nudges the split point
     // earlier if it would otherwise strand a header row alone at the
@@ -5844,7 +5892,7 @@ createApp({
         {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
       ],
       // VIR fields
-      virRoomNo:'', virRoomNoCustom:'', virSystem:'', virItems:[],
+      virRoomNo:'', virRoomNoCustom:'', virSystem:'', virItems:[], _virRoomExcludedGroups:[],
       maintType:'', pmNo:null, rootCause:'',
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
@@ -6865,11 +6913,11 @@ createApp({
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
+      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
       nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''},
       nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
-      nRoom: {name:'', system:'BCD'},
+      nRoom: {name:'', system:'BCD', excludedGroups:[]},
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:'', storageCustom:'',
@@ -7032,6 +7080,14 @@ createApp({
     function onVirRoomChange() {
       const match = pmVirSiteRooms.value.find(r => r.name === pm.virRoomNo);
       pm.virSystem = match ? match.system : '';
+      pm._virRoomExcludedGroups = match ? [...(match.excludedGroups||[])] : [];
+      // Regenerate directly here too (not just via the watcher below) —
+      // picking a DIFFERENT room that happens to run the SAME system
+      // wouldn't trigger the pm.virSystem watcher at all (value unchanged),
+      // so that room's own excludedGroups would never get applied.
+      if(!pm._isEdit && pm.virSystem) {
+        pm.virItems = virFilterExcluded(virChecklistFor(pm.virSystem), pm._virRoomExcludedGroups).map(t => ({...t, status:'ok', nota:''}));
+      }
     }
     // Regenerates the checklist whenever the system changes — but NEVER
     // during an edit: editRecord() already restored pm.virItems from the
@@ -7039,9 +7095,11 @@ createApp({
     // (deferred, fires after that) would otherwise clobber that historical
     // data with a blank freshly-generated template. Same class of bug as
     // the refNo-prefix/suffix watchers fixed earlier this session.
+    // Also covers the no-room-registered fallback (manual "Jenis Sistem"
+    // dropdown), where there's no room/excludedGroups to apply.
     watch(() => pm.virSystem, (sys) => {
       if(pm._isEdit || currentProject.value !== 'vir' || !sys) return;
-      pm.virItems = virChecklistFor(sys).map(t => ({...t, status:'ok', nota:''}));
+      pm.virItems = virFilterExcluded(virChecklistFor(sys), pm._virRoomExcludedGroups||[]).map(t => ({...t, status:'ok', nota:''}));
     });
 
     function openSites(proj) {
@@ -9346,7 +9404,14 @@ createApp({
       selSite.value = site;
       if(currentProject.value === 'vir') {
         if(mode === 'rooms') { eqTab.value = 'rooms'; }
-        else { equipVirSystem.value = mode || equipVirSystem.value; eqTab.value = 'cameras'; }
+        else {
+          equipVirSystem.value = mode || equipVirSystem.value;
+          // BCD's real gear (DVD-1150, VC-16b, TC-100, Quad, etc) is tracked
+          // via the per-room checklist toggle, not the generic Kamera/NVR/HDD
+          // tabs — those don't reflect BCD's actual equipment, so land on
+          // Bilik & Sistem instead. Optager still opens on Kamera as before.
+          eqTab.value = mode === 'BCD' ? 'rooms' : 'cameras';
+        }
       } else {
         eqTab.value = 'cameras';
       }
@@ -9535,7 +9600,10 @@ createApp({
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet, rooms:nRoom };
       Object.assign(refs[key], item);
       if(key === 'rooms') {
-        // No brand/model/category lookup applies to rooms — just the name+system.
+        // Clone excludedGroups so ticking checkboxes while editing doesn't
+        // mutate the stored room's array in place before "Kemaskini" is
+        // pressed (Object.assign above copies the array by reference).
+        nRoom.excludedGroups = [...(item.excludedGroups||[])];
       } else if(key === 'servers') {
         // Same "Lain-lain + custom text" reconciliation as brand/model
         // dropdowns, but across all 7 of the server's spec dropdowns.
@@ -9607,6 +9675,16 @@ createApp({
             refs[key].modelCustom = '';
           }
         }
+        if(key === 'cameras') {
+          // Accessory is camera-only, fixed short list (not a crowdsourced dictionary).
+          const knownAccessories = ['NDA-3083-PLEN','NDA-U-PMAS','NDA-7100-PEN'];
+          if(item.accessory && !knownAccessories.includes(item.accessory)) {
+            nCam.accessory = 'Lain-lain';
+            nCam.accessoryCustom = item.accessory;
+          } else {
+            nCam.accessoryCustom = '';
+          }
+        }
       }
       equipEditIdx[key] = idx;
       // The edit form sits above the (possibly long) list — scroll it into
@@ -9657,14 +9735,19 @@ createApp({
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
       if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _resolveBrandModel(nCam);
+      // Same "Lain-lain + custom text" resolution as brand/model, but for
+      // the accessory dropdown — _resolveBrandModel doesn't know about this
+      // camera-only field, so it's handled separately here.
+      const { accessoryCustom, ...camResolved } = resolved;
+      camResolved.accessory = (camResolved.accessory === 'Lain-lain' && accessoryCustom && accessoryCustom.trim()) ? accessoryCustom.trim() : camResolved.accessory;
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
-      const dup = _findDupConflict('cameras', list, resolved, equipEditIdx.cameras);
+      const dup = _findDupConflict('cameras', list, camResolved, equipEditIdx.cameras);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...resolved, _uid:list[equipEditIdx.cameras]._uid||_genId(), _ts:Date.now()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
-      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Kamera berjaya ditambah!'); }
-      _maybeAddCustomBrand('BRANDS', resolved.brand);
-      _maybeAddCustomModel('cameras', resolved.brand, resolved.model);
+      if(equipEditIdx.cameras !== null) { list[equipEditIdx.cameras] = {...camResolved, _uid:list[equipEditIdx.cameras]._uid||_genId(), _ts:Date.now()}; equipEditIdx.cameras = null; showToast('Kamera dikemaskini!'); }
+      else { list.push({...camResolved, _uid:_genId(), _ts:Date.now()}); showToast('Kamera berjaya ditambah!'); }
+      _maybeAddCustomBrand('BRANDS', camResolved.brand);
+      _maybeAddCustomModel('cameras', camResolved.brand, camResolved.model);
       resetForm('nCam');
     }
     function addNVR() {
@@ -9720,10 +9803,15 @@ createApp({
       const list = virSiteEquip.value[selSite.value.id].rooms;
       const dupIdx = list.findIndex((r,i) => r.name.trim().toLowerCase() === nRoom.name.trim().toLowerCase() && i !== equipEditIdx.rooms);
       if(dupIdx !== -1) { showToast(`Bilik "${nRoom.name}" sudah wujud untuk site ini.`, 'error'); return; }
-      const resolved = { name: nRoom.name.trim(), system: nRoom.system };
+      const resolved = { name: nRoom.name.trim(), system: nRoom.system, excludedGroups: [...(nRoom.excludedGroups||[])] };
       if(equipEditIdx.rooms !== null) { list[equipEditIdx.rooms] = {...resolved, _uid:list[equipEditIdx.rooms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.rooms = null; showToast('Bilik dikemaskini!'); }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Bilik berjaya ditambah!'); }
       resetForm('nRoom');
+    }
+    function toggleRoomGroup(groupKey) {
+      const idx = nRoom.excludedGroups.indexOf(groupKey);
+      if(idx === -1) nRoom.excludedGroups.push(groupKey);
+      else nRoom.excludedGroups.splice(idx, 1);
     }
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
@@ -9923,6 +10011,7 @@ createApp({
       if(proj) currentProject.value = proj;
       pm.virRoomNo=''; pm.virRoomNoCustom='';
       pm.virSystem = 'BCD'; // sane default until a room is picked (or changed via onVirRoomChange)
+      pm._virRoomExcludedGroups = [];
       pm.virItems = VIR_CHECKLIST_TEMPLATE_BCD.map(t=>({...t, status:'ok', nota:''}));
       pm.siteId=''; pm.siteName=''; pm.refNo=''; refNoSuffix.value='';
       pm.month=null; pm.year=null;
@@ -10078,7 +10167,9 @@ createApp({
         // Legacy records predate the BCD/Optager split — they're always BCD
         // since that was the only system that existed at the time.
         pm.virSystem = r.virSystem || 'BCD';
-        pm.virItems = r.virItems ? JSON.parse(JSON.stringify(r.virItems)) : virChecklistFor(pm.virSystem).map(t=>({...t, status:'ok', nota:''}));
+        const editRoomMatch = (virSiteEquip.value[pm.siteId]?.rooms||[]).find(rm => rm.name === pm.virRoomNo);
+        pm._virRoomExcludedGroups = editRoomMatch ? [...(editRoomMatch.excludedGroups||[])] : [];
+        pm.virItems = r.virItems ? JSON.parse(JSON.stringify(r.virItems)) : virFilterExcluded(virChecklistFor(pm.virSystem), pm._virRoomExcludedGroups).map(t=>({...t, status:'ok', nota:''}));
         pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
         pm.support=[
           {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
@@ -11801,7 +11892,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession,
-      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, virChecklistFor, virSectionsFor, virChecklistCols, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem, toggleVirSystem,
       siteEquip, selSite, eqTab,
