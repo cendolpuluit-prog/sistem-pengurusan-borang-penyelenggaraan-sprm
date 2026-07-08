@@ -1028,6 +1028,9 @@ tr:hover td{background:#f9fbff}
       <div class="nav-item" :class="{active:page==='user-mgmt'}" @click="page='user-mgmt'" v-if="authProfile?.role==='superadmin'">
         <span class="icon">👥</span> Pengurusan Pengguna
       </div>
+      <div class="nav-item" :class="{active:page==='custom-equip'}" @click="page='custom-equip'" v-if="authProfile?.role==='superadmin'">
+        <span class="icon">🧹</span> Urus Model Custom
+      </div>
       <div class="nav-item" :class="{active:page==='compare'}" @click="page='compare'" v-if="compareList.length===2">
         <span class="icon">⚖️</span> Bandingkan
       </div>
@@ -3566,6 +3569,50 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
         <div v-if="!allUsers.length" class="empty">Tiada pengguna lain. Tambah pengguna baru.</div>
+      </div>
+
+      <!-- ====== URUS MODEL CUSTOM (crowdsourced brand/model cleanup) ====== -->
+      <div v-if="page==='custom-equip' && authProfile?.role==='superadmin'">
+        <div class="card-title" style="margin:0 0 16px;border:none;padding:0">🧹 Urus Model Custom (Crowdsourced)</div>
+        <p class="text-sm text-muted mb-16">Model yang ditaip staff melalui pilihan "Lain-lain" tersimpan kekal untuk semua orang. Guna halaman ini untuk semak & padam entri yang salah/usang. Senarai model asal (hardcode dalam sistem) <b>tidak</b> boleh dipadam di sini.</p>
+        <div class="card">
+          <div class="form-row form-row-3">
+            <div class="form-group">
+              <label>Jenis Peralatan</label>
+              <select class="form-control" v-model="customEquipCleanup.equipType" @change="customEquipCleanup.brand=''">
+                <option value="cameras">Kamera</option>
+                <option value="nvr">NVR</option>
+                <option value="hdd">Hard Disk</option>
+                <option value="switches">Network Switch</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Projek</label>
+              <select class="form-control" v-model="customEquipCleanup.project">
+                <option value="cctv">CCTV</option>
+                <option value="vir">VIR</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Brand</label>
+              <select class="form-control" v-model="customEquipCleanup.brand">
+                <option value="">-- Pilih Brand --</option>
+                <option v-for="b in customEquipCleanupBrandList" :key="b">{{b}}</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card" v-if="customEquipCleanup.brand">
+          <div class="flex justify-between items-center mb-16">
+            <div class="card-title" style="margin:0;border:none;padding:0">Model Custom — {{customEquipCleanup.brand}} ({{customEquipCleanup.project.toUpperCase()}})</div>
+            <button v-if="customEquipCleanupList.length" class="btn btn-danger btn-sm" @click="clearAllCustomModels">🗑 Padam Semua</button>
+          </div>
+          <div v-if="!customEquipCleanupList.length" class="empty">Tiada model custom untuk kombinasi ini.</div>
+          <div v-for="m in customEquipCleanupList" :key="m" class="flex justify-between items-center" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
+            <span style="font-size:.88rem">{{m}}</span>
+            <button class="btn btn-outline btn-sm btn-icon" @click="removeCustomModel(m)" title="Padam">🗑</button>
+          </div>
+        </div>
       </div>
 
       <!-- ====== PROFILE ====== -->
@@ -6939,7 +6986,16 @@ createApp({
     const BRAND_LISTS = { BRANDS, HDD_BRANDS, SWITCH_BRANDS };
     const EQUIP_MODEL_DICTS = { cameras: CAMERA_MODELS, nvr: NVR_MODELS, hdd: HDD_MODELS, switches: SWITCH_MODELS };
     const customBrands = reactive({ BRANDS: [], HDD_BRANDS: [], SWITCH_BRANDS: [] });
-    const customModels = reactive({ cameras: {}, nvr: {}, hdd: {}, switches: {} });
+    // Crowdsourced MODELS are split per project (cctv/vir) — the Kamera/NVR/
+    // HDD/Switch tabs are shared UI between CCTV and VIR (BCD) sites, but a
+    // brand like Bosch is CCTV-only in practice, so a model typed in while
+    // managing a CCTV site shouldn't also appear when managing a VIR site.
+    // Brand names themselves stay shared (not split) — only the crowdsourced
+    // MODEL lists underneath a brand are project-scoped.
+    const customModels = reactive({
+      cctv: { cameras: {}, nvr: {}, hdd: {}, switches: {} },
+      vir:  { cameras: {}, nvr: {}, hdd: {}, switches: {} },
+    });
 
     async function loadCustomEquipmentOptions() {
       try {
@@ -6948,8 +7004,11 @@ createApp({
           const d = doc.data();
           if(d.kind === 'brand' && customBrands[d.listKey] !== undefined) {
             customBrands[d.listKey] = d.items || [];
-          } else if(d.kind === 'model' && customModels[d.equipType]) {
-            customModels[d.equipType][d.brand] = d.items || [];
+          } else if(d.kind === 'model' && d.project && customModels[d.project]?.[d.equipType]) {
+            // Docs from before the CCTV/VIR split (no `project` field) are
+            // simply not read anymore — see the button in Pengurusan
+            // Pengguna to review/clear any leftover legacy entries.
+            customModels[d.project][d.equipType][d.brand] = d.items || [];
           }
         });
       } catch(e) { console.warn('loadCustomEquipmentOptions failed:', e); }
@@ -6976,7 +7035,8 @@ createApp({
     function modelOptionsFor(equipType, brand) {
       if(!EQUIP_MODEL_DICTS[equipType] || !brand) return [];
       const builtIn = EQUIP_MODEL_DICTS[equipType][brand] || [];
-      const custom = customModels[equipType]?.[brand] || [];
+      const proj = currentProject.value === 'vir' ? 'vir' : 'cctv';
+      const custom = customModels[proj]?.[equipType]?.[brand] || [];
       return _mergeOptionList(builtIn, custom);
     }
 
@@ -7003,11 +7063,12 @@ createApp({
       const known = modelOptionsFor(equipType, brand).map(m => m.trim().toLowerCase());
       const val = model.trim();
       if(known.includes(val.toLowerCase())) return;
-      if(!customModels[equipType][brand]) customModels[equipType][brand] = [];
-      customModels[equipType][brand].push(val);
+      const proj = currentProject.value === 'vir' ? 'vir' : 'cctv';
+      if(!customModels[proj][equipType][brand]) customModels[proj][equipType][brand] = [];
+      customModels[proj][equipType][brand].push(val);
       try {
-        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand).set({
-          kind: 'model', equipType, brand,
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand+'__'+proj).set({
+          kind: 'model', equipType, brand, project: proj,
           items: firebase.firestore.FieldValue.arrayUnion(val),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
@@ -7015,6 +7076,46 @@ createApp({
         console.warn('Gagal simpan model custom ke cloud:', e);
         showToast('Peralatan disimpan. Model baru "'+val+'" belum sync ke cloud (offline) — akan cuba lagi bila online.', 'error');
       }
+    }
+
+    // ---- Urus Model Custom (superadmin cleanup tool) ----
+    const customEquipCleanup = reactive({ equipType: 'cameras', project: 'cctv', brand: '' });
+    const CLEANUP_BRAND_LIST_KEY = { cameras: 'BRANDS', nvr: 'BRANDS', hdd: 'HDD_BRANDS', switches: 'SWITCH_BRANDS' };
+    const customEquipCleanupBrandList = computed(() => {
+      const listKey = CLEANUP_BRAND_LIST_KEY[customEquipCleanup.equipType];
+      return brandOptionsFor(listKey).filter(b => b !== 'Lain-lain');
+    });
+    const customEquipCleanupList = computed(() => {
+      const { equipType, project, brand } = customEquipCleanup;
+      if(!brand) return [];
+      return customModels[project]?.[equipType]?.[brand] || [];
+    });
+    async function removeCustomModel(model) {
+      const { equipType, project, brand } = customEquipCleanup;
+      if(!isAdminRole() || authProfile.value?.role !== 'superadmin') return;
+      const list = customModels[project][equipType][brand] || [];
+      const idx = list.indexOf(model);
+      if(idx === -1) return;
+      list.splice(idx, 1);
+      try {
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand+'__'+project).set({
+          kind: 'model', equipType, brand, project,
+          items: firebase.firestore.FieldValue.arrayRemove(model),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        await logAudit('CUSTOM_MODEL_DELETE', `[${project.toUpperCase()}] ${equipType}/${brand}: ${model}`);
+        showToast('Model custom dipadam.');
+      } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
+    }
+    async function clearAllCustomModels() {
+      const { equipType, project, brand } = customEquipCleanup;
+      if(!brand || !confirm(`Padam SEMUA model custom untuk ${brand} (${project.toUpperCase()})?`)) return;
+      try {
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand+'__'+project).delete();
+        customModels[project][equipType][brand] = [];
+        await logAudit('CUSTOM_MODEL_CLEAR_ALL', `[${project.toUpperCase()}] ${equipType}/${brand}`);
+        showToast('Semua model custom untuk brand ini dipadam.');
+      } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
     }
 
     // ---- Project split ----
@@ -7425,7 +7526,7 @@ createApp({
       'new-pm': pm._isEdit ? ('Edit ' + (currentProject.value==='vir' ? 'Borang VIR' : 'Borang CCTV')) : (currentProject.value==='vir' ? 'Borang VIR Baru' : 'Borang CCTV Baru'),
       'pm-list': currentProject.value==='vir' ? 'Rekod Borang VIR' : 'Rekod Borang CCTV',
       'pm-view':'Lihat Rekod', 'jadual':'Jadual Penyelenggaraan',
-      'user-mgmt':'Pengurusan Pengguna', profile:'Profil Saya', backup:'Backup & Restore',
+      'user-mgmt':'Pengurusan Pengguna', 'custom-equip':'Urus Model Custom', profile:'Profil Saya', backup:'Backup & Restore',
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
       'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
       'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV'),
@@ -8445,7 +8546,7 @@ createApp({
 
     // ---- Bulk import from txt/csv/xlsx/pdf (auto-detect + auto-sort columns) ----
     const IMPORT_FIELD_KEYS = {
-      cameras:  ['name','ip','camType','brand','model','serial'],
+      cameras:  ['name','ip','camType','brand','model','accessory','serial'],
       nvr:      ['name','type','brand','model','serial','ip'],
       hdd:      ['brand','model','serial','capacity','config','nvrRef'],
       switches: ['name','brand','model','serial'],
@@ -8461,6 +8562,7 @@ createApp({
       category: ['type','jenis','category','kategori'],
       brand:    ['brand','jenama','manufacturer','make'],
       model:    ['model','part no','part number'],
+      accessory: ['accessory','aksesori','accessories'],
       serial:   ['serial','no siri','s/n','sn','serial no','serial number'],
       capacity: ['capacity','kapasiti','size'],
       config:   ['config','configuration','konfigurasi','raid'],
@@ -8767,6 +8869,9 @@ createApp({
         if(key) seen.set(key, item);
         added++;
       });
+      // Same auto-sort as manual add/edit for these 4 tabs — a bulk import
+      // is exactly when entries are most likely to land out of order.
+      if(['nvr','switches','alarms','misc'].includes(kind)) _sortByName(list);
       return { added, duplicates };
     }
 
@@ -8862,6 +8967,17 @@ createApp({
         return 0;
       });
       showToast('Senarai disusun ikut IP Address. Klik "💾 Simpan Semua" untuk kekalkan susunan.', 'success');
+    }
+
+    // Auto-sorts a list by its `name` field ascending, right after every add/
+    // edit — for Network Switch, NVR, Alarm SMS, and Peralatan Lain-lain,
+    // where entries are typically named with an embedded number (e.g.
+    // "KS/WS/01", "KS/WS/02") and staff don't always key them in in order.
+    // `numeric:true` makes this a natural sort — "…/2" sorts before "…/10",
+    // not after it the way plain string comparison would.
+    function _sortByName(list) {
+      if(!list || list.length < 2) return;
+      list.sort((a,b) => String(a.name||'').localeCompare(String(b.name||''), undefined, { numeric:true, sensitivity:'base' }));
     }
 
     function confirmImportRows() {
@@ -9760,6 +9876,7 @@ createApp({
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId(), _ts:Date.now()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('NVR berjaya ditambah!'); }
+      _sortByName(list);
       _maybeAddCustomBrand('BRANDS', resolved.brand);
       _maybeAddCustomModel('nvr', resolved.brand, resolved.model);
       resetForm('nNVR');
@@ -9789,6 +9906,7 @@ createApp({
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.switches !== null) { list[equipEditIdx.switches] = {...resolved, _uid:list[equipEditIdx.switches]._uid||_genId(), _ts:Date.now()}; equipEditIdx.switches = null; showToast('Switch dikemaskini!'); }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Switch berjaya ditambah!'); }
+      _sortByName(list);
       _maybeAddCustomBrand('SWITCH_BRANDS', resolved.brand);
       _maybeAddCustomModel('switches', resolved.brand, resolved.model);
       resetForm('nSW');
@@ -9825,6 +9943,7 @@ createApp({
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...resolved, _uid:list[equipEditIdx.alarms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Alarm berjaya ditambah!'); }
+      _sortByName(list);
       resetForm('nALM');
     }
     function addMisc() {
@@ -9840,6 +9959,7 @@ createApp({
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Peralatan berjaya ditambah!'); }
+      _sortByName(list);
       Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     }
     // Resolves one "dropdown value + optional custom text" pair the same
@@ -11940,6 +12060,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
+      customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
       revealedPw, togglePwReveal,
       bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
