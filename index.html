@@ -806,8 +806,22 @@ tr:hover td{background:#f9fbff}
 /* EXPIRY BADGES */
 .expiry-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:20px;font-size:.72rem;font-weight:700}
 .expiry-badge.expired{background:#fdecea;color:#c62828;border:1px solid #ffcdd2}
-.expiry-badge.soon{background:#fff8e1;color:#e65100;border:1px solid #ffe082}
+.expiry-badge.soon,.expiry-badge.expiring{background:#fff8e1;color:#e65100;border:1px solid #ffe082}
 .expiry-badge.active{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9}
+
+/* WARRANTY STAT CARDS */
+.warranty-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+.warranty-stat-card{background:#f7f9fc;border-radius:10px;padding:14px 16px}
+.warranty-stat-card .wsc-label{font-size:.75rem;color:#666}
+.warranty-stat-card .wsc-value{font-size:1.5rem;font-weight:700;margin-top:4px}
+.warranty-stat-card.expired{background:#fdecea}
+.warranty-stat-card.expired .wsc-value{color:#c62828}
+.warranty-stat-card.expiring{background:#fff8e1}
+.warranty-stat-card.expiring .wsc-value{color:#e65100}
+.warranty-stat-card.active{background:#e8f5e9}
+.warranty-stat-card.active .wsc-value{color:#2e7d32}
+.warranty-vendor-group{margin-bottom:18px}
+.warranty-vendor-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f3f8;border-radius:8px 8px 0 0;font-weight:700;color:#003366;font-size:.88rem}
 
 /* CONTACT PERSON */
 .cp-empty-row td{ background:#fffde7 }
@@ -976,39 +990,43 @@ tr:hover td{background:#f9fbff}
       </div>
       <div class="nav-section-label">PROJEK CCTV</div>
       <div class="nav-item" :class="{active:page==='sites'&&currentProject==='cctv'}" @click="openSites('cctv')">
-        <span class="icon">🏢</span> Site CCTV
+        <span class="icon">🏢</span> Site
       </div>
       <div class="nav-item" :class="{active:page==='new-pm'&&currentProject==='cctv'}" @click="startNewPM('cctv')">
-        <span class="icon">📝</span> Borang CCTV
+        <span class="icon">📝</span> Borang
       </div>
       <div class="nav-item" :class="{active:page==='pm-list'&&currentProject==='cctv'}" @click="openPMList('cctv')">
-        <span class="icon">📋</span> Rekod Borang CCTV
+        <span class="icon">📋</span> Rekod Borang
       </div>
       <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContactPersons();page='contact-person'">
-        <span class="icon">📞</span> Contact Person CCTV
+        <span class="icon">📞</span> Contact Person
       </div>
       <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='cctv'}" @click="currentProject='cctv';loadContracts();page='contracts'">
-        <span class="icon">📜</span> Kontrak &amp; SLA (CCTV)
+        <span class="icon">📜</span> Kontrak &amp; SLA
         <span v-if="contractsExpiringCountCctv>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountCctv}}</span>
+      </div>
+      <div class="nav-item" :class="{active:page==='warranty'}" @click="loadWarranty();page='warranty'" v-if="canViewCredentials">
+        <span class="icon">🛡️</span> Waranti Peralatan
+        <span v-if="warrantyExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{warrantyExpiringCount}}</span>
       </div>
       <div class="nav-section-label" style="margin-top:6px">PROJEK VIR</div>
       <div class="nav-item" :class="{active:page==='sites'&&currentProject==='vir'}" @click="openSites('vir')">
-        <span class="icon">🎥</span> Site VIR
+        <span class="icon">🎥</span> Site
       </div>
       <div class="nav-item" :class="{active:page==='new-pm'&&currentProject==='vir'}" @click="startNewPM('vir')">
-        <span class="icon">📝</span> Borang VIR
+        <span class="icon">📝</span> Borang
       </div>
       <div class="nav-item" :class="{active:page==='pm-list'&&currentProject==='vir'}" @click="openPMList('vir')">
-        <span class="icon">📋</span> Rekod Borang VIR
+        <span class="icon">📋</span> Rekod Borang
       </div>
       <div class="nav-item" :class="{active:page==='contact-person'&&currentProject==='vir'}" @click="currentProject='vir';loadContactPersons();page='contact-person'">
-        <span class="icon">📞</span> Contact Person VIR
+        <span class="icon">📞</span> Contact Person
       </div>
       <div class="nav-item" :class="{active:page==='contracts'&&currentProject==='vir'}" @click="currentProject='vir';loadContracts();page='contracts'">
-        <span class="icon">📜</span> Kontrak &amp; SLA (VIR)
+        <span class="icon">📜</span> Kontrak &amp; SLA
         <span v-if="contractsExpiringCountVir>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountVir}}</span>
       </div>
-      <div class="nav-divider"></div>
+      <div class="nav-section-label" style="margin-top:6px">JADUAL, LAPORAN &amp; SUPPORT</div>
       <div class="nav-item" :class="{active:page==='jadual'}" @click="openJadual">
         <span class="icon">📅</span> Jadual Penyelenggaraan
       </div>
@@ -1021,15 +1039,15 @@ tr:hover td{background:#f9fbff}
       <div class="nav-item" :class="{active:page==='kontraktor-luar'}" @click="loadKontraktorLuar();page='kontraktor-luar'">
         <span class="icon">🛠️</span> Senarai Kontraktor Luar
       </div>
-      <div class="nav-divider"></div>
+      <div class="nav-item" :class="{active:page==='custom-equip'}" @click="page='custom-equip'" v-if="authProfile?.role==='superadmin'">
+        <span class="icon">🧹</span> Urus Model Custom
+      </div>
+      <div class="nav-section-label" style="margin-top:6px">PENTADBIRAN &amp; AKAUN</div>
       <div class="nav-item" :class="{active:page==='audit-log'}" @click="loadAuditLogs();page='audit-log'" v-if="['superadmin','admin'].includes(authProfile?.role)">
         <span class="icon">🗒</span> Log Audit
       </div>
       <div class="nav-item" :class="{active:page==='user-mgmt'}" @click="page='user-mgmt'" v-if="authProfile?.role==='superadmin'">
         <span class="icon">👥</span> Pengurusan Pengguna
-      </div>
-      <div class="nav-item" :class="{active:page==='custom-equip'}" @click="page='custom-equip'" v-if="authProfile?.role==='superadmin'">
-        <span class="icon">🧹</span> Urus Model Custom
       </div>
       <div class="nav-item" :class="{active:page==='compare'}" @click="page='compare'" v-if="compareList.length===2">
         <span class="icon">⚖️</span> Bandingkan
@@ -1493,6 +1511,85 @@ tr:hover td{background:#f9fbff}
           <div v-if="canEditContract" class="flex gap-8">
             <button class="btn btn-sm btn-outline" @click="openEditContract(c)">✏️ Edit</button>
             <button class="btn btn-sm btn-danger" @click="deleteContract(c)">🗑</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== WARANTI PERALATAN (CCTV sahaja — tracking dalaman, tidak terkait langsung borang PM/CM) ====== -->
+      <div v-if="page==='warranty'">
+        <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin:0;border:none;padding:0">🛡️ Waranti Peralatan — Projek CCTV</div>
+          <div class="flex gap-8">
+            <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportWarrantyExcel">⬇ Excel</button>
+            <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportWarrantyDocx">📝 Word</button>
+            <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportWarrantyPdf">🖨 PDF</button>
+            <button v-if="canEditContract" class="btn btn-primary btn-sm" @click="openAddWarranty">+ Tambah Peralatan</button>
+          </div>
+        </div>
+        <p class="text-sm text-muted mb-16">Tracking waranti peralatan yang diwarisi daripada 3 kontraktor pemasang asal SPRM (sebelum Daya One ambil alih penyelenggaraan). Data ini berasingan sepenuhnya daripada borang PM/CM — semata-mata untuk rujukan &amp; laporan dalaman.</p>
+
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
+          <select class="form-control" style="width:auto;min-width:200px" v-model="warrantyFilterVendor">
+            <option value="">Semua Vendor</option>
+            <option v-for="v in CCTV_WARRANTY_VENDORS.filter(x=>x!=='Lain-lain')" :key="v" :value="v">{{v}}</option>
+          </select>
+          <select class="form-control" style="width:auto;min-width:160px" v-model="warrantyFilterStatus">
+            <option value="">Semua Status</option>
+            <option value="expired">🔴 Tamat Tempoh</option>
+            <option value="expiring">🟡 Hampir Tamat</option>
+            <option value="active">🟢 Aktif</option>
+          </select>
+        </div>
+
+        <div class="warranty-stats">
+          <div class="warranty-stat-card">
+            <div class="wsc-label">Jumlah Peralatan</div>
+            <div class="wsc-value">{{warrantyFiltered.length}}</div>
+          </div>
+          <div class="warranty-stat-card active">
+            <div class="wsc-label">🟢 Aktif</div>
+            <div class="wsc-value">{{warrantyFiltered.filter(w=>warrantyStatus(w)==='active').length}}</div>
+          </div>
+          <div class="warranty-stat-card expiring">
+            <div class="wsc-label">🟡 Hampir Tamat</div>
+            <div class="wsc-value">{{warrantyFiltered.filter(w=>warrantyStatus(w)==='expiring').length}}</div>
+          </div>
+          <div class="warranty-stat-card expired">
+            <div class="wsc-label">🔴 Tamat Tempoh</div>
+            <div class="wsc-value">{{warrantyFiltered.filter(w=>warrantyStatus(w)==='expired').length}}</div>
+          </div>
+        </div>
+
+        <div v-if="!warrantyFiltered.length" class="empty">Tiada rekod waranti peralatan lagi.</div>
+        <div v-for="grp in warrantyByVendor" :key="grp.vendor" class="warranty-vendor-group">
+          <div class="warranty-vendor-header">🏢 {{grp.vendor}} <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} peralatan)</span></div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Site</th><th>Peralatan</th><th>Brand / Model</th><th>No. Siri</th><th>Tempoh Waranti</th><th>Status</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="w in grp.items" :key="w.id">
+                  <td>{{w.siteName||'-'}}</td>
+                  <td>{{w.equipmentName||'-'}}</td>
+                  <td>{{w.brand}} {{w.model}}</td>
+                  <td>{{w.serial||'-'}}</td>
+                  <td style="font-size:.8rem">{{fmtDate(w.startDate)}} — {{fmtDate(w.endDate)}}</td>
+                  <td>
+                    <span :class="['expiry-badge', warrantyStatus(w)]">
+                      <template v-if="warrantyStatus(w)==='expired'">🔴 Tamat</template>
+                      <template v-else-if="warrantyStatus(w)==='expiring'">🟡 Hampir Tamat</template>
+                      <template v-else>🟢 Aktif</template>
+                    </span>
+                  </td>
+                  <td class="flex gap-8">
+                    <template v-if="canEditContract">
+                      <button class="btn btn-sm btn-outline btn-icon" @click="openEditWarranty(w)" title="Edit">✏️</button>
+                      <button class="btn btn-sm btn-danger btn-icon" @click="deleteWarranty(w)" title="Padam">🗑</button>
+                    </template>
+                    <span v-else class="text-muted text-sm">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -2220,7 +2317,7 @@ tr:hover td{background:#f9fbff}
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama / Lokasi *</label><input class="form-control" v-model="nMISC.name" placeholder="cth: Monitor Bilik Kawalan"></div>
               <div class="form-group"><label>Kategori</label>
-                <select class="form-control" v-model="nMISC.category">
+                <select class="form-control" v-model="nMISC.category" @change="onMiscCategoryChange">
                   <option v-for="c in miscCategoriesShown" :key="c">{{c}}</option>
                   <option value="Lain-lain">Lain-lain</option>
                 </select>
@@ -3947,6 +4044,42 @@ tr:hover td{background:#f9fbff}
         </div>
       </div>
 
+      <!-- ====== ADD/EDIT WARANTI PERALATAN MODAL ====== -->
+      <div v-if="warrantyModal.show" class="modal-bg" @click.self="warrantyModal.show=false">
+        <div class="modal">
+          <h3>{{warrantyModal.editing?'Edit Waranti Peralatan':'Tambah Waranti Peralatan'}}</h3>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Vendor / Kontraktor Asal *</label>
+              <select class="form-control" v-model="warrantyModal.data.vendor">
+                <option value="">-- Pilih --</option>
+                <option v-for="v in CCTV_WARRANTY_VENDORS" :key="v">{{v}}</option>
+              </select>
+              <input v-if="warrantyModal.data.vendor==='Lain-lain'" class="form-control" v-model="warrantyModal.data.vendorCustom" placeholder="Nyatakan vendor sebenar" style="margin-top:6px">
+            </div>
+            <div class="form-group"><label>Site *</label>
+              <select class="form-control" v-model="warrantyModal.data.siteId" @change="onWarrantySiteChange">
+                <option value="">-- Pilih Site --</option>
+                <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Nama Peralatan *</label><input class="form-control" v-model="warrantyModal.data.equipmentName" placeholder="cth: 24 Port PoE Switch, Disk Array Storage, Workstation"></div>
+            <div class="form-group"><label>Brand</label><input class="form-control" v-model="warrantyModal.data.brand" placeholder="cth: H3C, Dell"></div>
+            <div class="form-group"><label>Model</label><input class="form-control" v-model="warrantyModal.data.model" placeholder="cth: S5170-28S-HPWR-EI L2"></div>
+            <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="warrantyModal.data.serial" placeholder="Serial No. / Service Tag"></div>
+            <div class="form-group"><label>Jenis Waranti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="warrantyModal.data.warrantyType" placeholder="cth: Limited Lifetime Warranty with 10BD-Ship"></div>
+            <div class="form-group"><label>Tarikh Mula Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.startDate"></div>
+            <div class="form-group"><label>Tarikh Tamat Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.endDate"></div>
+            <div class="form-group"><label>Reminder (hari sebelum tamat)</label><input class="form-control" type="number" min="1" v-model.number="warrantyModal.data.reminderDays" placeholder="60"></div>
+          </div>
+          <div class="form-group"><label>Nota</label><textarea class="form-control" rows="3" v-model="warrantyModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
+          <p v-if="warrantyModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{warrantyModal.err}}</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="warrantyModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="submitWarranty" :disabled="loading">{{loading?'Menyimpan...':warrantyModal.editing?'Simpan Perubahan':'Tambah Peralatan'}}</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== BULK EDIT EQUIPMENT MODAL ====== -->
       <div v-if="bulkEditModal.show" class="modal-bg" @click.self="bulkEditModal.show=false">
         <div class="modal">
@@ -5364,7 +5497,7 @@ createApp({
     };
     const ALARM_BRANDS = Object.keys(ALARM_BRAND_MODELS);
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
-    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Rack','AP/Router'];
+    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable'];
     // Workstation-level PC brand/model dropdowns — only shown when Kategori
     // is "PC" (other categories keep the free-text brand/model inputs since
     // they cover too wide a range of devices for a fixed dropdown to help).
@@ -5377,23 +5510,25 @@ createApp({
       'Lain-lain': [],
     };
     // Same idea for Kategori "TV".
-    const TV_BRANDS = ['LG','SONY','Hisense','Lain-lain'];
+    const TV_BRANDS = ['LG','SONY','Hisense','Samsung','Lain-lain'];
     const TV_MODELS = {
       'LG': ['55UM5N-H','Lain-lain'],
       'SONY': ['Lain-lain'],
       'Hisense': ['50DM66D','43DM66D','Lain-lain'],
+      'Samsung': ['UA43U8000FK (43")','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "AP/Router".
     const AP_ROUTER_BRANDS = ['TP-Link','Lain-lain'];
     const AP_ROUTER_MODELS = {
-      'TP-Link': ['TL-MR105','Lain-lain'],
+      'TP-Link': ['TL-MR105','Omada EAP610','Omada EAP613','Omada EAP620 HD','Omada EAP610-Outdoor','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "Monitor".
-    const MONITOR_BRANDS = ['Acer','Lain-lain'];
+    const MONITOR_BRANDS = ['Acer','HP','Lain-lain'];
     const MONITOR_MODELS = {
       'Acer': ['EK221Q','Lain-lain'],
+      'HP': ['Series 5 23.8" FHD - 524sf','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "UPS".
@@ -5415,11 +5550,31 @@ createApp({
       'DUVAL': ['DSP RJ45-CAT6-48V','Lain-lain'],
       'Lain-lain': [],
     };
+    // Same idea for Kategori "Microphone".
+    const MICROPHONE_BRANDS = ['Behringer','Lain-lain'];
+    const MICROPHONE_MODELS = {
+      'Behringer': ['B-5','Lain-lain'],
+      'Lain-lain': [],
+    };
+    // Same idea for Kategori "Mic/Line Preamplifier".
+    const MIC_PREAMP_BRANDS = ['Behringer','Lain-lain'];
+    const MIC_PREAMP_MODELS = {
+      'Behringer': ['MIC2200','Lain-lain'],
+      'Lain-lain': [],
+    };
+    // Same idea for Kategori "Display Cable" — brand is always OEM (no other
+    // manufacturer used for these), so onMiscCategoryChange() auto-selects it
+    // and there's deliberately no "Lain-lain" option on the brand dropdown.
+    // Model is cable length.
+    const DISPLAY_CABLE_BRANDS = ['OEM'];
+    const DISPLAY_CABLE_MODELS = {
+      'OEM': ['2M','5M','10M','20M','30M','Lain-lain'],
+    };
     // Lookup so the Brand/Model fields can pick the right fixed dropdown
     // per Kategori without a growing v-if chain in the template — add a
     // new category's dicts here and it's wired up automatically.
-    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS, 'Surge Protector': SURGE_PROTECTOR_BRANDS };
-    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS, 'Surge Protector': SURGE_PROTECTOR_MODELS };
+    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS, 'Surge Protector': SURGE_PROTECTOR_BRANDS, Microphone: MICROPHONE_BRANDS, 'Mic/Line Preamplifier': MIC_PREAMP_BRANDS, 'Display Cable': DISPLAY_CABLE_BRANDS };
+    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS, 'Surge Protector': SURGE_PROTECTOR_MODELS, Microphone: MICROPHONE_MODELS, 'Mic/Line Preamplifier': MIC_PREAMP_MODELS, 'Display Cable': DISPLAY_CABLE_MODELS };
     const miscBrandOptions = computed(() => MISC_BRAND_DICTS[nMISC.category] || null);
     const miscModelOptions = computed(() => (MISC_MODEL_DICTS[nMISC.category] || {})[nMISC.brand] || []);
     // CCTV's "Lain-lain" categories were pared down to what's actually used
@@ -7021,6 +7176,294 @@ createApp({
       setTimeout(()=>{ w.print(); w.close(); }, 200);
       await logAudit('CONTRACT_EXPORT_PDF', `${list.length} rekod (${currentProject.value.toUpperCase()})`);
     }
+
+    // ── Waranti Peralatan (CCTV only) ──────────────────────────────────
+    // Standalone tracking of equipment warranty inherited from the 3
+    // original installer contractors (before Daya One took over
+    // maintenance) — deliberately NOT wired into siteEquipment/pmRecords;
+    // it's a separate collection admins key in by hand purely for
+    // reference/reporting, so borang PM/CM stay completely unaffected.
+    const CCTV_WARRANTY_VENDORS = ['MK Keratan Sdn Bhd','Data Karisma Sdn Bhd','VME Broadcast Sdn Bhd','Lain-lain'];
+    const warranty = ref([]);
+    const warrantyModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
+      vendor:'', vendorCustom:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
+      warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'',
+    } });
+    const warrantyFilterVendor = ref('');
+    const warrantyFilterStatus = ref('');
+    async function loadWarranty() {
+      try {
+        const snap = await db.collection('equipmentWarranty').orderBy('endDate','asc').get();
+        warranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      } catch(e) { showToast('Gagal muat waranti peralatan: ' + e.message, 'error'); }
+    }
+    function warrantyStatus(w) {
+      if(!w.endDate) return 'active';
+      const today = _localDateStr();
+      if(w.endDate < today) return 'expired';
+      const warn = new Date();
+      warn.setDate(warn.getDate() + (w.reminderDays || 60));
+      if(w.endDate <= _localDateStr(warn)) return 'expiring';
+      return 'active';
+    }
+    const warrantyExpiringCount = computed(() =>
+      warranty.value.filter(w => warrantyStatus(w) !== 'active').length
+    );
+    const warrantyFiltered = computed(() => warranty.value.filter(w =>
+      (!warrantyFilterVendor.value || w.vendor === warrantyFilterVendor.value) &&
+      (!warrantyFilterStatus.value || warrantyStatus(w) === warrantyFilterStatus.value)
+    ));
+    const warrantyByVendor = computed(() => {
+      const groups = {};
+      warrantyFiltered.value.forEach(w => {
+        const key = w.vendor || 'Lain-lain';
+        if(!groups[key]) groups[key] = [];
+        groups[key].push(w);
+      });
+      return CCTV_WARRANTY_VENDORS.filter(v => groups[v]?.length).map(v => ({ vendor:v, items:groups[v] }));
+    });
+    function onWarrantySiteChange() {
+      const s = SITES.find(x => x.id === warrantyModal.data.siteId);
+      warrantyModal.data.siteName = s?.name || '';
+    }
+    function openAddWarranty() {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      warrantyModal.editing = false; warrantyModal.err = '';
+      Object.assign(warrantyModal.data, {
+        vendor:'', vendorCustom:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
+        warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'',
+      });
+      warrantyModal.show = true;
+    }
+    function openEditWarranty(w) {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      warrantyModal.editing = true; warrantyModal.err = '';
+      Object.assign(warrantyModal.data, {
+        vendor:w.vendor||'', vendorCustom:'', siteId:w.siteId||'', siteName:w.siteName||'',
+        equipmentName:w.equipmentName||'', brand:w.brand||'', model:w.model||'', serial:w.serial||'',
+        warrantyType:w.warrantyType||'', startDate:w.startDate||'', endDate:w.endDate||'',
+        reminderDays:w.reminderDays||60, notes:w.notes||'',
+      });
+      warrantyModal._editId = w.id;
+      warrantyModal.show = true;
+    }
+    async function submitWarranty() {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      warrantyModal.err = '';
+      const d = warrantyModal.data;
+      if(!d.vendor || !d.siteId || !d.equipmentName || !d.startDate || !d.endDate) {
+        warrantyModal.err = 'Vendor, site, nama peralatan, tarikh mula dan tarikh tamat wajib diisi.'; return;
+      }
+      if(d.endDate < d.startDate) {
+        warrantyModal.err = 'Tarikh tamat mesti selepas tarikh mula.'; return;
+      }
+      loading.value = true;
+      try {
+        const vendor = (d.vendor === 'Lain-lain' && d.vendorCustom.trim()) ? d.vendorCustom.trim() : d.vendor;
+        const { vendorCustom, ...rest } = d;
+        const data = { ...rest, vendor, reminderDays: d.reminderDays || 60 };
+        if(!warrantyModal.editing) {
+          await db.collection('equipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          await logAudit('WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
+          showToast('Waranti peralatan berjaya ditambah!');
+        } else {
+          await db.collection('equipmentWarranty').doc(warrantyModal._editId).update(data);
+          await logAudit('WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
+          showToast('Waranti peralatan dikemaskini!');
+        }
+        warrantyModal.show = false;
+        await loadWarranty();
+      } catch(e) { warrantyModal.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    async function deleteWarranty(w) {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})?`)) return;
+      try {
+        await db.collection('equipmentWarranty').doc(w.id).delete();
+        warranty.value = warranty.value.filter(x => x.id !== w.id);
+        await logAudit('WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
+        showToast('Rekod waranti dipadam.');
+      } catch(e) { showToast('Gagal padam rekod waranti: ' + e.message, 'error'); }
+    }
+    const WARRANTY_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
+    async function exportWarrantyExcel() {
+      const rows = warrantyFiltered.value.map((w,i) => ({
+        '#': i+1, 'Vendor': w.vendor||'-', 'Site': w.siteName||'-', 'Peralatan': w.equipmentName||'-',
+        'Brand': w.brand||'-', 'Model': w.model||'-', 'No. Siri': w.serial||'-', 'Jenis Waranti': w.warrantyType||'-',
+        'Tarikh Mula': fmtDate(w.startDate), 'Tarikh Tamat': fmtDate(w.endDate),
+        'Status': WARRANTY_STATUS_LABEL[warrantyStatus(w)], 'Nota': w.notes||'-',
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Waranti Peralatan CCTV');
+      XLSX.writeFile(wb, `waranti_peralatan_cctv_${new Date().toISOString().slice(0,10)}.xlsx`);
+      await logAudit('WARRANTY_EXPORT_EXCEL', `${rows.length} rekod`);
+    }
+    async function exportWarrantyPdf() {
+      const groups = warrantyByVendor.value;
+      const list = warrantyFiltered.value;
+      const groupsHtml = groups.map(g => `
+        <h3 style="color:#003366;margin:16px 0 4px">${g.vendor} (${g.items.length} peralatan)</h3>
+        <table><thead><tr><th>Site</th><th>Peralatan</th><th>Brand/Model</th><th>No. Siri</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Status</th></tr></thead>
+        <tbody>${g.items.map(w => `<tr>
+          <td>${(w.siteName||'-').replace(/</g,'&lt;')}</td><td>${(w.equipmentName||'-').replace(/</g,'&lt;')}</td>
+          <td>${(w.brand||'').replace(/</g,'&lt;')} ${(w.model||'').replace(/</g,'&lt;')}</td>
+          <td>${(w.serial||'-').replace(/</g,'&lt;')}</td>
+          <td>${fmtDate(w.startDate)}</td><td>${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyStatus(w)]}</td>
+        </tr>`).join('')}</tbody></table>`).join('');
+      const w2 = window.open('','_blank','width=1100,height=750');
+      if(!w2) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Waranti_Peralatan_CCTV_${new Date().toISOString().slice(0,10)}</title>
+        <style>
+          body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
+          h2{color:#003366;margin-bottom:2px}
+          p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
+          table{width:100%;border-collapse:collapse;margin-top:6px}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
+          td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt}
+          tr:nth-child(even) td{background:#f7f9fc}
+        </style>
+      </head><body>
+        <div class="header">
+          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Waranti Peralatan — Projek CCTV SPRM</h2>
+            <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
+          </div>
+          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+        </div>
+        ${groupsHtml}
+      </body></html>`);
+      w2.document.close();
+      w2.focus();
+      const imgs = [...w2.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w2.print(); w2.close(); }, 200);
+      await logAudit('WARRANTY_EXPORT_PDF', `${list.length} rekod`);
+    }
+    async function exportWarrantyDocx() {
+      if(!window.docx) { showToast('DOCX library tidak tersedia. Semak sambungan internet.', 'error'); return; }
+      const { Document, Packer, Paragraph, Table, TableRow, TableCell,
+              TextRun, AlignmentType, BorderStyle, WidthType, ShadingType,
+              VerticalAlign, ImageRun } = window.docx;
+
+      const BLUE = '003366', WHITE = 'FFFFFF';
+      const bThin = (c='999999') => ({ style: BorderStyle.SINGLE, size: 4, color: c });
+      const bNone = () => ({ style: BorderStyle.NONE, size: 0, color: 'FFFFFF' });
+      const allBorders = (c='999999') => ({ top:bThin(c), bottom:bThin(c), left:bThin(c), right:bThin(c) });
+      const noBorders = () => ({ top:bNone(), bottom:bNone(), left:bNone(), right:bNone(), insideH:bNone(), insideV:bNone() });
+
+      function sectionHdr(text) {
+        return new Paragraph({
+          children: [new TextRun({ text, color: WHITE, bold: true, size: 19 })],
+          shading: { type: ShadingType.SOLID, color: BLUE },
+          spacing: { before: 160, after: 60 },
+          indent: { left: 80 },
+        });
+      }
+      function makeTable(headers, rows) {
+        const hRow = new TableRow({
+          tableHeader: true,
+          children: headers.map(h => new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: h, color: WHITE, bold: true, size: 15 })], alignment: AlignmentType.CENTER })],
+            shading: { type: ShadingType.SOLID, color: BLUE },
+            borders: allBorders(BLUE),
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 40, bottom: 40, left: 60, right: 60 },
+          })),
+        });
+        const dRows = rows.map((row, ri) => new TableRow({
+          children: row.map((cell, ci) => new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: String(cell ?? ''), size: 15 })] })],
+            shading: ri % 2 === 1 ? { type: ShadingType.SOLID, color: 'F5F8FF' } : undefined,
+            borders: allBorders(),
+            verticalAlign: VerticalAlign.CENTER,
+            margins: { top: 40, bottom: 40, left: 60, right: 60 },
+          })),
+        }));
+        return new Table({ rows: [hRow, ...dRows], width: { size: 100, type: WidthType.PERCENTAGE } });
+      }
+      function spacer() { return new Paragraph({ text: '', spacing: { after: 80 } }); }
+
+      const children = [];
+      // ── Header: Daya One logo (kiri) & SPRM logo (kanan) ──
+      try {
+        const [dayaOneBuf, sprmBuf] = await Promise.all([
+          fetch('logo_dayaone.png').then(r => r.arrayBuffer()),
+          fetch('logo_sprm.png').then(r => r.arrayBuffer()),
+        ]);
+        children.push(new Table({
+          rows: [new TableRow({ children: [
+            new TableCell({
+              children: [new Paragraph({ children: [new ImageRun({ data: dayaOneBuf, transformation: { width: 130, height: 44 } })] })],
+              borders: { top: bNone(), left: bNone(), right: bNone(), bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE } },
+              verticalAlign: VerticalAlign.CENTER,
+            }),
+            new TableCell({
+              children: [new Paragraph({ children: [new ImageRun({ data: sprmBuf, transformation: { width: 130, height: 44 } })], alignment: AlignmentType.RIGHT })],
+              borders: { top: bNone(), left: bNone(), right: bNone(), bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE } },
+              verticalAlign: VerticalAlign.CENTER,
+            }),
+          ]})],
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: noBorders(),
+        }));
+      } catch(e) { /* logos optional — carry on without them if fetch fails */ }
+      children.push(spacer());
+
+      // ── Title ──
+      children.push(new Paragraph({
+        children: [new TextRun({ text: 'WARANTI PERALATAN — PROJEK CCTV SPRM', color: WHITE, bold: true, size: 22 })],
+        shading: { type: ShadingType.SOLID, color: BLUE },
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 100, after: 40 },
+      }));
+      const list = warrantyFiltered.value;
+      children.push(new Paragraph({
+        children: [new TextRun({ text: `Dijana pada ${new Date().toLocaleString('ms-MY')}  |  ${list.length} rekod`, italics: true, color: '555555', size: 15 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 },
+      }));
+
+      // ── Vendor groups ──
+      warrantyByVendor.value.forEach(g => {
+        children.push(sectionHdr(`${g.vendor} (${g.items.length} peralatan)`));
+        children.push(makeTable(
+          ['Site','Peralatan','Brand/Model','No. Siri','Tarikh Mula','Tarikh Tamat','Status'],
+          g.items.map(w => [
+            w.siteName||'-', w.equipmentName||'-', `${w.brand||''} ${w.model||''}`.trim()||'-', w.serial||'-',
+            fmtDate(w.startDate), fmtDate(w.endDate), WARRANTY_STATUS_LABEL[warrantyStatus(w)],
+          ])
+        ));
+        children.push(spacer());
+      });
+
+      // ── Footer ──
+      children.push(new Paragraph({
+        children: [new TextRun({ text: 'Daya One Resources Sdn Bhd  |  No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor  |  03-89431400', size: 14, color: '555555' })],
+        border: { top: { style: BorderStyle.SINGLE, size: 8, color: BLUE } },
+        spacing: { before: 100 },
+      }));
+
+      const doc = new Document({
+        sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 900, right: 900 } } }, children }],
+      });
+      const blob = await Packer.toBlob(doc);
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `waranti_peralatan_cctv_${new Date().toISOString().slice(0,10)}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      await logAudit('WARRANTY_EXPORT_DOCX', `${list.length} rekod`);
+      showToast('DOCX berjaya dieksport!');
+    }
+
     const resetPwModal = reactive({ show:false, userId:'', username:'', userEmail:'', err:'' });
     const forcePwModal = reactive({ show:false, newPw:'', confirmPw:'', err:'' });
     const showResetNew = ref(false);
@@ -7298,7 +7741,7 @@ createApp({
     // assignments, audit logs and custom equipment options. Fetched fresh
     // from Firestore (not the local reactive refs) so it's always complete
     // regardless of what happens to be loaded in the app right now.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -7333,7 +7776,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -7565,6 +8008,7 @@ createApp({
         if(data.customEquipmentOptions?.length) { await _batchRestoreCollection('customEquipmentOptions', data.customEquipmentOptions); await loadCustomEquipmentOptions(); }
         if(data.loginAttempts?.length) { await _batchRestoreCollection('loginAttempts', data.loginAttempts); }
         if(data.kontraktorLuar?.length) { await _batchRestoreCollection('kontraktorLuar', data.kontraktorLuar); await loadKontraktorLuar(); }
+        if(data.equipmentWarranty?.length) { await _batchRestoreCollection('equipmentWarranty', data.equipmentWarranty); await loadWarranty(); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
@@ -7591,7 +8035,7 @@ createApp({
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
       'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
       'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV'),
-      'kontraktor-luar': 'Senarai Kontraktor Luar'
+      'kontraktor-luar': 'Senarai Kontraktor Luar', 'warranty': 'Waranti Peralatan (CCTV)'
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
@@ -9677,7 +10121,7 @@ createApp({
     // new-PM draft, the site-compare picker) can't be safely reconstructed
     // from just a page name, so those fall back to their parent list page
     // instead of silently landing on a broken/blank view.
-    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar'];
+    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty'];
     const LAST_PAGE_KEY = 'pmapp_lastPage';
     watch([page, currentProject, selSite], () => {
       try {
@@ -10071,6 +10515,15 @@ createApp({
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Alarm berjaya ditambah!'); }
       _sortByName(list);
       resetForm('nALM');
+    }
+    // "Display Cable" only ever uses OEM as brand — auto-select it (and lock
+    // out any other choice, since its dropdown has no "Lain-lain") whenever
+    // that Kategori is picked, instead of leaving Brand blank for the user
+    // to fill in themselves.
+    function onMiscCategoryChange() {
+      nMISC.model = ''; nMISC.modelCustom = '';
+      nMISC.brand = nMISC.category === 'Display Cable' ? 'OEM' : '';
+      nMISC.brandCustom = '';
     }
     function addMisc() {
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
@@ -12247,6 +12700,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
+      CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount,
+      warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
+      openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
@@ -12255,7 +12711,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       profileEdit, initProfile, saveProfile, pwChange, showPwNew, showPwConfirm, changePassword,
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp, sortEquipListByName,
-      openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc,
+      openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
