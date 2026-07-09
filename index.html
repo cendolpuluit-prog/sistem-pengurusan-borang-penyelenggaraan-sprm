@@ -822,6 +822,8 @@ tr:hover td{background:#f9fbff}
 .warranty-stat-card.active .wsc-value{color:#2e7d32}
 .warranty-vendor-group{margin-bottom:18px}
 .warranty-vendor-header{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f0f3f8;border-radius:8px 8px 0 0;font-weight:700;color:#003366;font-size:.88rem}
+.warranty-site-group{margin:8px 0 14px 14px;border-left:3px solid #d3d9e6;padding-left:10px}
+.warranty-site-header{display:flex;align-items:center;gap:6px;padding:6px 0;font-weight:700;color:#333;font-size:.82rem}
 
 /* CONTACT PERSON */
 .cp-empty-row td{ background:#fffde7 }
@@ -1560,36 +1562,62 @@ tr:hover td{background:#f9fbff}
           </div>
         </div>
 
+        <div v-if="canEditContract" class="card" style="margin-bottom:18px">
+          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem">📅 Tempoh Jaminan Kontrak (ikut Company)</div>
+          <div class="flex gap-8" style="flex-wrap:wrap;align-items:flex-end">
+            <div class="form-group" style="margin:0">
+              <label>Nama Company</label>
+              <select class="form-control" v-model="vendorContractForm.vendor" @change="onVendorContractPick">
+                <option value="">-- Pilih --</option>
+                <option v-for="v in CCTV_WARRANTY_VENDORS.filter(x=>x!=='Lain-lain')" :key="v" :value="v">{{v}}</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label>Tarikh Tamat Kontrak</label>
+              <input class="form-control" type="date" v-model="vendorContractForm.contractEndDate">
+            </div>
+            <button class="btn btn-primary btn-sm" @click="saveVendorContract">💾 Simpan</button>
+          </div>
+          <div v-if="Object.keys(vendorContracts).length" style="margin-top:10px;font-size:.8rem;color:#666">
+            <div v-for="v in CCTV_WARRANTY_VENDORS.filter(x=>vendorContracts[x])" :key="v">{{v}}: <b>{{fmtDate(vendorContracts[v])}}</b></div>
+          </div>
+        </div>
+
         <div v-if="!warrantyFiltered.length" class="empty">Tiada rekod waranti peralatan lagi.</div>
         <div v-for="grp in warrantyByVendor" :key="grp.vendor" class="warranty-vendor-group">
-          <div class="warranty-vendor-header">🏢 {{grp.vendor}} <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} peralatan)</span></div>
-          <div class="tbl-wrap">
-            <table>
-              <thead><tr><th>Site</th><th>Peralatan</th><th>Brand / Model</th><th>No. Siri</th><th>Tempoh Waranti</th><th>Status</th><th>Tindakan</th></tr></thead>
-              <tbody>
-                <tr v-for="w in grp.items" :key="w.id">
-                  <td>{{w.siteName||'-'}}</td>
-                  <td>{{w.equipmentName||'-'}}</td>
-                  <td>{{w.brand}} {{w.model}}</td>
-                  <td>{{w.serial||'-'}}</td>
-                  <td style="font-size:.8rem">{{fmtDate(w.startDate)}} — {{fmtDate(w.endDate)}}</td>
-                  <td>
-                    <span :class="['expiry-badge', warrantyStatus(w)]">
-                      <template v-if="warrantyStatus(w)==='expired'">🔴 Tamat</template>
-                      <template v-else-if="warrantyStatus(w)==='expiring'">🟡 Hampir Tamat</template>
-                      <template v-else>🟢 Aktif</template>
-                    </span>
-                  </td>
-                  <td class="flex gap-8">
-                    <template v-if="canEditContract">
-                      <button class="btn btn-sm btn-outline btn-icon" @click="openEditWarranty(w)" title="Edit">✏️</button>
-                      <button class="btn btn-sm btn-danger btn-icon" @click="deleteWarranty(w)" title="Padam">🗑</button>
-                    </template>
-                    <span v-else class="text-muted text-sm">—</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="warranty-vendor-header">🏢 {{grp.vendor}}
+            <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} peralatan · {{grp.sites.length}} site)</span>
+            <span v-if="vendorContracts[grp.vendor]" style="font-weight:400;color:#888;font-size:.8rem">· Tempoh Jaminan Kontrak: {{fmtDate(vendorContracts[grp.vendor])}}</span>
+          </div>
+          <div v-for="site in grp.sites" :key="site.siteId" class="warranty-site-group">
+            <div class="warranty-site-header">📍 {{site.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{site.items.length}} peralatan)</span></div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Peralatan</th><th>Brand / Model</th><th>No. Siri</th><th>Tempoh Waranti</th><th>Status</th><th>Tindakan</th></tr></thead>
+                <tbody>
+                  <tr v-for="w in site.items" :key="w.id">
+                    <td>{{w.equipmentName||'-'}}</td>
+                    <td>{{w.brand}} {{w.model}}</td>
+                    <td>{{w.serial||'-'}}</td>
+                    <td style="font-size:.8rem">{{fmtDate(w.startDate)}} — {{fmtDate(w.endDate)}}</td>
+                    <td>
+                      <span :class="['expiry-badge', warrantyStatus(w)]">
+                        <template v-if="warrantyStatus(w)==='expired'">🔴 Tamat</template>
+                        <template v-else-if="warrantyStatus(w)==='expiring'">🟡 Hampir Tamat</template>
+                        <template v-else>🟢 Aktif</template>
+                      </span>
+                    </td>
+                    <td class="flex gap-8">
+                      <template v-if="canEditContract">
+                        <button class="btn btn-sm btn-outline btn-icon" @click="openEditWarranty(w)" title="Edit">✏️</button>
+                        <button class="btn btn-sm btn-danger btn-icon" @click="deleteWarranty(w)" title="Padam">🗑</button>
+                      </template>
+                      <span v-else class="text-muted text-sm">—</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -2911,7 +2939,7 @@ tr:hover td{background:#f9fbff}
                       <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')" style="display:block;margin-bottom:4px">
                         {{r.cmStatus==='resolved'?'Selesai':r.cmStatus==='in-progress'?'Dalam Proses':'Terbuka'}}
                       </span>
-                      <select class="form-control" style="width:120px;font-size:.75rem" @change="updateCMStatus(r.id,$event.target.value)" :value="r.cmStatus||'open'">
+                      <select class="form-control" style="width:120px;font-size:.75rem" :disabled="!canEditPmRecord(r)" @change="updateCMStatus(r.id,$event.target.value)" :value="r.cmStatus||'open'">
                         <option value="open">Terbuka</option>
                         <option value="in-progress">Dalam Proses</option>
                         <option value="resolved">Selesai</option>
@@ -2949,7 +2977,7 @@ tr:hover td{background:#f9fbff}
                 <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')">
                   {{r.cmStatus==='resolved'?'Selesai':r.cmStatus==='in-progress'?'Dalam Proses':'Terbuka'}}
                 </span>
-                <select class="form-control" style="font-size:.78rem;flex:1" @change="updateCMStatus(r.id,$event.target.value)" :value="r.cmStatus||'open'">
+                <select class="form-control" style="font-size:.78rem;flex:1" :disabled="!canEditPmRecord(r)" @change="updateCMStatus(r.id,$event.target.value)" :value="r.cmStatus||'open'">
                   <option value="open">Terbuka</option>
                   <option value="in-progress">Dalam Proses</option>
                   <option value="resolved">Selesai</option>
@@ -7196,6 +7224,39 @@ createApp({
         const snap = await db.collection('equipmentWarranty').orderBy('endDate','asc').get();
         warranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
       } catch(e) { showToast('Gagal muat waranti peralatan: ' + e.message, 'error'); }
+      await loadVendorContracts();
+    }
+    // "Tempoh Jaminan Kontrak" — one overall contract-warranty date per
+    // vendor (not per item/site), shown next to the vendor's name in both
+    // the on-screen list and the exports. Doc ID = vendor name (only 3
+    // fixed vendors, so it's safe/readable as an ID).
+    const vendorContracts = ref({});
+    const vendorContractForm = reactive({ vendor:'', contractEndDate:'' });
+    async function loadVendorContracts() {
+      try {
+        const snap = await db.collection('warrantyVendorContracts').get();
+        const map = {};
+        snap.docs.forEach(d => { map[d.id] = d.data().contractEndDate || ''; });
+        vendorContracts.value = map;
+      } catch(e) { showToast('Gagal muat tempoh jaminan kontrak: ' + e.message, 'error'); }
+    }
+    function onVendorContractPick() {
+      vendorContractForm.contractEndDate = vendorContracts.value[vendorContractForm.vendor] || '';
+    }
+    async function saveVendorContract() {
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!vendorContractForm.vendor || !vendorContractForm.contractEndDate) {
+        showToast('Sila pilih company dan tarikh.', 'error'); return;
+      }
+      try {
+        await db.collection('warrantyVendorContracts').doc(vendorContractForm.vendor).set({
+          vendor: vendorContractForm.vendor, contractEndDate: vendorContractForm.contractEndDate,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '',
+        });
+        vendorContracts.value = { ...vendorContracts.value, [vendorContractForm.vendor]: vendorContractForm.contractEndDate };
+        await logAudit('WARRANTY_VENDOR_CONTRACT_SET', `${vendorContractForm.vendor} — ${vendorContractForm.contractEndDate}`);
+        showToast('Tempoh jaminan kontrak disimpan!');
+      } catch(e) { showToast('Gagal simpan: ' + e.message, 'error'); }
     }
     function warrantyStatus(w) {
       if(!w.endDate) return 'active';
@@ -7213,6 +7274,12 @@ createApp({
       (!warrantyFilterVendor.value || w.vendor === warrantyFilterVendor.value) &&
       (!warrantyFilterStatus.value || warrantyStatus(w) === warrantyFilterStatus.value)
     ));
+    // Nested Vendor > Site grouping — a site under the same vendor commonly
+    // has many equipment items (e.g. 10 items all at "Kompleks SPRM Negeri
+    // Pulau Pinang"), so flattening straight to one row per item repeated
+    // the site name over and over in reports. Grouping site as its own
+    // sub-header (like the original Excel this replaces) keeps the report
+    // readable — site printed once, items listed underneath.
     const warrantyByVendor = computed(() => {
       const groups = {};
       warrantyFiltered.value.forEach(w => {
@@ -7220,7 +7287,20 @@ createApp({
         if(!groups[key]) groups[key] = [];
         groups[key].push(w);
       });
-      return CCTV_WARRANTY_VENDORS.filter(v => groups[v]?.length).map(v => ({ vendor:v, items:groups[v] }));
+      return CCTV_WARRANTY_VENDORS.filter(v => groups[v]?.length).map(v => {
+        const items = groups[v];
+        const siteGroups = {};
+        const siteOrder = [];
+        items.forEach(w => {
+          const sKey = w.siteId || w.siteName || '—';
+          if(!siteGroups[sKey]) { siteGroups[sKey] = []; siteOrder.push(sKey); }
+          siteGroups[sKey].push(w);
+        });
+        const sites = siteOrder.map(sKey => ({
+          siteId: sKey, siteName: siteGroups[sKey][0].siteName || '—', items: siteGroups[sKey],
+        }));
+        return { vendor:v, items, sites };
+      });
     });
     function onWarrantySiteChange() {
       const s = SITES.find(x => x.id === warrantyModal.data.siteId);
@@ -7289,12 +7369,15 @@ createApp({
     const WARRANTY_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
     async function exportWarrantyExcel() {
       const rows = warrantyFiltered.value.map((w,i) => ({
-        '#': i+1, 'Vendor': w.vendor||'-', 'Site': w.siteName||'-', 'Peralatan': w.equipmentName||'-',
+        '#': i+1, 'Vendor': w.vendor||'-',
+        'Tempoh Jaminan Kontrak': vendorContracts.value[w.vendor] ? fmtDate(vendorContracts.value[w.vendor]) : '-',
+        'Site': w.siteName||'-', 'Peralatan': w.equipmentName||'-',
         'Brand': w.brand||'-', 'Model': w.model||'-', 'No. Siri': w.serial||'-', 'Jenis Waranti': w.warrantyType||'-',
         'Tarikh Mula': fmtDate(w.startDate), 'Tarikh Tamat': fmtDate(w.endDate),
         'Status': WARRANTY_STATUS_LABEL[warrantyStatus(w)], 'Nota': w.notes||'-',
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1 };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Waranti Peralatan CCTV');
       XLSX.writeFile(wb, `waranti_peralatan_cctv_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -7304,18 +7387,22 @@ createApp({
       const groups = warrantyByVendor.value;
       const list = warrantyFiltered.value;
       const groupsHtml = groups.map(g => `
-        <h3 style="color:#003366;margin:16px 0 4px">${g.vendor} (${g.items.length} peralatan)</h3>
-        <table><thead><tr><th>Site</th><th>Peralatan</th><th>Brand/Model</th><th>No. Siri</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Status</th></tr></thead>
-        <tbody>${g.items.map(w => `<tr>
-          <td>${(w.siteName||'-').replace(/</g,'&lt;')}</td><td>${(w.equipmentName||'-').replace(/</g,'&lt;')}</td>
-          <td>${(w.brand||'').replace(/</g,'&lt;')} ${(w.model||'').replace(/</g,'&lt;')}</td>
-          <td>${(w.serial||'-').replace(/</g,'&lt;')}</td>
-          <td>${fmtDate(w.startDate)}</td><td>${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyStatus(w)]}</td>
-        </tr>`).join('')}</tbody></table>`).join('');
+        <h3 style="color:#003366;margin:16px 0 4px">${g.vendor} — Tempoh Jaminan Kontrak : ${vendorContracts.value[g.vendor] ? fmtDate(vendorContracts.value[g.vendor]) : '-'}</h3>
+        ${g.sites.map(site => `
+          <h4 style="color:#333;margin:10px 0 2px;font-size:9.5pt">📍 ${(site.siteName||'-').replace(/</g,'&lt;')} (${site.items.length} peralatan)</h4>
+          <table><thead><tr><th>Peralatan</th><th>Brand/Model</th><th>No. Siri</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Status</th></tr></thead>
+          <tbody>${site.items.map(w => `<tr>
+            <td>${(w.equipmentName||'-').replace(/</g,'&lt;')}</td>
+            <td>${(w.brand||'').replace(/</g,'&lt;')} ${(w.model||'').replace(/</g,'&lt;')}</td>
+            <td>${(w.serial||'-').replace(/</g,'&lt;')}</td>
+            <td>${fmtDate(w.startDate)}</td><td>${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyStatus(w)]}</td>
+          </tr>`).join('')}</tbody></table>`).join('')}
+      `).join('');
       const w2 = window.open('','_blank','width=1100,height=750');
       if(!w2) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Waranti_Peralatan_CCTV_${new Date().toISOString().slice(0,10)}</title>
         <style>
+          @page{size:landscape;margin:12mm}
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
           h2{color:#003366;margin-bottom:2px}
           p{color:#555;font-size:8.5pt;margin-top:0}
@@ -7350,7 +7437,7 @@ createApp({
       if(!window.docx) { showToast('DOCX library tidak tersedia. Semak sambungan internet.', 'error'); return; }
       const { Document, Packer, Paragraph, Table, TableRow, TableCell,
               TextRun, AlignmentType, BorderStyle, WidthType, ShadingType,
-              VerticalAlign, ImageRun } = window.docx;
+              VerticalAlign, ImageRun, PageOrientation } = window.docx;
 
       const BLUE = '003366', WHITE = 'FFFFFF';
       const bThin = (c='999999') => ({ style: BorderStyle.SINGLE, size: 4, color: c });
@@ -7389,6 +7476,13 @@ createApp({
         return new Table({ rows: [hRow, ...dRows], width: { size: 100, type: WidthType.PERCENTAGE } });
       }
       function spacer() { return new Paragraph({ text: '', spacing: { after: 80 } }); }
+      function siteHdr(text) {
+        return new Paragraph({
+          children: [new TextRun({ text, bold: true, color: '333333', size: 16 })],
+          spacing: { before: 100, after: 40 },
+          indent: { left: 160 },
+        });
+      }
 
       const children = [];
       // ── Header: Daya One logo (kiri) & SPRM logo (kanan) ──
@@ -7430,16 +7524,20 @@ createApp({
         spacing: { after: 100 },
       }));
 
-      // ── Vendor groups ──
+      // ── Vendor groups (nested by site — a site commonly has many items,
+      // so grouping avoids repeating the site name on every row) ──
       warrantyByVendor.value.forEach(g => {
-        children.push(sectionHdr(`${g.vendor} (${g.items.length} peralatan)`));
-        children.push(makeTable(
-          ['Site','Peralatan','Brand/Model','No. Siri','Tarikh Mula','Tarikh Tamat','Status'],
-          g.items.map(w => [
-            w.siteName||'-', w.equipmentName||'-', `${w.brand||''} ${w.model||''}`.trim()||'-', w.serial||'-',
-            fmtDate(w.startDate), fmtDate(w.endDate), WARRANTY_STATUS_LABEL[warrantyStatus(w)],
-          ])
-        ));
+        children.push(sectionHdr(`${g.vendor} — Tempoh Jaminan Kontrak : ${vendorContracts.value[g.vendor] ? fmtDate(vendorContracts.value[g.vendor]) : '-'}`));
+        g.sites.forEach(site => {
+          children.push(siteHdr(`📍 ${site.siteName||'-'} (${site.items.length} peralatan)`));
+          children.push(makeTable(
+            ['Peralatan','Brand/Model','No. Siri','Tarikh Mula','Tarikh Tamat','Status'],
+            site.items.map(w => [
+              w.equipmentName||'-', `${w.brand||''} ${w.model||''}`.trim()||'-', w.serial||'-',
+              fmtDate(w.startDate), fmtDate(w.endDate), WARRANTY_STATUS_LABEL[warrantyStatus(w)],
+            ])
+          ));
+        });
         children.push(spacer());
       });
 
@@ -7451,7 +7549,10 @@ createApp({
       }));
 
       const doc = new Document({
-        sections: [{ properties: { page: { margin: { top: 720, bottom: 720, left: 900, right: 900 } } }, children }],
+        sections: [{ properties: { page: {
+          size: { orientation: PageOrientation.LANDSCAPE, width: 16838, height: 11906 },
+          margin: { top: 720, bottom: 720, left: 900, right: 900 },
+        } }, children }],
       });
       const blob = await Packer.toBlob(doc);
       const url  = URL.createObjectURL(blob);
@@ -7741,7 +7842,7 @@ createApp({
     // assignments, audit logs and custom equipment options. Fetched fresh
     // from Firestore (not the local reactive refs) so it's always complete
     // regardless of what happens to be loaded in the app right now.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -7776,7 +7877,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -8009,6 +8110,7 @@ createApp({
         if(data.loginAttempts?.length) { await _batchRestoreCollection('loginAttempts', data.loginAttempts); }
         if(data.kontraktorLuar?.length) { await _batchRestoreCollection('kontraktorLuar', data.kontraktorLuar); await loadKontraktorLuar(); }
         if(data.equipmentWarranty?.length) { await _batchRestoreCollection('equipmentWarranty', data.equipmentWarranty); await loadWarranty(); }
+        if(data.warrantyVendorContracts?.length) { await _batchRestoreCollection('warrantyVendorContracts', data.warrantyVendorContracts); await loadVendorContracts(); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
@@ -8502,6 +8604,8 @@ createApp({
 
     // ---- CM Status ----
     async function updateCMStatus(recordId, status) {
+      const rec = pmRecords.value.find(r => r.id === recordId);
+      if(!rec || !canEditPmRecord(rec)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       try {
         // Track resolvedAt only the moment status first becomes 'resolved' —
         // used for the Time-to-Resolution report (createdAt -> resolvedAt).
@@ -8523,8 +8627,14 @@ createApp({
     }));
 
     async function bulkUpdateCMStatus() {
-      const ids = bulkCmSelected.value;
-      if(!ids.length) return;
+      // A batch.commit() is all-or-nothing — one record the user isn't
+      // allowed to edit (not admin+, not the creator) would fail the whole
+      // batch under the pmRecords security rule. Filter those out up front
+      // so the records the user CAN edit still go through.
+      const allIds = bulkCmSelected.value;
+      const ids = allIds.filter(id => { const r = pmRecords.value.find(r => r.id === id); return r && canEditPmRecord(r); });
+      if(!ids.length) { showToast('Tiada kebenaran untuk mengemaskini rekod terpilih.', 'error'); return; }
+      if(ids.length < allIds.length) showToast(`${allIds.length - ids.length} rekod dilangkau (bukan rekod anda).`, 'error');
       const statusLabel = bulkCmStatus.value === 'resolved' ? 'Selesai' : bulkCmStatus.value === 'in-progress' ? 'Dalam Proses' : 'Terbuka';
       if(!confirm(`Kemaskini ${ids.length} rekod CM kepada "${statusLabel}"?`)) return;
       loading.value = true;
@@ -12703,6 +12813,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
+      vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
