@@ -1598,10 +1598,11 @@ tr:hover td{background:#f9fbff}
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
             <span class="fw-600" style="margin-left:4px">{{selSite?.name}}</span>
             <span v-if="currentProject==='vir' && eqTab!=='rooms'" class="badge" style="background:#e8f0ff;color:#003366;font-size:.75rem">Sistem: {{equipVirSystem}}</span>
-            <button v-if="currentProject==='vir' && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="toggleVirSystem">🔀 Tukar ke {{equipVirSystem==='BCD'?'Optager HD4000':'BCD'}}</button>
           </div>
-          <button class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
+          <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
+        <div v-if="!canEditEquip" class="badge badge-gray" style="display:block;margin-bottom:12px;padding:8px 12px">🔒 Paparan sahaja — hanya admin/superadmin boleh mengedit peralatan site.</div>
+        <fieldset :disabled="!canEditEquip" style="border:0;margin:0;padding:0">
         <div class="tabs">
           <div v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Server ({{(selSiteEquip.servers||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
@@ -1663,7 +1664,7 @@ tr:hover td{background:#f9fbff}
                 <input v-else class="form-control" v-model="nCam.model" placeholder="cth: WV-SF335, QNV-8080R">
                 <input v-if="nCam.model==='Lain-lain'" class="form-control" v-model="nCam.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Aksesori <span class="text-muted text-sm">(pilihan)</span></label>
+              <div class="form-group" v-if="currentProject!=='vir'"><label>Aksesori <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nCam.accessory">
                   <option value="">-- Tiada --</option>
                   <option>NDA-3083-PLEN</option>
@@ -1696,11 +1697,11 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th>Aksesori</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="c._uid||i" :class="{'highlight-row':equipEditIdx.cameras===i}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{i+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td>{{c.accessory||'-'}}</td><td>{{c.serial}}</td>
+                    <td>{{i+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td>{{c.serial}}</td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
@@ -1711,7 +1712,7 @@ tr:hover td{background:#f9fbff}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td :colspan="canViewCredentials?12:10" class="empty">Tiada kamera. Tambah di atas.</td></tr>
+                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td :colspan="(currentProject!=='vir'?10:9)+(canViewCredentials?2:0)" class="empty">Tiada kamera. Tambah di atas.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2044,15 +2045,18 @@ tr:hover td{background:#f9fbff}
                 <select class="form-control" v-model="nServer.ram"><option value="">— Pilih —</option><option v-for="o in OPTAGER_RAM" :key="o">{{o}}</option></select>
                 <input v-if="nServer.ram==='Lain-lain'" class="form-control" v-model="nServer.ramCustom" placeholder="Nyatakan RAM sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Storage</label>
-                <select class="form-control" v-model="nServer.storage">
-                  <option value="">— Pilih —</option>
-                  <optgroup v-for="type in OPTAGER_STORAGE_TYPES" :key="type" :label="type">
-                    <option v-for="size in OPTAGER_STORAGE_SIZES[type]" :key="type+size" :value="type+' '+size">{{size}}</option>
-                  </optgroup>
-                  <option value="Lain-lain">Lain-lain</option>
-                </select>
-                <input v-if="nServer.storage==='Lain-lain'" class="form-control" v-model="nServer.storageCustom" placeholder="Nyatakan storage sebenar" style="margin-top:6px">
+              <div class="form-group">
+                <label>Storage <span class="text-muted text-sm">(boleh pilih lebih dari satu)</span></label>
+                <div class="staff-checklist" style="grid-template-columns:1fr;max-height:160px">
+                  <template v-for="type in OPTAGER_STORAGE_TYPES" :key="type">
+                    <div class="text-sm fw-600" style="margin-top:4px;color:#555">{{type}}</div>
+                    <label v-for="size in OPTAGER_STORAGE_SIZES[type]" :key="type+size" class="staff-check-item">
+                      <input type="checkbox" :checked="nServer.storage.includes(type+' '+size)" @change="toggleServerStorage(type+' '+size)">
+                      {{size}}
+                    </label>
+                  </template>
+                </div>
+                <input class="form-control" v-model="nServer.storageCustom" placeholder="Storage tambahan (pilihan, cth: SSD (2.5&quot;) 750GB)" style="margin-top:6px">
               </div>
               <div class="form-group"><label>GPU</label>
                 <select class="form-control" v-model="nServer.gpu"><option value="">— Pilih —</option><option v-for="o in OPTAGER_GPU" :key="o">{{o}}</option></select>
@@ -2078,7 +2082,6 @@ tr:hover td{background:#f9fbff}
                 <input v-if="nServer.os==='Lain-lain'" class="form-control" v-model="nServer.osCustom" placeholder="Nyatakan OS sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>OS Product Key <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nServer.osProductKey"></div>
-              <div class="form-group"><label>Optager Version</label><input class="form-control" v-model="nServer.optagerVersion"></div>
               <div class="form-group"><label>Optager Machine ID</label><input class="form-control" v-model="nServer.optagerMachineId"></div>
               <div class="form-group"><label>Optager License Key</label><input class="form-control" v-model="nServer.optagerLicenseKey"></div>
               <div class="form-group"><label>Optager License Key Expiry</label><input class="form-control" type="date" v-model="nServer.optagerLicenseExpiry"></div>
@@ -2105,12 +2108,12 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>OS</th><th>Optager Version</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>OS</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{s.storage}}</td><td>{{s.gpu}}</td><td>{{s.os}}</td><td>{{s.optagerVersion}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.os}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
@@ -2136,12 +2139,25 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama/Label</label><input class="form-control" v-model="nTablet.name" placeholder="cth: Tablet Kawalan Bilik VIR 1"></div>
-              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.brand"></div>
-              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.model"></div>
+              <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
+                <select class="form-control" v-model="nTablet.brand" @change="nTablet.model=''">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="b in brandOptionsFor('TABLET_BRANDS')" :key="b">{{b}}</option>
+                </select>
+                <input v-if="nTablet.brand==='Lain-lain'" class="form-control" v-model="nTablet.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group"><label>Model <span class="text-muted text-sm">(pilihan)</span></label>
+                <select v-if="nTablet.brand && nTablet.brand!=='Lain-lain'" class="form-control" v-model="nTablet.model">
+                  <option value="">-- Pilih Model --</option>
+                  <option v-for="m in modelOptionsFor('tablets', nTablet.brand)" :key="m">{{m}}</option>
+                </select>
+                <input v-else class="form-control" v-model="nTablet.model" placeholder="cth: TB311XU">
+                <input v-if="nTablet.model==='Lain-lain'" class="form-control" v-model="nTablet.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
+              </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.serial"></div>
-              <div class="form-group"><label>Optager HD4000 Control APP (Versi) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.controlAppVersion"></div>
+              <div class="form-group"><label>Machine ID <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.controlAppMachineId"></div>
               <div class="form-group">
-                <label>Optager HD4000 Control APP License Key <span class="text-muted text-sm">(pilihan)</span></label>
+                <label>Optager HD4000 Control APP License Key <span class="text-muted text-sm">(pilihan — rekod dalaman staf sahaja, tidak dipaparkan dalam borang PM/CM)</span></label>
                 <input class="form-control" v-model="nTablet.controlAppLicenseKey">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer;display:inline-flex;margin-top:6px">📎 Upload .lic<input type="file" accept=".lic" style="display:none" @change="uploadTabletLicense">
                 </label>
@@ -2164,12 +2180,12 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Control APP</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(t,i) in selSiteEquip.tablets||[]" :key="t._uid||i" :class="{'highlight-row':equipEditIdx.tablets===i}">
                     <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
                     <td>{{i+1}}</td><td>{{t.name}} <span v-if="isRecentEquip(t)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td><td>{{t.controlAppVersion}}</td>
+                    <td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td><td>{{t.controlAppMachineId}}</td>
                     <td>
                       <button v-if="t.controlAppLicenseFile" class="btn btn-outline btn-sm" @click="downloadTabletLicense(t)" title="Muat turun fail .lic">⬇ {{t.controlAppLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
@@ -2327,6 +2343,7 @@ tr:hover td{background:#f9fbff}
             </div>
           </div>
         </div>
+        </fieldset>
       </div>
 
       <!-- ====== NEW PM (multi-step) ====== -->
@@ -2807,9 +2824,9 @@ tr:hover td{background:#f9fbff}
                   </td>
                   <td class="flex gap-8">
                     <button class="btn btn-sm btn-outline" @click="viewRecord(r)">👁 Lihat</button>
-                    <button class="btn btn-sm btn-outline" @click="editRecord(r)" title="Edit borang">✏️</button>
+                    <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-outline" @click="editRecord(r)" title="Edit borang">✏️</button>
                     <button class="btn btn-sm" :style="compareList.includes(r.id)?'background:#f59e0b;color:#fff':'background:#e8f0ff;color:#003366'" @click="toggleCompare(r.id)" title="Bandingkan">⚖️</button>
-                    <button class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
+                    <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
                 <tr v-if="!filteredPM.length"><td colspan="10" class="empty">Tiada rekod.</td></tr>
@@ -2843,9 +2860,9 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="pmc-actions">
                 <button class="btn btn-sm btn-outline" @click="viewRecord(r)">👁 Lihat</button>
-                <button class="btn btn-sm btn-outline" @click="editRecord(r)">✏️ Edit</button>
+                <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-outline" @click="editRecord(r)">✏️ Edit</button>
                 <button class="btn btn-sm" :style="compareList.includes(r.id)?'background:#f59e0b;color:#fff':'background:#e8f0ff;color:#003366'" @click="toggleCompare(r.id)">⚖️ Banding</button>
-                <button class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
+                <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
               </div>
             </div>
             <div v-if="!filteredPM.length" class="empty">Tiada rekod.</div>
@@ -3588,6 +3605,7 @@ tr:hover td{background:#f9fbff}
                 <option value="nvr">NVR</option>
                 <option value="hdd">Hard Disk</option>
                 <option value="switches">Network Switch</option>
+                <option value="tablets">Tablet</option>
               </select>
             </div>
             <div class="form-group">
@@ -4984,7 +5002,7 @@ const CAMERA_MODELS = {
   'Axis': [
     'M2025-LE','M2026-LE Mk II','M3045-V','M3046-V',
     'M3105-LVE','M3106-L MkII','M3106-LME','M3106-LVE','M3116-R MkII',
-    'M3205-LVE','M3206-LVE','M4308-PLE','M5525-E',
+    'M3205-LVE','M3206-LVE','M4218-LV','M4308-PLE','M5525-E',
     'P1435-LE','P1445-LE','P1447-LE','P1448-LE','P1455-LE',
     'P3225-LV','P3225-LVE','P3225-V','P3225-VE',
     'P3227-LV','P3227-LVE','P3228-LV MkII','P3228-LVE MkII',
@@ -5185,7 +5203,7 @@ const SWITCH_MODELS = {
     'TL-SF1006P (6-Port PoE)','TL-SF1008P (8-Port PoE)',
     'TL-SG1005P (5-Port PoE)','TL-SG105PE (5-Port PoE)','TL-SG108PE (8-Port PoE)',
     'TL-SG1016PE (16-Port PoE)','TL-SG1024P (24-Port PoE)',
-    'TL-SG2210P (8-Port PoE)','TL-SG2424P (24-Port PoE)',
+    'TL-SG2210P (8-Port PoE)','TL-SG2210MP (8-Port PoE)','TL-SG2424P (24-Port PoE)',
     'TL-SG3210 (8-Port, non-PoE uplink)','TL-SX3016F',
     'TL-SL1218P (16-Port PoE)','TL-SL1310P (8-Port PoE)',
     'Omada TL-SG3210XHP-M2','LS108GP (8-Port PoE)',
@@ -5232,13 +5250,37 @@ const SWITCH_MODELS = {
     'Lain-lain',
   ],
   'Allied Telesis': [
-    'x950-28XSQ (Core Switch, 24-Port + 4x25G SFP28)',
-    'GS980MX/28PSM (24/8-Port PoE)',
-    'GS980MX/10HSm (8 Port)',
+    'AT-x950-28XSQ (Core Switch)',
+    'AT-GS980MX/28PSm (24 Port)',
+    'AT-GS980MX/10HSm (8 Port)',
     'Lain-lain',
   ],
   'Huawei': [
     'CloudEngine S5735-L24P4XE-A-V2',
+    'Lain-lain',
+  ],
+  'Lain-lain': [],
+};
+
+// Android control tablets (7"-10") for VIR Optager HD4000, commonly
+// available in the Malaysia retail market.
+const TABLET_BRANDS = ['Lenovo','Xiaomi','Samsung','Honor','Lain-lain'];
+const TABLET_MODELS = {
+  'Lenovo': [
+    'TB311XU','TB300XU',
+    'Tab M8 (4th Gen)','Tab M9','Tab M10 (3rd Gen)','Tab M10 Plus (3rd Gen)','Tab P11 (2nd Gen)',
+    'Lain-lain',
+  ],
+  'Xiaomi': [
+    'Redmi Pad SE','Redmi Pad SE 8.7','Redmi Pad','Redmi Pad Pro','Xiaomi Pad 6','Xiaomi Pad 6S',
+    'Lain-lain',
+  ],
+  'Samsung': [
+    'Galaxy Tab A9','Galaxy Tab A9+','Galaxy Tab A8','Galaxy Tab A7 Lite','Galaxy Tab S6 Lite','Galaxy Tab S9 FE',
+    'Lain-lain',
+  ],
+  'Honor': [
+    'Honor Pad X8','Honor Pad X8a','Honor Pad X9','Honor Pad 8','Honor Pad 9',
     'Lain-lain',
   ],
   'Lain-lain': [],
@@ -5398,12 +5440,12 @@ createApp({
     // specific enough (nested hardware/software specs, license tracking)
     // that they don't fit the generic misc schema.
     const nServer = reactive({
-      name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:'', storageCustom:'',
+      name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[], storageCustom:'',
       gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
-      os:'', osCustom:'', osProductKey:'', optagerVersion:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
+      os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
       installDate:'', optagerLicenseFile:null,
     });
-    const nTablet = reactive({name:'',brand:'',model:'',serial:'',controlAppVersion:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''});
+    const nTablet = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''});
     const ROOT_CAUSE_CATEGORIES = ['Litup/Bekalan Kuasa','Cuaca/Petir','Kabel Rosak','Vandalism/Kerosakan Fizikal','Umur Peralatan','Software/Firmware','Lain-lain'];
     // HQ Putrajaya has up to 16 VIR rooms; other sites normally have 1-2 —
     // 20 covers every realistic case with room to spare, plus "Lain-lain"
@@ -6425,7 +6467,7 @@ createApp({
 
     // ── Dashboard: upcoming schedule preview (next 5, today onward) ──
     const upcomingAssignments = computed(() => {
-      const today = new Date().toISOString().slice(0,10);
+      const today = _localDateStr();
       return teamAssignments.value
         .filter(a => a.date >= today)
         .sort((a,b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)
@@ -6438,9 +6480,9 @@ createApp({
     // to visually scan 3 separate cards to know what needs attention soonest.
     const next7DaysItems = computed(() => {
       const now = new Date();
-      const todayStr = now.toISOString().slice(0,10);
+      const todayStr = _localDateStr(now);
       const in7 = new Date(now); in7.setDate(in7.getDate()+7);
-      const in7Str = in7.toISOString().slice(0,10);
+      const in7Str = _localDateStr(in7);
       const items = [];
       overdueList.value.forEach(s => {
         items.push({ id:'ov-'+s.id, icon:'⚠️', urgency:0, label:'Site Lampau: '+s.name, sub:VIR_SITES.some(v=>v.id===s.id)?'VIR':'CCTV', date:null, action:'sites' });
@@ -6597,6 +6639,10 @@ createApp({
       ['superadmin','admin','staff'].includes(authProfile.value?.role)
     );
     const canEditContract = computed(()=> isAdminRole());
+    const canEditEquip = computed(()=> isAdminRole());
+    function canEditPmRecord(r){
+      return isAdminRole() || (r.createdBy && r.createdBy === authUser.value?.email);
+    }
     // Equipment login credentials (camera/NVR/switch/alarm/misc access
     // username+password) are visible to staff and above — internship
     // accounts should never see them.
@@ -6622,6 +6668,12 @@ createApp({
       const t = new Date(); return day===t.getDate() && calMonth.value===t.getMonth() && calYear.value===t.getFullYear();
     }
     function isWeekend(col){ return col===0||col===6; } // 0=Sun, 6=Sat
+    // Local-timezone YYYY-MM-DD string. `.toISOString()` returns the UTC
+    // date, which lags a full calendar day behind Malaysia (UTC+8) local
+    // time between 00:00–08:00 — using it for "today" date-string
+    // comparisons (contract/user expiry, schedule filters) misclassifies
+    // things as not-yet-expired for that 8-hour window every day.
+    function _localDateStr(d){ const dt=d||new Date(); const y=dt.getFullYear(); const m=String(dt.getMonth()+1).padStart(2,'0'); const day=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
     function fmtDate(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}/${m}/${y}`; }
     function shortSite(name){
       if(!name) return '';
@@ -6845,11 +6897,11 @@ createApp({
 
     function contractStatus(c) {
       if(!c.endDate) return 'active';
-      const today = new Date().toISOString().slice(0,10);
+      const today = _localDateStr();
       if(c.endDate < today) return 'expired';
       const warn = new Date();
       warn.setDate(warn.getDate() + (c.reminderDays || 60));
-      if(c.endDate <= warn.toISOString().slice(0,10)) return 'expiring';
+      if(c.endDate <= _localDateStr(warn)) return 'expiring';
       return 'active';
     }
 
@@ -6989,11 +7041,11 @@ createApp({
       nRoom: {name:'', system:'BCD', excludedGroups:[]},
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:'', storageCustom:'',
+      nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[], storageCustom:'',
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
-        os:'', osCustom:'', osProductKey:'', optagerVersion:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
+        os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
         installDate:'', optagerLicenseFile:null},
-      nTablet: {name:'',brand:'',model:'',serial:'',controlAppVersion:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''},
+      nTablet: {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''},
     };
 
     // ---- Crowdsourced brand/model dropdown growth ----
@@ -7005,8 +7057,8 @@ createApp({
     // session. "Lain-lain" always stays as the last option so there's
     // always an escape hatch to add the next one.
     const CUSTOM_EQUIP_OPTIONS_COLLECTION = 'customEquipmentOptions';
-    const BRAND_LISTS = { BRANDS, NVR_BRANDS, HDD_BRANDS, SWITCH_BRANDS };
-    const EQUIP_MODEL_DICTS = { cameras: CAMERA_MODELS, nvr: NVR_MODELS, hdd: HDD_MODELS, switches: SWITCH_MODELS };
+    const BRAND_LISTS = { BRANDS, NVR_BRANDS, HDD_BRANDS, SWITCH_BRANDS, TABLET_BRANDS };
+    const EQUIP_MODEL_DICTS = { cameras: CAMERA_MODELS, nvr: NVR_MODELS, hdd: HDD_MODELS, switches: SWITCH_MODELS, tablets: TABLET_MODELS };
     const customBrands = reactive({ BRANDS: [], NVR_BRANDS: [], HDD_BRANDS: [], SWITCH_BRANDS: [] });
     // Crowdsourced MODELS are split per project (cctv/vir) — the Kamera/NVR/
     // HDD/Switch tabs are shared UI between CCTV and VIR (BCD) sites, but a
@@ -7102,7 +7154,7 @@ createApp({
 
     // ---- Urus Model Custom (superadmin cleanup tool) ----
     const customEquipCleanup = reactive({ equipType: 'cameras', project: 'cctv', brand: '' });
-    const CLEANUP_BRAND_LIST_KEY = { cameras: 'BRANDS', nvr: 'NVR_BRANDS', hdd: 'HDD_BRANDS', switches: 'SWITCH_BRANDS' };
+    const CLEANUP_BRAND_LIST_KEY = { cameras: 'BRANDS', nvr: 'NVR_BRANDS', hdd: 'HDD_BRANDS', switches: 'SWITCH_BRANDS', tablets: 'TABLET_BRANDS' };
     const customEquipCleanupBrandList = computed(() => {
       const listKey = CLEANUP_BRAND_LIST_KEY[customEquipCleanup.equipType];
       return brandOptionsFor(listKey).filter(b => b !== 'Lain-lain');
@@ -7130,6 +7182,7 @@ createApp({
       } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
     }
     async function clearAllCustomModels() {
+      if(authProfile.value?.role !== 'superadmin') return;
       const { equipType, project, brand } = customEquipCleanup;
       if(!brand || !confirm(`Padam SEMUA model custom untuk ${brand} (${project.toUpperCase()})?`)) return;
       try {
@@ -7156,21 +7209,6 @@ createApp({
     // showing/editing for VIR — set by the BCD/Optager buttons on the VIR
     // site list (openSiteEquip's `mode` param).
     const equipVirSystem = ref('BCD');
-    // Server/Tablet tabs only exist for Optager HD4000; NVR/Hard Disk/Alarm
-    // SMS tabs only exist for BCD (Optager has none of that equipment) — so
-    // switching systems can leave eqTab pointing at a tab that just got
-    // hidden, with no matching content shown. Fall back to Kamera whenever
-    // the current tab wouldn't exist under the system being switched to.
-    function toggleVirSystem() {
-      equipVirSystem.value = equipVirSystem.value === 'BCD' ? 'Optager HD4000' : 'BCD';
-      const invalidForBcd = ['servers','tablets'];
-      const invalidForOptager = ['nvr','hdd','alarm'];
-      const nowInvalid = equipVirSystem.value === 'BCD' ? invalidForBcd : invalidForOptager;
-      if(nowInvalid.includes(eqTab.value)) {
-        eqTab.value = 'cameras';
-      }
-    }
-
     // Equipment draft-recovery autosave trigger (see _saveEquipDraftLocal
     // above) — registered here, after both siteEquip and virSiteEquip
     // exist, so this watch() call doesn't reference virSiteEquip before
@@ -7260,7 +7298,7 @@ createApp({
     // assignments, audit logs and custom equipment options. Fetched fresh
     // from Firestore (not the local reactive refs) so it's always complete
     // regardless of what happens to be loaded in the app right now.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -7526,6 +7564,7 @@ createApp({
         if(data.auditLogs?.length) { await _batchRestoreCollection('auditLogs', data.auditLogs); }
         if(data.customEquipmentOptions?.length) { await _batchRestoreCollection('customEquipmentOptions', data.customEquipmentOptions); await loadCustomEquipmentOptions(); }
         if(data.loginAttempts?.length) { await _batchRestoreCollection('loginAttempts', data.loginAttempts); }
+        if(data.kontraktorLuar?.length) { await _batchRestoreCollection('kontraktorLuar', data.kontraktorLuar); await loadKontraktorLuar(); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
@@ -7686,7 +7725,7 @@ createApp({
     function _projectContractStart(project) {
       const relevant = contracts.value.filter(c => (c.project||'cctv') === project && c.startDate);
       if(!relevant.length) return null;
-      const todayStr = new Date().toISOString().slice(0,10);
+      const todayStr = _localDateStr();
       const active = relevant.find(c => c.startDate <= todayStr && (!c.endDate || c.endDate >= todayStr));
       const chosen = active || relevant.slice().sort((a,b) => a.startDate.localeCompare(b.startDate))[0];
       return chosen.startDate ? new Date(chosen.startDate) : null;
@@ -8187,6 +8226,18 @@ createApp({
       // by THIS client) doesn't go stale between page loads — allUsers is
       // otherwise only fetched once at login.
       try { await loadUsers(); } catch(e) {}
+      // Freezing a user (toggleFreeze) only sets `disabled` in Firestore —
+      // an already-open tab for that account stays fully authenticated
+      // until something re-checks. The heartbeat is the only recurring
+      // client-side tick, so use it to force-logout as soon as another
+      // admin freezes this session's own account.
+      if(authProfile.value?.id) {
+        const own = allUsers.value.find(u => u.id === authProfile.value.id);
+        if(own?.disabled) {
+          showToast('Akaun anda telah di-freeze oleh Superadmin/Admin.', 'error');
+          await doLogout();
+        }
+      }
     }
     function _startHeartbeat() {
       _sendHeartbeat();
@@ -8264,7 +8315,7 @@ createApp({
       try {
         const ref = db.collection('loginAttempts').doc(username);
         const doc = await ref.get();
-        const newCount = (doc.exists ? (doc.data().count||0) : 0) + 1;
+        const newCount = Math.min((doc.exists ? (doc.data().count||0) : 0) + 1, 20);
         const update = { count: newCount, lastAttempt: firebase.firestore.FieldValue.serverTimestamp() };
         if(newCount >= 5) update.lockedUntil = firebase.firestore.Timestamp.fromMillis(Date.now() + 15*60*1000);
         await ref.set(update, { merge: true });
@@ -8411,7 +8462,7 @@ createApp({
         // Check account expiry for temporary users
         const prof = authProfile.value;
         if(prof?.accessType === 'temporary' && prof?.expiryDate) {
-          const today = new Date().toISOString().slice(0,10);
+          const today = _localDateStr();
           if(prof.expiryDate < today) {
             await auth.signOut();
             authProfile.value = null;
@@ -8578,7 +8629,7 @@ createApp({
       alarms:   ['name','type','brand','model','serial'],
       misc:     ['name','category','brand','model','serial'],
       servers:  ['name','processor','ram','storage','gpu','mobo','os','optagerMachineId','optagerLicenseKey'],
-      tablets:  ['name','brand','model','serial','controlAppVersion'],
+      tablets:  ['name','brand','model','serial','controlAppMachineId'],
     };
     const IMPORT_HEADER_HINTS = {
       name:     ['name','nama','lokasi','location','channel','device','desc'],
@@ -8869,7 +8920,7 @@ createApp({
     // reading selSite/currentProject live here would target whatever site
     // the user has since navigated to, not the one the file was scanned for.
     function _autoAddRows(rows, kind, targetProj, targetSiteId) {
-      const store = targetProj === 'vir' ? virSiteEquip.value : siteEquip.value;
+      const store = targetProj === 'vir' ? activeEquip() : siteEquip.value;
       if(!store[targetSiteId]) store[targetSiteId] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
       const list = store[targetSiteId][kind];
       const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
@@ -9146,16 +9197,16 @@ createApp({
     function setExpiryPreset(months) {
       const d = new Date();
       d.setMonth(d.getMonth() + months);
-      userModal.data.expiryDate = d.toISOString().slice(0,10);
+      userModal.data.expiryDate = _localDateStr(d);
     }
 
     function userExpiryStatus(u) {
       if(u.accessType !== 'temporary' || !u.expiryDate) return 'permanent';
-      const today = new Date().toISOString().slice(0,10);
+      const today = _localDateStr();
       if(u.expiryDate < today) return 'expired';
       const warn = new Date();
       warn.setDate(warn.getDate() + 14);
-      if(u.expiryDate <= warn.toISOString().slice(0,10)) return 'soon';
+      if(u.expiryDate <= _localDateStr(warn)) return 'soon';
       return 'active';
     }
 
@@ -9584,8 +9635,11 @@ createApp({
           // BCD's real gear (DVD-1150, VC-16b, TC-100, Quad, etc) is tracked
           // via the per-room checklist toggle, not the generic Kamera/NVR/HDD
           // tabs — those don't reflect BCD's actual equipment, so land on
-          // Bilik & Sistem instead. Optager still opens on Kamera as before.
-          eqTab.value = mode === 'BCD' ? 'rooms' : 'cameras';
+          // Bilik & Sistem instead. Optager opens on Server (its primary tab).
+          // Base the fallback on the resolved system (not the raw `mode`
+          // param), since mode-less calls (draft recovery, search click)
+          // must still land on a tab valid for whichever system was active.
+          eqTab.value = equipVirSystem.value === 'BCD' ? 'rooms' : 'servers';
         }
       } else {
         eqTab.value = 'cameras';
@@ -9781,9 +9835,11 @@ createApp({
         nRoom.excludedGroups = [...(item.excludedGroups||[])];
       } else if(key === 'servers') {
         // Same "Lain-lain + custom text" reconciliation as brand/model
-        // dropdowns, but across all 7 of the server's spec dropdowns.
+        // dropdowns, but across the server's other spec dropdowns. Storage
+        // is handled separately below since it's a checkbox multi-select,
+        // not a single dropdown value.
         const specs = [
-          ['processor', OPTAGER_PROCESSORS], ['ram', OPTAGER_RAM], ['storage', OPTAGER_STORAGE],
+          ['processor', OPTAGER_PROCESSORS], ['ram', OPTAGER_RAM],
           ['gpu', OPTAGER_GPU], ['mobo', OPTAGER_MOBO], ['moboType', OPTAGER_MOBO_TYPE], ['os', OPTAGER_OS],
         ];
         specs.forEach(([field, options]) => {
@@ -9795,6 +9851,17 @@ createApp({
             nServer[field+'Custom'] = '';
           }
         });
+        // Storage: split the saved list into ones that match a known
+        // checkbox option vs anything else (crowdsourced/legacy free text —
+        // including a pre-multi-select single string, since older records
+        // saved `storage` as one string, not an array) — the latter goes
+        // into the single "tambahan" custom text field, joined if there's
+        // more than one such value.
+        {
+          const saved = Array.isArray(item.storage) ? item.storage : (item.storage ? [item.storage] : []);
+          nServer.storage = saved.filter(v => OPTAGER_STORAGE.includes(v));
+          nServer.storageCustom = saved.filter(v => !OPTAGER_STORAGE.includes(v)).join(', ');
+        }
       } else if(key === 'misc') {
         // Saved category may be a free-text custom value, or one from a
         // DIFFERENT context's list (e.g. a VIR-only category on a CCTV
@@ -9830,7 +9897,7 @@ createApp({
         // custom text so editing shows it correctly. brandOptionsFor/
         // modelOptionsFor already include known crowdsourced entries, so
         // this only trips "Lain-lain" for values still unknown right now.
-        const brandListKey = { cameras:'BRANDS', nvr:'NVR_BRANDS', hdd:'HDD_BRANDS', switches:'SWITCH_BRANDS' }[key];
+        const brandListKey = { cameras:'BRANDS', nvr:'NVR_BRANDS', hdd:'HDD_BRANDS', switches:'SWITCH_BRANDS', tablets:'TABLET_BRANDS' }[key];
         if(brandListKey) {
           const knownBrands = brandOptionsFor(brandListKey).map(b => b.trim().toLowerCase());
           if(item.brand && !knownBrands.includes(item.brand.trim().toLowerCase())) {
@@ -9840,7 +9907,7 @@ createApp({
             refs[key].brandCustom = '';
           }
         }
-        const equipType = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switches:'switches' }[key];
+        const equipType = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switches:'switches', tablets:'tablets' }[key];
         if(equipType) {
           const knownModels = modelOptionsFor(equipType, item.brand).map(m => m.trim().toLowerCase());
           if(item.model && !knownModels.includes(item.model.trim().toLowerCase())) {
@@ -10027,6 +10094,16 @@ createApp({
     function _resolveDropdownCustom(value, custom) {
       return (value === 'Lain-lain' && custom && custom.trim()) ? custom.trim() : value;
     }
+    // Always reassigns nServer.storage to a brand-new array (never .push/
+    // .splice in place) — resetForm() Object.assign's FORM_DEFAULTS.nServer
+    // straight onto nServer, which would otherwise make nServer.storage
+    // alias the SAME array object as the shared default; mutating it in
+    // place would corrupt that shared default for every future reset.
+    function toggleServerStorage(value) {
+      nServer.storage = nServer.storage.includes(value)
+        ? nServer.storage.filter(v => v !== value)
+        : [...nServer.storage, value];
+    }
     function addServer() {
       if(!nServer.name){showToast('Sila masukkan nama/label server','error');return;}
       ensureSite(selSite.value.id);
@@ -10035,14 +10112,13 @@ createApp({
         name: nServer.name,
         processor: _resolveDropdownCustom(nServer.processor, nServer.processorCustom),
         ram: _resolveDropdownCustom(nServer.ram, nServer.ramCustom),
-        storage: _resolveDropdownCustom(nServer.storage, nServer.storageCustom),
+        storage: [...nServer.storage, ...(nServer.storageCustom.trim() ? [nServer.storageCustom.trim()] : [])],
         gpu: _resolveDropdownCustom(nServer.gpu, nServer.gpuCustom),
         mobo: _resolveDropdownCustom(nServer.mobo, nServer.moboCustom),
         moboType: _resolveDropdownCustom(nServer.moboType, nServer.moboTypeCustom),
         networking: nServer.networking,
         os: _resolveDropdownCustom(nServer.os, nServer.osCustom),
         osProductKey: nServer.osProductKey,
-        optagerVersion: nServer.optagerVersion,
         optagerMachineId: nServer.optagerMachineId,
         optagerLicenseKey: nServer.optagerLicenseKey,
         optagerLicenseExpiry: nServer.optagerLicenseExpiry,
@@ -10088,13 +10164,16 @@ createApp({
     }
     function addTablet() {
       if(!nTablet.name){showToast('Sila masukkan nama/label tablet','error');return;}
+      const resolved = _resolveBrandModel(nTablet);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].tablets;
-      const item = { name:nTablet.name, brand:nTablet.brand, model:nTablet.model, serial:nTablet.serial, controlAppVersion:nTablet.controlAppVersion, controlAppLicenseKey:nTablet.controlAppLicenseKey, controlAppLicenseFile:nTablet.controlAppLicenseFile, installDate:nTablet.installDate, _ts:Date.now() };
+      const item = { name:resolved.name, brand:resolved.brand, model:resolved.model, serial:resolved.serial, controlAppMachineId:resolved.controlAppMachineId, controlAppLicenseKey:resolved.controlAppLicenseKey, controlAppLicenseFile:resolved.controlAppLicenseFile, installDate:resolved.installDate, _ts:Date.now() };
       const dup = _findDupConflict('tablets', list, item, equipEditIdx.tablets);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.tablets !== null) { item._uid = list[equipEditIdx.tablets]._uid||_genId(); list[equipEditIdx.tablets] = item; equipEditIdx.tablets = null; showToast('Tablet dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Tablet berjaya ditambah!'); }
+      _maybeAddCustomBrand('TABLET_BRANDS', item.brand);
+      _maybeAddCustomModel('tablets', item.brand, item.model);
       resetForm('nTablet');
     }
     // Control APP license (.lic) upload/download — same base64-in-Firestore
@@ -10144,7 +10223,7 @@ createApp({
     // flight, and reading selSite.value after the await would log the audit
     // entry (or write the data) under whatever site they've since switched to.
     async function _writeSiteEquipToFirestore(opts = {}) {
-      if(!selSite.value) return;
+      if(!selSite.value || !isAdminRole()) return;
       const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
       const siteId = selSite.value.id;
       const siteLabel = selSite.value?.name || selSite.value?.id;
@@ -10360,6 +10439,7 @@ createApp({
     // borang. savePM() detects pm._draftId is already set and overwrites
     // the same Firestore doc instead of creating a new one.
     function editRecord(r) {
+      if(!canEditPmRecord(r)){ showToast('Anda tiada kebenaran untuk mengedit rekod ini.','error'); return; }
       clearPmDraftLocal();
       currentProject.value = r.project||'cctv';
       pm._draftId = r.id;
@@ -10499,8 +10579,9 @@ createApp({
     });
 
     async function deleteRecord(id) {
-      if(!confirm('Padam rekod PM ini?')) return;
       const rec = pmRecords.value.find(r=>r.id===id);
+      if(rec && !canEditPmRecord(rec)){ showToast('Anda tiada kebenaran untuk memadam rekod ini.','error'); return; }
+      if(!confirm('Padam rekod PM ini?')) return;
       try {
         await _fw(db.collection('pmRecords').doc(id).delete());
         pmRecords.value = pmRecords.value.filter(r=>r.id!==id);
@@ -11025,16 +11106,30 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       // Preserve read-state across rebuilds — ids are stable (e.g.
       // 'overdue-'+siteId), but this function reruns on every pmRecords
       // change and previously hardcoded read:false on every item, silently
-      // un-reading anything the user had already dismissed.
-      const prevRead = new Set(notifications.value.filter(n=>n.read).map(n=>n.id));
+      // un-reading anything the user had already dismissed. Also merge in
+      // localStorage-persisted read ids so state survives a reload/re-login
+      // (in-memory `notifications.value` alone doesn't).
+      const prevRead = new Set([...notifications.value.filter(n=>n.read).map(n=>n.id), ..._loadReadNotifIds()]);
       list.forEach(n => { if(prevRead.has(n.id)) n.read = true; });
       notifications.value = list;
     }
 
-    function markAllRead() { notifications.value.forEach(n=>n.read=true); }
+    const _READ_NOTIF_KEY = 'pmcctv_readNotifIds';
+    function _loadReadNotifIds() {
+      try { return new Set(JSON.parse(localStorage.getItem(_READ_NOTIF_KEY) || '[]')); } catch(e) { return new Set(); }
+    }
+    function _saveReadNotifIds() {
+      // Only persists ids still present in the current list, so dismissed
+      // notifications that later disappear (e.g. a CM record gets closed)
+      // don't accumulate forever in storage.
+      try { localStorage.setItem(_READ_NOTIF_KEY, JSON.stringify(notifications.value.filter(n=>n.read).map(n=>n.id))); } catch(e) {}
+    }
+
+    function markAllRead() { notifications.value.forEach(n=>n.read=true); _saveReadNotifIds(); }
 
     function handleNotifClick(n) {
       n.read = true;
+      _saveReadNotifIds();
       if(n.type === 'overdue' && n.siteId) {
         startNewPMForSite(n.siteId);
         return;
@@ -11669,7 +11764,8 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         (eq.misc||[]).forEach(m => rows.push({ site:site.name, proj, cat:'Lain-lain', name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
-      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquip.value));
+      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
+      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipOptager.value));
       return rows.filter(r => {
         if(assetFilterProj.value!=='all' && r.proj!==assetFilterProj.value) return false;
         if(assetFilterCat.value!=='all' && r.cat!==assetFilterCat.value) return false;
@@ -11991,7 +12087,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         });
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
-      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquip.value));
+      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
+      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipOptager.value));
       return rows.sort((a,b) => b.ageYears - a.ageYears);
     });
 
@@ -12115,10 +12212,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
-      currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem, toggleVirSystem,
+      currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown, miscBrandOptions, miscModelOptions, ALARM_BRANDS, ALARM_BRAND_MODELS,
-      nServer, nTablet, addServer, addTablet, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
+      nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
@@ -12146,7 +12243,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS,
-      contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canViewCredentials,
+      contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canViewCredentials, canEditEquip, canEditPmRecord,
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
