@@ -7487,7 +7487,7 @@ createApp({
         <div class="header">
           <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
           <div class="header-mid">
-            <h2>Ringkasan Waranti Peralatan</h2>
+            <h2>Ringkasan Waranti Peralatan Sistem CCTV</h2>
             <p style="font-weight:600;color:#333;font-size:8pt;line-height:1.3">TENDER BAGI PERKHIDMATAN PENYENGGARAAN PERKAKASAN SERTA PERISIAN KAMERA LITAR TERTUTUP (CCTV) UNTUK 17 PEJABAT SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM) BAGI TEMPOH 33 BULAN</p>
             <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
             <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
@@ -7583,7 +7583,7 @@ createApp({
 
       // ── Title ──
       children.push(new Paragraph({
-        children: [new TextRun({ text: 'WARANTI PERALATAN — PROJEK CCTV SPRM', color: WHITE, bold: true, size: 22 })],
+        children: [new TextRun({ text: 'RINGKASAN WARANTI PERALATAN SISTEM CCTV', color: WHITE, bold: true, size: 22 })],
         shading: { type: ShadingType.SOLID, color: BLUE },
         alignment: AlignmentType.CENTER,
         spacing: { before: 100, after: 40 },
@@ -9800,7 +9800,26 @@ createApp({
       try {
         const eq = {};
         SITES.forEach(s=>{ eq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; });
-        const snap = await db.collection('siteEquipment').get();
+        const VIR_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
+        const veqRooms = {}, veqBcd = {}, veqOptager = {};
+        VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={...VIR_EQUIP_SHAPE}; });
+
+        // All of these reads are independent of each other — firing them
+        // together (instead of one `await` at a time) cuts login load time
+        // down to whichever single read is slowest, instead of the sum of
+        // all of them. Permission-denied reads (the two credential
+        // collections, for internship accounts) are caught individually so
+        // one denial doesn't fail the whole Promise.all.
+        const [snap, credSnap, vsnap, vCredSnap, pmSnap, tSnap] = await Promise.all([
+          db.collection('siteEquipment').get(),
+          db.collection('siteEquipmentCredentials').get().catch(()=>null),
+          db.collection('virSiteEquipment').get(),
+          db.collection('virSiteEquipmentCredentials').get().catch(()=>null),
+          db.collection('pmRecords').orderBy('createdAt','desc').get(),
+          db.collection('teamAssignments').orderBy('date','asc').get(),
+          loadUsers(), // sets allUsers.value itself — no snapshot to capture
+        ]);
+
         // Merge onto the default shape (not a full overwrite) — a site doc
         // saved before some equipment category existed in the schema (e.g.
         // "misc" for older records) would otherwise load with that field
@@ -9813,23 +9832,16 @@ createApp({
         // clicked, without needing a manual "Susun ikut…" click.
         Object.values(eq).forEach(_sortAllEquipLists);
         // Merge credentials back in from the companion collection — a
-        // permission-denied here (internship accounts, who can't read that
+        // permission-denied above (internship accounts, who can't read that
         // collection) is expected and silently ignored; equipment still
         // loads fine, just without accessUser/accessPw values (which the UI
         // hides from them anyway via canViewCredentials).
-        try {
-          const credSnap = await db.collection('siteEquipmentCredentials').get();
-          credSnap.forEach(doc => { if(eq[doc.id]) _mergeCredentials(eq[doc.id], doc.data()); });
-        } catch(e) { /* no permission — fine, see comment above */ }
+        if(credSnap) credSnap.forEach(doc => { if(eq[doc.id]) _mergeCredentials(eq[doc.id], doc.data()); });
         siteEquip.value = eq;
 
         // VIR site equipment — one doc per site holding `rooms` (shared)
         // plus two nested, fully separate equipment sets keyed 'BCD' and
         // 'Optager HD4000' (their physical asset types don't overlap).
-        const VIR_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
-        const veqRooms = {}, veqBcd = {}, veqOptager = {};
-        VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={...VIR_EQUIP_SHAPE}; });
-        const vsnap = await db.collection('virSiteEquipment').get();
         vsnap.forEach(doc=>{
           const d = doc.data();
           veqRooms[doc.id] = { rooms: d.rooms || [] };
@@ -9845,24 +9857,18 @@ createApp({
         });
         Object.values(veqBcd).forEach(_sortAllEquipLists);
         Object.values(veqOptager).forEach(_sortAllEquipLists);
-        try {
-          const vCredSnap = await db.collection('virSiteEquipmentCredentials').get();
-          vCredSnap.forEach(doc => {
-            const d = doc.data();
-            if(veqBcd[doc.id]) _mergeCredentials(veqBcd[doc.id], d['BCD']);
-            if(veqOptager[doc.id]) _mergeCredentials(veqOptager[doc.id], d['Optager HD4000']);
-          });
-        } catch(e) { /* no permission — fine, see CCTV comment above */ }
+        if(vCredSnap) vCredSnap.forEach(doc => {
+          const d = doc.data();
+          if(veqBcd[doc.id]) _mergeCredentials(veqBcd[doc.id], d['BCD']);
+          if(veqOptager[doc.id]) _mergeCredentials(veqOptager[doc.id], d['Optager HD4000']);
+        });
         virSiteEquip.value = veqRooms;
         virSiteEquipBCD.value = veqBcd;
         virSiteEquipOptager.value = veqOptager;
 
-        const pmSnap = await db.collection('pmRecords').orderBy('createdAt','desc').get();
         pmRecords.value = pmSnap.docs.map(d=>({id:d.id,...d.data()}));
+        teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()}));
 
-        // All roles need the user list now (for the online-users indicator);
-        // audit log stays admin/superadmin-only since it's sensitive.
-        await loadUsers();
         // Contract start dates now feed Site Health Score's PM-cycle
         // anchoring (see siteHealthScores) — that widget is visible to every
         // role, so contracts must load for everyone, not just admin/superadmin.
@@ -9872,9 +9878,6 @@ createApp({
         }
         initDbStorageWidgetIfStale(); // fire-and-forget — no-op for non-superadmin, cache-first for superadmin
 
-        // Load team assignments
-        const tSnap = await db.collection('teamAssignments').orderBy('date','asc').get();
-        teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()}));
         checkAutoBackup();
         // Re-check periodically too — checkAutoBackup only fires once per
         // calendar day, so re-running it is a cheap no-op except right
