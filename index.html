@@ -121,6 +121,10 @@ tr:hover td{background:#f9fbff}
 .form-group label{display:block;font-size:.82rem;font-weight:600;color:#555;margin-bottom:5px}
 .form-control{width:100%;padding:9px 12px;border:1px solid #d0d0d0;border-radius:6px;font-size:.88rem;transition:.15s}
 .form-control:focus{outline:none;border-color:#005599;box-shadow:0 0 0 3px rgba(0,85,153,.1)}
+details.form-control summary{list-style:none}
+details.form-control summary::-webkit-details-marker{display:none}
+details.form-control summary::after{content:'▾';float:right;color:#888}
+details.form-control[open] summary::after{content:'▴'}
 .form-row{display:grid;gap:14px}
 .form-row-2{grid-template-columns:1fr 1fr}
 .form-row-3{grid-template-columns:1fr 1fr 1fr}
@@ -1534,6 +1538,7 @@ tr:hover td{background:#f9fbff}
           <select class="form-control" style="width:auto;min-width:200px" v-model="warrantyFilterVendor">
             <option value="">Semua Vendor</option>
             <option v-for="v in CCTV_WARRANTY_VENDORS.filter(x=>x!=='Lain-lain')" :key="v" :value="v">{{v}}</option>
+            <option v-for="v in warrantyCustomVendors" :key="v" :value="v">{{v}}</option>
           </select>
           <select class="form-control" style="width:auto;min-width:160px" v-model="warrantyFilterStatus">
             <option value="">Semua Status</option>
@@ -1726,7 +1731,7 @@ tr:hover td{background:#f9fbff}
           </div>
           <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
-        <div v-if="!canEditEquip" class="badge badge-gray" style="display:block;margin-bottom:12px;padding:8px 12px">🔒 Paparan sahaja — hanya admin/superadmin boleh mengedit peralatan site.</div>
+        <div v-if="!canEditEquip" class="badge badge-gray" style="display:block;margin-bottom:12px;padding:8px 12px">🔒 Paparan sahaja — {{currentProject==='vir' ? 'hanya admin/superadmin boleh mengedit peralatan site VIR.' : 'hanya admin/superadmin/staff boleh mengedit peralatan site.'}}</div>
         <fieldset :disabled="!canEditEquip" style="border:0;margin:0;padding:0">
         <div class="tabs">
           <div v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Server ({{(selSiteEquip.servers||[]).length}})</div>
@@ -2172,16 +2177,20 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group">
                 <label>Storage <span class="text-muted text-sm">(boleh pilih lebih dari satu)</span></label>
-                <div class="staff-checklist" style="grid-template-columns:1fr;max-height:160px">
-                  <template v-for="type in OPTAGER_STORAGE_TYPES" :key="type">
-                    <div class="text-sm fw-600" style="margin-top:4px;color:#555">{{type}}</div>
-                    <label v-for="size in OPTAGER_STORAGE_SIZES[type]" :key="type+size" class="staff-check-item">
-                      <input type="checkbox" :checked="nServer.storage.includes(type+' '+size)" @change="toggleServerStorage(type+' '+size)">
-                      {{size}}
-                    </label>
-                  </template>
-                </div>
-                <input class="form-control" v-model="nServer.storageCustom" placeholder="Storage tambahan (pilihan, cth: SSD (2.5&quot;) 750GB)" style="margin-top:6px">
+                <details class="form-control" style="padding:0">
+                  <summary style="padding:9px 12px;cursor:pointer;list-style:none;color:#333">
+                    {{nServer.storage.length ? nServer.storage.join(', ') : '— Pilih Storage —'}}
+                  </summary>
+                  <div class="staff-checklist" style="grid-template-columns:1fr;max-height:160px;overflow-y:auto;padding:8px 12px;border-top:1px solid #eee">
+                    <template v-for="type in OPTAGER_STORAGE_TYPES" :key="type">
+                      <div class="text-sm fw-600" style="margin-top:4px;color:#555">{{type}}</div>
+                      <label v-for="size in OPTAGER_STORAGE_SIZES[type]" :key="type+size" class="staff-check-item">
+                        <input type="checkbox" :checked="nServer.storage.includes(type+' '+size)" @change="toggleServerStorage(type+' '+size)">
+                        {{size}}
+                      </label>
+                    </template>
+                  </div>
+                </details>
               </div>
               <div class="form-group"><label>GPU</label>
                 <select class="form-control" v-model="nServer.gpu"><option value="">— Pilih —</option><option v-for="o in OPTAGER_GPU" :key="o">{{o}}</option></select>
@@ -2208,7 +2217,6 @@ tr:hover td{background:#f9fbff}
               </div>
               <div class="form-group"><label>OS Product Key <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nServer.osProductKey"></div>
               <div class="form-group"><label>Optager Machine ID</label><input class="form-control" v-model="nServer.optagerMachineId"></div>
-              <div class="form-group"><label>Optager License Key</label><input class="form-control" v-model="nServer.optagerLicenseKey"></div>
               <div class="form-group"><label>Optager License Key Expiry</label><input class="form-control" type="date" v-model="nServer.optagerLicenseExpiry"></div>
               <div class="form-group">
                 <label>Fail Lesen (.lic) <span class="text-muted text-sm">(pilihan)</span></label>
@@ -2233,22 +2241,23 @@ tr:hover td{background:#f9fbff}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>OS</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>Networking</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.os}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.networking}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
+                    <td>{{s.installDate}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('servers',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="11" class="empty">Tiada server.</td></tr>
+                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="17" class="empty">Tiada server.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3101,6 +3110,30 @@ tr:hover td{background:#f9fbff}
             </template>
           </template>
 
+          <!-- SERVER SNAPSHOT — Optager HD4000 only. BCD has no Server
+               hardware, so this is strictly gated on virSystem, never just
+               project==='vir', to keep BCD's borang free of this table. -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.servers||[]).length">
+            <div class="pm-section-hdr">Senarai Server <span>({{viewPM.servers.length}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr>
+                <th style="width:4%">No.</th>
+                <th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th>
+                <th>Motherboard</th><th>Motherboard Type</th><th>Networking</th><th>OS</th>
+                <th>License Expiry</th><th>Tarikh Pasang</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(s,i) in viewPM.servers" :key="i">
+                  <td class="ctr">{{i+1}}</td>
+                  <td>{{s.name}}</td><td>{{s.processor}}</td><td>{{s.ram}}</td>
+                  <td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td>
+                  <td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.networking}}</td>
+                  <td>{{s.os}}</td><td>{{s.optagerLicenseExpiry}}</td><td>{{s.installDate}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+
           <template v-if="viewPM?.project!=='vir'">
           <p style="font-size:8.5pt;margin-bottom:6px;color:#444;font-style:italic">Berikut adalah prosedur pemeriksaan dan pengujian yang perlu dilaksanakan pada setiap sesi lawatan penyelenggaraan berjadual:</p>
 
@@ -3876,7 +3909,7 @@ tr:hover td{background:#f9fbff}
 
         <div class="card">
           <div class="card-title">☁️ Auto-Backup Cloud (Max 3)</div>
-          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali seminggu dan disimpan di Firestore (cloud) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan. Skop terhad kepada data <b>penting/operasi</b> sahaja (peralatan site &amp; rekod PM) supaya kekal di bawah had saiz dokumen Firestore — untuk backup semua data, guna Backup Manual di sebelah.</p>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali sehari (~jam 10 malam) dan disimpan di Firestore (cloud) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan (backup terlama digantikan bila yang ke-4 dibuat). Skop terhad kepada data <b>penting/operasi</b> sahaja (peralatan site &amp; rekod PM) supaya kekal di bawah had saiz dokumen Firestore — untuk backup semua data, guna Backup Manual di sebelah.</p>
           <button class="btn btn-outline btn-sm" @click="doAutoBackup" :disabled="loading" style="margin-bottom:14px">
             ⚡ Buat Auto-Backup Sekarang
           </button>
@@ -5525,7 +5558,7 @@ createApp({
     };
     const ALARM_BRANDS = Object.keys(ALARM_BRAND_MODELS);
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
-    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable'];
+    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable (HDMI)'];
     // Workstation-level PC brand/model dropdowns — only shown when Kategori
     // is "PC" (other categories keep the free-text brand/model inputs since
     // they cover too wide a range of devices for a fixed dropdown to help).
@@ -5560,10 +5593,12 @@ createApp({
       'Lain-lain': [],
     };
     // Same idea for Kategori "UPS".
-    const UPS_BRANDS = ['Neuropower','MyCamExpert','Lain-lain'];
+    const UPS_BRANDS = ['Neuropower','MyCamExpert','Right Power','Koss','Lain-lain'];
     const UPS_MODELS = {
       'Neuropower': ['Cronus 2KR (2kVA)','Cronus 3KR','Cronus 1KR','Lain-lain'],
       'MyCamExpert': ['MC10930','MC10930R','MC800VA','Lain-lain'],
+      'Right Power': ['Titan Vista 9+ 1K (1kVA)','Titan Vista 9+ 2K (2kVA)','Titan Vista 9+ 3K (3kVA)','Lain-lain'],
+      'Koss': ['Maxtron MX-1KR (1kVA)','Maxtron MX-2KR (2kVA)','Maxtron MX-3KR (3kVA)','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "UPS Battery Pack".
@@ -5590,7 +5625,7 @@ createApp({
       'Behringer': ['MIC2200','Lain-lain'],
       'Lain-lain': [],
     };
-    // Same idea for Kategori "Display Cable" — brand is always OEM (no other
+    // Same idea for Kategori "Display Cable (HDMI)" — brand is always OEM (no other
     // manufacturer used for these), so onMiscCategoryChange() auto-selects it
     // and there's deliberately no "Lain-lain" option on the brand dropdown.
     // Model is cable length.
@@ -5601,15 +5636,15 @@ createApp({
     // Lookup so the Brand/Model fields can pick the right fixed dropdown
     // per Kategori without a growing v-if chain in the template — add a
     // new category's dicts here and it's wired up automatically.
-    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS, 'Surge Protector': SURGE_PROTECTOR_BRANDS, Microphone: MICROPHONE_BRANDS, 'Mic/Line Preamplifier': MIC_PREAMP_BRANDS, 'Display Cable': DISPLAY_CABLE_BRANDS };
-    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS, 'Surge Protector': SURGE_PROTECTOR_MODELS, Microphone: MICROPHONE_MODELS, 'Mic/Line Preamplifier': MIC_PREAMP_MODELS, 'Display Cable': DISPLAY_CABLE_MODELS };
+    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS, 'PoE Inline (Surge Protector)': SURGE_PROTECTOR_BRANDS, Microphone: MICROPHONE_BRANDS, 'Mic/Line Preamplifier': MIC_PREAMP_BRANDS, 'Display Cable (HDMI)': DISPLAY_CABLE_BRANDS };
+    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS, 'PoE Inline (Surge Protector)': SURGE_PROTECTOR_MODELS, Microphone: MICROPHONE_MODELS, 'Mic/Line Preamplifier': MIC_PREAMP_MODELS, 'Display Cable (HDMI)': DISPLAY_CABLE_MODELS };
     const miscBrandOptions = computed(() => MISC_BRAND_DICTS[nMISC.category] || null);
     const miscModelOptions = computed(() => (MISC_MODEL_DICTS[nMISC.category] || {})[nMISC.brand] || []);
     // CCTV's "Lain-lain" categories were pared down to what's actually used
     // in the field, plus HDMI Ethernet Extender which wasn't tracked before.
     // AP/Router was re-added after initially being removed; UPS Battery Pack
     // and Surge Protector are new categories.
-    const MISC_CATEGORIES_CCTV = ['Monitor','TV','PC','UPS','Rack','HDMI Ethernet Extender','AP/Router','UPS Battery Pack','Surge Protector'];
+    const MISC_CATEGORIES_CCTV = ['Monitor','TV','PC','UPS','Rack','HDMI Ethernet Extender','AP/Router','UPS Battery Pack','PoE Inline (Surge Protector)','PoE Injector','PoE Media Converter (Fiber to PoE)','PoE Splitter','PoE Extender'];
     // Optager already has its own dedicated POE/Network Switch tab, so the
     // POE-related Lain-lain categories are redundant clutter there — hidden
     // for that context only, VIR/BCD keeps the full list unchanged.
@@ -5623,9 +5658,9 @@ createApp({
     // specific enough (nested hardware/software specs, license tracking)
     // that they don't fit the generic misc schema.
     const nServer = reactive({
-      name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[], storageCustom:'',
+      name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
       gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
-      os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
+      os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
       installDate:'', optagerLicenseFile:null,
     });
     const nTablet = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''});
@@ -6187,6 +6222,11 @@ createApp({
       ],
       // VIR fields
       virRoomNo:'', virRoomNoCustom:'', virSystem:'', virItems:[], _virRoomExcludedGroups:[],
+      // Optager HD4000-only equipment snapshot (BCD has no Server hardware
+      // to snapshot) — captured at room/system-select time, printed as its
+      // own "Senarai Server" table gated strictly on virSystem==='Optager
+      // HD4000' so it never bleeds into BCD's or CCTV's printed borang.
+      servers:[],
       maintType:'', pmNo:null, rootCause:'',
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
@@ -6579,7 +6619,7 @@ createApp({
     }
 
     async function saveTeam() {
-      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!canEditSchedule.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!teamModal.data.team || !teamModal.data.date) {
         teamModal.err = 'Team dan tarikh wajib diisi.'; return;
       }
@@ -6797,7 +6837,7 @@ createApp({
     watch(staffRotationDetail, v => { if(staffRotationModal.show && !v) staffRotationModal.show = false; });
 
     async function deleteTeam(t) {
-      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!canEditSchedule.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!t?.id) return;
       if(!confirm('Padam penugasan Team ' + t.team + ' ini?')) return;
       try {
@@ -6815,14 +6855,24 @@ createApp({
     ];
     const calYear  = ref(new Date().getFullYear());
     const calMonth = ref(new Date().getMonth());
+    // Jadual Penyelenggaraan is normally superadmin/admin-only, but Izwan
+    // (staff-level) was given a one-off exception to edit it too — everyone
+    // else at 'staff'/'internship' level stays view-only.
+    const SCHEDULE_EDIT_STAFF_OVERRIDE = ['izwan'];
     const canEditSchedule = computed(()=>
-      authProfile.value?.role==='superadmin' || authProfile.value?.role==='admin'
+      authProfile.value?.role==='superadmin' || authProfile.value?.role==='admin' ||
+      SCHEDULE_EDIT_STAFF_OVERRIDE.includes((authProfile.value?.username||'').toLowerCase())
     );
     const canEditContact = computed(()=>
       ['superadmin','admin','staff'].includes(authProfile.value?.role)
     );
     const canEditContract = computed(()=> isAdminRole());
-    const canEditEquip = computed(()=> isAdminRole());
+    // CCTV site equipment: staff may also add/edit/delete records (only
+    // admin+ can touch the Firestore doc for other write-restricted things
+    // elsewhere in the app). VIR stays admin+ only.
+    const canEditEquip = computed(()=>
+      isAdminRole() || (currentProject.value==='cctv' && authProfile.value?.role==='staff')
+    );
     function canEditPmRecord(r){
       return isAdminRole() || (r.createdBy && r.createdBy === authUser.value?.email);
     }
@@ -7218,6 +7268,12 @@ createApp({
       warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'',
     } });
     const warrantyFilterVendor = ref('');
+    // Custom "Lain-lain" vendor names (free-typed, see submitWarranty) so
+    // the vendor filter dropdown can actually select them — otherwise those
+    // records were only reachable through "Semua Vendor".
+    const warrantyCustomVendors = computed(() => [...new Set(
+      warranty.value.map(w => w.vendor).filter(v => v && !CCTV_WARRANTY_VENDORS.includes(v))
+    )]);
     const warrantyFilterStatus = ref('');
     async function loadWarranty() {
       try {
@@ -7287,7 +7343,13 @@ createApp({
         if(!groups[key]) groups[key] = [];
         groups[key].push(w);
       });
-      return CCTV_WARRANTY_VENDORS.filter(v => groups[v]?.length).map(v => {
+      // Vendor is resolved to the free-typed name at save time (see
+      // submitWarranty), so a custom "Lain-lain" vendor's group key won't
+      // match any of the 3 fixed CCTV_WARRANTY_VENDORS strings — list those
+      // known vendors first, then any custom ones so records don't vanish.
+      const knownVendors = CCTV_WARRANTY_VENDORS.filter(v => v !== 'Lain-lain' && groups[v]?.length);
+      const customVendors = Object.keys(groups).filter(v => !CCTV_WARRANTY_VENDORS.includes(v));
+      return [...knownVendors, ...customVendors].map(v => {
         const items = groups[v];
         const siteGroups = {};
         const siteOrder = [];
@@ -7318,8 +7380,15 @@ createApp({
     function openEditWarranty(w) {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       warrantyModal.editing = true; warrantyModal.err = '';
+      // Custom "Lain-lain" vendors are saved with the free-typed name as
+      // `vendor` (see submitWarranty), not the literal string 'Lain-lain' —
+      // so re-selecting 'Lain-lain' and restoring the typed name into
+      // vendorCustom is needed for the dropdown/custom-input to prefill.
+      const isKnownVendor = CCTV_WARRANTY_VENDORS.includes(w.vendor);
       Object.assign(warrantyModal.data, {
-        vendor:w.vendor||'', vendorCustom:'', siteId:w.siteId||'', siteName:w.siteName||'',
+        vendor: isKnownVendor ? (w.vendor||'') : 'Lain-lain',
+        vendorCustom: isKnownVendor ? '' : (w.vendor||''),
+        siteId:w.siteId||'', siteName:w.siteName||'',
         equipmentName:w.equipmentName||'', brand:w.brand||'', model:w.model||'', serial:w.serial||'',
         warrantyType:w.warrantyType||'', startDate:w.startDate||'', endDate:w.endDate||'',
         reminderDays:w.reminderDays||60, notes:w.notes||'',
@@ -7418,7 +7487,9 @@ createApp({
         <div class="header">
           <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
           <div class="header-mid">
-            <h2>Waranti Peralatan — Projek CCTV SPRM</h2>
+            <h2>Ringkasan Waranti Peralatan</h2>
+            <p style="font-weight:600;color:#333;font-size:8pt;line-height:1.3">TENDER BAGI PERKHIDMATAN PENYENGGARAAN PERKAKASAN SERTA PERISIAN KAMERA LITAR TERTUTUP (CCTV) UNTUK 17 PEJABAT SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM) BAGI TEMPOH 33 BULAN</p>
+            <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
             <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
           </div>
           <img src="logo_sprm.png" alt="SPRM" class="header-logo">
@@ -7585,9 +7656,9 @@ createApp({
       nRoom: {name:'', system:'BCD', excludedGroups:[]},
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[], storageCustom:'',
+      nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
-        os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseKey:'', optagerLicenseExpiry:'',
+        os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
         installDate:'', optagerLicenseFile:null},
       nTablet: {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''},
     };
@@ -7792,7 +7863,17 @@ createApp({
       // so that room's own excludedGroups would never get applied.
       if(!pm._isEdit && pm.virSystem) {
         pm.virItems = virFilterExcluded(virChecklistFor(pm.virSystem), pm._virRoomExcludedGroups).map(t => ({...t, status:'ok', nota:''}));
+        _loadPmServersSnapshot();
       }
+    }
+    // Optager HD4000-only Server equipment snapshot for the printed borang
+    // — pulled from the SAME reactive store the Optager "Urus Peralatan
+    // Site" screen edits (virSiteEquipOptager), never virSiteEquipBCD, so
+    // BCD's PM/CM borang can never end up with a Server table.
+    function _loadPmServersSnapshot() {
+      if(currentProject.value !== 'vir' || pm.virSystem !== 'Optager HD4000') { pm.servers = []; return; }
+      const eq = virSiteEquipOptager.value[pm.siteId];
+      pm.servers = (eq?.servers || []).map(s => ({...s}));
     }
     // Regenerates the checklist whenever the system changes — but NEVER
     // during an edit: editRecord() already restored pm.virItems from the
@@ -7805,6 +7886,7 @@ createApp({
     watch(() => pm.virSystem, (sys) => {
       if(pm._isEdit || currentProject.value !== 'vir' || !sys) return;
       pm.virItems = virFilterExcluded(virChecklistFor(sys), pm._virRoomExcludedGroups||[]).map(t => ({...t, status:'ok', nota:''}));
+      _loadPmServersSnapshot();
     });
 
     function openSites(proj) {
@@ -7877,7 +7959,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -7952,6 +8034,7 @@ createApp({
     // admin to use manual file-download backup instead if it happens.
     const BACKUP_COLLECTION = 'systemBackups';
     const BACKUP_MAX_BYTES = 900000; // stay safely under Firestore's ~1MiB document limit
+    let _autoBackupWatcher = null;
 
     async function doAutoBackup() {
       const data = collectBackupData();
@@ -7985,11 +8068,21 @@ createApp({
       autoBackups.value = snap.docs.map(d => ({ id:d.id, timestamp:d.data().timestamp, size:d.data().sizeBytes }));
     }
 
+    // Daily at ~10pm local time — there's no server-side cron in a static
+    // client app, so this fires once per calendar day (by local date, not
+    // last-24h) the first time ANY logged-in session checks in at/after
+    // 22:00. If nobody has the app open right at 10pm, the first check-in
+    // after that time that same day still counts as "today's" backup —
+    // catch-up, not skipped. Retention (FIFO, oldest replaces first once at
+    // MAX_AUTO_BACKUPS) is already handled inside doAutoBackup().
+    const AUTO_BACKUP_HOUR = 22;
     async function checkAutoBackup() {
       try {
         const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').limit(1).get();
         const last = snap.docs[0]?.data()?.timestamp;
-        if(!last || Date.now() - new Date(last).getTime() > 7*24*60*60*1000) {
+        const lastDay = last ? _localDateStr(new Date(last)) : null;
+        const isDueToday = lastDay !== _localDateStr() && new Date().getHours() >= AUTO_BACKUP_HOUR;
+        if(isDueToday) {
           await doAutoBackup();
         } else {
           await refreshAutoBackups();
@@ -8056,8 +8149,13 @@ createApp({
         if(data.siteEquip) {
           Object.entries(data.siteEquip).forEach(([id,val])=>{
             const merged = {...EQUIP_SHAPE_CCTV, ...val};
+            // Local state keeps the full merged copy (with credentials, if
+            // the backup had them) so whoever restores sees it immediately
+            // — only the Firestore write is split into the two collections.
             restoredSiteEquip[id] = merged;
-            batch.set(db.collection('siteEquipment').doc(id), merged);
+            const { stripped, creds } = _splitCredentials(merged);
+            batch.set(db.collection('siteEquipment').doc(id), stripped);
+            batch.set(db.collection('siteEquipmentCredentials').doc(id), creds);
           });
         }
         // VIR's rooms + BCD + Optager all live in the SAME Firestore doc
@@ -8077,7 +8175,10 @@ createApp({
             restoredVirRooms[id] = { rooms };
             restoredVirBcd[id] = bcd;
             restoredVirOptager[id] = optager;
-            batch.set(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcd, 'Optager HD4000': optager }, { merge: true });
+            const bcdSplit = _splitCredentials(bcd);
+            const optagerSplit = _splitCredentials(optager);
+            batch.set(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped }, { merge: true });
+            batch.set(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds }, { merge: true });
           });
         }
         await _fw(batch.commit());
@@ -9182,7 +9283,7 @@ createApp({
       switches: ['name','brand','model','serial'],
       alarms:   ['name','type','brand','model','serial'],
       misc:     ['name','category','brand','model','serial'],
-      servers:  ['name','processor','ram','storage','gpu','mobo','os','optagerMachineId','optagerLicenseKey'],
+      servers:  ['name','processor','ram','storage','gpu','mobo','moboType','networking','os','optagerMachineId'],
       tablets:  ['name','brand','model','serial','controlAppMachineId'],
     };
     const IMPORT_HEADER_HINTS = {
@@ -9636,6 +9737,52 @@ createApp({
       ['nvr','switches','alarms','misc'].forEach(k => _sortByName(eq[k]));
     }
 
+    // ── Credential separation (accessUser/accessPw) ─────────────────────
+    // These fields exist on cameras/nvr/switches/alarms/misc items. They
+    // used to live inline in the same siteEquipment/virSiteEquipment doc
+    // that everyone signed-in can read — meaning internship accounts
+    // (deliberately excluded from *seeing* credentials in the UI, see
+    // canViewCredentials) could still pull them straight from Firestore via
+    // devtools, since Firestore rules can't restrict individual fields
+    // within one document. Splitting them into a companion collection with
+    // its own read rule (superadmin/admin/staff only) actually enforces
+    // that at the data layer. Kept invisible to the rest of the app: items
+    // in local reactive state ALWAYS carry accessUser/accessPw as normal
+    // fields (merged back in right after load) — only loadAll()/
+    // _writeSiteEquipToFirestore()/applyRestore() know about the split.
+    const CRED_EQUIP_KINDS = ['cameras','nvr','switches','alarms','misc'];
+    function _splitCredentials(equipObj) {
+      const stripped = { ...equipObj };
+      const creds = {};
+      CRED_EQUIP_KINDS.forEach(kind => {
+        const list = equipObj[kind];
+        if(!Array.isArray(list)) return;
+        const kindCreds = {};
+        stripped[kind] = list.map(item => {
+          if(item._uid && (item.accessUser || item.accessPw)) {
+            kindCreds[item._uid] = { accessUser: item.accessUser||'', accessPw: item.accessPw||'' };
+          }
+          const { accessUser, accessPw, ...rest } = item;
+          return rest;
+        });
+        creds[kind] = kindCreds; // always set, even {} — so a save that clears the last credential in a kind overwrites (not leaves stale) the companion doc's entry
+      });
+      return { stripped, creds };
+    }
+    function _mergeCredentials(equipObj, creds) {
+      if(!equipObj || !creds) return equipObj;
+      CRED_EQUIP_KINDS.forEach(kind => {
+        const list = equipObj[kind];
+        const kindCreds = creds[kind];
+        if(!Array.isArray(list) || !kindCreds) return;
+        list.forEach(item => {
+          const c = item._uid && kindCreds[item._uid];
+          if(c) { item.accessUser = c.accessUser||''; item.accessPw = c.accessPw||''; }
+        });
+      });
+      return equipObj;
+    }
+
     function confirmImportRows() {
       const kind = importState.kind;
       const rows = importState.rows.filter(r => r._include);
@@ -9665,6 +9812,15 @@ createApp({
         // site's equipment page is opened (auto-save) or "Simpan Semua" is
         // clicked, without needing a manual "Susun ikut…" click.
         Object.values(eq).forEach(_sortAllEquipLists);
+        // Merge credentials back in from the companion collection — a
+        // permission-denied here (internship accounts, who can't read that
+        // collection) is expected and silently ignored; equipment still
+        // loads fine, just without accessUser/accessPw values (which the UI
+        // hides from them anyway via canViewCredentials).
+        try {
+          const credSnap = await db.collection('siteEquipmentCredentials').get();
+          credSnap.forEach(doc => { if(eq[doc.id]) _mergeCredentials(eq[doc.id], doc.data()); });
+        } catch(e) { /* no permission — fine, see comment above */ }
         siteEquip.value = eq;
 
         // VIR site equipment — one doc per site holding `rooms` (shared)
@@ -9689,6 +9845,14 @@ createApp({
         });
         Object.values(veqBcd).forEach(_sortAllEquipLists);
         Object.values(veqOptager).forEach(_sortAllEquipLists);
+        try {
+          const vCredSnap = await db.collection('virSiteEquipmentCredentials').get();
+          vCredSnap.forEach(doc => {
+            const d = doc.data();
+            if(veqBcd[doc.id]) _mergeCredentials(veqBcd[doc.id], d['BCD']);
+            if(veqOptager[doc.id]) _mergeCredentials(veqOptager[doc.id], d['Optager HD4000']);
+          });
+        } catch(e) { /* no permission — fine, see CCTV comment above */ }
         virSiteEquip.value = veqRooms;
         virSiteEquipBCD.value = veqBcd;
         virSiteEquipOptager.value = veqOptager;
@@ -9712,6 +9876,12 @@ createApp({
         const tSnap = await db.collection('teamAssignments').orderBy('date','asc').get();
         teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()}));
         checkAutoBackup();
+        // Re-check periodically too — checkAutoBackup only fires once per
+        // calendar day, so re-running it is a cheap no-op except right
+        // after 10pm, when it catches sessions left open through the mark
+        // instead of only checking once at login.
+        clearInterval(_autoBackupWatcher);
+        _autoBackupWatcher = setInterval(checkAutoBackup, 30*60*1000);
         buildNotifications();
       } catch(e) {
         console.error(e);
@@ -9876,6 +10046,7 @@ createApp({
     }
 
     async function saveCpModal() {
+      if(!canEditContact.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!cpModal.siteId) return;
       cpModal.err = '';
       const cleaned = cpModal.contacts
@@ -9951,6 +10122,7 @@ createApp({
     }
 
     async function saveKModal() {
+      if(!canEditKontraktor.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       kModal.err = '';
       if(!kModal.name.trim()) { kModal.err = 'Sila masukkan nama kontraktor.'; return; }
       if(!isValidPhone(kModal.phone)) { kModal.err = 'Format no. telefon tidak sah.'; return; }
@@ -9969,6 +10141,7 @@ createApp({
     }
 
     async function deleteKontraktor(id) {
+      if(!canEditKontraktor.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!confirm('Padam kontraktor ini?')) return;
       const proj = kontraktorLuarProject.value;
       const list = (kontraktorLuar.value[proj] || []).filter(c => c.id !== id);
@@ -10405,17 +10578,13 @@ createApp({
             nServer[field+'Custom'] = '';
           }
         });
-        // Storage: split the saved list into ones that match a known
-        // checkbox option vs anything else (crowdsourced/legacy free text —
-        // including a pre-multi-select single string, since older records
-        // saved `storage` as one string, not an array) — the latter goes
-        // into the single "tambahan" custom text field, joined if there's
-        // more than one such value.
-        {
-          const saved = Array.isArray(item.storage) ? item.storage : (item.storage ? [item.storage] : []);
-          nServer.storage = saved.filter(v => OPTAGER_STORAGE.includes(v));
-          nServer.storageCustom = saved.filter(v => !OPTAGER_STORAGE.includes(v)).join(', ');
-        }
+        // Storage: normalize to an array (older records saved `storage` as
+        // one plain string, not an array). Any legacy/crowdsourced value
+        // that isn't one of the fixed checkbox options is kept as-is in the
+        // array rather than dropped — there's no "Lain-lain" custom text
+        // field for storage anymore, so it just won't have its own checkbox
+        // ticked, but re-saving won't silently lose it.
+        nServer.storage = Array.isArray(item.storage) ? item.storage : (item.storage ? [item.storage] : []);
       } else if(key === 'misc') {
         // Saved category may be a free-text custom value, or one from a
         // DIFFERENT context's list (e.g. a VIR-only category on a CCTV
@@ -10632,7 +10801,7 @@ createApp({
     // to fill in themselves.
     function onMiscCategoryChange() {
       nMISC.model = ''; nMISC.modelCustom = '';
-      nMISC.brand = nMISC.category === 'Display Cable' ? 'OEM' : '';
+      nMISC.brand = nMISC.category === 'Display Cable (HDMI)' ? 'OEM' : '';
       nMISC.brandCustom = '';
     }
     function addMisc() {
@@ -10675,7 +10844,7 @@ createApp({
         name: nServer.name,
         processor: _resolveDropdownCustom(nServer.processor, nServer.processorCustom),
         ram: _resolveDropdownCustom(nServer.ram, nServer.ramCustom),
-        storage: [...nServer.storage, ...(nServer.storageCustom.trim() ? [nServer.storageCustom.trim()] : [])],
+        storage: [...nServer.storage],
         gpu: _resolveDropdownCustom(nServer.gpu, nServer.gpuCustom),
         mobo: _resolveDropdownCustom(nServer.mobo, nServer.moboCustom),
         moboType: _resolveDropdownCustom(nServer.moboType, nServer.moboTypeCustom),
@@ -10683,7 +10852,6 @@ createApp({
         os: _resolveDropdownCustom(nServer.os, nServer.osCustom),
         osProductKey: nServer.osProductKey,
         optagerMachineId: nServer.optagerMachineId,
-        optagerLicenseKey: nServer.optagerLicenseKey,
         optagerLicenseExpiry: nServer.optagerLicenseExpiry,
         optagerLicenseFile: nServer.optagerLicenseFile,
         installDate: nServer.installDate,
@@ -10786,18 +10954,27 @@ createApp({
     // flight, and reading selSite.value after the await would log the audit
     // entry (or write the data) under whatever site they've since switched to.
     async function _writeSiteEquipToFirestore(opts = {}) {
-      if(!selSite.value || !isAdminRole()) return;
+      if(!selSite.value || !canEditEquip.value) return;
       const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
+      const credCol = currentProject.value === 'vir' ? 'virSiteEquipmentCredentials' : 'siteEquipmentCredentials';
       const siteId = selSite.value.id;
       const siteLabel = selSite.value?.name || selSite.value?.id;
+      // accessUser/accessPw are split out into a companion doc with its own
+      // (stricter) read rule — see _splitCredentials — so the main doc
+      // written here never carries them, regardless of who's saving.
+      const { stripped, creds } = _splitCredentials(activeEquip()[siteId]);
       // VIR keeps rooms + both systems' equipment in ONE doc, under distinct
       // top-level keys (merge:true so writing one doesn't clobber the
       // others): { rooms:[...], BCD:{...}, 'Optager HD4000':{...} }.
       const data = currentProject.value === 'vir'
-        ? { rooms: virSiteEquip.value[siteId]?.rooms || [], [equipVirSystem.value]: activeEquip()[siteId] }
-        : activeEquip()[siteId];
+        ? { rooms: virSiteEquip.value[siteId]?.rooms || [], [equipVirSystem.value]: stripped }
+        : stripped;
+      const credData = currentProject.value === 'vir'
+        ? { [equipVirSystem.value]: creds }
+        : creds;
       try {
         await _fw(db.collection(col).doc(siteId).set(data, { merge: true }));
+        await _fw(db.collection(credCol).doc(siteId).set(credData, { merge: true }));
         await logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
         if(opts.toast !== false) showToast('Peralatan berjaya disimpan!');
@@ -10954,6 +11131,10 @@ createApp({
             virRoomNo: (pm.virRoomNo==='Lain-lain' && pm.virRoomNoCustom.trim()) ? pm.virRoomNoCustom.trim() : pm.virRoomNo,
             virSystem: pm.virSystem || 'BCD',
             virItems: JSON.parse(JSON.stringify(pm.virItems)),
+            // Optager HD4000-only — stays [] for BCD records (see
+            // _loadPmServersSnapshot), so a BCD borang never carries a
+            // Server snapshot even accidentally.
+            servers: JSON.parse(JSON.stringify(pm.servers||[])),
           } : {
             cameras:[...pm.cameras], nvr:[...pm.nvr], hdd:[...pm.hdd],
             switches:[...pm.switches], alarms:[...pm.alarms], misc:[...pm.misc],
@@ -11026,6 +11207,9 @@ createApp({
         const editRoomMatch = (virSiteEquip.value[pm.siteId]?.rooms||[]).find(rm => rm.name === pm.virRoomNo);
         pm._virRoomExcludedGroups = editRoomMatch ? [...(editRoomMatch.excludedGroups||[])] : [];
         pm.virItems = r.virItems ? JSON.parse(JSON.stringify(r.virItems)) : virFilterExcluded(virChecklistFor(pm.virSystem), pm._virRoomExcludedGroups).map(t=>({...t, status:'ok', nota:''}));
+        // Optager-only snapshot — legacy/BCD records simply have no
+        // `servers` field, so this naturally stays [] for them.
+        pm.servers = r.servers ? JSON.parse(JSON.stringify(r.servers)) : [];
         pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
         pm.support=[
           {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
@@ -12810,7 +12994,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
-      CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount,
+      CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
       vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract,
