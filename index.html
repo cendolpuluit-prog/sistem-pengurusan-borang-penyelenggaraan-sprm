@@ -1598,12 +1598,13 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="warranty-site-header">📍 {{site.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{site.items.length}} peralatan)</span></div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Peralatan</th><th>Brand / Model</th><th>No. Siri</th><th>Tempoh Waranti</th><th>Status</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th>Peralatan</th><th>Brand / Model</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="w in site.items" :key="w.id">
                     <td>{{w.equipmentName||'-'}}</td>
                     <td>{{w.brand}} {{w.model}}</td>
                     <td>{{w.serial||'-'}}</td>
+                    <td style="font-size:.8rem">{{w.warrantyType||'-'}}</td>
                     <td style="font-size:.8rem">{{fmtDate(w.startDate)}} — {{fmtDate(w.endDate)}}</td>
                     <td>
                       <span :class="['expiry-badge', warrantyStatus(w)]">
@@ -7443,7 +7444,7 @@ createApp({
         'Tempoh Jaminan Kontrak': vendorContracts.value[w.vendor] ? fmtDate(vendorContracts.value[w.vendor]) : '-',
         'Site': w.siteName||'-', 'Peralatan': w.equipmentName||'-',
         'Brand': w.brand||'-', 'Model': w.model||'-', 'No. Siri': w.serial||'-', 'Jenis Waranti': w.warrantyType||'-',
-        'Tarikh Mula': fmtDate(w.startDate), 'Tarikh Tamat': fmtDate(w.endDate),
+        'Tempoh Waranti': `${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}`,
         'Status': WARRANTY_STATUS_LABEL[warrantyStatus(w)], 'Nota': w.notes||'-',
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
@@ -7460,12 +7461,13 @@ createApp({
         <h3 style="color:#003366;margin:16px 0 4px">${g.vendor} — Tempoh Jaminan Kontrak : ${vendorContracts.value[g.vendor] ? fmtDate(vendorContracts.value[g.vendor]) : '-'}</h3>
         ${g.sites.map(site => `
           <h4 style="color:#333;margin:10px 0 2px;font-size:9.5pt">📍 ${(site.siteName||'-').replace(/</g,'&lt;')} (${site.items.length} peralatan)</h4>
-          <table><thead><tr><th>Peralatan</th><th>Brand/Model</th><th>No. Siri</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Status</th></tr></thead>
+          <table><thead><tr><th>Peralatan</th><th>Brand/Model</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th></tr></thead>
           <tbody>${site.items.map(w => `<tr>
             <td>${(w.equipmentName||'-').replace(/</g,'&lt;')}</td>
             <td>${(w.brand||'').replace(/</g,'&lt;')} ${(w.model||'').replace(/</g,'&lt;')}</td>
             <td>${(w.serial||'-').replace(/</g,'&lt;')}</td>
-            <td>${fmtDate(w.startDate)}</td><td>${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyStatus(w)]}</td>
+            <td>${(w.warrantyType||'-').replace(/</g,'&lt;')}</td>
+            <td>${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyStatus(w)]}</td>
           </tr>`).join('')}</tbody></table>`).join('')}
       `).join('');
       const w2 = window.open('','_blank','width=1100,height=750');
@@ -7603,10 +7605,10 @@ createApp({
         g.sites.forEach(site => {
           children.push(siteHdr(`📍 ${site.siteName||'-'} (${site.items.length} peralatan)`));
           children.push(makeTable(
-            ['Peralatan','Brand/Model','No. Siri','Tarikh Mula','Tarikh Tamat','Status'],
+            ['Peralatan','Brand/Model','No. Siri','Jenis Waranti','Tempoh Waranti','Status'],
             site.items.map(w => [
-              w.equipmentName||'-', `${w.brand||''} ${w.model||''}`.trim()||'-', w.serial||'-',
-              fmtDate(w.startDate), fmtDate(w.endDate), WARRANTY_STATUS_LABEL[warrantyStatus(w)],
+              w.equipmentName||'-', `${w.brand||''} ${w.model||''}`.trim()||'-', w.serial||'-', w.warrantyType||'-',
+              `${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}`, WARRANTY_STATUS_LABEL[warrantyStatus(w)],
             ])
           ));
         });
