@@ -4106,8 +4106,9 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== ADD/EDIT WARANTI PERALATAN MODAL ====== -->
-      <div v-if="warrantyModal.show" class="modal-bg" @click.self="warrantyModal.show=false">
-        <div class="modal">
+      <div v-if="warrantyModal.show" class="modal-bg">
+        <div class="modal" style="position:relative">
+          <button @click="warrantyModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
           <h3>{{warrantyModal.editing?'Edit Waranti Peralatan':'Tambah Waranti Peralatan'}}</h3>
           <div class="form-row form-row-2">
             <div class="form-group"><label>Vendor / Kontraktor Asal *</label>
@@ -10218,7 +10219,11 @@ createApp({
     }
 
     async function toggleFreeze(u) {
-      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      // Firestore rule for users/{userId} only lets superadmin update another
+      // account's `disabled` field — match that here (not isAdminRole(),
+      // which also passes for admin) so this doesn't silently
+      // permission-deny if the user-mgmt page ever opens up to admin+.
+      if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const newState = !u.disabled;
       try {
         await db.collection('users').doc(u.id).update({ disabled: newState });
@@ -10229,7 +10234,9 @@ createApp({
     }
 
     async function deleteUser(u) {
-      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      // Same rationale as toggleFreeze() above — matches Firestore rule
+      // (superadmin-only delete on users/{userId}).
+      if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(u.role==='superadmin'){ showToast('Tidak boleh padam akaun Superadmin.','error'); return; }
       if(!confirm(`Padam pengguna @${u.username}? Tindakan ini tidak boleh dibatalkan.`)) return;
       try {
