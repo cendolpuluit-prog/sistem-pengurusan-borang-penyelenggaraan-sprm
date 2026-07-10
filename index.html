@@ -7263,7 +7263,7 @@ createApp({
     // maintenance) — deliberately NOT wired into siteEquipment/pmRecords;
     // it's a separate collection admins key in by hand purely for
     // reference/reporting, so borang PM/CM stay completely unaffected.
-    const CCTV_WARRANTY_VENDORS = ['MK Keratan Sdn Bhd','Data Karisma Sdn Bhd','VME Broadcast Sdn Bhd','Lain-lain'];
+    const CCTV_WARRANTY_VENDORS = ['MK Eratan Sdn Bhd','Data Karisma Sdn Bhd','VME Broadcast Sdn Bhd','Lain-lain'];
     const warranty = ref([]);
     const warrantyModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
       vendor:'', vendorCustom:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
@@ -7478,9 +7478,11 @@ createApp({
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
           h2{color:#003366;margin-bottom:2px}
           p{color:#555;font-size:8.5pt;margin-top:0}
-          .header{display:flex;align-items:center;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
           .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
           .header-mid{text-align:center;flex:1}
+          .header-side{flex-shrink:0;text-align:right}
+          .header-generated{font-style:italic;color:#888;font-size:7.5pt;margin:4px 0 0}
           table{width:100%;border-collapse:collapse;margin-top:6px}
           th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
           td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt}
@@ -7493,9 +7495,11 @@ createApp({
             <h2>Ringkasan Waranti Peralatan Sistem CCTV</h2>
             <p style="font-weight:600;color:#333;font-size:8pt;line-height:1.3">TENDER BAGI PERKHIDMATAN PENYENGGARAAN PERKAKASAN SERTA PERISIAN KAMERA LITAR TERTUTUP (CCTV) UNTUK 17 PEJABAT SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM) BAGI TEMPOH 33 BULAN</p>
             <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
-            <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
           </div>
-          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+          <div class="header-side">
+            <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} rekod</p>
+          </div>
         </div>
         ${groupsHtml}
       </body></html>`);
@@ -7558,8 +7562,9 @@ createApp({
         });
       }
 
+      const list = warrantyFiltered.value;
       const children = [];
-      // ── Header: Daya One logo (kiri) & SPRM logo (kanan) ──
+      // ── Header: Daya One logo (kiri) & SPRM logo + "Dijana pada" (kanan) ──
       try {
         const [dayaOneBuf, sprmBuf] = await Promise.all([
           fetch('logo_dayaone.png').then(r => r.arrayBuffer()),
@@ -7573,7 +7578,17 @@ createApp({
               verticalAlign: VerticalAlign.CENTER,
             }),
             new TableCell({
-              children: [new Paragraph({ children: [new ImageRun({ data: sprmBuf, transformation: { width: 130, height: 44 } })], alignment: AlignmentType.RIGHT })],
+              children: [
+                new Paragraph({ children: [new ImageRun({ data: sprmBuf, transformation: { width: 130, height: 44 } })], alignment: AlignmentType.RIGHT }),
+                new Paragraph({
+                  children: [new TextRun({ text: `Dijana pada ${new Date().toLocaleString('ms-MY')}`, italics: true, color: '888888', size: 12 })],
+                  alignment: AlignmentType.RIGHT, spacing: { before: 20 },
+                }),
+                new Paragraph({
+                  children: [new TextRun({ text: `${list.length} rekod`, italics: true, color: '888888', size: 12 })],
+                  alignment: AlignmentType.RIGHT,
+                }),
+              ],
               borders: { top: bNone(), left: bNone(), right: bNone(), bottom: { style: BorderStyle.SINGLE, size: 12, color: BLUE } },
               verticalAlign: VerticalAlign.CENTER,
             }),
@@ -7589,13 +7604,7 @@ createApp({
         children: [new TextRun({ text: 'RINGKASAN WARANTI PERALATAN SISTEM CCTV', color: WHITE, bold: true, size: 22 })],
         shading: { type: ShadingType.SOLID, color: BLUE },
         alignment: AlignmentType.CENTER,
-        spacing: { before: 100, after: 40 },
-      }));
-      const list = warrantyFiltered.value;
-      children.push(new Paragraph({
-        children: [new TextRun({ text: `Dijana pada ${new Date().toLocaleString('ms-MY')}  |  ${list.length} rekod`, italics: true, color: '555555', size: 15 })],
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 100 },
+        spacing: { before: 100, after: 100 },
       }));
 
       // ── Vendor groups (nested by site — a site commonly has many items,
