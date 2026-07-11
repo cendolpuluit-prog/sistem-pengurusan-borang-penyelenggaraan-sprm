@@ -6457,7 +6457,7 @@ createApp({
           // deleted since the crash, we can't safely guess which OTHER
           // room it belongs to, so skip rather than risk misfiling real
           // recorded equipment into the wrong room.
-          const roomStillExists = draft.roomUid === '__unassigned__' ||
+          const roomStillExists = draft.roomUid === 'legacyUnassigned' ||
             (virSiteEquip.value[site.id]?.rooms || []).some(r => r._uid === draft.roomUid);
           if(!roomStillExists) {
             clearEquipDraftLocal();
@@ -7796,6 +7796,14 @@ createApp({
       return _mergeOptionList(builtIn, custom);
     }
 
+    // 'model__'+equipType+'__'+brand+'__'+proj doc IDs below embed the
+    // free-typed "Lain-lain" brand name straight into a Firestore path — a
+    // brand containing "/" would break the doc reference (Firestore reads
+    // "/" as a path separator inside .doc()), same failure class as the
+    // loginAttempts bug above (see _safeLoginAttemptId), just a lower-
+    // likelihood input surface. equipType/proj/listKey are always fixed
+    // app literals, never user text, so only the brand portion needs this.
+    function _safeIdPart(s) { return String(s||'').replace(/[/\\.]/g, '_'); }
     async function _maybeAddCustomBrand(listKey, brand) {
       if(!BRAND_LISTS[listKey] || !brand || brand === 'Lain-lain') return;
       const known = brandOptionsFor(listKey).map(b => b.trim().toLowerCase());
@@ -7823,7 +7831,7 @@ createApp({
       if(!customModels[proj][equipType][brand]) customModels[proj][equipType][brand] = [];
       customModels[proj][equipType][brand].push(val);
       try {
-        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand+'__'+proj).set({
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+_safeIdPart(brand)+'__'+proj).set({
           kind: 'model', equipType, brand, project: proj,
           items: firebase.firestore.FieldValue.arrayUnion(val),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -7854,7 +7862,7 @@ createApp({
       if(idx === -1) return;
       list.splice(idx, 1);
       try {
-        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand+'__'+project).set({
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+_safeIdPart(brand)+'__'+project).set({
           kind: 'model', equipType, brand, project,
           items: firebase.firestore.FieldValue.arrayRemove(model),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -7868,7 +7876,7 @@ createApp({
       const { equipType, project, brand } = customEquipCleanup;
       if(!brand || !confirm(`Padam SEMUA model custom untuk ${brand} (${project.toUpperCase()})?`)) return;
       try {
-        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+brand+'__'+project).delete();
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+_safeIdPart(brand)+'__'+project).delete();
         customModels[project][equipType][brand] = [];
         await logAudit('CUSTOM_MODEL_CLEAR_ALL', `[${project.toUpperCase()}] ${equipType}/${brand}`);
         showToast('Semua model custom untuk brand ini dipadam.');
@@ -7890,7 +7898,7 @@ createApp({
     // multiple Optager rooms at one site (e.g. 4 rooms) run identical gear
     // but each has its OWN serial numbers, so equipment must be tracked per
     // room, not lumped together. Shape: { [siteId]: { byRoom: { [roomUid]:
-    // {cameras:[],nvr:[],...} } } }. A reserved '__unassigned__' room-uid
+    // {cameras:[],nvr:[],...} } } }. A reserved 'legacyUnassigned' room-uid
     // bucket holds equipment migrated from the old (pre-room-split) flat
     // shape, since there's no way to auto-guess which real room it belonged
     // to — see _normalizeOptagerRec.
@@ -7915,7 +7923,7 @@ createApp({
     // once past the picker).
     const currentOptagerRoomName = computed(() => {
       if(!selSite.value || !equipVirRoomUid.value) return '';
-      if(equipVirRoomUid.value === '__unassigned__') return 'Data Lama (Belum Diagihkan Ikut Bilik)';
+      if(equipVirRoomUid.value === 'legacyUnassigned') return 'Data Lama (Belum Diagihkan Ikut Bilik)';
       const room = (virSiteEquip.value[selSite.value.id]?.rooms || []).find(r => r._uid === equipVirRoomUid.value);
       return room?.name || '';
     });
@@ -9091,9 +9099,25 @@ createApp({
     // ---- Auth ----
     // ── Login lockout (best-effort, client+Firestore only — see
     // firestore.rules comment on /loginAttempts for the honest caveat) ──
+    // Turns arbitrary user-typed login text into a Firestore-safe document
+    // ID for the loginAttempts collection. Raw usernames were being used
+    // directly as doc IDs — a username containing "/" gets interpreted as
+    // a Firestore path separator (breaking the doc reference entirely), and
+    // a username that happens to start+end with "__" (e.g. "__test__")
+    // hits Firestore's reserved __*__ doc-ID pattern and throws. Both are
+    // reachable by literally anyone typing at the login screen, and both
+    // failures were being silently swallowed (best-effort catch), so the
+    // anti-bruteforce lockout would quietly stop working for that username
+    // with zero visible error. Prefixing with a fixed literal guarantees
+    // the result can never match __*__, and stripping "/" (plus any other
+    // non-alphanumeric) guarantees it's always a flat, valid doc ID.
+    function _safeLoginAttemptId(username) {
+      const cleaned = String(username||'').replace(/[^a-zA-Z0-9_-]/g, '_').replace(/^_+|_+$/g, '');
+      return 'u_' + (cleaned || 'unknown');
+    }
     async function checkLoginLockout(username) {
       try {
-        const doc = await db.collection('loginAttempts').doc(username).get();
+        const doc = await db.collection('loginAttempts').doc(_safeLoginAttemptId(username)).get();
         if(doc.exists) {
           const d = doc.data();
           if(d.lockedUntil && d.lockedUntil.toMillis && d.lockedUntil.toMillis() > Date.now()) {
@@ -9105,7 +9129,7 @@ createApp({
     }
     async function recordLoginFailure(username) {
       try {
-        const ref = db.collection('loginAttempts').doc(username);
+        const ref = db.collection('loginAttempts').doc(_safeLoginAttemptId(username));
         const doc = await ref.get();
         const newCount = Math.min((doc.exists ? (doc.data().count||0) : 0) + 1, 20);
         const update = { count: newCount, lastAttempt: firebase.firestore.FieldValue.serverTimestamp() };
@@ -9115,7 +9139,7 @@ createApp({
     }
     async function clearLoginFailures(username) {
       try {
-        await db.collection('loginAttempts').doc(username).set({ count:0, lockedUntil:null, lastAttempt: firebase.firestore.FieldValue.serverTimestamp() });
+        await db.collection('loginAttempts').doc(_safeLoginAttemptId(username)).set({ count:0, lockedUntil:null, lastAttempt: firebase.firestore.FieldValue.serverTimestamp() });
       } catch(e) { /* best-effort */ }
     }
 
@@ -9925,7 +9949,7 @@ createApp({
     // {byRoom:{...}} shape. Handles three cases: already room-scoped (new
     // data), the old flat pre-room-split shape (real recorded equipment
     // that can't be auto-assigned to a room — parked under a reserved
-    // '__unassigned__' bucket so it's never silently dropped), or empty.
+    // 'legacyUnassigned' bucket so it's never silently dropped), or empty.
     function _normalizeOptagerRec(raw) {
       if(!raw) return { byRoom: {} };
       if(raw.byRoom) {
@@ -9934,7 +9958,7 @@ createApp({
         return { byRoom };
       }
       if(Object.keys(raw).length) {
-        return { byRoom: { __unassigned__: {...VIR_ROOM_EQUIP_SHAPE, ...raw} } };
+        return { byRoom: { legacyUnassigned: {...VIR_ROOM_EQUIP_SHAPE, ...raw} } };
       }
       return { byRoom: {} };
     }
@@ -9957,9 +9981,9 @@ createApp({
     function optagerRoomChoicesForSite(siteId) {
       const rooms = (virSiteEquip.value[siteId]?.rooms || []).filter(r => r.system === 'Optager HD4000');
       const choices = rooms.map(r => ({ uid: r._uid, name: r.name }));
-      const unassigned = virSiteEquipOptager.value[siteId]?.byRoom?.__unassigned__;
+      const unassigned = virSiteEquipOptager.value[siteId]?.byRoom?.legacyUnassigned;
       const hasUnassignedData = unassigned && EQUIP_KINDS.some(k => (unassigned[k]||[]).length);
-      if(hasUnassignedData) choices.push({ uid: '__unassigned__', name: '⚠️ Data Lama (Belum Diagihkan Ikut Bilik)' });
+      if(hasUnassignedData) choices.push({ uid: 'legacyUnassigned', name: '⚠️ Data Lama (Belum Diagihkan Ikut Bilik)' });
       return choices;
     }
     // True if a room's Optager equipment bucket actually has anything
@@ -9969,19 +9993,19 @@ createApp({
       const bucket = virSiteEquipOptager.value[siteId]?.byRoom?.[roomUid];
       return !!bucket && EQUIP_KINDS.some(k => (bucket[k]||[]).length);
     }
-    // Moves a room's recorded equipment into the '__unassigned__' bucket
+    // Moves a room's recorded equipment into the 'legacyUnassigned' bucket
     // (merging with whatever's already there) instead of leaving it behind
     // under a uid the room picker will never surface again — used when a
     // room with recorded equipment is deleted, or re-tagged away from
     // Optager HD4000. Keeps the data reachable/reviewable rather than
     // silently orphaning real recorded serial numbers.
     function _migrateOptagerRoomToUnassigned(siteId, roomUid) {
-      if(roomUid === '__unassigned__') return; // already there
+      if(roomUid === 'legacyUnassigned') return; // already there
       const siteRec = virSiteEquipOptager.value[siteId];
       const bucket = siteRec?.byRoom?.[roomUid];
       if(!bucket) return;
-      if(!siteRec.byRoom.__unassigned__) siteRec.byRoom.__unassigned__ = {...VIR_ROOM_EQUIP_SHAPE};
-      const unassigned = siteRec.byRoom.__unassigned__;
+      if(!siteRec.byRoom.legacyUnassigned) siteRec.byRoom.legacyUnassigned = {...VIR_ROOM_EQUIP_SHAPE};
+      const unassigned = siteRec.byRoom.legacyUnassigned;
       EQUIP_KINDS.forEach(k => { unassigned[k] = [...(unassigned[k]||[]), ...(bucket[k]||[])]; });
       delete siteRec.byRoom[roomUid];
     }
@@ -11090,7 +11114,7 @@ createApp({
         // optagerRoomChoicesForSite), so equipment under a since-retagged
         // room's uid becomes unreachable even though it still physically
         // exists in Firestore. Warn first, then migrate it to the
-        // '__unassigned__' bucket so it stays reachable/reviewable.
+        // 'legacyUnassigned' bucket so it stays reachable/reviewable.
         if(existing.system === 'Optager HD4000' && resolved.system !== 'Optager HD4000' && _roomHasOptagerEquipment(selSite.value.id, roomUid)) {
           if(!confirm(`Bilik "${existing.name}" masih ada peralatan Optager HD4000 direkodkan (kamera/server/dll). Menukar sistem bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan?`)) {
             return;
@@ -11268,7 +11292,7 @@ createApp({
       // virSiteEquip.value[siteId].rooms (see optagerRoomChoicesForSite),
       // so once the room itself is gone, its equipment bucket can never be
       // selected again even though it still exists in Firestore. Warn with
-      // specifics and migrate to '__unassigned__' so it stays reachable.
+      // specifics and migrate to 'legacyUnassigned' so it stays reachable.
       if(key === 'rooms') {
         const room = virSiteEquip.value[siteId]?.rooms?.[idx];
         if(room?.system === 'Optager HD4000' && _roomHasOptagerEquipment(siteId, room._uid)) {
@@ -12869,7 +12893,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         const byRoom = virSiteEquipOptager.value[s.id]?.byRoom || {};
         Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
           const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
-          const roomLabel = roomUid==='__unassigned__' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
+          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
           pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
         });
       });
@@ -13200,7 +13224,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         const byRoom = virSiteEquipOptager.value[s.id]?.byRoom || {};
         Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
           const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
-          const roomLabel = roomUid==='__unassigned__' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
+          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
           pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
         });
       });
