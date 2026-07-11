@@ -1049,7 +1049,7 @@ details.form-control[open] summary::after{content:'▴'}
         <span class="icon">🧹</span> Urus Model Custom
       </div>
       <div class="nav-section-label" style="margin-top:6px">PENTADBIRAN &amp; AKAUN</div>
-      <div class="nav-item" :class="{active:page==='audit-log'}" @click="loadAuditLogs();page='audit-log'" v-if="['superadmin','admin'].includes(authProfile?.role)">
+      <div class="nav-item" :class="{active:page==='audit-log'}" @click="loadAuditLogs();page='audit-log'" v-if="['superadmin','admin','staff'].includes(authProfile?.role)">
         <span class="icon">🗒</span> Log Audit
       </div>
       <div class="nav-item" :class="{active:page==='user-mgmt'}" @click="page='user-mgmt'" v-if="authProfile?.role==='superadmin'">
@@ -1359,13 +1359,13 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
           </div>
 
-          <div class="card" style="margin-bottom:0" v-if="['superadmin','admin'].includes(authProfile?.role)">
+          <div class="card" style="margin-bottom:0" v-if="['superadmin','admin','staff'].includes(authProfile?.role)">
             <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
               <span>🗒 Aktiviti Terkini</span>
               <button class="btn btn-outline btn-sm" @click="loadAuditLogs();page='audit-log'">Lihat Semua →</button>
             </div>
-            <div v-if="!auditLogs.length" class="empty" style="padding:20px">Tiada aktiviti direkodkan.</div>
-            <div v-for="l in auditLogs.slice(0,5)" :key="l.id" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
+            <div v-if="!visibleAuditLogs.length" class="empty" style="padding:20px">Tiada aktiviti direkodkan.</div>
+            <div v-for="l in visibleAuditLogs.slice(0,5)" :key="l.id" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
               <div class="flex items-center gap-8">
                 <span class="badge badge-blue" style="font-size:.68rem">{{l.action}}</span>
                 <span style="font-size:.8rem;color:#222;font-weight:600">{{l.userName||l.userId||'-'}}</span>
@@ -1461,7 +1461,7 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== AUDIT LOG ====== -->
-      <div v-if="page==='audit-log' && ['superadmin','admin'].includes(authProfile?.role)">
+      <div v-if="page==='audit-log' && ['superadmin','admin','staff'].includes(authProfile?.role)">
         <div class="card">
           <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             <span>🗒 Log Audit</span>
@@ -1473,15 +1473,18 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th></tr></thead>
+              <thead><tr><th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th><th v-if="authProfile?.role==='superadmin'" style="width:60px">Padam</th></tr></thead>
               <tbody>
-                <tr v-for="l in auditLogs" :key="l.id">
+                <tr v-for="l in visibleAuditLogs" :key="l.id">
                   <td style="white-space:nowrap;font-size:.8rem">{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</td>
                   <td>{{l.userName||l.userId||'-'}}</td>
                   <td><span class="badge badge-blue" style="font-size:.72rem">{{l.action}}</span></td>
                   <td>{{l.detail||'-'}}</td>
+                  <td v-if="authProfile?.role==='superadmin'" style="text-align:center">
+                    <button class="btn btn-danger btn-sm btn-icon" @click="deleteAuditLog(l)" title="Padam">🗑</button>
+                  </td>
                 </tr>
-                <tr v-if="!auditLogs.length"><td colspan="4" class="empty">Tiada log audit.</td></tr>
+                <tr v-if="!visibleAuditLogs.length"><td :colspan="authProfile?.role==='superadmin'?5:4" class="empty">Tiada log audit.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1729,6 +1732,8 @@ details.form-control[open] summary::after{content:'▴'}
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
             <span class="fw-600" style="margin-left:4px">{{selSite?.name}}</span>
             <span v-if="currentProject==='vir' && eqTab!=='rooms'" class="badge" style="background:#e8f0ff;color:#003366;font-size:.75rem">Sistem: {{equipVirSystem}}</span>
+            <span v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000' && eqTab!=='rooms'" class="badge" style="background:#fff3e0;color:#7a2e00;font-size:.75rem">🚪 {{currentOptagerRoomName}}</span>
+            <button v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000' && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="openSiteEquip(selSite,'Optager HD4000')">🔁 Tukar Bilik</button>
           </div>
           <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
@@ -4294,6 +4299,29 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
       </div>
 
+      <!-- ====== VIR OPTAGER HD4000 — WHICH ROOM? PICKER ======
+           Optager equipment is room-scoped (identical gear per room, but
+           each room has its own serial numbers) — this popup is shown
+           instead of jumping straight into the equipment tabs, so the
+           technician explicitly picks which room they're keying data in
+           for. See openSiteEquip/_openOptagerRoomPicker. -->
+      <div v-if="virRoomPickerModal.show" class="modal-bg" @click.self="virRoomPickerModal.show=false">
+        <div class="modal">
+          <h3>🚪 Urus Peralatan — Bilik Mana? <span class="text-muted text-sm">({{virRoomPickerModal.site?.name}} — Optager HD4000)</span></h3>
+          <p v-if="!_optagerRoomChoicesForSite(virRoomPickerModal.site?.id||'').length" class="text-sm text-muted" style="margin-bottom:14px">
+            Tiada bilik bertag "Optager HD4000" didaftarkan untuk site ini lagi. Sila daftar dahulu di "🚪 Bilik &amp; Sistem" sebelum urus peralatan.
+          </p>
+          <div v-else class="flex" style="flex-direction:column;gap:8px;margin-bottom:14px">
+            <button v-for="r in _optagerRoomChoicesForSite(virRoomPickerModal.site?.id||'')" :key="r.uid"
+              class="btn btn-outline" style="text-align:left;justify-content:flex-start"
+              @click="pickOptagerRoom(r.uid)">{{r.name}}</button>
+          </div>
+          <div class="flex gap-8 justify-end">
+            <button class="btn btn-outline" @click="virRoomPickerModal.show=false">Batal</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== LAPORAN ====== -->
       <div v-if="page==='laporan'">
         <!-- Filter bar -->
@@ -6387,6 +6415,12 @@ createApp({
       try {
         localStorage.setItem(EQUIP_DRAFT_KEY, JSON.stringify({
           siteId: selSite.value.id, project: currentProject.value,
+          // system/roomUid let recovery restore into the EXACT same slot —
+          // critical for Optager, which is room-scoped: without knowing
+          // which room this draft came from, recovery would have no way to
+          // know where to put it back.
+          system: currentProject.value === 'vir' ? equipVirSystem.value : null,
+          roomUid: (currentProject.value === 'vir' && equipVirSystem.value === 'Optager HD4000') ? equipVirRoomUid.value : null,
           data: activeEquip()[selSite.value.id], savedAt: Date.now(),
         }));
       } catch(e) {}
@@ -6415,14 +6449,35 @@ createApp({
       const when = new Date(draft.savedAt).toLocaleString('ms-MY');
       if(confirm(`Ada perubahan peralatan belum disimpan untuk site "${siteLabel}" dari sesi lepas (${when}) — kemungkinan tak sempat klik "Simpan" sebelum sambungan/tab terputus.\n\nNak pulihkan perubahan ni?`)) {
         currentProject.value = draft.project;
-        if(site) {
+        if(!site) { clearEquipDraftLocal(); return; }
+        if(draft.project === 'vir' && draft.system === 'Optager HD4000') {
+          // Room-scoped — only safe to restore directly if that exact room
+          // still exists (or it's the legacy unassigned bucket, which
+          // always exists as a valid target). If the room was renamed/
+          // deleted since the crash, we can't safely guess which OTHER
+          // room it belongs to, so skip rather than risk misfiling real
+          // recorded equipment into the wrong room.
+          const roomStillExists = draft.roomUid === '__unassigned__' ||
+            (virSiteEquip.value[site.id]?.rooms || []).some(r => r._uid === draft.roomUid);
+          if(!roomStillExists) {
+            clearEquipDraftLocal();
+            showToast('Draf peralatan Optager tidak dapat dipulihkan — bilik asal draf ini sudah tiada/dipadam.', 'error');
+            return;
+          }
+          openOptagerRoomEquip(site, draft.roomUid);
           ensureSite(site.id);
           activeEquip()[site.id] = draft.data;
-          openSiteEquip(site);
-          showToast('Draf peralatan dipulihkan. Jangan lupa klik "Simpan Semua".', 'success');
         } else {
-          clearEquipDraftLocal();
+          // Set the system BEFORE writing draft.data — activeEquip()
+          // resolves against whatever equipVirSystem currently is, so this
+          // must match the draft's OWN system, not leftover session state,
+          // or the write lands in the wrong (current) system's slot.
+          if(draft.project === 'vir') equipVirSystem.value = draft.system || 'BCD';
+          ensureSite(site.id);
+          activeEquip()[site.id] = draft.data;
+          openSiteEquip(site, draft.project === 'vir' ? equipVirSystem.value : undefined);
         }
+        showToast('Draf peralatan dipulihkan. Jangan lupa klik "Simpan Semua".', 'success');
       } else {
         clearEquipDraftLocal();
       }
@@ -7831,11 +7886,39 @@ createApp({
     // under distinct top-level keys — see _writeSiteEquipToFirestore/loadAll.
     const virSiteEquip   = ref({});
     const virSiteEquipBCD = ref({});
+    // Optager HD4000 equipment is ROOM-scoped, not site-scoped like BCD —
+    // multiple Optager rooms at one site (e.g. 4 rooms) run identical gear
+    // but each has its OWN serial numbers, so equipment must be tracked per
+    // room, not lumped together. Shape: { [siteId]: { byRoom: { [roomUid]:
+    // {cameras:[],nvr:[],...} } } }. A reserved '__unassigned__' room-uid
+    // bucket holds equipment migrated from the old (pre-room-split) flat
+    // shape, since there's no way to auto-guess which real room it belonged
+    // to — see _normalizeOptagerRec.
     const virSiteEquipOptager = ref({});
+    const VIR_ROOM_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
     // Which system's equipment the "Urus Peralatan Site" page is currently
     // showing/editing for VIR — set by the BCD/Optager buttons on the VIR
     // site list (openSiteEquip's `mode` param).
     const equipVirSystem = ref('BCD');
+    // Optager only — which room's equipment bucket is currently open. Reset
+    // to null whenever no Optager room context is active, so activeEquip()
+    // can tell "not yet picked a room" apart from a real (falsy-looking, but
+    // never actually falsy since _genId() ids are non-empty strings) uid.
+    const equipVirRoomUid = ref(null);
+    // Popup shown when clicking "Optager HD4000" on the VIR site list —
+    // asks which of that site's registered Optager rooms to edit equipment
+    // for, since Optager equipment is room-scoped (see virSiteEquipOptager).
+    const virRoomPickerModal = reactive({ show:false, site:null });
+    // Room name badge on the site-equip page header, for the currently
+    // open Optager room — so it's always visually clear which room's
+    // equipment is being edited (there's no other on-screen indicator
+    // once past the picker).
+    const currentOptagerRoomName = computed(() => {
+      if(!selSite.value || !equipVirRoomUid.value) return '';
+      if(equipVirRoomUid.value === '__unassigned__') return 'Data Lama (Belum Diagihkan Ikut Bilik)';
+      const room = (virSiteEquip.value[selSite.value.id]?.rooms || []).find(r => r._uid === equipVirRoomUid.value);
+      return room?.name || '';
+    });
     // Equipment draft-recovery autosave trigger (see _saveEquipDraftLocal
     // above) — registered here, after both siteEquip and virSiteEquip
     // exist, so this watch() call doesn't reference virSiteEquip before
@@ -7881,10 +7964,14 @@ createApp({
     // Optager HD4000-only Server equipment snapshot for the printed borang
     // — pulled from the SAME reactive store the Optager "Urus Peralatan
     // Site" screen edits (virSiteEquipOptager), never virSiteEquipBCD, so
-    // BCD's PM/CM borang can never end up with a Server table.
+    // BCD's PM/CM borang can never end up with a Server table. Optager
+    // equipment is room-scoped, so the snapshot must resolve the EXACT
+    // room selected in the form (by name → _uid), not just the site.
     function _loadPmServersSnapshot() {
       if(currentProject.value !== 'vir' || pm.virSystem !== 'Optager HD4000') { pm.servers = []; return; }
-      const eq = virSiteEquipOptager.value[pm.siteId];
+      const room = (virSiteEquip.value[pm.siteId]?.rooms || []).find(r => r.name === pm.virRoomNo);
+      if(!room) { pm.servers = []; return; }
+      const eq = virSiteEquipOptager.value[pm.siteId]?.byRoom?.[room._uid];
       pm.servers = (eq?.servers || []).map(s => ({...s}));
     }
     // Regenerates the checklist whenever the system changes — but NEVER
@@ -8183,12 +8270,15 @@ createApp({
           ids.forEach(id => {
             const rooms = data.virSiteEquip?.[id]?.rooms || [];
             const bcd = {...EQUIP_SHAPE_VIR, ...(data.virSiteEquipBCD?.[id] || {})};
-            const optager = {...EQUIP_SHAPE_VIR, ...(data.virSiteEquipOptager?.[id] || {})};
+            // Optager is room-scoped — normalize whatever shape the backup
+            // has (already room-scoped, or the old flat pre-split shape)
+            // into {byRoom:{...}}, same as loadAll().
+            const optager = _normalizeOptagerRec(data.virSiteEquipOptager?.[id]);
             restoredVirRooms[id] = { rooms };
             restoredVirBcd[id] = bcd;
             restoredVirOptager[id] = optager;
             const bcdSplit = _splitCredentials(bcd);
-            const optagerSplit = _splitCredentials(optager);
+            const optagerSplit = _splitOptagerByRoom(optager);
             batch.set(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped }, { merge: true });
             batch.set(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds }, { merge: true });
           });
@@ -8262,8 +8352,11 @@ createApp({
 
     const totalCameras = computed(() => Object.values(siteEquip.value).reduce((sum,s)=>sum+(s?.cameras?.length||0),0));
     const totalVirCameras = computed(() => {
-      const countFrom = (obj) => Object.values(obj).reduce((sum,s)=>sum+(s?.cameras?.length||0),0);
-      return countFrom(virSiteEquipBCD.value) + countFrom(virSiteEquipOptager.value);
+      const countFromBCD = (obj) => Object.values(obj).reduce((sum,s)=>sum+(s?.cameras?.length||0),0);
+      // Optager is room-scoped — sum across every room, not the site level.
+      const countFromOptager = (obj) => Object.values(obj).reduce((sum,site) =>
+        sum + Object.values(site?.byRoom||{}).reduce((s2,room)=>s2+(room?.cameras?.length||0),0), 0);
+      return countFromBCD(virSiteEquipBCD.value) + countFromOptager(virSiteEquipOptager.value);
     });
 
     const pmThisYear = computed(() => pmRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
@@ -8569,6 +8662,7 @@ createApp({
         await db.collection('auditLogs').add({
           userId: authUser.value?.uid || '',
           userName: authProfile.value?.name || authUser.value?.email || '',
+          userRole: authProfile.value?.role || '',
           action,
           detail,
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -8599,8 +8693,39 @@ createApp({
       } catch(e) { console.warn('loadAuditLogs failed:', e); }
     }
 
+    // Older log entries were written before `userRole` existed, so fall back
+    // to resolving the actor's CURRENT role — via the logged-in user's own
+    // profile if it's their own entry (loadUsers() excludes your own account
+    // from allUsers), otherwise via the allUsers list loaded for everyone
+    // (see the heartbeat's freeze-check, which relies on the same list being
+    // available regardless of role).
+    function _resolveLogActorRole(log) {
+      if(log.userRole) return log.userRole;
+      if(log.userId && log.userId === authUser.value?.uid) return authProfile.value?.role;
+      return allUsers.value.find(u => u.id === log.userId)?.role;
+    }
+    // Role-based visibility: superadmin sees everything; admin sees
+    // everything except superadmin's own actions; staff only sees actions
+    // performed by fellow staff (not admin/superadmin activity).
+    const visibleAuditLogs = computed(() => {
+      const role = authProfile.value?.role;
+      if(role === 'superadmin') return auditLogs.value;
+      if(role === 'admin') return auditLogs.value.filter(l => _resolveLogActorRole(l) !== 'superadmin');
+      if(role === 'staff') return auditLogs.value.filter(l => _resolveLogActorRole(l) === 'staff');
+      return [];
+    });
+    async function deleteAuditLog(log) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm('Padam log audit ini? Tindakan ini tidak boleh dibatalkan.')) return;
+      try {
+        await db.collection('auditLogs').doc(log.id).delete();
+        auditLogs.value = auditLogs.value.filter(l => l.id !== log.id);
+        showToast('Log audit dipadam.');
+      } catch(e) { showToast('Gagal padam log: '+e.message, 'error'); }
+    }
+
     function _auditLogRows() {
-      return auditLogs.value.map(l => [
+      return visibleAuditLogs.value.map(l => [
         l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-',
         l.userName || l.userId || '-',
         l.action || '-',
@@ -8615,7 +8740,7 @@ createApp({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Log Audit');
       XLSX.writeFile(wb, 'Log_Audit_'+new Date().toISOString().slice(0,10)+'.xlsx');
-      await logAudit('EXPORT_AUDIT_EXCEL', `${auditLogs.value.length} rekod`);
+      await logAudit('EXPORT_AUDIT_EXCEL', `${visibleAuditLogs.value.length} rekod`);
     }
 
     async function exportAuditLogPdf() {
@@ -9795,6 +9920,72 @@ createApp({
       return equipObj;
     }
 
+    // ── Optager HD4000 room-scoped equipment helpers ────────────────────
+    // Normalizes a raw Optager Firestore/backup field into the room-scoped
+    // {byRoom:{...}} shape. Handles three cases: already room-scoped (new
+    // data), the old flat pre-room-split shape (real recorded equipment
+    // that can't be auto-assigned to a room — parked under a reserved
+    // '__unassigned__' bucket so it's never silently dropped), or empty.
+    function _normalizeOptagerRec(raw) {
+      if(!raw) return { byRoom: {} };
+      if(raw.byRoom) {
+        const byRoom = {};
+        Object.keys(raw.byRoom).forEach(uid => { byRoom[uid] = {...VIR_ROOM_EQUIP_SHAPE, ...raw.byRoom[uid]}; });
+        return { byRoom };
+      }
+      if(Object.keys(raw).length) {
+        return { byRoom: { __unassigned__: {...VIR_ROOM_EQUIP_SHAPE, ...raw} } };
+      }
+      return { byRoom: {} };
+    }
+    // Splits credentials out of EVERY room's bucket for one site — used by
+    // both the save path and restore, since the whole per-room map must be
+    // written back together (writing just the currently-open room would
+    // silently wipe out every other room's equipment under the same key).
+    function _splitOptagerByRoom(optagerRec) {
+      const byRoom = {}, credsByRoom = {};
+      Object.keys(optagerRec?.byRoom || {}).forEach(uid => {
+        const { stripped, creds } = _splitCredentials(optagerRec.byRoom[uid]);
+        byRoom[uid] = stripped;
+        credsByRoom[uid] = creds;
+      });
+      return { stripped: { byRoom }, creds: { byRoom: credsByRoom } };
+    }
+    // Rooms shown in the "which room?" picker when clicking the Optager
+    // HD4000 button — only rooms tagged for that system, plus the legacy
+    // unassigned bucket if it actually has any equipment worth surfacing.
+    function _optagerRoomChoicesForSite(siteId) {
+      const rooms = (virSiteEquip.value[siteId]?.rooms || []).filter(r => r.system === 'Optager HD4000');
+      const choices = rooms.map(r => ({ uid: r._uid, name: r.name }));
+      const unassigned = virSiteEquipOptager.value[siteId]?.byRoom?.__unassigned__;
+      const hasUnassignedData = unassigned && EQUIP_KINDS.some(k => (unassigned[k]||[]).length);
+      if(hasUnassignedData) choices.push({ uid: '__unassigned__', name: '⚠️ Data Lama (Belum Diagihkan Ikut Bilik)' });
+      return choices;
+    }
+    // True if a room's Optager equipment bucket actually has anything
+    // recorded in it — used to warn before an action would make that data
+    // unreachable (deleting the room, or re-tagging it away from Optager).
+    function _roomHasOptagerEquipment(siteId, roomUid) {
+      const bucket = virSiteEquipOptager.value[siteId]?.byRoom?.[roomUid];
+      return !!bucket && EQUIP_KINDS.some(k => (bucket[k]||[]).length);
+    }
+    // Moves a room's recorded equipment into the '__unassigned__' bucket
+    // (merging with whatever's already there) instead of leaving it behind
+    // under a uid the room picker will never surface again — used when a
+    // room with recorded equipment is deleted, or re-tagged away from
+    // Optager HD4000. Keeps the data reachable/reviewable rather than
+    // silently orphaning real recorded serial numbers.
+    function _migrateOptagerRoomToUnassigned(siteId, roomUid) {
+      if(roomUid === '__unassigned__') return; // already there
+      const siteRec = virSiteEquipOptager.value[siteId];
+      const bucket = siteRec?.byRoom?.[roomUid];
+      if(!bucket) return;
+      if(!siteRec.byRoom.__unassigned__) siteRec.byRoom.__unassigned__ = {...VIR_ROOM_EQUIP_SHAPE};
+      const unassigned = siteRec.byRoom.__unassigned__;
+      EQUIP_KINDS.forEach(k => { unassigned[k] = [...(unassigned[k]||[]), ...(bucket[k]||[])]; });
+      delete siteRec.byRoom[roomUid];
+    }
+
     function confirmImportRows() {
       const kind = importState.kind;
       const rows = importState.rows.filter(r => r._include);
@@ -9814,7 +10005,7 @@ createApp({
         SITES.forEach(s=>{ eq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; });
         const VIR_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
         const veqRooms = {}, veqBcd = {}, veqOptager = {};
-        VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={...VIR_EQUIP_SHAPE}; });
+        VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={byRoom:{}}; });
 
         // All of these reads are independent of each other — firing them
         // together (instead of one `await` at a time) cuts login load time
@@ -9865,14 +10056,22 @@ createApp({
             ? {cameras:d.cameras||[], nvr:d.nvr||[], hdd:d.hdd||[], switches:d.switches||[], alarms:d.alarms||[]}
             : null;
           veqBcd[doc.id] = {...VIR_EQUIP_SHAPE, ...(d.BCD || legacy || {})};
-          veqOptager[doc.id] = {...VIR_EQUIP_SHAPE, ...(d['Optager HD4000'] || {})};
+          // Optager is room-scoped (unlike BCD) — normalize whatever shape
+          // this doc has (already room-scoped, or the old flat pre-split
+          // shape) into {byRoom:{...}}. See _normalizeOptagerRec.
+          veqOptager[doc.id] = _normalizeOptagerRec(d['Optager HD4000']);
         });
         Object.values(veqBcd).forEach(_sortAllEquipLists);
-        Object.values(veqOptager).forEach(_sortAllEquipLists);
+        Object.values(veqOptager).forEach(rec => Object.values(rec.byRoom).forEach(_sortAllEquipLists));
         if(vCredSnap) vCredSnap.forEach(doc => {
           const d = doc.data();
           if(veqBcd[doc.id]) _mergeCredentials(veqBcd[doc.id], d['BCD']);
-          if(veqOptager[doc.id]) _mergeCredentials(veqOptager[doc.id], d['Optager HD4000']);
+          const optagerCredsByRoom = d['Optager HD4000']?.byRoom || {};
+          if(veqOptager[doc.id]) {
+            Object.keys(veqOptager[doc.id].byRoom).forEach(uid => {
+              _mergeCredentials(veqOptager[doc.id].byRoom[uid], optagerCredsByRoom[uid]);
+            });
+          }
         });
         virSiteEquip.value = veqRooms;
         virSiteEquipBCD.value = veqBcd;
@@ -9885,7 +10084,7 @@ createApp({
         // anchoring (see siteHealthScores) — that widget is visible to every
         // role, so contracts must load for everyone, not just admin/superadmin.
         loadContracts(); // fire-and-forget — needed for the dashboard expiry badge/alert + site health scoring
-        if(['superadmin','admin'].includes(authProfile.value?.role)) {
+        if(['superadmin','admin','staff'].includes(authProfile.value?.role)) {
           loadAuditLogs(); // fire-and-forget — not on critical login path
         }
         initDbStorageWidgetIfStale(); // fire-and-forget — no-op for non-superadmin, cache-first for superadmin
@@ -10373,28 +10572,61 @@ createApp({
     // open into (from the site list's BCD/Optager buttons); 'rooms' — open
     // straight to the Bilik & Sistem tab without changing which system was
     // last active. Ignored for CCTV.
+    //
+    // Optager is room-scoped (see virSiteEquipOptager), so — unlike every
+    // other mode — it can't jump straight into the equipment tabs; it has
+    // to ask WHICH of the site's registered Optager rooms to edit first.
+    // Mode-less calls (draft recovery bypasses this via openOptagerRoomEquip
+    // directly; global-search-result clicks fall through here) also trigger
+    // the picker if the last-active system happened to be Optager, since a
+    // stale room-uid from a DIFFERENT site would be wrong context to reuse.
     function openSiteEquip(site, mode) {
+      const resolvedSystem = mode === 'rooms' ? null : (mode || equipVirSystem.value);
+      if(currentProject.value === 'vir' && resolvedSystem === 'Optager HD4000') {
+        _openOptagerRoomPicker(site);
+        return;
+      }
       _flushEquipAutoSave(); // persist any pending edits for the site we're leaving
       selSite.value = site;
       if(currentProject.value === 'vir') {
-        if(mode === 'rooms') { eqTab.value = 'rooms'; }
+        if(mode === 'rooms') {
+          eqTab.value = 'rooms';
+          // BUG FIX: mode==='rooms' is the only path that doesn't touch
+          // equipVirSystem, so a stale equipVirRoomUid left over from a
+          // PREVIOUS site's Optager room stays set. ensureSite()/
+          // activeEquip() below would then resolve through the Optager
+          // facade using that foreign room-uid against THIS (possibly
+          // different) site, silently creating/persisting a spurious empty
+          // equipment bucket keyed by another site's room id. Clearing it
+          // here makes the facade's get/set traps no-op (see
+          // _optagerRoomFacade) instead of touching the wrong slot.
+          equipVirRoomUid.value = null;
+        }
         else {
           equipVirSystem.value = mode || equipVirSystem.value;
           // BCD's real gear (DVD-1150, VC-16b, TC-100, Quad, etc) is tracked
           // via the per-room checklist toggle, not the generic Kamera/NVR/HDD
           // tabs — those don't reflect BCD's actual equipment, so land on
-          // Bilik & Sistem instead. Optager opens on Server (its primary tab).
-          // Base the fallback on the resolved system (not the raw `mode`
-          // param), since mode-less calls (draft recovery, search click)
-          // must still land on a tab valid for whichever system was active.
-          eqTab.value = equipVirSystem.value === 'BCD' ? 'rooms' : 'servers';
+          // Bilik & Sistem instead.
+          eqTab.value = 'rooms';
         }
       } else {
         eqTab.value = 'cameras';
       }
+      _finishOpenSiteEquipPage(site);
+    }
+    // Shared tail for every path that actually lands on the site-equip page
+    // (plain BCD/CCTV open, and openOptagerRoomEquip below) — assumes
+    // selSite/equipVirSystem/equipVirRoomUid/eqTab are ALREADY set correctly
+    // by the caller.
+    function _finishOpenSiteEquipPage(site) {
       page.value = 'site-equip';
       ensureSite(site.id);
-      const eq = activeEquip()[site.id];
+      // Defensive fallback: for the VIR "rooms" view, equipVirRoomUid is
+      // deliberately null (see openSiteEquip), so the Optager facade
+      // resolves to undefined here — that's expected (the rooms view never
+      // reads `eq`'s equipment kinds for anything), not a bug.
+      const eq = activeEquip()[site.id] || {};
       // Backfill ids for equipment saved before this id-based keying existed.
       EQUIP_KINDS.forEach(k => (eq[k]||[]).forEach(item => { if(!item._uid) item._uid = _genId(); }));
       EQUIP_KINDS.forEach(k => equipSelected[k].clear()); // don't carry bulk-selection over from a previous site
@@ -10415,6 +10647,32 @@ createApp({
         rooms.forEach(item => { if(!item._uid) item._uid = _genId(); });
         cancelEditEquip('rooms');
       }
+    }
+    // Popup asking which Optager room to edit — only rooms tagged Optager
+    // HD4000 for this site, plus the legacy "unassigned" bucket if it has
+    // any equipment left in it (see _optagerRoomChoicesForSite).
+    function _openOptagerRoomPicker(site) {
+      virRoomPickerModal.site = site;
+      virRoomPickerModal.show = true;
+    }
+    function pickOptagerRoom(roomUid) {
+      const site = virRoomPickerModal.site;
+      virRoomPickerModal.show = false;
+      virRoomPickerModal.site = null;
+      openOptagerRoomEquip(site, roomUid);
+    }
+    // Actually opens the site-equip page scoped to one specific Optager
+    // room — called both from the room picker's selection and directly
+    // from draft recovery (which already knows the room, so it skips the
+    // picker).
+    function openOptagerRoomEquip(site, roomUid) {
+      _flushEquipAutoSave();
+      selSite.value = site;
+      currentProject.value = 'vir';
+      equipVirSystem.value = 'Optager HD4000';
+      equipVirRoomUid.value = roomUid;
+      eqTab.value = 'servers';
+      _finishOpenSiteEquipPage(site);
     }
 
     // ---- Remember last-visited page across browser refresh ----
@@ -10456,9 +10714,40 @@ createApp({
     // active (equipVirSystem) — cameras/nvr/hdd/switches/alarms/misc only.
     // Rooms are NOT part of this — they live in virSiteEquip directly,
     // shared across both systems (see ensureSite/selSiteEquip/addVirRoom).
+    //
+    // BCD stays site-scoped (returns virSiteEquipBCD.value directly, a real
+    // {[siteId]: {...}} dict). Optager is ROOM-scoped, but every one of the
+    // ~18 call sites elsewhere in this file was written against the site-
+    // scoped contract (`activeEquip()[siteId]`, including whole-slot
+    // overwrites like draft recovery's `activeEquip()[id] = draft.data`) —
+    // rewriting all of them would be far riskier than making Optager LOOK
+    // like a site-scoped dict from the outside. A Proxy does that: reads/
+    // writes to `facade[siteId]` transparently redirect to
+    // virSiteEquipOptager.value[siteId].byRoom[equipVirRoomUid.value],
+    // auto-creating the nested structure on write. Every caller keeps
+    // working unmodified, as long as equipVirRoomUid is set correctly
+    // BEFORE activeEquip() is used (see openOptagerRoomEquip).
+    function _optagerRoomFacade() {
+      return new Proxy({}, {
+        get(_, siteId) {
+          if(typeof siteId !== 'string') return undefined;
+          const roomUid = equipVirRoomUid.value;
+          if(!roomUid) return undefined;
+          return virSiteEquipOptager.value[siteId]?.byRoom?.[roomUid];
+        },
+        set(_, siteId, value) {
+          const roomUid = equipVirRoomUid.value;
+          if(!roomUid) return true; // no room context yet — no-op rather than throw
+          if(!virSiteEquipOptager.value[siteId]) virSiteEquipOptager.value[siteId] = { byRoom: {} };
+          if(!virSiteEquipOptager.value[siteId].byRoom) virSiteEquipOptager.value[siteId].byRoom = {};
+          virSiteEquipOptager.value[siteId].byRoom[roomUid] = value;
+          return true;
+        },
+      });
+    }
     function activeEquip() {
       if(currentProject.value !== 'vir') return siteEquip.value;
-      return equipVirSystem.value === 'Optager HD4000' ? virSiteEquipOptager.value : virSiteEquipBCD.value;
+      return equipVirSystem.value === 'Optager HD4000' ? _optagerRoomFacade() : virSiteEquipBCD.value;
     }
     const selSiteEquip = computed(() => {
       if(!selSite.value) return {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[],rooms:[]};
@@ -10792,7 +11081,25 @@ createApp({
       const dupIdx = list.findIndex((r,i) => r.name.trim().toLowerCase() === nRoom.name.trim().toLowerCase() && i !== equipEditIdx.rooms);
       if(dupIdx !== -1) { showToast(`Bilik "${nRoom.name}" sudah wujud untuk site ini.`, 'error'); return; }
       const resolved = { name: nRoom.name.trim(), system: nRoom.system, excludedGroups: [...(nRoom.excludedGroups||[])] };
-      if(equipEditIdx.rooms !== null) { list[equipEditIdx.rooms] = {...resolved, _uid:list[equipEditIdx.rooms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.rooms = null; showToast('Bilik dikemaskini!'); }
+      if(equipEditIdx.rooms !== null) {
+        const existing = list[equipEditIdx.rooms];
+        const roomUid = existing._uid || _genId();
+        // Re-tagging a room away from Optager HD4000 would otherwise hide
+        // its recorded equipment forever — the room picker only lists
+        // rooms currently tagged 'Optager HD4000' (see
+        // _optagerRoomChoicesForSite), so equipment under a since-retagged
+        // room's uid becomes unreachable even though it still physically
+        // exists in Firestore. Warn first, then migrate it to the
+        // '__unassigned__' bucket so it stays reachable/reviewable.
+        if(existing.system === 'Optager HD4000' && resolved.system !== 'Optager HD4000' && _roomHasOptagerEquipment(selSite.value.id, roomUid)) {
+          if(!confirm(`Bilik "${existing.name}" masih ada peralatan Optager HD4000 direkodkan (kamera/server/dll). Menukar sistem bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan?`)) {
+            return;
+          }
+          _migrateOptagerRoomToUnassigned(selSite.value.id, roomUid);
+        }
+        list[equipEditIdx.rooms] = {...resolved, _uid:roomUid, _ts:Date.now()};
+        equipEditIdx.rooms = null; showToast('Bilik dikemaskini!');
+      }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Bilik berjaya ditambah!'); }
       resetForm('nRoom');
     }
@@ -10955,7 +11262,22 @@ createApp({
       a.click();
     }
     function removeItem(siteId, key, idx) {
-      if(!confirm('Padam rekod ini?')) return;
+      // Deleting a room that still has recorded Optager equipment under its
+      // uid would otherwise orphan that equipment forever — the room
+      // picker only ever lists rooms currently present in
+      // virSiteEquip.value[siteId].rooms (see _optagerRoomChoicesForSite),
+      // so once the room itself is gone, its equipment bucket can never be
+      // selected again even though it still exists in Firestore. Warn with
+      // specifics and migrate to '__unassigned__' so it stays reachable.
+      if(key === 'rooms') {
+        const room = virSiteEquip.value[siteId]?.rooms?.[idx];
+        if(room?.system === 'Optager HD4000' && _roomHasOptagerEquipment(siteId, room._uid)) {
+          if(!confirm(`Bilik "${room.name}" masih ada peralatan Optager HD4000 direkodkan (kamera/server/dll). Memadam bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan padam bilik ini?`)) {
+            return;
+          }
+          _migrateOptagerRoomToUnassigned(siteId, room._uid);
+        } else if(!confirm('Padam rekod ini?')) return;
+      } else if(!confirm('Padam rekod ini?')) return;
       const list = key === 'rooms' ? virSiteEquip.value[siteId].rooms : activeEquip()[siteId][key];
       // Deleting a row before the one mid-edit shifts every later index, so
       // equipEditIdx[key] must be re-synced by identity (_uid) — comparing
@@ -10983,7 +11305,14 @@ createApp({
       // accessUser/accessPw are split out into a companion doc with its own
       // (stricter) read rule — see _splitCredentials — so the main doc
       // written here never carries them, regardless of who's saving.
-      const { stripped, creds } = _splitCredentials(activeEquip()[siteId]);
+      // Optager is room-scoped — activeEquip()[siteId] only resolves to the
+      // CURRENTLY OPEN room's bucket, so writing that alone would wipe out
+      // every other room's equipment under the same 'Optager HD4000' key.
+      // Must always write the full per-room map for the site instead.
+      const isOptager = currentProject.value === 'vir' && equipVirSystem.value === 'Optager HD4000';
+      const { stripped, creds } = isOptager
+        ? _splitOptagerByRoom(virSiteEquipOptager.value[siteId])
+        : _splitCredentials(activeEquip()[siteId]);
       // VIR keeps rooms + both systems' equipment in ONE doc, under distinct
       // top-level keys (merge:true so writing one doesn't clobber the
       // others): { rooms:[...], BCD:{...}, 'Optager HD4000':{...} }.
@@ -12533,7 +12862,17 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
       VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
-      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipOptager.value));
+      // Optager is room-scoped — each room has its own equipment/serials,
+      // so push each room separately (with the room name folded into the
+      // site label) instead of treating the whole site as one bucket.
+      VIR_SITES.forEach(s => {
+        const byRoom = virSiteEquipOptager.value[s.id]?.byRoom || {};
+        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
+          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
+          const roomLabel = roomUid==='__unassigned__' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
+          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
+        });
+      });
       return rows.filter(r => {
         if(assetFilterProj.value!=='all' && r.proj!==assetFilterProj.value) return false;
         if(assetFilterCat.value!=='all' && r.cat!==assetFilterCat.value) return false;
@@ -12856,7 +13195,15 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
       VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
-      VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipOptager.value));
+      // Optager is room-scoped — push each room separately (see assetRegister above).
+      VIR_SITES.forEach(s => {
+        const byRoom = virSiteEquipOptager.value[s.id]?.byRoom || {};
+        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
+          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
+          const roomLabel = roomUid==='__unassigned__' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
+          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
+        });
+      });
       return rows.sort((a,b) => b.ageYears - a.ageYears);
     });
 
@@ -13028,6 +13375,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp, sortEquipListByName,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
+      equipVirRoomUid, virRoomPickerModal, currentOptagerRoomName, _optagerRoomChoicesForSite, pickOptagerRoom, openOptagerRoomEquip,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
@@ -13044,7 +13392,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
-      auditLogs, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
+      auditLogs, visibleAuditLogs, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
       showOnlinePanel, onlineUsers,
