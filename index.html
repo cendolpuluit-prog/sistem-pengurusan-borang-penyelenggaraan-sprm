@@ -4308,11 +4308,11 @@ details.form-control[open] summary::after{content:'▴'}
       <div v-if="virRoomPickerModal.show" class="modal-bg" @click.self="virRoomPickerModal.show=false">
         <div class="modal">
           <h3>🚪 Urus Peralatan — Bilik Mana? <span class="text-muted text-sm">({{virRoomPickerModal.site?.name}} — Optager HD4000)</span></h3>
-          <p v-if="!_optagerRoomChoicesForSite(virRoomPickerModal.site?.id||'').length" class="text-sm text-muted" style="margin-bottom:14px">
+          <p v-if="!optagerRoomChoicesForSite(virRoomPickerModal.site?.id||'').length" class="text-sm text-muted" style="margin-bottom:14px">
             Tiada bilik bertag "Optager HD4000" didaftarkan untuk site ini lagi. Sila daftar dahulu di "🚪 Bilik &amp; Sistem" sebelum urus peralatan.
           </p>
           <div v-else class="flex" style="flex-direction:column;gap:8px;margin-bottom:14px">
-            <button v-for="r in _optagerRoomChoicesForSite(virRoomPickerModal.site?.id||'')" :key="r.uid"
+            <button v-for="r in optagerRoomChoicesForSite(virRoomPickerModal.site?.id||'')" :key="r.uid"
               class="btn btn-outline" style="text-align:left;justify-content:flex-start"
               @click="pickOptagerRoom(r.uid)">{{r.name}}</button>
           </div>
@@ -9954,7 +9954,7 @@ createApp({
     // Rooms shown in the "which room?" picker when clicking the Optager
     // HD4000 button — only rooms tagged for that system, plus the legacy
     // unassigned bucket if it actually has any equipment worth surfacing.
-    function _optagerRoomChoicesForSite(siteId) {
+    function optagerRoomChoicesForSite(siteId) {
       const rooms = (virSiteEquip.value[siteId]?.rooms || []).filter(r => r.system === 'Optager HD4000');
       const choices = rooms.map(r => ({ uid: r._uid, name: r.name }));
       const unassigned = virSiteEquipOptager.value[siteId]?.byRoom?.__unassigned__;
@@ -10650,7 +10650,7 @@ createApp({
     }
     // Popup asking which Optager room to edit — only rooms tagged Optager
     // HD4000 for this site, plus the legacy "unassigned" bucket if it has
-    // any equipment left in it (see _optagerRoomChoicesForSite).
+    // any equipment left in it (see optagerRoomChoicesForSite).
     function _openOptagerRoomPicker(site) {
       virRoomPickerModal.site = site;
       virRoomPickerModal.show = true;
@@ -11087,7 +11087,7 @@ createApp({
         // Re-tagging a room away from Optager HD4000 would otherwise hide
         // its recorded equipment forever — the room picker only lists
         // rooms currently tagged 'Optager HD4000' (see
-        // _optagerRoomChoicesForSite), so equipment under a since-retagged
+        // optagerRoomChoicesForSite), so equipment under a since-retagged
         // room's uid becomes unreachable even though it still physically
         // exists in Firestore. Warn first, then migrate it to the
         // '__unassigned__' bucket so it stays reachable/reviewable.
@@ -11265,7 +11265,7 @@ createApp({
       // Deleting a room that still has recorded Optager equipment under its
       // uid would otherwise orphan that equipment forever — the room
       // picker only ever lists rooms currently present in
-      // virSiteEquip.value[siteId].rooms (see _optagerRoomChoicesForSite),
+      // virSiteEquip.value[siteId].rooms (see optagerRoomChoicesForSite),
       // so once the room itself is gone, its equipment bucket can never be
       // selected again even though it still exists in Firestore. Warn with
       // specifics and migrate to '__unassigned__' so it stays reachable.
@@ -13375,7 +13375,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp, sortEquipListByName,
       openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
-      equipVirRoomUid, virRoomPickerModal, currentOptagerRoomName, _optagerRoomChoicesForSite, pickOptagerRoom, openOptagerRoomEquip,
+      equipVirRoomUid, virRoomPickerModal, currentOptagerRoomName, optagerRoomChoicesForSite, pickOptagerRoom, openOptagerRoomEquip,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
