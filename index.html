@@ -2210,8 +2210,11 @@ details.form-control[open] summary::after{content:'▴'}
                 <select class="form-control" v-model="nServer.moboType"><option value="">— Pilih —</option><option v-for="o in OPTAGER_MOBO_TYPE" :key="o">{{o}}</option></select>
                 <input v-if="nServer.moboType==='Lain-lain'" class="form-control" v-model="nServer.moboTypeCustom" placeholder="Nyatakan jenis motherboard" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Networking</label>
-                <select class="form-control" v-model="nServer.networking"><option value="">— Pilih —</option><option>Wifi</option><option>LAN</option><option>Wifi + LAN</option></select>
+              <div class="form-group"><label>LAN IP Address <span class="text-muted text-sm">(pilihan)</span></label>
+                <input class="form-control" v-model="nServer.lanIp" placeholder="cth: 192.168.0.11">
+              </div>
+              <div class="form-group"><label>WiFi IP Address <span class="text-muted text-sm">(pilihan)</span></label>
+                <input class="form-control" v-model="nServer.wifiIp" placeholder="cth: 192.168.1.11">
               </div>
             </div>
 
@@ -2247,12 +2250,12 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>Networking</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.networking}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
@@ -3139,16 +3142,15 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr>
                 <th style="width:4%">No.</th>
                 <th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th>
-                <th>Motherboard</th><th>Motherboard Type</th><th>Networking</th><th>OS</th>
-                <th>License Expiry</th>
+                <th>Motherboard</th><th>Networking</th><th>OS</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(s,i) in viewPM.servers" :key="i">
                   <td class="ctr">{{i+1}}</td>
                   <td>{{s.name}}</td><td>{{s.processor}}</td><td>{{s.ram}}</td>
                   <td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td>
-                  <td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.networking}}</td>
-                  <td>{{s.os}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                  <td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{serverNetworkingDisplay(s)}}</td>
+                  <td>{{s.os}}</td>
                 </tr>
               </tbody>
             </table>
@@ -3162,9 +3164,9 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="pm-section-hdr">Senarai Kamera <span>({{viewPM.cameras.length}} unit)</span></div>
             <table class="pm-tbl">
               <thead><tr>
-                <th style="width:4%">No.</th>
-                <th>Nama</th><th>IP Address</th><th>Brand</th><th>Model</th>
-                <th>No. Siri</th><th>Jenis</th>
+                <th style="width:8%">No.</th>
+                <th>Nama</th><th>IP Address</th><th style="width:10%">Brand</th><th style="width:12%">Model</th>
+                <th>No. Siri</th><th style="width:8%">Jenis</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(c,i) in viewPM.cameras" :key="i">
@@ -5784,7 +5786,7 @@ createApp({
     // that they don't fit the generic misc schema.
     const nServer = reactive({
       name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
-      gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
+      gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
       os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
       installDate:'', optagerLicenseFile:null,
     });
@@ -7828,7 +7830,7 @@ createApp({
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
-        gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', networking:'',
+        gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
         os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
         installDate:'', optagerLicenseFile:null},
       nTablet: {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''},
@@ -9561,7 +9563,7 @@ createApp({
       switches: ['name','brand','model','serial'],
       alarms:   ['name','type','brand','model','serial'],
       misc:     ['name','category','brand','model','serial'],
-      servers:  ['name','processor','ram','storage','gpu','mobo','moboType','networking','os','optagerMachineId'],
+      servers:  ['name','processor','ram','storage','gpu','mobo','moboType','lanIp','wifiIp','os','optagerMachineId'],
       tablets:  ['name','brand','model','serial','controlAppMachineId'],
     };
     const IMPORT_HEADER_HINTS = {
@@ -11331,6 +11333,17 @@ createApp({
         ? nServer.storage.filter(v => v !== value)
         : [...nServer.storage, value];
     }
+    // Combines the LAN/WiFi IP fields into one "Networking" display string
+    // for the printed borang (replaces the old Wifi/LAN/Wifi+LAN dropdown).
+    // No leading underscore — called directly from the template, and a
+    // leading-underscore name there doesn't resolve at render time (see
+    // the earlier optagerRoomChoicesForSite incident).
+    function serverNetworkingDisplay(s) {
+      const parts = [];
+      if(s.lanIp) parts.push('LAN: ' + s.lanIp);
+      if(s.wifiIp) parts.push('WiFi: ' + s.wifiIp);
+      return parts.join(' / ');
+    }
     function addServer() {
       if(!nServer.name){showToast('Sila masukkan nama/label server','error');return;}
       ensureSite(selSite.value.id);
@@ -11343,7 +11356,7 @@ createApp({
         gpu: _resolveDropdownCustom(nServer.gpu, nServer.gpuCustom),
         mobo: _resolveDropdownCustom(nServer.mobo, nServer.moboCustom),
         moboType: _resolveDropdownCustom(nServer.moboType, nServer.moboTypeCustom),
-        networking: nServer.networking,
+        lanIp: nServer.lanIp, wifiIp: nServer.wifiIp,
         os: _resolveDropdownCustom(nServer.os, nServer.osCustom),
         osProductKey: nServer.osProductKey,
         optagerMachineId: nServer.optagerMachineId,
@@ -13515,7 +13528,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown, miscBrandOptions, miscModelOptions, ALARM_BRANDS, ALARM_BRAND_MODELS,
-      nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
+      nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense, serverNetworkingDisplay,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
