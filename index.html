@@ -11550,6 +11550,14 @@ createApp({
     function loadPMEquip() {
       if(!pm.siteId){showToast('Sila pilih site','error');return;}
       if(currentProject.value === 'vir') {
+        // Without a room picked, onVirRoomChange() never fires — pm.virSystem
+        // silently stays at its 'BCD' default and _loadPmOptagerEquipSnapshot
+        // never runs, so an Optager room's checklist AND equipment snapshot
+        // (Server/Kamera/Switch/Tablet/Lain-lain) would be skipped entirely
+        // even though the technician is actually visiting an Optager room.
+        if(!pm.virRoomNo){ showToast('Sila pilih No. Bilik VIR', 'error'); return; }
+        if(pm.virRoomNo === 'Lain-lain' && !pm.virRoomNoCustom.trim()){ showToast('Sila nyatakan no. bilik', 'error'); return; }
+        if(!pm.virSystem){ showToast('Sila pilih Jenis Sistem (BCD / Optager HD4000)', 'error'); return; }
         const site = VIR_SITES.find(s=>s.id===pm.siteId);
         pm.siteName = site?.name||'';
         pmStep.value = 2;
