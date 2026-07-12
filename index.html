@@ -3140,7 +3140,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <th style="width:4%">No.</th>
                 <th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th>
                 <th>Motherboard</th><th>Motherboard Type</th><th>Networking</th><th>OS</th>
-                <th>License Expiry</th><th>Tarikh Pasang</th>
+                <th>License Expiry</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(s,i) in viewPM.servers" :key="i">
@@ -3148,7 +3148,88 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>{{s.name}}</td><td>{{s.processor}}</td><td>{{s.ram}}</td>
                   <td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td>
                   <td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.networking}}</td>
-                  <td>{{s.os}}</td><td>{{s.optagerLicenseExpiry}}</td><td>{{s.installDate}}</td>
+                  <td>{{s.os}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+
+          <!-- KAMERA SNAPSHOT — Optager HD4000 only. Spec listing (no
+               Kualiti Paparan/Nota review columns like CCTV's camera table)
+               since Optager's actual maintenance review happens via the
+               checklist above, not per-item. -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.cameras||[]).length">
+            <div class="pm-section-hdr">Senarai Kamera <span>({{viewPM.cameras.length}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr>
+                <th style="width:4%">No.</th>
+                <th>Nama</th><th>IP Address</th><th>Brand</th><th>Model</th>
+                <th>No. Siri</th><th>Jenis</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(c,i) in viewPM.cameras" :key="i">
+                  <td class="ctr">{{i+1}}</td>
+                  <td>{{c.name}}</td><td>{{c.ip}}</td><td>{{c.brand}}</td><td>{{c.model}}</td>
+                  <td>{{c.serial}}</td><td>{{c.camType}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+
+          <!-- POE/NETWORK SWITCH SNAPSHOT — Optager HD4000 only. -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.switches||[]).length">
+            <div class="pm-section-hdr">Senarai POE/Network Switch <span>({{viewPM.switches.length}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr>
+                <th style="width:4%">No.</th>
+                <th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th>
+                <th>IP Address</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(s,i) in viewPM.switches" :key="i">
+                  <td class="ctr">{{i+1}}</td>
+                  <td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}}</td><td>{{s.serial}}</td>
+                  <td>{{s.ip}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+
+          <!-- TABLET SNAPSHOT — Optager HD4000 only. controlAppMachineId/
+               controlAppLicenseKey/controlAppLicenseFile deliberately
+               excluded — same convention as Server's OS Product Key/
+               Optager Machine ID/Lesen (.lic), internal-only fields never
+               shown in the printed borang. -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.tablets||[]).length">
+            <div class="pm-section-hdr">Senarai Tablet <span>({{viewPM.tablets.length}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr>
+                <th style="width:4%">No.</th>
+                <th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(t,i) in viewPM.tablets" :key="i">
+                  <td class="ctr">{{i+1}}</td>
+                  <td>{{t.name}}</td><td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </template>
+
+          <!-- LAIN-LAIN (MISC) SNAPSHOT — Optager HD4000 only. -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.misc||[]).length">
+            <div class="pm-section-hdr">Senarai Lain-lain <span>({{viewPM.misc.length}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr>
+                <th style="width:4%">No.</th>
+                <th>Nama</th><th>Kategori</th><th>Brand</th><th>Model</th>
+                <th>No. Siri</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(m,i) in viewPM.misc" :key="i">
+                  <td class="ctr">{{i+1}}</td>
+                  <td>{{m.name}}</td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td>
+                  <td>{{m.serial}}</td>
                 </tr>
               </tbody>
             </table>
@@ -6272,11 +6353,14 @@ createApp({
       ],
       // VIR fields
       virRoomNo:'', virRoomNoCustom:'', virSystem:'', virItems:[], _virRoomExcludedGroups:[],
-      // Optager HD4000-only equipment snapshot (BCD has no Server hardware
-      // to snapshot) — captured at room/system-select time, printed as its
-      // own "Senarai Server" table gated strictly on virSystem==='Optager
+      // Optager HD4000-only equipment snapshot (BCD has no equivalent
+      // hardware to snapshot) — captured at room/system-select time,
+      // printed as its own tables gated strictly on virSystem==='Optager
       // HD4000' so it never bleeds into BCD's or CCTV's printed borang.
-      servers:[],
+      // cameras/switches/misc are the SAME fields CCTV uses (harmless reuse
+      // — VIR always keeps them blank/repurposed separately from CCTV, see
+      // editRecord/savePM); tablets is Optager-only so it's declared here.
+      servers:[], tablets:[],
       maintType:'', pmNo:null, rootCause:'',
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
@@ -7986,21 +8070,34 @@ createApp({
       // so that room's own excludedGroups would never get applied.
       if(!pm._isEdit && pm.virSystem) {
         pm.virItems = virFilterExcluded(virChecklistFor(pm.virSystem), pm._virRoomExcludedGroups).map(t => ({...t, status:'ok', nota:''}));
-        _loadPmServersSnapshot();
+        _loadPmOptagerEquipSnapshot();
       }
     }
-    // Optager HD4000-only Server equipment snapshot for the printed borang
-    // — pulled from the SAME reactive store the Optager "Urus Peralatan
-    // Site" screen edits (virSiteEquipOptager), never virSiteEquipBCD, so
-    // BCD's PM/CM borang can never end up with a Server table. Optager
-    // equipment is room-scoped, so the snapshot must resolve the EXACT
-    // room selected in the form (by name → _uid), not just the site.
-    function _loadPmServersSnapshot() {
-      if(currentProject.value !== 'vir' || pm.virSystem !== 'Optager HD4000') { pm.servers = []; return; }
+    // Optager HD4000-only equipment snapshot for the printed borang —
+    // pulled from the SAME reactive store the Optager "Urus Peralatan Site"
+    // screen edits (virSiteEquipOptager), never virSiteEquipBCD, so BCD's
+    // PM/CM borang can never end up with these tables. Optager equipment is
+    // room-scoped, so the snapshot must resolve the EXACT room selected in
+    // the form (by name → _uid), not just the site. Covers every equipment
+    // kind actually available under Optager (servers, cameras, POE/network
+    // switches, tablets, lain-lain/misc) — NVR/HDD/Alarm have no Optager
+    // equivalent (those tabs are hidden for this system), so left untouched.
+    function _loadPmOptagerEquipSnapshot() {
+      if(currentProject.value !== 'vir' || pm.virSystem !== 'Optager HD4000') {
+        pm.servers = []; pm.cameras = []; pm.switches = []; pm.tablets = []; pm.misc = [];
+        return;
+      }
       const room = (virSiteEquip.value[pm.siteId]?.rooms || []).find(r => r.name === pm.virRoomNo);
-      if(!room) { pm.servers = []; return; }
+      if(!room) {
+        pm.servers = []; pm.cameras = []; pm.switches = []; pm.tablets = []; pm.misc = [];
+        return;
+      }
       const eq = virSiteEquipOptager.value[pm.siteId]?.byRoom?.[room._uid];
       pm.servers = (eq?.servers || []).map(s => ({...s}));
+      pm.cameras = (eq?.cameras || []).map(c => ({...c}));
+      pm.switches = (eq?.switches || []).map(s => ({...s}));
+      pm.tablets = (eq?.tablets || []).map(t => ({...t}));
+      pm.misc = (eq?.misc || []).map(m => ({...m}));
     }
     // Regenerates the checklist whenever the system changes — but NEVER
     // during an edit: editRecord() already restored pm.virItems from the
@@ -8013,7 +8110,7 @@ createApp({
     watch(() => pm.virSystem, (sys) => {
       if(pm._isEdit || currentProject.value !== 'vir' || !sys) return;
       pm.virItems = virFilterExcluded(virChecklistFor(sys), pm._virRoomExcludedGroups||[]).map(t => ({...t, status:'ok', nota:''}));
-      _loadPmServersSnapshot();
+      _loadPmOptagerEquipSnapshot();
     });
 
     function openSites(proj) {
@@ -11433,7 +11530,7 @@ createApp({
       pm.virItems = VIR_CHECKLIST_TEMPLATE_BCD.map(t=>({...t, status:'ok', nota:''}));
       pm.siteId=''; pm.siteName=''; pm.refNo=''; refNoSuffix.value='';
       pm.month=null; pm.year=null;
-      pm.visitDate=''; pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
+      pm.visitDate=''; pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[]; pm.servers=[]; pm.tablets=[];
       pm.support=[
         {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
         {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -11552,9 +11649,13 @@ createApp({
             virSystem: pm.virSystem || 'BCD',
             virItems: JSON.parse(JSON.stringify(pm.virItems)),
             // Optager HD4000-only — stays [] for BCD records (see
-            // _loadPmServersSnapshot), so a BCD borang never carries a
-            // Server snapshot even accidentally.
+            // _loadPmOptagerEquipSnapshot), so a BCD borang never carries
+            // these snapshots even accidentally.
             servers: JSON.parse(JSON.stringify(pm.servers||[])),
+            cameras: JSON.parse(JSON.stringify(pm.cameras||[])),
+            switches: JSON.parse(JSON.stringify(pm.switches||[])),
+            tablets: JSON.parse(JSON.stringify(pm.tablets||[])),
+            misc: JSON.parse(JSON.stringify(pm.misc||[])),
           } : {
             cameras:[...pm.cameras], nvr:[...pm.nvr], hdd:[...pm.hdd],
             switches:[...pm.switches], alarms:[...pm.alarms], misc:[...pm.misc],
@@ -11627,10 +11728,16 @@ createApp({
         const editRoomMatch = (virSiteEquip.value[pm.siteId]?.rooms||[]).find(rm => rm.name === pm.virRoomNo);
         pm._virRoomExcludedGroups = editRoomMatch ? [...(editRoomMatch.excludedGroups||[])] : [];
         pm.virItems = r.virItems ? JSON.parse(JSON.stringify(r.virItems)) : virFilterExcluded(virChecklistFor(pm.virSystem), pm._virRoomExcludedGroups).map(t=>({...t, status:'ok', nota:''}));
-        // Optager-only snapshot — legacy/BCD records simply have no
-        // `servers` field, so this naturally stays [] for them.
+        // Optager-only snapshots — legacy/BCD records simply have no
+        // servers/cameras/switches/tablets/misc fields, so these naturally
+        // stay [] for them. NVR/HDD/Alarm have no Optager equivalent (those
+        // tabs are hidden for this system), so always blanked.
         pm.servers = r.servers ? JSON.parse(JSON.stringify(r.servers)) : [];
-        pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[];
+        pm.cameras = r.cameras ? JSON.parse(JSON.stringify(r.cameras)) : [];
+        pm.switches = r.switches ? JSON.parse(JSON.stringify(r.switches)) : [];
+        pm.tablets = r.tablets ? JSON.parse(JSON.stringify(r.tablets)) : [];
+        pm.misc = r.misc ? JSON.parse(JSON.stringify(r.misc)) : [];
+        pm.nvr=[]; pm.hdd=[]; pm.alarms=[];
         pm.support=[
           {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
           {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
