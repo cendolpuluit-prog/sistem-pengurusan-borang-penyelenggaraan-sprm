@@ -497,6 +497,7 @@ details.form-control[open] summary::after{content:'▴'}
      document. page-break-inside:avoid still keeps it from splitting if it
      happens to land right at a page boundary.  */
   .pm-footer{page-break-inside:avoid}
+  .pm-chk-legend{page-break-inside:avoid}
 }
 /* #print-area shows on screen too — styled via .pm-preview-inner wrapper */
 
@@ -2256,7 +2257,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>Appliance No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
@@ -3138,6 +3139,14 @@ details.form-control[open] summary::after{content:'▴'}
                   </tbody>
                 </table>
               </div>
+              <!-- Legend for the two blank boxes under Status — left box is
+                   ticked for "Berfungsi" (functional), right box is crossed
+                   for "Tidak Berfungsi" (not functional). Placed once below
+                   each section's table pair (not per-row) since the two
+                   boxes themselves carry no printed label otherwise. -->
+              <div class="pm-chk-legend" style="text-align:right;font-size:7pt;color:#555;font-style:italic;margin:2px 0 6px">
+                Petunjuk Status: <span style="color:#155724;font-weight:700">&#10003;</span> = Berfungsi &nbsp;/&nbsp; <span style="color:#721c24;font-weight:700">&#10007;</span> = Tidak Berfungsi
+              </div>
             </template>
           </template>
 
@@ -3154,7 +3163,7 @@ details.form-control[open] summary::after{content:'▴'}
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
-                <th>Nama</th><th>Appliance No. Siri</th><th>Brand</th><th>Model</th>
+                <th>Nama</th><th>No. Siri</th><th>Brand</th><th>Model</th>
                 <th>LAN IP</th><th>WiFi IP</th><th>Machine ID</th>
               </tr></thead>
               <tbody>
@@ -6280,7 +6289,7 @@ createApp({
     // template (which those referenced) only ever matched BCD's physical
     // layout and doesn't apply to Optager anyway.
     const VIR_CHECKLIST_TEMPLATE_OPTAGER = [
-      {key:'opt_pc',        label:'Server/PC Optager HD4000',        section:'Perkakasan (Hardware)'},
+      {key:'opt_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan (Hardware)'},
       {key:'opt_monitor',   label:'Monitor',                          section:'Perkakasan (Hardware)'},
       {key:'opt_ups',       label:'UPS',                              section:'Perkakasan (Hardware)'},
       {key:'opt_camera',    label:'Kamera Rakaman',                   section:'Perkakasan (Hardware)'},
@@ -8581,7 +8590,12 @@ createApp({
       if(filterSite.value && r.siteId!==filterSite.value) return false;
       if(filterYear.value && r.year!=filterYear.value) return false;
       if(filterMaintType.value && (r.maintType||'PM')!==filterMaintType.value) return false;
-      if(filterPmNo.value && Number(r.pmNo)!==Number(filterPmNo.value)) return false;
+      // "Penyelenggaraan Ke-" (PM1/PM2/PM3) only applies to PM records — CM
+      // records have no such concept, but older records may still carry a
+      // leftover pmNo:1 from before savePM() stopped writing it for CM.
+      // Excluding non-PM records here (not just checking the number) keeps
+      // this filter PM-only even against that stale data.
+      if(filterPmNo.value && ((r.maintType||'PM')!=='PM' || Number(r.pmNo)!==Number(filterPmNo.value))) return false;
       return true;
     }));
 
@@ -11685,7 +11699,7 @@ createApp({
           project: isVir ? 'vir' : 'cctv',
           siteId:pm.siteId, siteName:pm.siteName, refNo:pm.refNo,
           month:pm.month, year:pm.year, visitDate:pm.visitDate,
-          maintType: pm.maintType||'PM', pmNo: pm.pmNo||1, rootCause: pm.maintType==='CM' ? (pm.rootCause||'') : '',
+          maintType: pm.maintType||'PM', pmNo: pm.maintType==='CM' ? null : (pm.pmNo||1), rootCause: pm.maintType==='CM' ? (pm.rootCause||'') : '',
           contractorName:pm.contractorName, contractorJawatan:pm.contractorJawatan, contractorTarikh:pm.contractorTarikh,
           clientName:pm.clientName, clientJawatan:pm.clientJawatan, clientTarikh:pm.clientTarikh,
           client2Name:pm.client2Name, client2Jawatan:pm.client2Jawatan, client2Tarikh:pm.client2Tarikh,
@@ -12426,7 +12440,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
           // avoid rules (table rows, section headers, signature block,
           // notes box, footer) so those still won't get sliced mid-element
           // across a page boundary, same intent as the old print CSS.
-          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.pm-section-hdr', '.pm-sign-wrap', '.pm-nota-box', '.pm-section-block', '.pm-footer', '.pm-corp-header', '.pm-corp-info'] },
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.pm-section-hdr', '.pm-sign-wrap', '.pm-nota-box', '.pm-section-block', '.pm-footer', '.pm-corp-header', '.pm-corp-info', '.pm-chk-legend'] },
         }).from(clone).save();
         await logAudit('EXPORT_PDF', `${viewPM.value?.refNo||'-'} — ${viewPM.value?.siteName||''}`);
         showToast('PDF berjaya dieksport!');
