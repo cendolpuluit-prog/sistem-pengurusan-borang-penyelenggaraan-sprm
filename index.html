@@ -14,6 +14,7 @@
 <script src="https://unpkg.com/docx@8/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1740,7 +1741,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="!canEditEquip" class="badge badge-gray" style="display:block;margin-bottom:12px;padding:8px 12px">🔒 Paparan sahaja — {{currentProject==='vir' ? 'hanya admin/superadmin boleh mengedit peralatan site VIR.' : 'hanya admin/superadmin/staff boleh mengedit peralatan site.'}}</div>
         <fieldset :disabled="!canEditEquip" style="border:0;margin:0;padding:0">
         <div class="tabs">
-          <div v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Server ({{(selSiteEquip.servers||[]).length}})</div>
+          <div v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Appliance ({{(selSiteEquip.servers||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
           <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ {{currentProject==='vir'?'NVR':'Server/NVR/SAN'}} ({{(selSiteEquip.nvr||[]).length}})</div>
           <div v-if="!(currentProject==='vir' && equipVirSystem==='Optager HD4000')" class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
@@ -2162,14 +2163,19 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
         </div>
 
-        <!-- SERVER TAB (VIR Optager HD4000 only) -->
+        <!-- SERVER/APPLIANCE TAB (VIR Optager HD4000 only) -->
         <div v-if="eqTab==='servers'">
           <div class="card" id="equip-form-servers">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Server Optager HD4000</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Appliance Optager HD4000</div>
               <button class="btn btn-outline btn-sm" @click="resetForm('nServer')">↺ Reset</button>
             </div>
-            <div class="form-group"><label>Nama/Label Server</label><input class="form-control" v-model="nServer.name" placeholder="cth: Server Optager Bilik VIR 1"></div>
+            <div class="form-group"><label>Nama/Label Appliance</label><input class="form-control" v-model="nServer.name" placeholder="cth: Appliance Optager Bilik VIR 1"></div>
+            <div class="form-row form-row-3">
+              <div class="form-group"><label>Brand</label><input class="form-control" v-model="nServer.brand" readonly></div>
+              <div class="form-group"><label>Model</label><input class="form-control" v-model="nServer.model" readonly></div>
+              <div class="form-group"><label>Appliance No. Siri</label><input class="form-control" v-model="nServer.serial" placeholder="No. Siri appliance"></div>
+            </div>
 
             <div class="fw-600 mb-8" style="color:#003366">Hardware</div>
             <div class="form-row form-row-3">
@@ -2239,22 +2245,23 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nServer.installDate"></div>
             </div>
             <div class="flex gap-8">
-              <button class="btn btn-primary" @click="addServer">{{equipEditIdx.servers!==null?'✓ Kemaskini Server':'+ Tambah Server'}}</button>
+              <button class="btn btn-primary" @click="addServer">{{equipEditIdx.servers!==null?'✓ Kemaskini Appliance':'+ Tambah Appliance'}}</button>
               <button v-if="equipEditIdx.servers!==null" class="btn btn-outline" @click="cancelEditEquip('servers')">✕ Batal Edit</button>
             </div>
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Server</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Appliance</div>
               <button v-if="equipSelected.servers.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('servers')">🗑 Padam Terpilih ({{equipSelected.servers.size}})</button>
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>Appliance No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
+                    <td>{{s.brand||'OPTAGER'}}</td><td>{{s.model||'HD4000'}}</td><td>{{s.serial}}</td>
                     <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
@@ -2266,7 +2273,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="17" class="empty">Tiada server.</td></tr>
+                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="21" class="empty">Tiada appliance.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2338,7 +2345,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="8" class="empty">Tiada tablet.</td></tr>
+                  <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="9" class="empty">Tiada tablet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2552,33 +2559,6 @@ details.form-control[open] summary::after{content:'▴'}
               </template>
             </div>
             <div class="form-group">
-              <label>No. Rujukan</label>
-              <div style="display:flex;align-items:center;gap:0">
-                <span v-if="refNoPrefix" style="background:#e8f5e9;border:1px solid #b2d8b2;border-right:none;padding:6px 10px;border-radius:4px 0 0 4px;font-size:.85rem;color:#006633;font-weight:600;white-space:nowrap">{{refNoPrefix}}</span>
-                <input class="form-control" v-model="refNoSuffix" placeholder="001" :style="refNoPrefix?'border-radius:0 4px 4px 0;flex:1;min-width:60px':''" :disabled="currentProject==='vir'?(!pm.siteId||!pm.virRoomNo):!pm.siteId" :title="!pm.siteId?'Pilih site dahulu':(currentProject==='vir'&&!pm.virRoomNo?'Pilih bilik dahulu':'')">
-              </div>
-              <small v-if="refNoDuplicate" style="color:#c62828;font-size:.75rem;font-weight:600">⚠️ No. rujukan <b>{{pm.refNo}}</b> sudah wujud dalam rekod. Sila guna nombor lain.</small>
-              <small v-else-if="refNoGapWarning" style="color:#e65100;font-size:.75rem;font-weight:600">⚠️ No. <b>{{nextRefNoSuggestion}}</b> untuk site ini belum digunakan — guna <b>{{refNoSuffix}}</b> akan tinggalkan gap. Cadangan seterusnya: <b>{{nextRefNoSuggestion}}</b>.</small>
-              <small v-else-if="pm.refNo" style="color:#006633;font-size:.75rem">No. Rujukan: <b>{{pm.refNo}}</b></small>
-              <small v-else-if="!pm.siteId" style="color:#888;font-size:.75rem">Pilih site dahulu untuk jana no. rujukan</small>
-              <small v-else-if="currentProject==='vir' && !pm.virRoomNo" style="color:#888;font-size:.75rem">Pilih bilik dahulu untuk jana no. rujukan (setiap bilik ada nombor sendiri)</small>
-            </div>
-            <div class="form-group">
-              <label>Bulan</label>
-              <select class="form-control" v-model="pm.month">
-                <option :value="null">-- Pilih Bulan --</option>
-                <option v-for="(m,i) in MONTHS" :key="i" :value="i+1">{{m}}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Tahun</label>
-              <select class="form-control" v-model="pm.year">
-                <option :value="null">-- Pilih Tahun --</option>
-                <option v-for="y in Array.from({length:16},(_,i)=>2020+i)" :key="y" :value="y">{{y}}</option>
-              </select>
-            </div>
-            <div class="form-group"><label>Tarikh Penyelenggaraan</label><input class="form-control" type="date" v-model="pm.visitDate"></div>
-            <div class="form-group">
               <label>Jenis Penyelenggaraan</label>
               <select class="form-control" v-model="pm.maintType">
                 <option value="">-- Pilih Jenis --</option>
@@ -2602,6 +2582,34 @@ details.form-control[open] summary::after{content:'▴'}
                 <option v-for="c in ROOT_CAUSE_CATEGORIES" :key="c">{{c}}</option>
               </select>
             </div>
+            <div class="form-group">
+              <label>No. Rujukan</label>
+              <div style="display:flex;align-items:center;gap:0">
+                <span v-if="refNoPrefix" style="background:#e8f5e9;border:1px solid #b2d8b2;border-right:none;padding:6px 10px;border-radius:4px 0 0 4px;font-size:.85rem;color:#006633;font-weight:600;white-space:nowrap">{{refNoPrefix}}</span>
+                <input class="form-control" v-model="refNoSuffix" placeholder="001" :style="refNoPrefix?'border-radius:0 4px 4px 0;flex:1;min-width:60px':''" :disabled="!refNoPrefix" :title="!pm.siteId?'Pilih site dahulu':(currentProject==='vir'&&!pm.virRoomNo?'Pilih bilik dahulu':(!pm.maintType?'Pilih jenis penyelenggaraan dahulu':''))">
+              </div>
+              <small v-if="refNoDuplicate" style="color:#c62828;font-size:.75rem;font-weight:600">⚠️ No. rujukan <b>{{pm.refNo}}</b> sudah wujud dalam rekod. Sila guna nombor lain.</small>
+              <small v-else-if="refNoGapWarning" style="color:#e65100;font-size:.75rem;font-weight:600">⚠️ No. <b>{{nextRefNoSuggestion}}</b> untuk site ini belum digunakan — guna <b>{{refNoSuffix}}</b> akan tinggalkan gap. Cadangan seterusnya: <b>{{nextRefNoSuggestion}}</b>.</small>
+              <small v-else-if="pm.refNo" style="color:#006633;font-size:.75rem">No. Rujukan: <b>{{pm.refNo}}</b></small>
+              <small v-else-if="!pm.siteId" style="color:#888;font-size:.75rem">Pilih site dahulu untuk jana no. rujukan</small>
+              <small v-else-if="currentProject==='vir' && !pm.virRoomNo" style="color:#888;font-size:.75rem">Pilih bilik dahulu untuk jana no. rujukan (setiap bilik ada nombor sendiri)</small>
+              <small v-else-if="!pm.maintType" style="color:#888;font-size:.75rem">Pilih jenis penyelenggaraan (PM/CM) dahulu untuk jana no. rujukan — nombor PM dan CM diasingkan</small>
+            </div>
+            <div class="form-group">
+              <label>Bulan</label>
+              <select class="form-control" v-model="pm.month">
+                <option :value="null">-- Pilih Bulan --</option>
+                <option v-for="(m,i) in MONTHS" :key="i" :value="i+1">{{m}}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Tahun</label>
+              <select class="form-control" v-model="pm.year">
+                <option :value="null">-- Pilih Tahun --</option>
+                <option v-for="y in Array.from({length:16},(_,i)=>2020+i)" :key="y" :value="y">{{y}}</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Tarikh Penyelenggaraan</label><input class="form-control" type="date" v-model="pm.visitDate"></div>
           </div>
           <div class="flex gap-8">
             <button class="btn btn-primary" @click="loadPMEquip" :disabled="!pm.siteId">Seterusnya →</button>
@@ -3133,24 +3141,27 @@ details.form-control[open] summary::after{content:'▴'}
             </template>
           </template>
 
-          <!-- SERVER SNAPSHOT — Optager HD4000 only. BCD has no Server
+          <!-- APPLIANCE SNAPSHOT — Optager HD4000 only. BCD has no Appliance
                hardware, so this is strictly gated on virSystem, never just
-               project==='vir', to keep BCD's borang free of this table. -->
+               project==='vir', to keep BCD's borang free of this table.
+               Borang PM/CM only shows identity/network fields (Nama, No.
+               Siri, Brand, Model, LAN/WiFi IP, Machine ID) — the detailed
+               hardware/software specs (processor, RAM, storage, GPU, OS
+               etc.) stay staff-only in Urus Peralatan Site, not printed on
+               the official borang. -->
           <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.servers||[]).length">
-            <div class="pm-section-hdr">Senarai Server <span>({{viewPM.servers.length}} unit)</span></div>
+            <div class="pm-section-hdr">Senarai Appliance <span>({{viewPM.servers.length}} unit)</span></div>
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
-                <th>Nama</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th>
-                <th>Motherboard</th><th>Networking</th><th>OS</th>
+                <th>Nama</th><th>Appliance No. Siri</th><th>Brand</th><th>Model</th>
+                <th>LAN IP</th><th>WiFi IP</th><th>Machine ID</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(s,i) in viewPM.servers" :key="i">
                   <td class="ctr">{{i+1}}</td>
-                  <td>{{s.name}}</td><td>{{s.processor}}</td><td>{{s.ram}}</td>
-                  <td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td>
-                  <td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{serverNetworkingDisplay(s)}}</td>
-                  <td>{{s.os}}</td>
+                  <td>{{s.name}}</td><td>{{s.serial}}</td><td>{{s.brand||'OPTAGER'}}</td><td>{{s.model||'HD4000'}}</td>
+                  <td>{{s.lanIp}}</td><td>{{s.wifiIp}}</td><td>{{s.optagerMachineId}}</td>
                 </tr>
               </tbody>
             </table>
@@ -5785,7 +5796,8 @@ createApp({
     // specific enough (nested hardware/software specs, license tracking)
     // that they don't fit the generic misc schema.
     const nServer = reactive({
-      name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
+      name:'', brand:'OPTAGER', model:'HD4000', serial:'',
+      processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
       gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
       os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
       installDate:'', optagerLicenseFile:null,
@@ -6377,7 +6389,11 @@ createApp({
     );
 
     const refNoSuffix = ref('');
-    const refNoPrefix = computed(() => {
+    // Base prefix (site/room/year scope, WITHOUT the PM/CM segment) — used
+    // only to match against historical refNo values for numbering
+    // continuity, since records saved before the PM/CM split don't have
+    // that segment at all (see refNoPrefix/nextRefNoSuggestion below).
+    const refNoBasePrefix = computed(() => {
       const siteList = currentProject.value === 'vir' ? VIR_SITES : SITES;
       const site = siteList.find(s => s.id === pm.siteId);
       if (!site) return '';
@@ -6393,8 +6409,8 @@ createApp({
         if(parts.length >= 4 && /^\d{4}$/.test(parts[3])) year = parts[3];
       }
       // VIR sites can have several rooms, each with its own independent
-      // numbering (SPRM/VIR/IPJ/2026/Bilik01/001, .../Bilik02/001 — both
-      // "001" since they're different rooms, not a clash). CCTV has no
+      // numbering (SPRM/VIR/IPJ/2026/Bilik01/PM/001, .../Bilik02/PM/001 —
+      // both "001" since they're different rooms, not a clash). CCTV has no
       // per-room split, so its prefix is unchanged.
       if(currentProject.value === 'vir') {
         if(!pm.virRoomNo) return ''; // ref no. needs a room chosen first
@@ -6408,7 +6424,19 @@ createApp({
       }
       return `SPRM/${proj}/${site.code}/${year}/`;
     });
-    watch([() => pm.siteId, () => pm.virRoomNo, refNoSuffix], () => {
+    // Displayed/saved prefix inserts a PM or CM segment right before the
+    // running number (SPRM/CCTV/KTN/2026/PM/001, SPRM/CCTV/KTN/2026/CM/001)
+    // so PM and CM each get their own independent counter — lets a site
+    // supervisor read straight off the ref no. how many CM jobs have been
+    // done, without it being mixed into the same running count as PM visits.
+    // Requires a maintType to be chosen first (see form: Jenis Penyelenggaraan
+    // now sits above No. Rujukan) since the segment can't be known before that.
+    const refNoPrefix = computed(() => {
+      const base = refNoBasePrefix.value;
+      if(!base || !pm.maintType) return '';
+      return `${base}${pm.maintType}/`;
+    });
+    watch([() => pm.siteId, () => pm.virRoomNo, () => pm.maintType, refNoSuffix], () => {
       // Never during edit — editRecord() sets pm.virRoomNo (which is now
       // part of the VIR ref-no prefix) to restore the form, and this
       // watcher firing right after would rebuild pm.refNo from the CURRENT
@@ -6420,30 +6448,37 @@ createApp({
     });
 
     // Auto-suggest the next sequential ref-no suffix for the selected site
-    // (scoped to site+project+year, matching refNoPrefix), so the field
-    // starts pre-filled with the correct next number instead of relying on
-    // the user to manually track "what's the last one I used". Prevents
-    // gaps like 001 -> 003 (skipping 002) that only get caught after the
-    // fact, if at all — the duplicate check alone only stops re-using an
-    // already-taken number, it doesn't stop skipping ahead.
+    // (scoped to site+project+year+room+maintType), so the field starts
+    // pre-filled with the correct next number instead of relying on the user
+    // to manually track "what's the last one I used". Prevents gaps like
+    // 001 -> 003 (skipping 002) that only get caught after the fact, if at
+    // all — the duplicate check alone only stops re-using an already-taken
+    // number, it doesn't stop skipping ahead.
+    // Matches against refNoBasePrefix (not refNoPrefix) plus a maintType
+    // check on the record itself — not a text search for "/PM/"/"/CM/" in
+    // refNo — so numbering continues correctly across the format change:
+    // older records saved before the PM/CM segment existed still count
+    // toward the right PM or CM sequence instead of restarting at 001.
     const nextRefNoSuggestion = computed(() => {
-      const prefix = refNoPrefix.value;
-      if(!prefix) return '001';
+      const base = refNoBasePrefix.value;
+      if(!base || !pm.maintType) return '001';
       const nums = pmRecords.value
-        .filter(r => r.refNo && r.refNo.startsWith(prefix))
-        .map(r => parseInt(r.refNo.slice(prefix.length), 10))
+        .filter(r => r.refNo && r.refNo.startsWith(base) && (r.maintType||'PM') === pm.maintType)
+        .map(r => { const segs = r.refNo.split('/'); return parseInt(segs[segs.length-1], 10); })
         .filter(n => !isNaN(n));
       const next = (nums.length ? Math.max(...nums) : 0) + 1;
       return String(next).padStart(3, '0');
     });
-    watch([() => pm.siteId, () => pm.virRoomNo], () => {
+    watch([() => pm.siteId, () => pm.virRoomNo, () => pm.maintType], () => {
       // Skip while editing an existing record — editRecord() also sets
       // pm.siteId (to populate the form), which would otherwise trigger this
       // watcher and clobber the record's real suffix with the "next
       // available" suggestion for that site right as the edit form opens.
-      // Also re-suggests on virRoomNo change — each VIR room numbers
-      // independently, so switching rooms must refresh the suggestion.
-      if(pm.siteId && !pm._isEdit) refNoSuffix.value = nextRefNoSuggestion.value;
+      // Also re-suggests on virRoomNo/maintType change — each VIR room
+      // numbers independently, and switching PM<->CM must refresh to that
+      // type's own next-available suggestion instead of keeping the other
+      // type's number.
+      if(pm.siteId && pm.maintType && !pm._isEdit) refNoSuffix.value = nextRefNoSuggestion.value;
     });
     const refNoGapWarning = computed(() => {
       if(!refNoSuffix.value || refNoDuplicate.value) return false;
@@ -7372,19 +7407,19 @@ createApp({
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Kontrak & SLA');
-      XLSX.writeFile(wb, `kontrak_sla_${currentProject.value}_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.writeFile(wb, `kontrak_sla_${currentProject.value}_${_localDateStr()}.xlsx`);
       await logAudit('CONTRACT_EXPORT_EXCEL', `${rows.length} rekod (${currentProject.value.toUpperCase()})`);
     }
     async function exportContractsPdf() {
       const list = contractsFiltered.value;
       const tableRows = list.map((c,i) => `<tr>
-        <td>${i+1}</td><td>${(c.title||'').replace(/</g,'&lt;')}</td><td>${(c.contractNo||'-').replace(/</g,'&lt;')}</td>
+        <td>${i+1}</td><td>${esc(c.title||'')}</td><td>${esc(c.contractNo||'-')}</td>
         <td>${fmtDate(c.startDate)}</td><td>${fmtDate(c.endDate)}</td><td>${CONTRACT_STATUS_LABEL[contractStatus(c)]}</td>
-        <td>${(c.notes||'-').replace(/</g,'&lt;')}</td>
+        <td>${esc(c.notes||'-')}</td>
       </tr>`).join('');
       const w = window.open('','_blank','width=1000,height=700');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
-      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Kontrak_SLA_${currentProject.value.toUpperCase()}_${new Date().toISOString().slice(0,10)}</title>
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Kontrak_SLA_${currentProject.value.toUpperCase()}_${_localDateStr()}</title>
         <style>
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
           h2{color:#003366;margin-bottom:2px}
@@ -7612,28 +7647,28 @@ createApp({
       ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1 };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Waranti Peralatan CCTV');
-      XLSX.writeFile(wb, `waranti_peralatan_cctv_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.writeFile(wb, `waranti_peralatan_cctv_${_localDateStr()}.xlsx`);
       await logAudit('WARRANTY_EXPORT_EXCEL', `${rows.length} rekod`);
     }
     async function exportWarrantyPdf() {
       const groups = warrantyByVendor.value;
       const list = warrantyFiltered.value;
       const groupsHtml = groups.map(g => `
-        <h3 style="color:#003366;margin:16px 0 4px">${g.vendor} — Tempoh Jaminan Kontrak : ${vendorContracts.value[g.vendor] ? fmtDate(vendorContracts.value[g.vendor]) : '-'}</h3>
+        <h3 style="color:#003366;margin:16px 0 4px">${esc(g.vendor)} — Tempoh Jaminan Kontrak : ${vendorContracts.value[g.vendor] ? fmtDate(vendorContracts.value[g.vendor]) : '-'}</h3>
         ${g.sites.map(site => `
-          <h4 style="color:#333;margin:10px 0 2px;font-size:9.5pt">📍 ${(site.siteName||'-').replace(/</g,'&lt;')} (${site.items.length} peralatan)</h4>
+          <h4 style="color:#333;margin:10px 0 2px;font-size:9.5pt">📍 ${esc(site.siteName||'-')} (${site.items.length} peralatan)</h4>
           <table><thead><tr><th>Peralatan</th><th>Brand/Model</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th></tr></thead>
           <tbody>${site.items.map(w => `<tr>
-            <td>${(w.equipmentName||'-').replace(/</g,'&lt;')}</td>
-            <td>${(w.brand||'').replace(/</g,'&lt;')} ${(w.model||'').replace(/</g,'&lt;')}</td>
-            <td>${(w.serial||'-').replace(/</g,'&lt;')}</td>
-            <td>${(w.warrantyType||'-').replace(/</g,'&lt;')}</td>
+            <td>${esc(w.equipmentName||'-')}</td>
+            <td>${esc(w.brand||'')} ${esc(w.model||'')}</td>
+            <td>${esc(w.serial||'-')}</td>
+            <td>${esc(w.warrantyType||'-')}</td>
             <td>${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyStatus(w)]}</td>
           </tr>`).join('')}</tbody></table>`).join('')}
       `).join('');
       const w2 = window.open('','_blank','width=1100,height=750');
       if(!w2) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
-      w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Waranti_Peralatan_CCTV_${new Date().toISOString().slice(0,10)}</title>
+      w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Waranti_Peralatan_CCTV_${_localDateStr()}</title>
         <style>
           @page{size:landscape;margin:12mm}
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
@@ -7802,7 +7837,7 @@ createApp({
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href = url;
-      a.download = `waranti_peralatan_cctv_${new Date().toISOString().slice(0,10)}.docx`;
+      a.download = `waranti_peralatan_cctv_${_localDateStr()}.docx`;
       a.click();
       URL.revokeObjectURL(url);
       await logAudit('WARRANTY_EXPORT_DOCX', `${list.length} rekod`);
@@ -7829,7 +7864,8 @@ createApp({
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nServer: {name:'', processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
+      nServer: {name:'', brand:'OPTAGER', model:'HD4000', serial:'',
+        processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
         os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
         installDate:'', optagerLicenseFile:null},
@@ -8261,6 +8297,7 @@ createApp({
     const BACKUP_COLLECTION = 'systemBackups';
     const BACKUP_MAX_BYTES = 900000; // stay safely under Firestore's ~1MiB document limit
     let _autoBackupWatcher = null;
+    let _notifWatcher = null;
 
     async function doAutoBackup() {
       const data = collectBackupData();
@@ -8777,7 +8814,7 @@ createApp({
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Rekod PM');
-      XLSX.writeFile(wb, `rekod_pm_batch_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.writeFile(wb, `rekod_pm_batch_${_localDateStr()}.xlsx`);
       showToast(`${rows.length} rekod berjaya di-export ke Excel!`);
     }
 
@@ -8866,16 +8903,16 @@ createApp({
       ws['!cols'] = [{wch:20},{wch:20},{wch:20},{wch:40}];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Log Audit');
-      XLSX.writeFile(wb, 'Log_Audit_'+new Date().toISOString().slice(0,10)+'.xlsx');
+      XLSX.writeFile(wb, 'Log_Audit_'+_localDateStr()+'.xlsx');
       await logAudit('EXPORT_AUDIT_EXCEL', `${visibleAuditLogs.value.length} rekod`);
     }
 
     async function exportAuditLogPdf() {
       const rows = _auditLogRows();
-      const tableRows = rows.map(r => `<tr>${r.map(c => `<td>${String(c).replace(/</g,'&lt;')}</td>`).join('')}</tr>`).join('');
+      const tableRows = rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('');
       const w = window.open('','_blank','width=1000,height=700');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
-      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Log_Audit_${new Date().toISOString().slice(0,10)}</title>
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Log_Audit_${_localDateStr()}</title>
         <style>
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
           h2{color:#003366;margin-bottom:2px}
@@ -9563,7 +9600,7 @@ createApp({
       switches: ['name','brand','model','serial'],
       alarms:   ['name','type','brand','model','serial'],
       misc:     ['name','category','brand','model','serial'],
-      servers:  ['name','processor','ram','storage','gpu','mobo','moboType','lanIp','wifiIp','os','optagerMachineId'],
+      servers:  ['name','brand','model','serial','processor','ram','storage','gpu','mobo','moboType','lanIp','wifiIp','os','optagerMachineId'],
       tablets:  ['name','brand','model','serial','controlAppMachineId'],
     };
     const IMPORT_HEADER_HINTS = {
@@ -9874,7 +9911,7 @@ createApp({
         if(kind === 'cameras' && !item.camType) item.camType = 'Indoor';
         if(kind === 'nvr' && !item.type) item.type = 'NVR';
         if(kind === 'hdd' && !item.config) item.config = 'RAID 5';
-        if(kind === 'alarms' && !item.type) item.type = 'SMS Power Alert';
+        if(kind === 'alarms' && !item.type) item.type = 'SMS Alert System';
         if(kind === 'misc' && !item.category) item.category = 'Monitor';
         list.push(item);
         if(key) seen.set(key, item);
@@ -10240,6 +10277,12 @@ createApp({
         clearInterval(_autoBackupWatcher);
         _autoBackupWatcher = setInterval(checkAutoBackup, 30*60*1000);
         buildNotifications();
+        // Re-run periodically too — buildNotifications is otherwise only
+        // triggered by pmRecords/contracts watchers, so day-threshold alerts
+        // (CM open >14 days, draft >7 days) would never surface for a tab
+        // left open with no new Firestore writes.
+        clearInterval(_notifWatcher);
+        _notifWatcher = setInterval(buildNotifications, 5*60*1000);
       } catch(e) {
         console.error(e);
         showToast('Gagal memuatkan data: ' + e.message + '. Semak sambungan internet.', 'error');
@@ -11283,8 +11326,8 @@ createApp({
       if(!isValidIp(nALM.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].alarms;
-      const resolved = _resolveBrandModel(nALM);
-      resolved.type = (resolved.type === 'Lain-lain' && resolved.typeCustom && resolved.typeCustom.trim()) ? resolved.typeCustom.trim() : resolved.type;
+      const { typeCustom, ...resolved } = _resolveBrandModel(nALM);
+      resolved.type = (resolved.type === 'Lain-lain' && typeCustom && typeCustom.trim()) ? typeCustom.trim() : resolved.type;
       const dup = _findDupConflict('alarms', list, resolved, equipEditIdx.alarms);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...resolved, _uid:list[equipEditIdx.alarms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
@@ -11333,23 +11376,13 @@ createApp({
         ? nServer.storage.filter(v => v !== value)
         : [...nServer.storage, value];
     }
-    // Combines the LAN/WiFi IP fields into one "Networking" display string
-    // for the printed borang (replaces the old Wifi/LAN/Wifi+LAN dropdown).
-    // No leading underscore — called directly from the template, and a
-    // leading-underscore name there doesn't resolve at render time (see
-    // the earlier optagerRoomChoicesForSite incident).
-    function serverNetworkingDisplay(s) {
-      const parts = [];
-      if(s.lanIp) parts.push('LAN: ' + s.lanIp);
-      if(s.wifiIp) parts.push('WiFi: ' + s.wifiIp);
-      return parts.join(' / ');
-    }
     function addServer() {
       if(!nServer.name){showToast('Sila masukkan nama/label server','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].servers;
       const item = {
         name: nServer.name,
+        brand: nServer.brand||'OPTAGER', model: nServer.model||'HD4000', serial: nServer.serial,
         processor: _resolveDropdownCustom(nServer.processor, nServer.processorCustom),
         ram: _resolveDropdownCustom(nServer.ram, nServer.ramCustom),
         storage: [...nServer.storage],
@@ -11367,8 +11400,8 @@ createApp({
       };
       const dup = _findDupConflict('servers', list, item, equipEditIdx.servers);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.servers !== null) { item._uid = list[equipEditIdx.servers]._uid||_genId(); list[equipEditIdx.servers] = item; equipEditIdx.servers = null; showToast('Server dikemaskini!'); }
-      else { item._uid = _genId(); list.push(item); showToast('Server berjaya ditambah!'); }
+      if(equipEditIdx.servers !== null) { item._uid = list[equipEditIdx.servers]._uid||_genId(); list[equipEditIdx.servers] = item; equipEditIdx.servers = null; showToast('Appliance dikemaskini!'); }
+      else { item._uid = _genId(); list.push(item); showToast('Appliance berjaya ditambah!'); }
       resetForm('nServer');
     }
     // Optager license (.lic) file upload/download — stored as a base64 data
@@ -11381,6 +11414,7 @@ createApp({
       const file = evt.target.files[0];
       evt.target.value = '';
       if(!file) return;
+      if(!/\.lic$/i.test(file.name)) { showToast('Fail mesti berformat .lic','error'); return; }
       if(file.size > 500 * 1024) { showToast('Fail .lic terlalu besar. Max 500KB.','error'); return; }
       try {
         const data = await new Promise((res, rej) => {
@@ -11421,6 +11455,7 @@ createApp({
       const file = evt.target.files[0];
       evt.target.value = '';
       if(!file) return;
+      if(!/\.lic$/i.test(file.name)) { showToast('Fail mesti berformat .lic','error'); return; }
       if(file.size > 500 * 1024) { showToast('Fail .lic terlalu besar. Max 500KB.','error'); return; }
       try {
         const data = await new Promise((res, rej) => {
@@ -12328,35 +12363,79 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       showToast('DOCX berjaya dieksport!');
     }
 
-    // ---- EXPORT PDF (print) ----
+    // ---- EXPORT PDF (direct download) ----
+    // Renders #print-area to canvas and packages it as a real .pdf file via
+    // html2pdf.js (html2canvas + jsPDF), then triggers a normal browser
+    // download — no OS print dialog. The old window.print()-based approach
+    // opened the native print sheet on mobile (pick a printer / "Save as
+    // PDF" buried in a menu), which reads as "print", not "download a
+    // file". This always lands an actual .pdf in Downloads, desktop and
+    // mobile alike, matching how exportDOCX() already behaves.
     async function exportPDF() {
       const el = document.getElementById('print-area');
       if(!el) return;
-      const styles = [...document.querySelectorAll('style,link[rel="stylesheet"]')]
-        .map(s => s.outerHTML).join('\n');
-      const clone = el.cloneNode(true);
-      const w = window.open('','_blank','width=900,height=700');
-      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
-      // Browser "Save as PDF" uses the document <title> as the default filename.
       const refSafe = (viewPM.value?.refNo || 'Borang').replace(/[\\/:*?"<>|]/g, '-');
-      w.document.write(`<!DOCTYPE html><html lang="ms"><head>
-        <meta charset="UTF-8"><title>Borang_${refSafe}</title>
-        ${styles}
-        <style>body{background:#fff;margin:24px}@media print{body{margin:0}}</style>
-      </head><body class="pm-print">${clone.innerHTML}</body></html>`);
-      w.document.close();
-      w.focus();
-      // The popup is a brand-new document, so its <img> tags (Daya One/SPRM
-      // logos, QR snapshot) have to load fresh — a blind fixed delay before
-      // printing races against that load and can print mid-layout-shift
-      // (logo overlapping the box below it). Wait for every image to
-      // actually finish (or fail) first, capped so a broken image can't
-      // hang the export forever.
-      const imgs = [...w.document.images];
+      const clone = el.cloneNode(true);
+      // Undo the on-screen preview scale-to-fit transform (narrow screens
+      // shrink #print-area via inline transform/width — see pmPreviewScale)
+      // so the PDF always captures the form's true full-width layout,
+      // instead of the shrunk preview size.
+      clone.style.transform = 'none';
+      clone.style.width = PM_PREVIEW_DESIGN_WIDTH + 'px';
+      clone.classList.remove('pm-read-mode');
+      // Re-apply (outside @media print, since html2canvas never evaluates
+      // print media) the same corp-header/signature grid layouts and
+      // fixed-table-layout rules the print stylesheet normally supplies —
+      // without this the captured PDF would use the on-screen block
+      // layout instead of the tuned print layout.
+      clone.classList.add('pdf-export-clone');
+      const overrideStyle = document.createElement('style');
+      overrideStyle.textContent = `
+        .pdf-export-clone .pm-corp-header{width:100%;display:grid;grid-template-columns:110px 1fr 110px;box-sizing:border-box}
+        .pdf-export-clone .pm-corp-info{width:100%;display:grid;grid-template-columns:1fr 1fr;box-sizing:border-box}
+        .pdf-export-clone .pm-sign-wrap{width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;box-sizing:border-box}
+        .pdf-export-clone .pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr}
+        .pdf-export-clone .pm-vir-2col{width:100%;display:grid;grid-template-columns:1fr 1fr;box-sizing:border-box}
+        .pdf-export-clone .pm-vir-2col>.pm-tbl{min-width:0}
+        .pdf-export-clone .pm-tbl{table-layout:fixed;width:100%;border-collapse:collapse}
+        .pdf-export-clone .pm-tbl td{word-break:break-all;overflow-wrap:break-word;max-width:0}
+        .pdf-export-clone .pm-tbl td.pm-hdr-lbl{word-break:normal;overflow-wrap:break-word}
+        .pdf-export-clone .pm-tbl th{word-break:break-word;overflow-wrap:break-word;max-width:0;white-space:normal}
+      `;
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff';
+      container.appendChild(clone);
+      document.head.appendChild(overrideStyle);
+      document.body.appendChild(container);
+      // Same "wait for every image to actually finish" guard as before —
+      // the clone's <img> tags (logos, QR snapshot) share the already-
+      // loaded source so this usually resolves near-instantly, but a slow
+      // reflow could still race html2canvas's capture.
+      const imgs = [...clone.querySelectorAll('img')];
       const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
       await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
-      setTimeout(()=>{ w.print(); w.close(); }, 200);
-      await logAudit('EXPORT_PDF', `${viewPM.value?.refNo||'-'} — ${viewPM.value?.siteName||''}`);
+      try {
+        await html2pdf().set({
+          margin: [10, 10, 10, 10],
+          filename: `Borang_${refSafe}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          // 'css' mode honours any explicit page-break-before/after; the
+          // 'avoid' list mirrors the print stylesheet's page-break-inside:
+          // avoid rules (table rows, section headers, signature block,
+          // notes box, footer) so those still won't get sliced mid-element
+          // across a page boundary, same intent as the old print CSS.
+          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.pm-section-hdr', '.pm-sign-wrap', '.pm-nota-box', '.pm-section-block', '.pm-footer', '.pm-corp-header', '.pm-corp-info'] },
+        }).from(clone).save();
+        await logAudit('EXPORT_PDF', `${viewPM.value?.refNo||'-'} — ${viewPM.value?.siteName||''}`);
+        showToast('PDF berjaya dieksport!');
+      } catch(e) {
+        showToast('Gagal jana PDF: ' + e.message, 'error');
+      } finally {
+        document.body.removeChild(container);
+        document.head.removeChild(overrideStyle);
+      }
     }
 
     // ── Feature 1: Notifications ──
@@ -13087,7 +13166,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Inventori Peralatan');
-      XLSX.writeFile(wb, `inventori_peralatan_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.writeFile(wb, `inventori_peralatan_${_localDateStr()}.xlsx`);
     }
 
     // ── 2. Trend Keterlambatan (SLA breach history) ──
@@ -13528,7 +13607,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown, miscBrandOptions, miscModelOptions, ALARM_BRANDS, ALARM_BRAND_MODELS,
-      nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense, serverNetworkingDisplay,
+      nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
