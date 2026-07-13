@@ -14,7 +14,6 @@
 <script src="https://unpkg.com/docx@8/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -12377,79 +12376,35 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       showToast('DOCX berjaya dieksport!');
     }
 
-    // ---- EXPORT PDF (direct download) ----
-    // Renders #print-area to canvas and packages it as a real .pdf file via
-    // html2pdf.js (html2canvas + jsPDF), then triggers a normal browser
-    // download — no OS print dialog. The old window.print()-based approach
-    // opened the native print sheet on mobile (pick a printer / "Save as
-    // PDF" buried in a menu), which reads as "print", not "download a
-    // file". This always lands an actual .pdf in Downloads, desktop and
-    // mobile alike, matching how exportDOCX() already behaves.
+    // ---- EXPORT PDF (print) ----
     async function exportPDF() {
       const el = document.getElementById('print-area');
       if(!el) return;
-      const refSafe = (viewPM.value?.refNo || 'Borang').replace(/[\\/:*?"<>|]/g, '-');
+      const styles = [...document.querySelectorAll('style,link[rel="stylesheet"]')]
+        .map(s => s.outerHTML).join('\n');
       const clone = el.cloneNode(true);
-      // Undo the on-screen preview scale-to-fit transform (narrow screens
-      // shrink #print-area via inline transform/width — see pmPreviewScale)
-      // so the PDF always captures the form's true full-width layout,
-      // instead of the shrunk preview size.
-      clone.style.transform = 'none';
-      clone.style.width = PM_PREVIEW_DESIGN_WIDTH + 'px';
-      clone.classList.remove('pm-read-mode');
-      // Re-apply (outside @media print, since html2canvas never evaluates
-      // print media) the same corp-header/signature grid layouts and
-      // fixed-table-layout rules the print stylesheet normally supplies —
-      // without this the captured PDF would use the on-screen block
-      // layout instead of the tuned print layout.
-      clone.classList.add('pdf-export-clone');
-      const overrideStyle = document.createElement('style');
-      overrideStyle.textContent = `
-        .pdf-export-clone .pm-corp-header{width:100%;display:grid;grid-template-columns:110px 1fr 110px;box-sizing:border-box}
-        .pdf-export-clone .pm-corp-info{width:100%;display:grid;grid-template-columns:1fr 1fr;box-sizing:border-box}
-        .pdf-export-clone .pm-sign-wrap{width:100%;display:grid;grid-template-columns:1fr 1fr 1fr;box-sizing:border-box}
-        .pdf-export-clone .pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr}
-        .pdf-export-clone .pm-vir-2col{width:100%;display:grid;grid-template-columns:1fr 1fr;box-sizing:border-box}
-        .pdf-export-clone .pm-vir-2col>.pm-tbl{min-width:0}
-        .pdf-export-clone .pm-tbl{table-layout:fixed;width:100%;border-collapse:collapse}
-        .pdf-export-clone .pm-tbl td{word-break:break-all;overflow-wrap:break-word;max-width:0}
-        .pdf-export-clone .pm-tbl td.pm-hdr-lbl{word-break:normal;overflow-wrap:break-word}
-        .pdf-export-clone .pm-tbl th{word-break:break-word;overflow-wrap:break-word;max-width:0;white-space:normal}
-      `;
-      const container = document.createElement('div');
-      container.style.cssText = 'position:fixed;left:-99999px;top:0;background:#fff';
-      container.appendChild(clone);
-      document.head.appendChild(overrideStyle);
-      document.body.appendChild(container);
-      // Same "wait for every image to actually finish" guard as before —
-      // the clone's <img> tags (logos, QR snapshot) share the already-
-      // loaded source so this usually resolves near-instantly, but a slow
-      // reflow could still race html2canvas's capture.
-      const imgs = [...clone.querySelectorAll('img')];
+      const w = window.open('','_blank','width=900,height=700');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      // Browser "Save as PDF" uses the document <title> as the default filename.
+      const refSafe = (viewPM.value?.refNo || 'Borang').replace(/[\\/:*?"<>|]/g, '-');
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head>
+        <meta charset="UTF-8"><title>Borang_${refSafe}</title>
+        ${styles}
+        <style>body{background:#fff;margin:24px}@media print{body{margin:0}}</style>
+      </head><body class="pm-print">${clone.innerHTML}</body></html>`);
+      w.document.close();
+      w.focus();
+      // The popup is a brand-new document, so its <img> tags (Daya One/SPRM
+      // logos, QR snapshot) have to load fresh — a blind fixed delay before
+      // printing races against that load and can print mid-layout-shift
+      // (logo overlapping the box below it). Wait for every image to
+      // actually finish (or fail) first, capped so a broken image can't
+      // hang the export forever.
+      const imgs = [...w.document.images];
       const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
       await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
-      try {
-        await html2pdf().set({
-          margin: [10, 10, 10, 10],
-          filename: `Borang_${refSafe}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          // 'css' mode honours any explicit page-break-before/after; the
-          // 'avoid' list mirrors the print stylesheet's page-break-inside:
-          // avoid rules (table rows, section headers, signature block,
-          // notes box, footer) so those still won't get sliced mid-element
-          // across a page boundary, same intent as the old print CSS.
-          pagebreak: { mode: ['css', 'legacy'], avoid: ['tr', '.pm-section-hdr', '.pm-sign-wrap', '.pm-nota-box', '.pm-section-block', '.pm-footer', '.pm-corp-header', '.pm-corp-info', '.pm-chk-legend'] },
-        }).from(clone).save();
-        await logAudit('EXPORT_PDF', `${viewPM.value?.refNo||'-'} — ${viewPM.value?.siteName||''}`);
-        showToast('PDF berjaya dieksport!');
-      } catch(e) {
-        showToast('Gagal jana PDF: ' + e.message, 'error');
-      } finally {
-        document.body.removeChild(container);
-        document.head.removeChild(overrideStyle);
-      }
+      setTimeout(()=>{ w.print(); w.close(); }, 200);
+      await logAudit('EXPORT_PDF', `${viewPM.value?.refNo||'-'} — ${viewPM.value?.siteName||''}`);
     }
 
     // ── Feature 1: Notifications ──
