@@ -5705,7 +5705,7 @@ createApp({
     };
     const ALARM_BRANDS = Object.keys(ALARM_BRAND_MODELS);
     const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
-    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable (HDMI)'];
+    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable (HDMI)','Digital Clock'];
     // Workstation-level PC brand/model dropdowns — only shown when Kategori
     // is "PC" (other categories keep the free-text brand/model inputs since
     // they cover too wide a range of devices for a fixed dropdown to help).
@@ -5727,9 +5727,10 @@ createApp({
       'Lain-lain': [],
     };
     // Same idea for Kategori "AP/Router".
-    const AP_ROUTER_BRANDS = ['TP-Link','Lain-lain'];
+    const AP_ROUTER_BRANDS = ['TP-Link','TotoLink','Lain-lain'];
     const AP_ROUTER_MODELS = {
       'TP-Link': ['TL-MR105','Omada EAP610','Omada EAP613','Omada EAP620 HD','Omada EAP610-Outdoor','Lain-lain'],
+      'TotoLink': ['N300 Mini N200RE-V5','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "Monitor".
@@ -5744,7 +5745,7 @@ createApp({
     const UPS_MODELS = {
       'Neuropower': ['Cronus 2KR (2kVA)','Cronus 3KR','Cronus 1KR','Lain-lain'],
       'MyCamExpert': ['MC10930','MC10930R','MC800VA','Lain-lain'],
-      'Right Power': ['Titan Vista 9+ 1K (1kVA)','Titan Vista 9+ 2K (2kVA)','Titan Vista 9+ 3K (3kVA)','Lain-lain'],
+      'Right Power': ['Titan Vista 9+ 1K (1kVA)','Titan Vista 9+ 2K (2kVA)','Titan Vista 9+ 3K (3kVA)','PowerBridge 9+ RT 3K','Lain-lain'],
       'Koss': ['Maxtron MX-1KR (1kVA)','Maxtron MX-2KR (2kVA)','Maxtron MX-3KR (3kVA)','Lain-lain'],
       'Lain-lain': [],
     };
@@ -5780,11 +5781,17 @@ createApp({
     const DISPLAY_CABLE_MODELS = {
       'OEM': ['2M','5M','10M','20M','30M','Lain-lain'],
     };
+    // Same idea for Kategori "Digital Clock" — brand and model are both
+    // fixed to "OEM" (no specific manufacturer/model tracked for these).
+    const DIGITAL_CLOCK_BRANDS = ['OEM'];
+    const DIGITAL_CLOCK_MODELS = {
+      'OEM': ['OEM'],
+    };
     // Lookup so the Brand/Model fields can pick the right fixed dropdown
     // per Kategori without a growing v-if chain in the template — add a
     // new category's dicts here and it's wired up automatically.
-    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS, 'PoE Inline (Surge Protector)': SURGE_PROTECTOR_BRANDS, Microphone: MICROPHONE_BRANDS, 'Mic/Line Preamplifier': MIC_PREAMP_BRANDS, 'Display Cable (HDMI)': DISPLAY_CABLE_BRANDS };
-    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS, 'PoE Inline (Surge Protector)': SURGE_PROTECTOR_MODELS, Microphone: MICROPHONE_MODELS, 'Mic/Line Preamplifier': MIC_PREAMP_MODELS, 'Display Cable (HDMI)': DISPLAY_CABLE_MODELS };
+    const MISC_BRAND_DICTS = { PC: PC_BRANDS, TV: TV_BRANDS, 'AP/Router': AP_ROUTER_BRANDS, Monitor: MONITOR_BRANDS, UPS: UPS_BRANDS, 'UPS Battery Pack': UPS_BATTERY_BRANDS, 'PoE Inline (Surge Protector)': SURGE_PROTECTOR_BRANDS, Microphone: MICROPHONE_BRANDS, 'Mic/Line Preamplifier': MIC_PREAMP_BRANDS, 'Display Cable (HDMI)': DISPLAY_CABLE_BRANDS, 'Digital Clock': DIGITAL_CLOCK_BRANDS };
+    const MISC_MODEL_DICTS = { PC: PC_MODELS, TV: TV_MODELS, 'AP/Router': AP_ROUTER_MODELS, Monitor: MONITOR_MODELS, UPS: UPS_MODELS, 'UPS Battery Pack': UPS_BATTERY_MODELS, 'PoE Inline (Surge Protector)': SURGE_PROTECTOR_MODELS, Microphone: MICROPHONE_MODELS, 'Mic/Line Preamplifier': MIC_PREAMP_MODELS, 'Display Cable (HDMI)': DISPLAY_CABLE_MODELS, 'Digital Clock': DIGITAL_CLOCK_MODELS };
     const miscBrandOptions = computed(() => MISC_BRAND_DICTS[nMISC.category] || null);
     const miscModelOptions = computed(() => (MISC_MODEL_DICTS[nMISC.category] || {})[nMISC.brand] || []);
     // CCTV's "Lain-lain" categories were pared down to what's actually used
@@ -6295,6 +6302,10 @@ createApp({
       {key:'opt_camera',    label:'Kamera Rakaman',                   section:'Perkakasan (Hardware)'},
       {key:'opt_mic',       label:'Mikrofon',                         section:'Perkakasan (Hardware)'},
       {key:'opt_preamp',    label:'Audio Preamplifier',               section:'Perkakasan (Hardware)'},
+      {key:'opt_strobe_red',  label:'Strobe Light (Red)',             section:'Perkakasan (Hardware)'},
+      {key:'opt_strobe_blue', label:'Strobe Light (Blue)',            section:'Perkakasan (Hardware)'},
+      {key:'opt_indication_light', label:'Indication Light (Sedang Digunakan)', section:'Perkakasan (Hardware)'},
+      {key:'opt_door_signage', label:'Door Signage (Bilik Merekod Penyataan)', section:'Perkakasan (Hardware)'},
       {key:'opt_software',  label:'Perisian Rakaman (Recording Software)', section:'Perisian (Software)'},
       {key:'opt_software_license', label:'Lesen Perisian (Software License)', section:'Perisian (Software)'},
       {key:'opt_control_software', label:'Perisian Control (Control Software)', section:'Perisian (Software)'},
@@ -11353,13 +11364,13 @@ createApp({
       _sortByName(list);
       resetForm('nALM');
     }
-    // "Display Cable" only ever uses OEM as brand — auto-select it (and lock
-    // out any other choice, since its dropdown has no "Lain-lain") whenever
-    // that Kategori is picked, instead of leaving Brand blank for the user
-    // to fill in themselves.
+    // "Display Cable" and "Digital Clock" only ever use OEM as brand —
+    // auto-select it (and lock out any other choice, since their dropdowns
+    // have no "Lain-lain") whenever one of those Kategori is picked,
+    // instead of leaving Brand blank for the user to fill in themselves.
     function onMiscCategoryChange() {
       nMISC.model = ''; nMISC.modelCustom = '';
-      nMISC.brand = nMISC.category === 'Display Cable (HDMI)' ? 'OEM' : '';
+      nMISC.brand = (nMISC.category === 'Display Cable (HDMI)' || nMISC.category === 'Digital Clock') ? 'OEM' : '';
       nMISC.brandCustom = '';
     }
     function addMisc() {
