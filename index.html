@@ -2074,7 +2074,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?10:8" class="empty">Tiada switch.</td></tr>
+                  <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada switch.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2156,7 +2156,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td :colspan="canViewCredentials?10:8" class="empty">Tiada alarm.</td></tr>
+                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada alarm.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2431,7 +2431,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="canViewCredentials?10:8" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
+                  <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3197,20 +3197,21 @@ details.form-control[open] summary::after{content:'▴'}
             </table>
           </template>
 
-          <!-- POE/NETWORK SWITCH SNAPSHOT — Optager HD4000 only. -->
+          <!-- POE/NETWORK SWITCH SNAPSHOT — Optager HD4000 only. IP Address
+               intentionally omitted from the borang PM/CM (for now) — it
+               stays visible in Urus Peralatan Site's own Senarai Network
+               Switch management table, just not printed on this form. -->
           <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.switches||[]).length">
             <div class="pm-section-hdr">Senarai POE/Network Switch <span>({{viewPM.switches.length}} unit)</span></div>
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
                 <th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th>
-                <th>IP Address</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(s,i) in viewPM.switches" :key="i">
                   <td class="ctr">{{i+1}}</td>
                   <td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}}</td><td>{{s.serial}}</td>
-                  <td>{{s.ip}}</td>
                 </tr>
               </tbody>
             </table>
@@ -6289,11 +6290,15 @@ createApp({
     // layout and doesn't apply to Optager anyway.
     const VIR_CHECKLIST_TEMPLATE_OPTAGER = [
       {key:'opt_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan (Hardware)'},
-      {key:'opt_monitor',   label:'Monitor',                          section:'Perkakasan (Hardware)'},
+      {key:'opt_monitor',   label:'Monitor/TV',                       section:'Perkakasan (Hardware)'},
       {key:'opt_ups',       label:'UPS',                              section:'Perkakasan (Hardware)'},
       {key:'opt_camera',    label:'Kamera Rakaman',                   section:'Perkakasan (Hardware)'},
       {key:'opt_mic',       label:'Mikrofon',                         section:'Perkakasan (Hardware)'},
+      {key:'opt_preamp',    label:'Audio Preamplifier',               section:'Perkakasan (Hardware)'},
       {key:'opt_software',  label:'Perisian Rakaman (Recording Software)', section:'Perisian (Software)'},
+      {key:'opt_software_license', label:'Lesen Perisian (Software License)', section:'Perisian (Software)'},
+      {key:'opt_control_software', label:'Perisian Control (Control Software)', section:'Perisian (Software)'},
+      {key:'opt_control_license',  label:'Lesen Perisian Control (Control Software License)', section:'Perisian (Software)'},
       {key:'opt_storage',   label:'Storan / Storage',                 section:'Perisian (Software)'},
       {key:'opt_backup',    label:'Backup Data',                      section:'Perisian (Software)'},
       {key:'opt_network',   label:'Rangkaian / Network Switch',       section:'Rangkaian & Sokongan'},
