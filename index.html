@@ -194,8 +194,12 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
 
 /* WELCOME POPUP (login) */
-.welcome-popup-bg{position:fixed;inset:0;z-index:9997;background:rgba(0,20,10,.45);display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));animation:slideIn .25s ease;box-sizing:border-box}
-.welcome-popup-card{position:relative;background:linear-gradient(160deg,#00281a 0%,#013a24 60%,#002855 100%);border:1px solid rgba(0,200,100,.3);border-radius:16px;padding:32px 30px 28px;max-width:460px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4)}
+.welcome-popup-bg{position:fixed;inset:0;z-index:9997;background:rgba(0,20,10,.45);display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));animation:slideIn .25s ease;box-sizing:border-box;overflow-y:auto}
+/* max-height + overflow-y so a small phone screen, landscape orientation,
+   or a larger system font size can never trap this card taller than the
+   viewport with no way to scroll to the rest of the text or the close
+   button — same "unreachable content" bug class as the .modal fix below. */
+.welcome-popup-card{position:relative;background:linear-gradient(160deg,#00281a 0%,#013a24 60%,#002855 100%);border:1px solid rgba(0,200,100,.3);border-radius:16px;padding:32px 30px 28px;max-width:460px;width:100%;max-height:85vh;max-height:85dvh;overflow-y:auto;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4);box-sizing:border-box}
 .welcome-popup-icon{font-size:2.2rem;margin-bottom:10px}
 .welcome-popup-card p{color:#e0f0ff;font-size:.85rem;line-height:1.7}
 .welcome-popup-card p b{color:#4dff99}
@@ -852,8 +856,8 @@ details.form-control[open] summary::after{content:'▴'}
 </div>
 
 <!-- SESSION TIMEOUT WARNING -->
-<div v-if="sessionWarning.show" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));box-sizing:border-box">
-  <div style="background:#fff;border-radius:14px;padding:32px 36px;max-width:360px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3)">
+<div v-if="sessionWarning.show" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));box-sizing:border-box;overflow-y:auto">
+  <div style="background:#fff;border-radius:14px;padding:32px 36px;max-width:360px;width:90%;max-height:85vh;max-height:85dvh;overflow-y:auto;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.3);box-sizing:border-box">
     <div style="font-size:2.2rem;margin-bottom:10px">⏱</div>
     <div style="font-weight:700;font-size:1.05rem;color:#b71c1c;margin-bottom:8px">Sesi Hampir Tamat</div>
     <div style="font-size:.88rem;color:#555;margin-bottom:18px;line-height:1.6">
@@ -3161,12 +3165,12 @@ details.form-control[open] summary::after{content:'▴'}
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
-                <th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th>
+                <th>Nama</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(u,i) in virEquipCombined" :key="i">
                   <td class="ctr">{{i+1}}</td>
-                  <td>{{u.name}}</td><td>{{u.brand}}</td><td>{{u.model}}</td><td>{{u.serial}}</td>
+                  <td>{{u.name}}</td><td>{{u.category}}</td><td>{{u.brand}}</td><td>{{u.model}}</td><td>{{u.serial}}</td>
                 </tr>
               </tbody>
             </table>
@@ -5789,7 +5793,7 @@ createApp({
     const VIR_ROOM_NAME_OPTIONS = Array.from({length: 20}, (_, i) => `Bilik ${i + 1}`);
     const VIR_CHECKLIST_SECTIONS = {
       'BCD': ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam'],
-      'Optager HD4000': ['Perkakasan (Hardware)','Perisian (Software)','Status Operasi Sistem'],
+      'Optager HD4000': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem'],
     };
     // Expanded from the real "Senarai Pemeriksaan dan Penyelenggaraan VIR"
     // paper form (SPRM/KUL/VIR/25/004) — every numbered item's individual
@@ -6243,37 +6247,52 @@ createApp({
     // template (which those referenced) only ever matched BCD's physical
     // layout and doesn't apply to Optager anyway.
     const VIR_CHECKLIST_TEMPLATE_OPTAGER = [
-      {key:'opt_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan (Hardware)'},
-      {key:'opt_monitor',   label:'Monitor/TV',                       section:'Perkakasan (Hardware)'},
-      {key:'opt_ups',       label:'UPS',                              section:'Perkakasan (Hardware)'},
-      {key:'opt_camera',    label:'Kamera Rakaman',                   section:'Perkakasan (Hardware)'},
-      {key:'opt_mic',       label:'Mikrofon',                         section:'Perkakasan (Hardware)'},
-      {key:'opt_preamp',    label:'Audio Preamplifier',               section:'Perkakasan (Hardware)'},
-      {key:'opt_strobe_red',  label:'Strobe Light (Red)',             section:'Perkakasan (Hardware)'},
-      {key:'opt_strobe_blue', label:'Strobe Light (Blue)',            section:'Perkakasan (Hardware)'},
-      {key:'opt_indication_light', label:'Indication Light (Sedang Digunakan)', section:'Perkakasan (Hardware)'},
-      {key:'opt_door_signage', label:'Door Signage (Bilik Merekod Penyataan)', section:'Perkakasan (Hardware)'},
-      // Rangkaian & Sokongan items merged into Perkakasan (Hardware) below —
-      // that section is no longer printed as its own separate table (see
-      // VIR_CHECKLIST_SECTIONS and virChecklistCols' single-table handling
-      // for 'Perkakasan (Hardware)').
-      {key:'opt_network',   label:'Rangkaian / Network Switch',       section:'Perkakasan (Hardware)'},
-      {key:'opt_cable',     label:'Pendawaian & Kabel',                section:'Perkakasan (Hardware)'},
-      {key:'opt_software',  label:'Perisian Rakaman (Recording Software)', section:'Perisian (Software)'},
-      {key:'opt_software_license', label:'Lesen Perisian (Software License)', section:'Perisian (Software)'},
-      {key:'opt_control_software', label:'Perisian Control (Control Software)', section:'Perisian (Software)'},
-      {key:'opt_control_license',  label:'Lesen Perisian Control (Control Software License)', section:'Perisian (Software)'},
-      {key:'opt_storage',   label:'Storan / Storage',                 section:'Perisian (Software)'},
-      {key:'opt_backup',    label:'Backup Data',                      section:'Perisian (Software)'},
+      {key:'opt_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_monitor',   label:'Monitor/TV',                       section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_ups',       label:'UPS',                              section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_camera',    label:'Kamera Rakaman',                   section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_mic',       label:'Mikrofon',                         section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_preamp',    label:'Audio Preamplifier',               section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_strobe_red',  label:'Strobe Light (Red)',             section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_strobe_blue', label:'Strobe Light (Blue)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_indication_light', label:'Indication Light (Sedang Digunakan)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_door_signage', label:'Door Signage (Bilik Merekod Penyataan)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_remote_ac', label:'Remote Penghawa Dingin (Air-Cond)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_remote_tv', label:'Remote Televisyen (TV)',           section:'Perkakasan dan Perisian (Hardware & Software)'},
+      // Rangkaian & Sokongan items merged into the combined
+      // Perkakasan/Perisian section below — that section is no longer
+      // printed as its own separate table (see VIR_CHECKLIST_SECTIONS
+      // and virChecklistCols' single-table handling). Cabling split into
+      // network vs audio/HDMI per client's reference borang, replacing
+      // the old single generic "Pendawaian & Kabel" item.
+      {key:'opt_network',   label:'Rangkaian / Network Switch',       section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_cable_network', label:'Pendawaian & Kabel Rangkaian (Network Cabling)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_cable_av',      label:'Pendawaian & Kabel Audio/HDMI', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      // Perisian (Software) merged into Perkakasan (Hardware) below — the
+      // combined section is now titled "Perkakasan dan Perisian (Hardware
+      // & Software)" (see VIR_CHECKLIST_SECTIONS). The two license-only
+      // items (Software License / Control Software License) were dropped
+      // per client request — Perisian Rakaman and Perisian Control remain.
+      {key:'opt_software',  label:'Perisian Rakaman (Recording Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_control_software', label:'Perisian Control (Control Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_storage',   label:'Storan Data (Storage)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_backup',    label:'Backup Data',                      section:'Perkakasan dan Perisian (Hardware & Software)'},
       // "Status Operasi Sistem" — functional/operational tests, distinct
       // from the hardware condition checks above (this section's column
       // is labelled "Fungsi" instead of "Item" in the print view, see
-      // virChecklistItemColLabel()).
+      // virChecklistItemColLabel()). Ordered as an end-to-end operational
+      // sequence: power on -> record -> verify -> transfer -> timestamp
+      // check -> control methods -> indicator light -> safe shutdown.
+      {key:'opt_op_boot',       label:'Sistem Berjaya Dihidupkan (Power On)', section:'Status Operasi Sistem'},
       {key:'opt_op_record1min', label:'Ujian Rakaman 1 Minit',         section:'Status Operasi Sistem'},
+      {key:'opt_op_playback',   label:'Ujian Playback / Semakan Rakaman', section:'Status Operasi Sistem'},
       {key:'opt_op_dvd',        label:'Ujian Pindahan Rakaman ke DVD', section:'Status Operasi Sistem'},
       {key:'opt_op_usb',        label:'Ujian Pindahan Rakaman ke USB Drive', section:'Status Operasi Sistem'},
+      {key:'opt_op_timestamp',  label:'Ketepatan Tarikh & Masa Rakaman (Timestamp)', section:'Status Operasi Sistem'},
       {key:'opt_op_panel',      label:'Operasi Menggunakan Button Panel', section:'Status Operasi Sistem'},
       {key:'opt_op_tablet',     label:'Operasi Menggunakan Tablet Control', section:'Status Operasi Sistem'},
+      {key:'opt_op_indication', label:'Fungsi Indication Light Semasa Rakaman', section:'Status Operasi Sistem'},
+      {key:'opt_op_shutdown',   label:'Sistem Berjaya Dimatikan Dengan Selamat (Shutdown)', section:'Status Operasi Sistem'},
     ];
     // Picks the right checklist array for a given system tag — falls back
     // to BCD if the system is unset/unrecognised (e.g. legacy records saved
@@ -6325,13 +6344,14 @@ createApp({
     // paper form's half-page-per-column layout). Nudges the split point
     // earlier if it would otherwise strand a header row alone at the
     // bottom of column 1 with none of its sub-checks following it.
-    // "Perkakasan (Hardware)" (Optager HD4000) is deliberately kept as one
-    // full-width table instead — it now also absorbs the merged "Rangkaian
-    // & Sokongan" items, and the client asked for it as a single complete
-    // table rather than split left/right.
+    // "Perkakasan dan Perisian (Hardware & Software)" (Optager HD4000) is
+    // deliberately kept as one full-width table instead — it now also
+    // absorbs the merged "Rangkaian & Sokongan" and "Perisian (Software)"
+    // items, and the client asked for it as a single complete table
+    // rather than split left/right.
     function virChecklistCols(section) {
       const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
-      if (section === 'Perkakasan (Hardware)') return [{ items, offset: 0 }];
+      if (section === 'Perkakasan dan Perisian (Hardware & Software)') return [{ items, offset: 0 }];
       let splitAt = Math.ceil(items.length / 2);
       while (splitAt > 0 && splitAt < items.length && items[splitAt-1].isHeader) splitAt--;
       return [
@@ -6358,11 +6378,11 @@ createApp({
       const vp = viewPM.value;
       if (!vp) return [];
       return [
-        ...(vp.servers||[]).map(s => ({ name:s.name, brand:s.brand||'OPTAGER', model:s.model||'HD4000', serial:s.serial })),
-        ...(vp.cameras||[]).map(c => ({ name:c.name, brand:c.brand, model:c.model, serial:c.serial })),
-        ...(vp.switches||[]).map(s => ({ name:s.name, brand:s.brand, model:s.model, serial:s.serial })),
-        ...(vp.tablets||[]).map(t => ({ name:t.name, brand:t.brand, model:t.model, serial:t.serial })),
-        ...(vp.misc||[]).map(m => ({ name:m.name, brand:m.brand, model:m.model, serial:m.serial })),
+        ...(vp.servers||[]).map(s => ({ name:s.name, category:'Appliance', brand:s.brand||'OPTAGER', model:s.model||'HD4000', serial:s.serial })),
+        ...(vp.cameras||[]).map(c => ({ name:c.name, category:'Kamera', brand:c.brand, model:c.model, serial:c.serial })),
+        ...(vp.switches||[]).map(s => ({ name:s.name, category:'POE/Network Switch', brand:s.brand, model:s.model, serial:s.serial })),
+        ...(vp.tablets||[]).map(t => ({ name:t.name, category:'Tablet', brand:t.brand, model:t.model, serial:t.serial })),
+        ...(vp.misc||[]).map(m => ({ name:m.name, category:m.category, brand:m.brand, model:m.model, serial:m.serial })),
       ];
     });
     // ---- "Default Setting Peralatan" (per-unit IP/network settings) ----
