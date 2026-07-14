@@ -6273,8 +6273,8 @@ createApp({
       // & Software)" (see VIR_CHECKLIST_SECTIONS). The two license-only
       // items (Software License / Control Software License) were dropped
       // per client request — Perisian Rakaman and Perisian Control remain.
-      {key:'opt_software',  label:'Perisian Rakaman (Recording Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
-      {key:'opt_control_software', label:'Perisian Control (Control Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_software',  label:'Perisian Rakaman Optager HD4000 (Optager HD4000 Recording Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_control_software', label:'Perisian Tablet Control (Optager HD4000 Tablet Control Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'opt_storage',   label:'Storan Data (Storage)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'opt_backup',    label:'Backup Data',                      section:'Perkakasan dan Perisian (Hardware & Software)'},
       // "Status Operasi Sistem" — functional/operational tests, distinct
@@ -6283,8 +6283,8 @@ createApp({
       // virChecklistItemColLabel()). Ordered as an end-to-end operational
       // sequence: power on -> record -> verify -> transfer -> timestamp
       // check -> control methods -> indicator light -> safe shutdown.
-      {key:'opt_op_boot',       label:'Sistem Berjaya Dihidupkan (Power On)', section:'Status Operasi Sistem'},
-      {key:'opt_op_record1min', label:'Ujian Rakaman 1 Minit',         section:'Status Operasi Sistem'},
+      {key:'opt_op_boot',       label:'Sistem dihidupkan (Power On System)', section:'Status Operasi Sistem'},
+      {key:'opt_op_record1min', label:'Ujian Rakaman',                 section:'Status Operasi Sistem'},
       {key:'opt_op_playback',   label:'Ujian Playback / Semakan Rakaman', section:'Status Operasi Sistem'},
       {key:'opt_op_dvd',        label:'Ujian Pindahan Rakaman ke DVD', section:'Status Operasi Sistem'},
       {key:'opt_op_usb',        label:'Ujian Pindahan Rakaman ke USB Drive', section:'Status Operasi Sistem'},
@@ -6292,7 +6292,7 @@ createApp({
       {key:'opt_op_panel',      label:'Operasi Menggunakan Button Panel', section:'Status Operasi Sistem'},
       {key:'opt_op_tablet',     label:'Operasi Menggunakan Tablet Control', section:'Status Operasi Sistem'},
       {key:'opt_op_indication', label:'Fungsi Indication Light Semasa Rakaman', section:'Status Operasi Sistem'},
-      {key:'opt_op_shutdown',   label:'Sistem Berjaya Dimatikan Dengan Selamat (Shutdown)', section:'Status Operasi Sistem'},
+      {key:'opt_op_shutdown',   label:'Sistem Dimatikan (Shutdown System)', section:'Status Operasi Sistem'},
     ];
     // Picks the right checklist array for a given system tag — falls back
     // to BCD if the system is unset/unrecognised (e.g. legacy records saved
@@ -11248,10 +11248,16 @@ createApp({
     // Same identity rule as the bulk import dedupe: IP for cameras/nvr,
     // Serial No. for everything else. excludeIdx lets an in-place edit
     // match against itself without tripping its own duplicate check.
+    // Equipment with no real serial (Rack, Digital Clock, etc.) commonly
+    // gets a placeholder like "N/A"/"-"/"Tiada" typed in instead — those
+    // aren't genuine identifiers, so multiple items sharing one of these
+    // isn't an actual duplicate and shouldn't be blocked the way two items
+    // sharing a real serial number would be.
+    const _NON_UNIQUE_SERIAL_PLACEHOLDERS = new Set(['n/a','na','-','–','—','tiada','tidak berkenaan','nil','none','x']);
     function _findDupConflict(kind, list, item, excludeIdx) {
       const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
       const val = String(item[dupField]||'').trim().toLowerCase();
-      if(!val) return null;
+      if(!val || (dupField==='serial' && _NON_UNIQUE_SERIAL_PLACEHOLDERS.has(val))) return null;
       const idx = list.findIndex((it,i) => i!==excludeIdx && String(it[dupField]||'').trim().toLowerCase()===val);
       return idx>-1 ? { field:dupField, value:item[dupField], existing:list[idx] } : null;
     }
