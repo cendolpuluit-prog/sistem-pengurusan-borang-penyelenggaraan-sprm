@@ -3111,9 +3111,9 @@ details.form-control[open] summary::after{content:'▴'}
           <template v-if="viewPM?.project==='vir'">
             <template v-for="section in virSectionsFor(viewPM?.virSystem)" :key="section">
               <div class="pm-section-hdr pm-vir-sec">{{section}}</div>
-              <div class="pm-vir-2col">
+              <div :class="virChecklistCols(section).length>1 ? 'pm-vir-2col' : ''">
                 <table class="pm-tbl" v-for="(col,ci) in virChecklistCols(section)" :key="ci">
-                  <thead><tr><th style="width:4%"></th><th>Item</th><th style="width:18%;text-align:center">Status</th><th style="width:14%">Nota</th></tr></thead>
+                  <thead><tr><th style="width:4%"></th><th>{{virChecklistItemColLabel(section)}}</th><th style="width:18%;text-align:center">Status</th><th style="width:14%">Nota</th></tr></thead>
                   <tbody>
                     <template v-for="(item,idx) in col.items" :key="item.key">
                       <tr v-if="item.isHeader">
@@ -3149,112 +3149,59 @@ details.form-control[open] summary::after{content:'▴'}
             </template>
           </template>
 
-          <!-- APPLIANCE SNAPSHOT — Optager HD4000 only. BCD has no Appliance
-               hardware, so this is strictly gated on virSystem, never just
-               project==='vir', to keep BCD's borang free of this table.
-               Borang PM/CM only shows identity/network fields (Nama, No.
-               Siri, Brand, Model, LAN/WiFi IP, Machine ID) — the detailed
-               hardware/software specs (processor, RAM, storage, GPU, OS
-               etc.) stay staff-only in Urus Peralatan Site, not printed on
-               the official borang. -->
-          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.servers||[]).length">
-            <div class="pm-section-hdr">Senarai Appliance <span>({{viewPM.servers.length}} unit)</span></div>
-            <table class="pm-tbl">
-              <thead><tr>
-                <th style="width:4%">No.</th>
-                <th>Nama</th><th>No. Siri</th><th>Brand</th><th>Model</th>
-                <th>LAN IP</th><th>WiFi IP</th><th>Machine ID</th>
-              </tr></thead>
-              <tbody>
-                <tr v-for="(s,i) in viewPM.servers" :key="i">
-                  <td class="ctr">{{i+1}}</td>
-                  <td>{{s.name}}</td><td>{{s.serial}}</td><td>{{s.brand||'OPTAGER'}}</td><td>{{s.model||'HD4000'}}</td>
-                  <td>{{s.lanIp}}</td><td>{{s.wifiIp}}</td><td>{{s.optagerMachineId}}</td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-
-          <!-- KAMERA SNAPSHOT — Optager HD4000 only. Spec listing (no
-               Kualiti Paparan/Nota review columns like CCTV's camera table)
-               since Optager's actual maintenance review happens via the
-               checklist above, not per-item. -->
-          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.cameras||[]).length">
-            <div class="pm-section-hdr">Senarai Kamera <span>({{viewPM.cameras.length}} unit)</span></div>
-            <table class="pm-tbl">
-              <thead><tr>
-                <th style="width:8%">No.</th>
-                <th>Nama</th><th>IP Address</th><th style="width:10%">Brand</th><th style="width:12%">Model</th>
-                <th>No. Siri</th><th style="width:8%">Jenis</th>
-              </tr></thead>
-              <tbody>
-                <tr v-for="(c,i) in viewPM.cameras" :key="i">
-                  <td class="ctr">{{i+1}}</td>
-                  <td>{{c.name}}</td><td>{{c.ip}}</td><td>{{c.brand}}</td><td>{{c.model}}</td>
-                  <td>{{c.serial}}</td><td>{{c.camType}}</td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-
-          <!-- POE/NETWORK SWITCH SNAPSHOT — Optager HD4000 only. IP Address
-               intentionally omitted from the borang PM/CM (for now) — it
-               stays visible in Urus Peralatan Site's own Senarai Network
-               Switch management table, just not printed on this form. -->
-          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.switches||[]).length">
-            <div class="pm-section-hdr">Senarai POE/Network Switch <span>({{viewPM.switches.length}} unit)</span></div>
+          <!-- MAKLUMAT LENGKAP PERKAKASAN — Optager HD4000 only. Combined
+               identity table (Brand/Model/No. Siri) across every equipment
+               type (Appliance/Kamera/Switch/Tablet/Lain-lain) — replaces
+               the 5 separate per-type snapshot tables this used to be,
+               per client's reference borang layout. IP/network settings
+               live in their own "Default Setting Peralatan" section below
+               instead of here. -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && virEquipCombined.length">
+            <div class="pm-section-hdr">Maklumat Lengkap Perkakasan <span>({{virEquipCombined.length}} unit)</span></div>
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
                 <th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th>
               </tr></thead>
               <tbody>
-                <tr v-for="(s,i) in viewPM.switches" :key="i">
+                <tr v-for="(u,i) in virEquipCombined" :key="i">
                   <td class="ctr">{{i+1}}</td>
-                  <td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}}</td><td>{{s.serial}}</td>
+                  <td>{{u.name}}</td><td>{{u.brand}}</td><td>{{u.model}}</td><td>{{u.serial}}</td>
                 </tr>
               </tbody>
             </table>
           </template>
 
-          <!-- TABLET SNAPSHOT — Optager HD4000 only. controlAppMachineId/
-               controlAppLicenseKey/controlAppLicenseFile deliberately
-               excluded — same convention as Server's OS Product Key/
-               Optager Machine ID/Lesen (.lic), internal-only fields never
-               shown in the printed borang. -->
-          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.tablets||[]).length">
-            <div class="pm-section-hdr">Senarai Tablet <span>({{viewPM.tablets.length}} unit)</span></div>
-            <table class="pm-tbl">
-              <thead><tr>
-                <th style="width:4%">No.</th>
-                <th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th>
-              </tr></thead>
-              <tbody>
-                <tr v-for="(t,i) in viewPM.tablets" :key="i">
-                  <td class="ctr">{{i+1}}</td>
-                  <td>{{t.name}}</td><td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td>
-                </tr>
-              </tbody>
-            </table>
-          </template>
-
-          <!-- LAIN-LAIN (MISC) SNAPSHOT — Optager HD4000 only. -->
-          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && (viewPM?.misc||[]).length">
-            <div class="pm-section-hdr">Senarai Lain-lain <span>({{viewPM.misc.length}} unit)</span></div>
-            <table class="pm-tbl">
-              <thead><tr>
-                <th style="width:4%">No.</th>
-                <th>Nama</th><th>Kategori</th><th>Brand</th><th>Model</th>
-                <th>No. Siri</th>
-              </tr></thead>
-              <tbody>
-                <tr v-for="(m,i) in viewPM.misc" :key="i">
-                  <td class="ctr">{{i+1}}</td>
-                  <td>{{m.name}}</td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td>
-                  <td>{{m.serial}}</td>
-                </tr>
-              </tbody>
-            </table>
+          <!-- DEFAULT SETTING PERALATAN — Optager HD4000 only. One small
+               Setting/Nilai/Status sub-table per unit that actually has an
+               IP or network-identity field on record (a Monitor or Digital
+               Clock misc entry, say, has none and is skipped rather than
+               printing an empty box for a field the system never
+               collects). Each Kamera gets its own sub-table individually,
+               matching the client's reference borang (not grouped). -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && virDefaultSettingUnits.length">
+            <div class="pm-section-hdr">Default Setting Peralatan</div>
+            <div class="pm-vir-2col">
+              <table class="pm-tbl" v-for="(u,ui) in virDefaultSettingUnits" :key="ui">
+                <thead>
+                  <tr><th colspan="3" style="text-align:left;background:#e8f4ee">{{u.name}}</th></tr>
+                  <tr><th style="width:34%">Setting</th><th>Nilai</th><th style="width:20%;text-align:center">Status</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row,ri) in u.rows" :key="ri">
+                    <td>{{row[0]}}</td>
+                    <td>{{row[1]}}</td>
+                    <td style="text-align:center;white-space:nowrap">
+                      <span class="pm-chk-box"></span>
+                      <span class="pm-chk-box"></span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pm-chk-legend" style="text-align:right;font-size:7pt;color:#555;font-style:italic;margin:2px 0 6px">
+              Petunjuk Status: <span style="color:#155724;font-weight:700">&#10003;</span> = Berfungsi &nbsp;/&nbsp; <span style="color:#721c24;font-weight:700">&#10007;</span> = Tidak Berfungsi
+            </div>
           </template>
 
           <template v-if="viewPM?.project!=='vir'">
@@ -5842,7 +5789,7 @@ createApp({
     const VIR_ROOM_NAME_OPTIONS = Array.from({length: 20}, (_, i) => `Bilik ${i + 1}`);
     const VIR_CHECKLIST_SECTIONS = {
       'BCD': ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam'],
-      'Optager HD4000': ['Perkakasan (Hardware)','Perisian (Software)','Rangkaian & Sokongan'],
+      'Optager HD4000': ['Perkakasan (Hardware)','Perisian (Software)','Status Operasi Sistem'],
     };
     // Expanded from the real "Senarai Pemeriksaan dan Penyelenggaraan VIR"
     // paper form (SPRM/KUL/VIR/25/004) — every numbered item's individual
@@ -6306,14 +6253,27 @@ createApp({
       {key:'opt_strobe_blue', label:'Strobe Light (Blue)',            section:'Perkakasan (Hardware)'},
       {key:'opt_indication_light', label:'Indication Light (Sedang Digunakan)', section:'Perkakasan (Hardware)'},
       {key:'opt_door_signage', label:'Door Signage (Bilik Merekod Penyataan)', section:'Perkakasan (Hardware)'},
+      // Rangkaian & Sokongan items merged into Perkakasan (Hardware) below —
+      // that section is no longer printed as its own separate table (see
+      // VIR_CHECKLIST_SECTIONS and virChecklistCols' single-table handling
+      // for 'Perkakasan (Hardware)').
+      {key:'opt_network',   label:'Rangkaian / Network Switch',       section:'Perkakasan (Hardware)'},
+      {key:'opt_cable',     label:'Pendawaian & Kabel',                section:'Perkakasan (Hardware)'},
       {key:'opt_software',  label:'Perisian Rakaman (Recording Software)', section:'Perisian (Software)'},
       {key:'opt_software_license', label:'Lesen Perisian (Software License)', section:'Perisian (Software)'},
       {key:'opt_control_software', label:'Perisian Control (Control Software)', section:'Perisian (Software)'},
       {key:'opt_control_license',  label:'Lesen Perisian Control (Control Software License)', section:'Perisian (Software)'},
       {key:'opt_storage',   label:'Storan / Storage',                 section:'Perisian (Software)'},
       {key:'opt_backup',    label:'Backup Data',                      section:'Perisian (Software)'},
-      {key:'opt_network',   label:'Rangkaian / Network Switch',       section:'Rangkaian & Sokongan'},
-      {key:'opt_cable',     label:'Pendawaian & Kabel',                section:'Rangkaian & Sokongan'},
+      // "Status Operasi Sistem" — functional/operational tests, distinct
+      // from the hardware condition checks above (this section's column
+      // is labelled "Fungsi" instead of "Item" in the print view, see
+      // virChecklistItemColLabel()).
+      {key:'opt_op_record1min', label:'Ujian Rakaman 1 Minit',         section:'Status Operasi Sistem'},
+      {key:'opt_op_dvd',        label:'Ujian Pindahan Rakaman ke DVD', section:'Status Operasi Sistem'},
+      {key:'opt_op_usb',        label:'Ujian Pindahan Rakaman ke USB Drive', section:'Status Operasi Sistem'},
+      {key:'opt_op_panel',      label:'Operasi Menggunakan Button Panel', section:'Status Operasi Sistem'},
+      {key:'opt_op_tablet',     label:'Operasi Menggunakan Tablet Control', section:'Status Operasi Sistem'},
     ];
     // Picks the right checklist array for a given system tag — falls back
     // to BCD if the system is unset/unrecognised (e.g. legacy records saved
@@ -6365,8 +6325,13 @@ createApp({
     // paper form's half-page-per-column layout). Nudges the split point
     // earlier if it would otherwise strand a header row alone at the
     // bottom of column 1 with none of its sub-checks following it.
+    // "Perkakasan (Hardware)" (Optager HD4000) is deliberately kept as one
+    // full-width table instead — it now also absorbs the merged "Rangkaian
+    // & Sokongan" items, and the client asked for it as a single complete
+    // table rather than split left/right.
     function virChecklistCols(section) {
       const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
+      if (section === 'Perkakasan (Hardware)') return [{ items, offset: 0 }];
       let splitAt = Math.ceil(items.length / 2);
       while (splitAt > 0 && splitAt < items.length && items[splitAt-1].isHeader) splitAt--;
       return [
@@ -6374,6 +6339,55 @@ createApp({
         { items: items.slice(splitAt), offset: splitAt },
       ];
     }
+    // "Status Operasi Sistem" lists functional tests, not physical parts —
+    // reads better as "Fungsi" (function) than "Item" in that one section's
+    // column header. Every other section keeps "Item".
+    function virChecklistItemColLabel(section) {
+      return section === 'Status Operasi Sistem' ? 'Fungsi' : 'Item';
+    }
+    // ---- "Maklumat Lengkap Perkakasan" (combined equipment info table) ----
+    // Optager HD4000's borang used to print 5 separate snapshot tables
+    // (Appliance/Kamera/POE-Switch/Tablet/Lain-lain), one per equipment
+    // type. Per client request this is now ONE combined table (just
+    // Nama/Brand/Model/No. Siri — identity info only); the actual
+    // IP/network settings moved out to virDefaultSettingUnits below.
+    // Tablet's own sensitive fields (controlAppMachineId/LicenseKey) stay
+    // excluded as before — only its basic identity joins this list, same
+    // as every other equipment type here.
+    const virEquipCombined = computed(() => {
+      const vp = viewPM.value;
+      if (!vp) return [];
+      return [
+        ...(vp.servers||[]).map(s => ({ name:s.name, brand:s.brand||'OPTAGER', model:s.model||'HD4000', serial:s.serial })),
+        ...(vp.cameras||[]).map(c => ({ name:c.name, brand:c.brand, model:c.model, serial:c.serial })),
+        ...(vp.switches||[]).map(s => ({ name:s.name, brand:s.brand, model:s.model, serial:s.serial })),
+        ...(vp.tablets||[]).map(t => ({ name:t.name, brand:t.brand, model:t.model, serial:t.serial })),
+        ...(vp.misc||[]).map(m => ({ name:m.name, brand:m.brand, model:m.model, serial:m.serial })),
+      ];
+    });
+    // ---- "Default Setting Peralatan" (per-unit IP/network settings) ----
+    // Only IP-bearing equipment gets its own mini sub-table here (each
+    // Kamera individually, per client's reference form — not grouped),
+    // and only fields that actually exist as tracked data today (IP/LAN-
+    // WiFi/Machine ID). A unit with no such field populated (e.g. a
+    // Monitor or Digital Clock misc entry) is skipped entirely rather
+    // than printing an empty box for a field the system doesn't collect.
+    const virDefaultSettingUnits = computed(() => {
+      const vp = viewPM.value;
+      if (!vp) return [];
+      const units = [];
+      (vp.servers||[]).forEach(s => {
+        const rows = [];
+        if (s.lanIp) rows.push(['LAN IP', s.lanIp]);
+        if (s.wifiIp) rows.push(['WiFi IP', s.wifiIp]);
+        if (s.optagerMachineId) rows.push(['Machine ID', s.optagerMachineId]);
+        if (rows.length) units.push({ name: s.name, rows });
+      });
+      (vp.cameras||[]).forEach(c => { if (c.ip) units.push({ name: c.name, rows: [['IP Address', c.ip]] }); });
+      (vp.switches||[]).forEach(s => { if (s.ip) units.push({ name: s.name, rows: [['IP Address', s.ip]] }); });
+      (vp.misc||[]).forEach(m => { if (m.ip) units.push({ name: m.name, rows: [['IP Address', m.ip]] }); });
+      return units;
+    });
 
     const pm = reactive({
       _draftId:null, _createdAt:null, _isEdit:false,
@@ -13587,7 +13601,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession,
-      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virEquipCombined, virDefaultSettingUnits, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
