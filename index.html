@@ -2966,7 +2966,7 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th>Bulan</th><th>Tahun</th><th>Tarikh Penyelenggaraan</th><th>Status</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th>Bulan</th><th>Tahun</th><th>Tarikh Penyelenggaraan</th><th>Status</th><th>Tarikh Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in filteredPM" :key="r.id">
@@ -2978,6 +2978,8 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>{{r.year}}</td>
                   <td>{{r.visitDate||'-'}}</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
+                  <td>{{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</td>
+                  <td>{{r.submittedBy||'-'}}</td>
                   <td>
                     <template v-if="r.maintType==='CM'">
                       <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')" style="display:block;margin-bottom:4px">
@@ -2998,7 +3000,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!filteredPM.length"><td colspan="10" class="empty">Tiada rekod.</td></tr>
+                <tr v-if="!filteredPM.length"><td colspan="12" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
           </div>
@@ -3016,6 +3018,10 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="pmc-meta">
                 <span>📅 {{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</span>
                 <span>🛠 {{r.visitDate||'-'}}</span>
+              </div>
+              <div v-if="r.submittedAt" class="pmc-meta">
+                <span>📤 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</span>
+                <span>👤 {{r.submittedBy||'-'}}</span>
               </div>
               <div v-if="r.maintType==='CM'" class="pmc-cm">
                 <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')">
@@ -3088,10 +3094,26 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-corp-info">
             <div class="pm-info-cell"><b>Cawangan / Site:</b> {{viewPM?.siteName}}</div>
             <div class="pm-info-cell"><b>Tarikh Penyelenggaraan:</b> {{viewPM?.visitDate||'—'}}</div>
-            <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}} <span v-if="viewPM?.virSystem" style="color:#006633">({{viewPM.virSystem}})</span></div>
+            <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}}</div>
             <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{viewPM?.month?MONTHS[viewPM.month-1]:'—'}} {{viewPM?.year}}</div>
             <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#006633">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
-            <div class="pm-info-cell pm-info-full" v-if="viewPM?.maintType==='PM'"><b>Penyelenggaraan Ke-:</b>
+            <!-- VIR only — row split into 2 columns instead of a lone
+                 full-width "Penyelenggaraan Ke-" bar (which used to leave
+                 this row blank entirely for CM records): Jenis Sistem VIR
+                 (BCD/Optager HD4000) always shows on the left, paired with
+                 Penyelenggaraan Ke- on the right (a dash for CM, which has
+                 no such concept). -->
+            <template v-if="viewPM?.project==='vir'">
+              <div class="pm-info-cell"><b>Jenis Sistem VIR:</b> {{viewPM?.virSystem||'BCD'}}</div>
+              <div class="pm-info-cell"><b>Penyelenggaraan Ke-:</b>
+                <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
+                  <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
+                </span>
+                <span v-else style="color:#888">—</span>
+              </div>
+            </template>
+            <!-- CCTV — unchanged, still a lone full-width row shown only for PM. -->
+            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir' && viewPM?.maintType==='PM'"><b>Penyelenggaraan Ke-:</b>
               <span class="pm-no-boxes">
                 <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
               </span>
@@ -3117,7 +3139,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="pm-section-hdr pm-vir-sec">{{section}}</div>
               <div :class="virChecklistCols(section).length>1 ? 'pm-vir-2col' : ''">
                 <table class="pm-tbl" v-for="(col,ci) in virChecklistCols(section)" :key="ci">
-                  <thead><tr><th style="width:4%"></th><th>{{virChecklistItemColLabel(section)}}</th><th style="width:18%;text-align:center">Status</th><th style="width:14%">Nota</th></tr></thead>
+                  <thead><tr><th style="width:4%"></th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
                   <tbody>
                     <template v-for="(item,idx) in col.items" :key="item.key">
                       <tr v-if="item.isHeader">
@@ -3153,19 +3175,19 @@ details.form-control[open] summary::after{content:'▴'}
             </template>
           </template>
 
-          <!-- MAKLUMAT LENGKAP PERKAKASAN — Optager HD4000 only. Combined
+          <!-- SENARAI LENGKAP PERKAKASAN — Optager HD4000 only. Combined
                identity table (Brand/Model/No. Siri) across every equipment
                type (Appliance/Kamera/Switch/Tablet/Lain-lain) — replaces
                the 5 separate per-type snapshot tables this used to be,
                per client's reference borang layout. IP/network settings
-               live in their own "Default Setting Peralatan" section below
+               live in their own "Default Setting Perkakasan" section below
                instead of here. -->
           <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && virEquipCombined.length">
-            <div class="pm-section-hdr">Maklumat Lengkap Perkakasan <span>({{virEquipCombined.length}} unit)</span></div>
+            <div class="pm-section-hdr">Senarai Lengkap Perkakasan <span>({{virEquipCombined.length}} unit)</span></div>
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
-                <th>Nama</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th>
+                <th style="width:26%">Nama</th><th style="width:18%">Kategori</th><th style="width:12%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(u,i) in virEquipCombined" :key="i">
@@ -3176,20 +3198,22 @@ details.form-control[open] summary::after{content:'▴'}
             </table>
           </template>
 
-          <!-- DEFAULT SETTING PERALATAN — Optager HD4000 only. One small
-               Setting/Nilai/Status sub-table per unit that actually has an
-               IP or network-identity field on record (a Monitor or Digital
-               Clock misc entry, say, has none and is skipped rather than
-               printing an empty box for a field the system never
-               collects). Each Kamera gets its own sub-table individually,
-               matching the client's reference borang (not grouped). -->
+          <!-- DEFAULT SETTING PERKAKASAN — Optager HD4000 only. One small
+               Setting/IP Address/Status sub-table per unit that actually
+               has an IP or network-identity field on record (a Monitor or
+               Digital Clock misc entry, say, has none and is skipped
+               rather than printing an empty box for a field the system
+               never collects). Each Kamera gets its own sub-table
+               individually, matching the client's reference borang (not
+               grouped) — its Setting row reads "Web Access" rather than
+               "IP Address" (the column header), per client request. -->
           <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && virDefaultSettingUnits.length">
-            <div class="pm-section-hdr">Default Setting Peralatan</div>
+            <div class="pm-section-hdr">Default Setting Perkakasan</div>
             <div class="pm-vir-2col">
               <table class="pm-tbl" v-for="(u,ui) in virDefaultSettingUnits" :key="ui">
                 <thead>
                   <tr><th colspan="3" style="text-align:left;background:#e8f4ee">{{u.name}}</th></tr>
-                  <tr><th style="width:34%">Setting</th><th>Nilai</th><th style="width:20%;text-align:center">Status</th></tr>
+                  <tr><th style="width:34%">Setting</th><th>IP Address</th><th style="width:20%;text-align:center">Status</th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row,ri) in u.rows" :key="ri">
@@ -6365,7 +6389,7 @@ createApp({
     function virChecklistItemColLabel(section) {
       return section === 'Status Operasi Sistem' ? 'Fungsi' : 'Item';
     }
-    // ---- "Maklumat Lengkap Perkakasan" (combined equipment info table) ----
+    // ---- "Senarai Lengkap Perkakasan" (combined equipment info table) ----
     // Optager HD4000's borang used to print 5 separate snapshot tables
     // (Appliance/Kamera/POE-Switch/Tablet/Lain-lain), one per equipment
     // type. Per client request this is now ONE combined table (just
@@ -6385,7 +6409,7 @@ createApp({
         ...(vp.misc||[]).map(m => ({ name:m.name, category:m.category, brand:m.brand, model:m.model, serial:m.serial })),
       ];
     });
-    // ---- "Default Setting Peralatan" (per-unit IP/network settings) ----
+    // ---- "Default Setting Perkakasan" (per-unit IP/network settings) ----
     // Only IP-bearing equipment gets its own mini sub-table here (each
     // Kamera individually, per client's reference form — not grouped),
     // and only fields that actually exist as tracked data today (IP/LAN-
@@ -6398,19 +6422,19 @@ createApp({
       const units = [];
       (vp.servers||[]).forEach(s => {
         const rows = [];
-        if (s.lanIp) rows.push(['LAN IP', s.lanIp]);
-        if (s.wifiIp) rows.push(['WiFi IP', s.wifiIp]);
+        if (s.lanIp) rows.push(['LAN', s.lanIp]);
+        if (s.wifiIp) rows.push(['WIFI', s.wifiIp]);
         if (s.optagerMachineId) rows.push(['Machine ID', s.optagerMachineId]);
         if (rows.length) units.push({ name: s.name, rows });
       });
-      (vp.cameras||[]).forEach(c => { if (c.ip) units.push({ name: c.name, rows: [['IP Address', c.ip]] }); });
+      (vp.cameras||[]).forEach(c => { if (c.ip) units.push({ name: c.name, rows: [['Web Access', c.ip]] }); });
       (vp.switches||[]).forEach(s => { if (s.ip) units.push({ name: s.name, rows: [['IP Address', s.ip]] }); });
       (vp.misc||[]).forEach(m => { if (m.ip) units.push({ name: m.name, rows: [['IP Address', m.ip]] }); });
       return units;
     });
 
     const pm = reactive({
-      _draftId:null, _createdAt:null, _isEdit:false,
+      _draftId:null, _createdAt:null, _isEdit:false, _submittedAt:null, _submittedBy:null,
       siteId:'', siteName:'', refNo:'',
       month: null, year: null,
       visitDate:'',
@@ -11639,7 +11663,7 @@ createApp({
     // ---- PM Form ----
     function startNewPM(proj) {
       clearPmDraftLocal();
-      pm._draftId = null; pm._createdAt = null; pm._isEdit = false;
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null;
       if(proj) currentProject.value = proj;
       pm.virRoomNo=''; pm.virRoomNoCustom='';
       pm.virSystem = 'BCD'; // sane default until a room is picked (or changed via onVirRoomChange)
@@ -11769,6 +11793,15 @@ createApp({
           // that rare crash+resume-edit case, which beats corrupting the field's type).
           createdAt: (pm._createdAt && pm._createdAt.toDate) ? pm._createdAt : firebase.firestore.FieldValue.serverTimestamp(),
           ...(pm._isEdit ? { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '' } : {}),
+          // "Tarikh Borang Submit" / "Disubmit Oleh" — stamped once, the
+          // first time this record actually reaches 'submitted' (same
+          // preserve-if-already-set pattern as createdAt above), so
+          // editing an already-submitted record later doesn't silently
+          // rewrite who/when it was originally submitted.
+          ...(status==='submitted' ? {
+            submittedAt: (pm._submittedAt && pm._submittedAt.toDate) ? pm._submittedAt : firebase.firestore.FieldValue.serverTimestamp(),
+            submittedBy: pm._submittedBy || authUser.value?.email || '',
+          } : {}),
           ...(isVir ? {
             virRoomNo: (pm.virRoomNo==='Lain-lain' && pm.virRoomNoCustom.trim()) ? pm.virRoomNoCustom.trim() : pm.virRoomNo,
             virSystem: pm.virSystem || 'BCD',
@@ -11796,7 +11829,7 @@ createApp({
         clearPmDraftLocal(); // Firestore now holds the authoritative copy — local recovery draft no longer needed
         await loadAll();
         viewPM.value = {id:pm._draftId,...data};
-        pm._draftId = null; pm._createdAt = null; pm._isEdit = false; // clear so next new form gets fresh ID
+        pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; // clear so next new form gets fresh ID
         page.value='pm-view';
       } catch(e){ showToast('Gagal: '+e.message,'error'); }
       loading.value=false;
@@ -11835,6 +11868,13 @@ createApp({
       pm._draftId = r.id;
       pm._createdAt = r.createdAt || null;
       pm._isEdit = true;
+      // Preserve the ORIGINAL submission timestamp/submitter across edits —
+      // savePM() only stamps these fresh when a record has never been
+      // submitted before (mirrors the createdAt-preservation pattern
+      // above), so re-saving an already-submitted record must carry these
+      // forward rather than losing them.
+      pm._submittedAt = r.submittedAt || null;
+      pm._submittedBy = r.submittedBy || null;
       pm.siteId = r.siteId||''; pm.siteName = r.siteName||''; pm.refNo = r.refNo||'';
       const parts = (r.refNo||'').split('/');
       refNoSuffix.value = parts.length>1 ? parts[parts.length-1] : '';
@@ -11911,7 +11951,7 @@ createApp({
       clearPmDraftLocal();
       const wasEdit = pm._isEdit;
       const originalId = pm._draftId;
-      pm._draftId = null; pm._createdAt = null; pm._isEdit = false;
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null;
       if(wasEdit && originalId) {
         // Return to viewing the record as it was, not the bare list —
         // less jarring than dumping them back at the full pm-list table.
