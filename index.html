@@ -2609,6 +2609,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">-- Pilih Punca --</option>
                 <option v-for="c in ROOT_CAUSE_CATEGORIES" :key="c">{{c}}</option>
               </select>
+              <input v-if="pm.rootCause==='Lain-lain'" class="form-control" v-model="pm.rootCauseCustom" placeholder="Nyatakan punca kerosakan sebenar" style="margin-top:6px">
             </div>
             <div class="form-group">
               <label>No. Rujukan</label>
@@ -3122,25 +3123,30 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{viewPM?.month?MONTHS[viewPM.month-1]:'—'}} {{viewPM?.year}}</div>
             <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#006633">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
             <!-- VIR only — row split into 2 columns instead of a lone
-                 full-width "Penyelenggaraan Ke-" bar (which used to leave
-                 this row blank entirely for CM records): Jenis Sistem VIR
+                 full-width "Penyelenggaraan No." bar: Jenis Sistem VIR
                  (BCD/Optager HD4000) always shows on the left, paired with
-                 Penyelenggaraan Ke- on the right (a dash for CM, which has
-                 no such concept). -->
+                 Penyelenggaraan No./Punca Kerosakan on the right — the
+                 label AND content swap depending on maintType, since a CM
+                 record has no PM-number concept but does have a root
+                 cause, and a PM record has the reverse. -->
             <template v-if="viewPM?.project==='vir'">
               <div class="pm-info-cell"><b>Jenis Sistem VIR:</b> {{viewPM?.virSystem||'BCD'}}</div>
-              <div class="pm-info-cell"><b>Penyelenggaraan No.:</b>
+              <div class="pm-info-cell"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>
                 <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
                   <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
                 </span>
-                <span v-else style="color:#888">—</span>
+                <span v-else>{{viewPM?.rootCause || '—'}}</span>
               </div>
             </template>
-            <!-- CCTV — unchanged, still a lone full-width row shown only for PM. -->
-            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir' && viewPM?.maintType==='PM'"><b>Penyelenggaraan No.:</b>
-              <span class="pm-no-boxes">
+            <!-- CCTV — same label/content swap as VIR above, now shown for
+                 both PM and CM (used to be PM-only, leaving CM records
+                 with no row here at all and no way to see the root
+                 cause on the printed borang). -->
+            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir'"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>
+              <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
                 <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
               </span>
+              <span v-else>{{viewPM?.rootCause || '—'}}</span>
             </div>
             <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir'">
               <b>Rumusan Kamera:</b>
@@ -6597,7 +6603,7 @@ createApp({
       // — VIR always keeps them blank/repurposed separately from CCTV, see
       // editRecord/savePM); tablets is Optager-only so it's declared here.
       servers:[], tablets:[],
-      maintType:'', pmNo:null, rootCause:'',
+      maintType:'', pmNo:null, rootCause:'', rootCauseCustom:'',
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
       clientName:'', clientJawatan:'', clientTarikh:'',
@@ -11971,7 +11977,7 @@ createApp({
         {key:'kabel',label:'Kabel dan Aksesori Rangkaian',status:'Baik',nota:''},
         {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
       ];
-      pm.maintType=''; pm.pmNo=null; pm.rootCause='';
+      pm.maintType=''; pm.pmNo=null; pm.rootCause=''; pm.rootCauseCustom='';
       pm.notaCatatan = '';
       pm.contractorName=''; pm.contractorJawatan=''; pm.contractorTarikh='';
       pm.clientName=''; pm.clientJawatan=''; pm.clientTarikh='';
@@ -12070,7 +12076,7 @@ createApp({
           project: isVir ? 'vir' : 'cctv',
           siteId:pm.siteId, siteName:pm.siteName, refNo:pm.refNo,
           month:pm.month, year:pm.year, visitDate:pm.visitDate,
-          maintType: pm.maintType||'PM', pmNo: pm.maintType==='CM' ? null : (pm.pmNo||1), rootCause: pm.maintType==='CM' ? (pm.rootCause||'') : '',
+          maintType: pm.maintType||'PM', pmNo: pm.maintType==='CM' ? null : (pm.pmNo||1), rootCause: pm.maintType==='CM' ? _resolveDropdownCustom(pm.rootCause||'', pm.rootCauseCustom) : '',
           contractorName:pm.contractorName, contractorJawatan:pm.contractorJawatan, contractorTarikh:pm.contractorTarikh,
           clientName:pm.clientName, clientJawatan:pm.clientJawatan, clientTarikh:pm.clientTarikh,
           client2Name:pm.client2Name, client2Jawatan:pm.client2Jawatan, client2Tarikh:pm.client2Tarikh,
@@ -12172,7 +12178,19 @@ createApp({
       refNoSuffix.value = parts.length>1 ? parts[parts.length-1] : '';
       pm.month = r.month||null; pm.year = r.year||null;
       pm.visitDate = r.visitDate||'';
-      pm.maintType = r.maintType||''; pm.pmNo = r.pmNo||null; pm.rootCause = r.rootCause||'';
+      pm.maintType = r.maintType||''; pm.pmNo = r.pmNo||null;
+      // Same "Lain-lain + custom text" reconciliation as brand/model
+      // dropdowns — a saved rootCause that isn't one of the fixed
+      // categories was custom-typed text, so reflect it as "Lain-lain"
+      // with the real value in the custom field rather than leaving the
+      // dropdown on a value it doesn't actually have as an option.
+      if(r.rootCause && !ROOT_CAUSE_CATEGORIES.includes(r.rootCause)) {
+        pm.rootCause = 'Lain-lain';
+        pm.rootCauseCustom = r.rootCause;
+      } else {
+        pm.rootCause = r.rootCause||'';
+        pm.rootCauseCustom = '';
+      }
       pm.notaCatatan = r.notaCatatan||'';
       pm.contractorName=r.contractorName||''; pm.contractorJawatan=r.contractorJawatan||''; pm.contractorTarikh=r.contractorTarikh||'';
       pm.clientName=r.clientName||''; pm.clientJawatan=r.clientJawatan||''; pm.clientTarikh=r.clientTarikh||'';
@@ -12603,7 +12621,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         rows: [
           new TableRow({ children: [infoCell('Cawangan / Site:',true), infoCell(r.siteName), infoCell('Tarikh Penyelenggaraan:',true), infoCell(fmtDateDash(r.visitDate))] }),
           new TableRow({ children: [infoCell(r.project==='vir'?'No. Bilik VIR:':'Bulan Penyelenggaraan:',true), infoCell(r.project==='vir'?`${r.virRoomNo||'—'}${r.virSystem?' ('+r.virSystem+')':''}`:bulan.replace(/^Bulan: /,'')), infoCell('Jenis Penyelenggaraan:',true), infoCell(r.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance')] }),
-          ...(r.maintType==='PM' ? [new TableRow({ children: [infoCell('Penyelenggaraan No.:',true), infoCell(r.pmNo ? `PM ${r.pmNo}` : '—'), infoCell(''), infoCell('')] })] : []),
+          new TableRow({ children: [infoCell(r.maintType==='CM'?'Punca Kerosakan:':'Penyelenggaraan No.:',true), infoCell(r.maintType==='CM'?(r.rootCause||'—'):(r.pmNo?`PM ${r.pmNo}`:'—')), infoCell(''), infoCell('')] }),
         ],
         width: { size: 100, type: WidthType.PERCENTAGE },
       }));
