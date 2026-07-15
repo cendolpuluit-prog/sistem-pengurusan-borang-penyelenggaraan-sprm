@@ -14,6 +14,8 @@
 <script src="https://unpkg.com/docx@8/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -1373,7 +1375,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div v-for="l in visibleAuditLogs.slice(0,5)" :key="l.id" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
               <div class="flex items-center gap-8">
                 <span class="badge badge-blue" style="font-size:.68rem">{{l.action}}</span>
-                <span style="font-size:.8rem;color:#222;font-weight:600">{{l.userName||l.userId||'-'}}</span>
+                <span style="font-size:.8rem;color:#222;font-weight:600">{{_resolveLogActorName(l)}}</span>
               </div>
               <div style="font-size:.75rem;color:#888;margin-top:2px">{{l.detail||'-'}} &nbsp;·&nbsp; {{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</div>
             </div>
@@ -1410,6 +1412,28 @@ details.form-control[open] summary::after{content:'▴'}
               <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">Nisbah PM vs CM ({{dashboardYear}})</div>
               <div class="chart-wrap"><canvas id="chartPMType"></canvas></div>
             </div>
+          </div>
+        </div>
+
+        <!-- PETA PENUGASAN -->
+        <div class="card">
+          <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:8px">
+            <div class="card-title" style="margin:0;border:none;padding:0">🗺️ Peta Penugasan</div>
+            <input type="date" class="form-control" style="width:auto" v-model="mapSelectedDate">
+          </div>
+          <div ref="mapContainerEl"></div>
+          <div v-if="mapDetailState" style="margin-top:12px;background:#f7f9fc;border-radius:8px;padding:12px 14px">
+            <div style="font-weight:700;color:#003366;margin-bottom:6px">{{mapDetailState}}</div>
+            <template v-if="mapDetailList">
+              <div v-for="(a,i) in mapDetailList" :key="i" style="padding:4px 0">
+                <div style="font-size:.85rem;font-weight:600">{{a.siteName}}</div>
+                <div style="font-size:.78rem;color:#666">{{a.team}} · {{a.members}}</div>
+              </div>
+            </template>
+            <div v-else style="font-size:.8rem;color:#888">Tiada penugasan di negeri ini pada tarikh ini.</div>
+          </div>
+          <div style="font-size:.72rem;color:#888;margin-top:8px">
+            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0056b3;margin-right:6px;vertical-align:middle"></span>ada penugasan pada tarikh dipilih — klik pin untuk butiran
           </div>
         </div>
 
@@ -1482,7 +1506,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="l in visibleAuditLogs" :key="l.id">
                   <td style="white-space:nowrap;font-size:.8rem">{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</td>
-                  <td>{{l.userName||l.userId||'-'}}</td>
+                  <td>{{_resolveLogActorName(l)}}</td>
                   <td><span class="badge badge-blue" style="font-size:.72rem">{{l.action}}</span></td>
                   <td>{{l.detail||'-'}}</td>
                   <td v-if="authProfile?.role==='superadmin'" style="text-align:center">
@@ -2979,7 +3003,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>{{r.visitDate||'-'}}</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
                   <td>{{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</td>
-                  <td>{{r.submittedBy||'-'}}</td>
+                  <td>{{_resolveSubmittedByUsername(r)}}</td>
                   <td>
                     <template v-if="r.maintType==='CM'">
                       <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')" style="display:block;margin-bottom:4px">
@@ -3021,7 +3045,7 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
               <div v-if="r.submittedAt" class="pmc-meta">
                 <span>📤 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</span>
-                <span>👤 {{r.submittedBy||'-'}}</span>
+                <span>👤 {{_resolveSubmittedByUsername(r)}}</span>
               </div>
               <div v-if="r.maintType==='CM'" class="pmc-cm">
                 <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')">
@@ -5217,6 +5241,28 @@ const ZONES = {
   BORNEO:       { label:'Borneo',       states:'Sabah · Sarawak · Labuan' },
 };
 
+// Maps each site (both CCTV & VIR) to its real state name, matching the
+// 16 state/federal-territory names in malaysia-states.topojson exactly
+// (Kuala Lumpur, Labuan, Putrajaya, Johor, Kedah, Kelantan, Melaka, Negeri
+// Sembilan, Pahang, Penang, Perak, Perlis, Sabah, Sarawak, Selangor,
+// Terengganu). `zone` above is too coarse for this (one zone spans
+// several states), so this is a deliberate explicit table rather than
+// derived from zone or parsed from the site name string.
+const SITE_STATE_MAP = {
+  s01:'Penang', s02:'Penang', s03:'Perak', s04:'Selangor', s05:'Negeri Sembilan',
+  s06:'Negeri Sembilan', s07:'Melaka', s08:'Johor', s09:'Johor', s10:'Johor',
+  s11:'Johor', s12:'Pahang', s13:'Pahang', s14:'Pahang', s15:'Terengganu',
+  s16:'Kelantan', s17:'Kelantan',
+  v00:'Putrajaya', v36:'Selangor', v01:'Perlis', v02:'Kedah', v37:'Kedah',
+  v03:'Kedah', v04:'Penang', v06:'Perak', v07:'Perak', v08:'Perak',
+  v09:'Selangor', v10:'Selangor', v11:'Kuala Lumpur', v13:'Labuan',
+  v14:'Negeri Sembilan', v15:'Negeri Sembilan', v16:'Melaka', v17:'Johor',
+  v18:'Johor', v19:'Johor', v20:'Johor', v22:'Pahang', v23:'Pahang',
+  v24:'Pahang', v25:'Terengganu', v26:'Terengganu', v27:'Kelantan',
+  v29:'Sabah', v30:'Sabah', v31:'Sabah', v32:'Sarawak', v33:'Sarawak',
+  v34:'Sarawak', v35:'Sarawak',
+};
+
 const LAST_BACKUP_KEY = 'pm_sprm_last_backup'; // local hint only (avoid redundant Firestore checks within the same browser session)
 const MAX_AUTO_BACKUPS = 3;
 
@@ -6806,6 +6852,92 @@ createApp({
       selectedUids: [],
       data: { team:'A', date:'', project:'SPRM - CCTV', maintType:'PM', siteId:'', siteName:'', notes:'' }
     });
+
+    // ---- Dashboard "Peta Penugasan" widget ----
+    // Defaults to today; the date input lets the user look at any other
+    // day's schedule too, not just "today".
+    const mapSelectedDate = ref(_localDateStr());
+    // Groups team assignments for the selected date by real state name
+    // (via SITE_STATE_MAP) — a state only gets a pin on the map if
+    // someone is actually scheduled there that day, never "all sites".
+    const mapStateAssignments = computed(() => {
+      const byState = {};
+      teamAssignments.value
+        .filter(a => a.date === mapSelectedDate.value)
+        .forEach(a => {
+          const state = SITE_STATE_MAP[a.siteId];
+          if (!state) return;
+          if (!byState[state]) byState[state] = [];
+          byState[state].push({
+            siteName: a.siteName, team: a.team, project: a.project,
+            members: (a.members||[]).map(m => m.name).join(', ') || '-',
+          });
+        });
+      return byState;
+    });
+    const mapDetailState = ref(null);
+    const mapDetailList = computed(() => mapDetailState.value ? (mapStateAssignments.value[mapDetailState.value] || null) : null);
+    function mapPinClick(stateName) { mapDetailState.value = stateName; }
+
+    // D3/topojson rendering — plain (non-reactive) module state, since a
+    // D3 selection isn't meaningfully reactive data; `mapD3Ready` just
+    // guards against re-fetching/re-building the SVG shell every time the
+    // user navigates back to the dashboard (the ref lives inside a
+    // v-if="page==='dashboard'" block, so its DOM node is recreated on
+    // every visit — only the one-time shell needs the guard, pin redraw
+    // happens on every mapStateAssignments change regardless).
+    const mapContainerEl = ref(null);
+    let mapD3Ready = false;
+    let mapPath = null, mapCentroids = [];
+    async function initMapWidget() {
+      if (mapD3Ready || !mapContainerEl.value) return;
+      mapD3Ready = true;
+      try {
+        const res = await fetch('malaysia-states.topojson');
+        const topology = await res.json();
+        const geo = topojson.feature(topology, topology.objects.states);
+        const width = 560, height = 340;
+        const projection = d3.geoMercator().fitSize([width, height], geo);
+        mapPath = d3.geoPath(projection);
+        const svg = d3.select(mapContainerEl.value).append('svg')
+          .attr('viewBox', '0 0 ' + width + ' ' + height)
+          .attr('role', 'img')
+          .style('width', '100%').style('height', 'auto').style('display', 'block');
+        svg.append('title').text('Peta penugasan staff mengikut negeri');
+        svg.selectAll('path.mp-state').data(geo.features).join('path')
+          .attr('class', 'mp-state').attr('d', mapPath)
+          .style('fill', '#eef2f8').style('stroke', '#c3cfe0').style('stroke-width', 1);
+        svg.append('g').attr('class', 'mp-pins');
+        mapCentroids = geo.features.map(f => ({ name: f.properties.Name, c: mapPath.centroid(f) }));
+        renderMapPins();
+      } catch (e) {
+        mapD3Ready = false; // allow retry (e.g. next dashboard visit) if the fetch failed transiently
+        if (mapContainerEl.value) mapContainerEl.value.innerHTML = '<p style="font-size:.8rem;color:#888;padding:12px 0">Peta tidak dapat dimuat: ' + e.message + '</p>';
+      }
+    }
+    function renderMapPins() {
+      if (!mapCentroids.length || !mapContainerEl.value) return;
+      const today = mapStateAssignments.value;
+      const g = d3.select(mapContainerEl.value).select('svg .mp-pins');
+      g.selectAll('circle').remove();
+      g.selectAll('text').remove();
+      mapCentroids.forEach(d => {
+        const has = !!today[d.name];
+        g.append('circle')
+          .attr('cx', d.c[0]).attr('cy', d.c[1]).attr('r', has ? 7 : 3)
+          .style('fill', has ? '#0056b3' : '#c3cfe0').style('cursor', 'pointer')
+          .on('click', () => mapPinClick(d.name));
+        if (has) {
+          g.append('text')
+            .attr('x', d.c[0] + 9).attr('y', d.c[1] + 4)
+            .style('font-size', '10px').style('font-weight', '700').style('fill', '#0056b3')
+            .style('cursor', 'pointer').text(d.name)
+            .on('click', () => mapPinClick(d.name));
+        }
+      });
+    }
+    watch(page, async (p) => { if (p === 'dashboard') { await nextTick(); initMapWidget(); } });
+    watch(mapStateAssignments, () => { mapDetailState.value = null; renderMapPins(); });
 
     const allUsers = ref([]);
     // Alphabetical (A-Z) by name for the User Management list — recomputes
@@ -8955,6 +9087,37 @@ createApp({
       if(log.userId && log.userId === authUser.value?.uid) return authProfile.value?.role;
       return allUsers.value.find(u => u.id === log.userId)?.role;
     }
+    // Some log entries show a user's email instead of their full name
+    // (e.g. "asrul@dayaone.com.my" instead of "Mohd Asrul Bin Adanan") for
+    // the same person across different rows — logAudit() falls back to
+    // authProfile.value?.name || authUser.value?.email at WRITE time, so
+    // any session where the profile doc read silently failed (network
+    // blip — see onAuthStateChanged's caught profile-load error) writes
+    // email for every action that session, permanently. Resolve the
+    // CURRENT name from allUsers/authProfile by userId at DISPLAY time
+    // instead — same self-healing pattern as _resolveLogActorRole above —
+    // so old rows show the right name today even if it was wrong when
+    // written, and only fall back to whatever was stored if the user
+    // record can no longer be found (e.g. account since deleted).
+    function _resolveLogActorName(log) {
+      if(log.userId && log.userId === authUser.value?.uid) {
+        return authProfile.value?.name || authProfile.value?.username || log.userName || log.userId || '-';
+      }
+      const match = allUsers.value.find(u => u.id === log.userId);
+      return match?.name || match?.username || log.userName || log.userId || '-';
+    }
+    // "Disubmit Oleh" on PM/CM records now stores username (see savePM) —
+    // shorter than an email for the table column. Older records still
+    // have an email stored from before that switch; resolve those back
+    // to the matching username via allUsers so the column stays short
+    // and consistent for old and new records alike, without needing to
+    // migrate historical data.
+    function _resolveSubmittedByUsername(r) {
+      if(!r.submittedBy) return '-';
+      if(!String(r.submittedBy).includes('@')) return r.submittedBy;
+      const match = allUsers.value.find(u => u.email === r.submittedBy);
+      return match?.username || r.submittedBy;
+    }
     // Role-based visibility: superadmin sees everything; admin sees
     // everything except superadmin's own actions; staff only sees actions
     // performed by fellow staff (not admin/superadmin activity).
@@ -8978,7 +9141,7 @@ createApp({
     function _auditLogRows() {
       return visibleAuditLogs.value.map(l => [
         l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-',
-        l.userName || l.userId || '-',
+        _resolveLogActorName(l),
         l.action || '-',
         l.detail || '-'
       ]);
@@ -11800,7 +11963,7 @@ createApp({
           // rewrite who/when it was originally submitted.
           ...(status==='submitted' ? {
             submittedAt: (pm._submittedAt && pm._submittedAt.toDate) ? pm._submittedAt : firebase.firestore.FieldValue.serverTimestamp(),
-            submittedBy: pm._submittedBy || authUser.value?.email || '',
+            submittedBy: pm._submittedBy || authProfile.value?.username || authUser.value?.email || '',
           } : {}),
           ...(isVir ? {
             virRoomNo: (pm.virRoomNo==='Lain-lain' && pm.virRoomNoCustom.trim()) ? pm.virRoomNoCustom.trim() : pm.virRoomNo,
@@ -13652,6 +13815,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             checkPmDraftRecovery();
             checkEquipDraftRecovery();
             restoreLastPage();
+            if (page.value === 'dashboard') { await nextTick(); initMapWidget(); }
           } else {
             authProfile.value = null;
           }
@@ -13685,11 +13849,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       cctvYearTarget, virYearTarget, cctvTargetPct, virTargetPct,
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
-      filteredPM, yearList,
+      filteredPM, yearList, _resolveSubmittedByUsername,
       PROJECT_TYPES, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
+      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl,
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
@@ -13734,7 +13899,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
-      auditLogs, visibleAuditLogs, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
+      auditLogs, visibleAuditLogs, _resolveLogActorName, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
       showOnlinePanel, onlineUsers,
