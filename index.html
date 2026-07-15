@@ -1375,7 +1375,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div v-for="l in visibleAuditLogs.slice(0,5)" :key="l.id" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
               <div class="flex items-center gap-8">
                 <span class="badge badge-blue" style="font-size:.68rem">{{l.action}}</span>
-                <span style="font-size:.8rem;color:#222;font-weight:600">{{_resolveLogActorName(l)}}</span>
+                <span style="font-size:.8rem;color:#222;font-weight:600">{{logActorDisplayName(l)}}</span>
               </div>
               <div style="font-size:.75rem;color:#888;margin-top:2px">{{l.detail||'-'}} &nbsp;·&nbsp; {{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</div>
             </div>
@@ -1506,7 +1506,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="l in visibleAuditLogs" :key="l.id">
                   <td style="white-space:nowrap;font-size:.8rem">{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</td>
-                  <td>{{_resolveLogActorName(l)}}</td>
+                  <td>{{logActorDisplayName(l)}}</td>
                   <td><span class="badge badge-blue" style="font-size:.72rem">{{l.action}}</span></td>
                   <td>{{l.detail||'-'}}</td>
                   <td v-if="authProfile?.role==='superadmin'" style="text-align:center">
@@ -3003,7 +3003,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>{{r.visitDate||'-'}}</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
                   <td>{{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</td>
-                  <td>{{_resolveSubmittedByUsername(r)}}</td>
+                  <td>{{submittedByDisplayName(r)}}</td>
                   <td>
                     <template v-if="r.maintType==='CM'">
                       <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')" style="display:block;margin-bottom:4px">
@@ -3045,7 +3045,7 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
               <div v-if="r.submittedAt" class="pmc-meta">
                 <span>📤 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</span>
-                <span>👤 {{_resolveSubmittedByUsername(r)}}</span>
+                <span>👤 {{submittedByDisplayName(r)}}</span>
               </div>
               <div v-if="r.maintType==='CM'" class="pmc-cm">
                 <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')">
@@ -9099,7 +9099,7 @@ createApp({
     // so old rows show the right name today even if it was wrong when
     // written, and only fall back to whatever was stored if the user
     // record can no longer be found (e.g. account since deleted).
-    function _resolveLogActorName(log) {
+    function logActorDisplayName(log) {
       if(log.userId && log.userId === authUser.value?.uid) {
         return authProfile.value?.name || authProfile.value?.username || log.userName || log.userId || '-';
       }
@@ -9112,7 +9112,7 @@ createApp({
     // to the matching username via allUsers so the column stays short
     // and consistent for old and new records alike, without needing to
     // migrate historical data.
-    function _resolveSubmittedByUsername(r) {
+    function submittedByDisplayName(r) {
       if(!r.submittedBy) return '-';
       if(!String(r.submittedBy).includes('@')) return r.submittedBy;
       const match = allUsers.value.find(u => u.email === r.submittedBy);
@@ -9141,7 +9141,7 @@ createApp({
     function _auditLogRows() {
       return visibleAuditLogs.value.map(l => [
         l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-',
-        _resolveLogActorName(l),
+        logActorDisplayName(l),
         l.action || '-',
         l.detail || '-'
       ]);
@@ -13849,7 +13849,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       cctvYearTarget, virYearTarget, cctvTargetPct, virTargetPct,
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
-      filteredPM, yearList, _resolveSubmittedByUsername,
+      filteredPM, yearList, submittedByDisplayName,
       PROJECT_TYPES, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
@@ -13899,7 +13899,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
-      auditLogs, visibleAuditLogs, _resolveLogActorName, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
+      auditLogs, visibleAuditLogs, logActorDisplayName, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
       showOnlinePanel, onlineUsers,
