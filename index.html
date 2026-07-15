@@ -5863,7 +5863,7 @@ createApp({
     const VIR_ROOM_NAME_OPTIONS = Array.from({length: 20}, (_, i) => `Bilik ${i + 1}`);
     const VIR_CHECKLIST_SECTIONS = {
       'BCD': ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam'],
-      'Optager HD4000': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem'],
+      'Optager HD4000': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem','Konfigurasi Sistem Appliance (SVR)'],
     };
     // Expanded from the real "Senarai Pemeriksaan dan Penyelenggaraan VIR"
     // paper form (SPRM/KUL/VIR/25/004) — every numbered item's individual
@@ -5877,6 +5877,7 @@ createApp({
     // whether any of its now-visible descendant checks are marked NOK,
     // instead of a hardcoded always-OK value.
     const SEC_AV = 'Sistem Rakaman Audio/Video', SEC_SIVIL = 'Skop Kerja Sivil', SEC_MEK = 'Mekanikal & Awam';
+    const SEC_SVR_CONFIG = 'Konfigurasi Sistem Appliance (SVR)';
     const VIR_CHECKLIST_TEMPLATE_BCD = [
       // ── 1. BCD USA ──
       {key:'h_bcd', label:'1.  BCD USA', section:SEC_AV, isHeader:true},
@@ -6363,6 +6364,48 @@ createApp({
       {key:'opt_op_tablet',     label:'Operasi Menggunakan Tablet Control', section:'Status Operasi Sistem'},
       {key:'opt_op_indication', label:'Fungsi Indication Light Semasa Rakaman', section:'Status Operasi Sistem'},
       {key:'opt_op_shutdown',   label:'Sistem Dimatikan (Shutdown System)', section:'Status Operasi Sistem'},
+      // "Konfigurasi Sistem Appliance (SVR)" — step-by-step Windows/Nvidia
+      // config verification for the Optager appliance PC, per client's
+      // internal setup SOP. Each row is a specific setting a technician
+      // must confirm is applied (status:'ok' = configured correctly),
+      // grouped under isHeader dividers that mirror the SOP's own
+      // numbered steps/sub-steps. More settings get appended here the
+      // same way as the client provides them — keep the header/sub-header
+      // numbering (i., 1.1, 1.2, …) consistent with the source SOP so the
+      // printed checklist reads the same as the reference document.
+      {key:'h_svr_windows',  label:'Windows System Settings', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_uac',        label:'Turn Off UAC (User Account Control Setting) — Set to "Never Notify"', section:SEC_SVR_CONFIG},
+      {key:'svr_autoplay',   label:'Autoplay Setting — Toggle OFF (Default: ON); set "Removable Drive" & "Memory Card" both to "Take no action"', section:SEC_SVR_CONFIG},
+      {key:'svr_firewall',   label:'Firewall & Network Protection — Turn off all 3 networks (Domain, Private, Public)', section:SEC_SVR_CONFIG},
+      {key:'svr_antivirus',  label:'Antivirus (Virus & Threat Protection Settings) — Turn off: Real-time protection, Cloud-delivered protection, Automatic sample submission, Tamper protection, etc.', section:SEC_SVR_CONFIG},
+      {key:'svr_notif',      label:'Notifications — Turn off all notification settings', section:SEC_SVR_CONFIG},
+      {key:'svr_faststartup', label:'Fast Startup — Untick (Control Panel → Power Options → Choose What the Power Buttons Do)', section:SEC_SVR_CONFIG},
+      {key:'svr_activation', label:'Activate Windows License (Change Product Key)', section:SEC_SVR_CONFIG},
+      {key:'h_svr_power',    label:'Power Settings', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_power_sleep', label:'Power & Sleep Settings — Set all to "Never"', section:SEC_SVR_CONFIG},
+      {key:'svr_power_plan', label:'Power Plan — Power Options → Select "High Performance", edit plan setting', section:SEC_SVR_CONFIG},
+      {key:'svr_hdd_sleep',  label:'High Performance Plan — Turn off HDD Sleep (set to 0 minutes), Apply', section:SEC_SVR_CONFIG},
+      {key:'h_svr_nvidia',   label:'Install Nvidia Control Panel', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_nvidia_install', label:'Download & Install Nvidia Control Panel from Microsoft Store', section:SEC_SVR_CONFIG},
+      {key:'h_svr_3d',       label:'1. Manage 3D Settings', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_3d_opengl',  label:'1.1 OpenGL Rendering GPU — Set to: Nvidia 5060/4060', section:SEC_SVR_CONFIG},
+      {key:'svr_3d_power',   label:'1.2 Power Management Mode — Set to: High Performance', section:SEC_SVR_CONFIG},
+      {key:'svr_3d_vsync',   label:'1.3 Vertical Sync — Set to: Off', section:SEC_SVR_CONFIG},
+      {key:'h_svr_physx',    label:'2. Set PhysX Configuration', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_physx_proc', label:'2.1 Select a PhysX Processor — Set to: Nvidia GeForce 5060/4060 (bukan Intel iGPU)', section:SEC_SVR_CONFIG},
+      {key:'h_svr_graphic',  label:'Graphic & Display Settings', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_graphic',    label:'Graphic Settings — Turn On; tambah "Optager" & "Axis Streaming Assistant"; set High Performance GPU untuk kedua-dua', section:SEC_SVR_CONFIG},
+      {key:'svr_wallpaper',  label:'Set Wallpaper PC — Solid Black Colour', section:SEC_SVR_CONFIG},
+      {key:'h_svr_msconfig', label:'System Configuration (MSConfig)', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_msconfig_boot', label:'Boot → Advanced Options — Tick "Number of Processors", pilih Max Core, Apply/OK', section:SEC_SVR_CONFIG},
+      {key:'svr_msconfig_timeout', label:'Boot → Timeout — Set 3 saat, Apply', section:SEC_SVR_CONFIG},
+      {key:'h_svr_startup',  label:'Startup & Shortcut', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_startup',    label:'Run → shell:startup → salin shortcut ikon Optager (dari Desktop) ke folder Startup', section:SEC_SVR_CONFIG},
+      {key:'h_svr_storage',  label:'Persediaan Storan (Drive D)', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_folders',    label:'Cipta 2 folder dalam Drive D: "Recordings" dan "TempDVD"', section:SEC_SVR_CONFIG},
+      {key:'h_svr_gpedit',   label:'Group Policy — QOS Packet Scheduler (gpedit.msc)', section:SEC_SVR_CONFIG, isHeader:true},
+      {key:'svr_gpedit_outstanding', label:'Limit Outstanding Packet — Enabled, set 4000000000, OK', section:SEC_SVR_CONFIG},
+      {key:'svr_gpedit_bandwidth',   label:'Limit Reservable Bandwidth — Enabled, set 0%, OK', section:SEC_SVR_CONFIG},
     ];
     // Picks the right checklist array for a given system tag — falls back
     // to BCD if the system is unset/unrecognised (e.g. legacy records saved
@@ -6421,7 +6464,7 @@ createApp({
     // rather than split left/right.
     function virChecklistCols(section) {
       const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
-      if (section === 'Perkakasan dan Perisian (Hardware & Software)') return [{ items, offset: 0 }];
+      if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG) return [{ items, offset: 0 }];
       let splitAt = Math.ceil(items.length / 2);
       while (splitAt > 0 && splitAt < items.length && items[splitAt-1].isHeader) splitAt--;
       return [
@@ -9857,12 +9900,17 @@ createApp({
 
     // ---- Bulk import from txt/csv/xlsx/pdf (auto-detect + auto-sort columns) ----
     const IMPORT_FIELD_KEYS = {
-      cameras:  ['name','ip','camType','brand','model','accessory','serial'],
-      nvr:      ['name','type','brand','model','serial','ip'],
+      // accessUser/accessPw included so an Excel/CSV source that carries
+      // device credentials imports them instead of silently dropping them
+      // (they end up split into the companion credentials collection on
+      // save, same as manually-added ones). Scanned images simply leave
+      // these columns blank.
+      cameras:  ['name','ip','camType','brand','model','accessory','serial','accessUser','accessPw'],
+      nvr:      ['name','type','brand','model','serial','ip','accessUser','accessPw'],
       hdd:      ['brand','model','serial','capacity','config','nvrRef'],
-      switches: ['name','brand','model','serial'],
-      alarms:   ['name','type','brand','model','serial'],
-      misc:     ['name','category','brand','model','serial'],
+      switches: ['name','brand','model','serial','accessUser','accessPw'],
+      alarms:   ['name','type','brand','model','serial','accessUser','accessPw'],
+      misc:     ['name','category','brand','model','serial','accessUser','accessPw'],
       servers:  ['name','brand','model','serial','processor','ram','storage','gpu','mobo','moboType','lanIp','wifiIp','os','optagerMachineId'],
       tablets:  ['name','brand','model','serial','controlAppMachineId'],
     };
@@ -9878,6 +9926,8 @@ createApp({
       capacity: ['capacity','kapasiti','size'],
       config:   ['config','configuration','konfigurasi','raid'],
       nvrRef:   ['nvr','nvr ref','nvr berkaitan'],
+      accessUser: ['access user','username','user name','pengguna','login'],
+      accessPw:   ['access pw','password','kata laluan','passwd'],
     };
     // Product-line names / model-number prefixes that reliably identify a
     // brand even when the brand itself was never typed or OCR'd — e.g. a
@@ -10272,11 +10322,17 @@ createApp({
       if(!selSite.value) return;
       const list = activeEquip()[selSite.value.id]?.[key];
       if(!list || list.length < 2) return;
+      // Sorting shifts every index, so an in-progress edit-in-place
+      // (equipEditIdx holds an array INDEX) would silently point at — and
+      // then overwrite — the wrong row on "Kemaskini". Track the edited
+      // row by _uid across the sort, same as bulk delete does.
+      const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
       list.sort((a,b) => {
         const ka = _ipSortKey(a.ip), kb = _ipSortKey(b.ip);
         for(let i=0;i<4;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; }
         return 0;
       });
+      if(editedUid) equipEditIdx[key] = list.findIndex(it => it._uid === editedUid);
       showToast('Senarai disusun ikut IP Address. Klik "💾 Simpan Semua" untuk kekalkan susunan.', 'success');
     }
 
@@ -10287,7 +10343,11 @@ createApp({
       if(!selSite.value) return;
       const list = activeEquip()[selSite.value.id]?.[key];
       if(!list || list.length < 2) return;
+      // Same index-shift hazard as sortEquipListByIp — re-sync any
+      // in-progress edit-in-place to its new position by _uid.
+      const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
       _sortByName(list);
+      if(editedUid) equipEditIdx[key] = list.findIndex(it => it._uid === editedUid);
       showToast('Senarai disusun ikut Nama/Lokasi. Klik "💾 Simpan Semua" untuk kekalkan susunan.', 'success');
     }
 
