@@ -3117,7 +3117,7 @@ details.form-control[open] summary::after{content:'▴'}
           <!-- INFO BLOCK -->
           <div class="pm-corp-info">
             <div class="pm-info-cell"><b>Cawangan / Site:</b> {{viewPM?.siteName}}</div>
-            <div class="pm-info-cell"><b>Tarikh Penyelenggaraan:</b> {{viewPM?.visitDate||'—'}}</div>
+            <div class="pm-info-cell"><b>Tarikh Penyelenggaraan:</b> {{fmtDateDash(viewPM?.visitDate)}}</div>
             <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}}</div>
             <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{viewPM?.month?MONTHS[viewPM.month-1]:'—'}} {{viewPM?.year}}</div>
             <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#006633">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
@@ -3129,7 +3129,7 @@ details.form-control[open] summary::after{content:'▴'}
                  no such concept). -->
             <template v-if="viewPM?.project==='vir'">
               <div class="pm-info-cell"><b>Jenis Sistem VIR:</b> {{viewPM?.virSystem||'BCD'}}</div>
-              <div class="pm-info-cell"><b>Penyelenggaraan Ke-:</b>
+              <div class="pm-info-cell"><b>Penyelenggaraan No.:</b>
                 <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
                   <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
                 </span>
@@ -3137,7 +3137,7 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
             </template>
             <!-- CCTV — unchanged, still a lone full-width row shown only for PM. -->
-            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir' && viewPM?.maintType==='PM'"><b>Penyelenggaraan Ke-:</b>
+            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir' && viewPM?.maintType==='PM'"><b>Penyelenggaraan No.:</b>
               <span class="pm-no-boxes">
                 <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
               </span>
@@ -5863,7 +5863,7 @@ createApp({
     const VIR_ROOM_NAME_OPTIONS = Array.from({length: 20}, (_, i) => `Bilik ${i + 1}`);
     const VIR_CHECKLIST_SECTIONS = {
       'BCD': ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam'],
-      'Optager HD4000': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem','Konfigurasi Sistem Appliance (SVR)'],
+      'Optager HD4000': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem','Default Konfigurasi Appliance Optager HD4000','Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)','Default Konfigurasi Kamera Axis M4218-LV (CAM3)'],
     };
     // Expanded from the real "Senarai Pemeriksaan dan Penyelenggaraan VIR"
     // paper form (SPRM/KUL/VIR/25/004) — every numbered item's individual
@@ -5877,7 +5877,9 @@ createApp({
     // whether any of its now-visible descendant checks are marked NOK,
     // instead of a hardcoded always-OK value.
     const SEC_AV = 'Sistem Rakaman Audio/Video', SEC_SIVIL = 'Skop Kerja Sivil', SEC_MEK = 'Mekanikal & Awam';
-    const SEC_SVR_CONFIG = 'Konfigurasi Sistem Appliance (SVR)';
+    const SEC_SVR_CONFIG = 'Default Konfigurasi Appliance Optager HD4000';
+    const SEC_CAM_CONFIG = 'Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)';
+    const SEC_CAM3_CONFIG = 'Default Konfigurasi Kamera Axis M4218-LV (CAM3)';
     const VIR_CHECKLIST_TEMPLATE_BCD = [
       // ── 1. BCD USA ──
       {key:'h_bcd', label:'1.  BCD USA', section:SEC_AV, isHeader:true},
@@ -6354,7 +6356,7 @@ createApp({
       // virChecklistItemColLabel()). Ordered as an end-to-end operational
       // sequence: power on -> record -> verify -> transfer -> timestamp
       // check -> control methods -> indicator light -> safe shutdown.
-      {key:'opt_op_boot',       label:'Sistem dihidupkan (Power On System)', section:'Status Operasi Sistem'},
+      {key:'opt_op_boot',       label:'Sistem Dihidupkan (Power On System)', section:'Status Operasi Sistem'},
       {key:'opt_op_record1min', label:'Ujian Rakaman',                 section:'Status Operasi Sistem'},
       {key:'opt_op_playback',   label:'Ujian Playback / Semakan Rakaman', section:'Status Operasi Sistem'},
       {key:'opt_op_dvd',        label:'Ujian Pindahan Rakaman ke DVD', section:'Status Operasi Sistem'},
@@ -6362,6 +6364,7 @@ createApp({
       {key:'opt_op_timestamp',  label:'Ketepatan Tarikh & Masa Rakaman (Timestamp)', section:'Status Operasi Sistem'},
       {key:'opt_op_panel',      label:'Operasi Menggunakan Button Panel', section:'Status Operasi Sistem'},
       {key:'opt_op_tablet',     label:'Operasi Menggunakan Tablet Control', section:'Status Operasi Sistem'},
+      {key:'opt_op_strobe',     label:'Fungsi Strobe Light Semasa Rakaman', section:'Status Operasi Sistem'},
       {key:'opt_op_indication', label:'Fungsi Indication Light Semasa Rakaman', section:'Status Operasi Sistem'},
       {key:'opt_op_shutdown',   label:'Sistem Dimatikan (Shutdown System)', section:'Status Operasi Sistem'},
       // "Konfigurasi Sistem Appliance (SVR)" — step-by-step Windows/Nvidia
@@ -6386,7 +6389,7 @@ createApp({
       {key:'svr_power_plan', label:'Power Plan — Power Options → Select "High Performance", edit plan setting', section:SEC_SVR_CONFIG},
       {key:'svr_hdd_sleep',  label:'High Performance Plan — Turn off HDD Sleep (set to 0 minutes), Apply', section:SEC_SVR_CONFIG},
       {key:'h_svr_nvidia',   label:'Install Nvidia Control Panel', section:SEC_SVR_CONFIG, isHeader:true},
-      {key:'svr_nvidia_install', label:'Download & Install Nvidia Control Panel from Microsoft Store', section:SEC_SVR_CONFIG},
+      {key:'svr_nvidia_install', label:'Download & Install Nvidia Control Panel', section:SEC_SVR_CONFIG},
       {key:'h_svr_3d',       label:'1. Manage 3D Settings', section:SEC_SVR_CONFIG, isHeader:true},
       {key:'svr_3d_opengl',  label:'1.1 OpenGL Rendering GPU — Set to: Nvidia 5060/4060', section:SEC_SVR_CONFIG},
       {key:'svr_3d_power',   label:'1.2 Power Management Mode — Set to: High Performance', section:SEC_SVR_CONFIG},
@@ -6406,6 +6409,39 @@ createApp({
       {key:'h_svr_gpedit',   label:'Group Policy — QOS Packet Scheduler (gpedit.msc)', section:SEC_SVR_CONFIG, isHeader:true},
       {key:'svr_gpedit_outstanding', label:'Limit Outstanding Packet — Enabled, set 4000000000, OK', section:SEC_SVR_CONFIG},
       {key:'svr_gpedit_bandwidth',   label:'Limit Reservable Bandwidth — Enabled, set 0%, OK', section:SEC_SVR_CONFIG},
+      // "Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)" — camera-
+      // side stream settings for smooth offline RTSP recording into
+      // Optager (same settings verified on both CAM1 and CAM2, since both
+      // run the identical model/profile).
+      {key:'h_cam_general',   label:'1. Video > Stream > General (Stream Profile Utama)', section:SEC_CAM_CONFIG, isHeader:true},
+      {key:'cam_encoding',    label:'Encoding — Set to: H.264 (elak H.265 jika Optager tak stabil)', section:SEC_CAM_CONFIG},
+      {key:'cam_resolution',  label:'Resolution — Set to: 1920x1080 (Full HD), atau 1280x720 jika PC panas/lag', section:SEC_CAM_CONFIG},
+      {key:'cam_framerate',   label:'Frame Rate — Set tetap: 25 fps atau 30 fps', section:SEC_CAM_CONFIG},
+      {key:'cam_compression', label:'Compression / Quality — Set: 60–80 (70 disyorkan)', section:SEC_CAM_CONFIG},
+      {key:'h_cam_zipstream', label:'2. Video > Stream > H.264 and H.265 Encoding (Zipstream)', section:SEC_CAM_CONFIG, isHeader:true},
+      {key:'cam_zipstream',   label:'Zipstream — Set to: Low (atau Off untuk smoothness maksimum)', section:SEC_CAM_CONFIG},
+      {key:'cam_dynfps',      label:'Dynamic FPS — Set to: Off', section:SEC_CAM_CONFIG},
+      {key:'cam_lowerlimit',  label:'Lower Limit — Tak perlu ubah (Dynamic FPS Off)', section:SEC_CAM_CONFIG},
+      {key:'cam_dyngop',      label:'Dynamic GOP — Set to: Off', section:SEC_CAM_CONFIG},
+      {key:'cam_pframes',     label:'P-frames — Set to: 61 (biarkan default)', section:SEC_CAM_CONFIG},
+      {key:'cam_bitrate',     label:'Bitrate Control — Set to: Variable', section:SEC_CAM_CONFIG},
+      // "Default Konfigurasi Kamera Axis M4218-LV (CAM3)" — CAM3 is a
+      // different model from CAM1/CAM2 (document/overview camera, not the
+      // main recording pair), so its stream profile settings differ.
+      // Recording FPS itself is hardcoded to 5fps inside the Optager
+      // HD4000 app separately from this camera-side profile — the profile
+      // frame rate below only governs the camera's own stream output.
+      {key:'h_cam3_general',   label:'1. Video > Stream > General / Stream Profiles', section:SEC_CAM3_CONFIG, isHeader:true},
+      {key:'cam3_profile_new', label:'Buat Stream Profile baru bernama "Document4K"', section:SEC_CAM3_CONFIG},
+      {key:'cam3_resolution',  label:'Resolution — Set to: 3840x2160', section:SEC_CAM3_CONFIG},
+      {key:'cam3_framerate',   label:'Frame Rate — Set to: 15 fps (atau 10 fps)', section:SEC_CAM3_CONFIG},
+      {key:'cam3_encoding',    label:'Encoding — Set to: H.264', section:SEC_CAM3_CONFIG},
+      {key:'cam3_quality',     label:'Quality — Set to: 85', section:SEC_CAM3_CONFIG},
+      {key:'h_cam3_zipstream', label:'2. Video > Stream > H.264 and H.265 Encoding', section:SEC_CAM3_CONFIG, isHeader:true},
+      {key:'cam3_zipstream',   label:'Zipstream — Set to: Off (PALING PENTING untuk teks tajam)', section:SEC_CAM3_CONFIG},
+      {key:'cam3_dynfps',      label:'Dynamic FPS — Set to: Off', section:SEC_CAM3_CONFIG},
+      {key:'cam3_dyngop',      label:'Dynamic GOP — Set to: Off', section:SEC_CAM3_CONFIG},
+      {key:'cam3_note_hardcode', label:'Nota: FPS rakaman sebenar di-hardcode 5 fps dalam aplikasi Optager HD4000 (berasingan daripada Frame Rate stream profile kamera di atas)', section:SEC_CAM3_CONFIG, isHeader:true},
     ];
     // Picks the right checklist array for a given system tag — falls back
     // to BCD if the system is unset/unrecognised (e.g. legacy records saved
@@ -6464,7 +6500,7 @@ createApp({
     // rather than split left/right.
     function virChecklistCols(section) {
       const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
-      if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG) return [{ items, offset: 0 }];
+      if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG || section === SEC_CAM_CONFIG || section === SEC_CAM3_CONFIG) return [{ items, offset: 0 }];
       let splitAt = Math.ceil(items.length / 2);
       while (splitAt > 0 && splitAt < items.length && items[splitAt-1].isHeader) splitAt--;
       return [
@@ -6516,9 +6552,24 @@ createApp({
         if (s.optagerMachineId) rows.push(['Machine ID', s.optagerMachineId]);
         if (rows.length) units.push({ name: s.name, rows });
       });
-      (vp.cameras||[]).forEach(c => { if (c.ip) units.push({ name: c.name, rows: [['Web Access', c.ip]] }); });
+      // Default web-access login for every Optager HD4000 camera (CAM1-3)
+      // is the same fixed credential — printed under each camera's own
+      // sub-table here rather than pulled from the equipment record's own
+      // accessUser/accessPw (which stays staff-only, hidden behind
+      // canViewCredentials elsewhere) since this is the shared factory
+      // default, not a per-unit stored value.
+      (vp.cameras||[]).forEach(c => { if (c.ip) units.push({ name: c.name, rows: [['Web Access', c.ip], ['Username', 'root'], ['Password', 'Admin123']] }); });
       (vp.switches||[]).forEach(s => { if (s.ip) units.push({ name: s.name, rows: [['IP Address', s.ip]] }); });
-      (vp.misc||[]).forEach(m => { if (m.ip) units.push({ name: m.name, rows: [['IP Address', m.ip]] }); });
+      // Wireless AP (misc category "AP/Router", e.g. SBH/VIR/OPT/AP1/B1 &
+      // AP2/B1) gets the same fixed shared default login as cameras above
+      // — not the equipment record's own stored accessUser/accessPw,
+      // consistent with the same "shared factory default, not a per-unit
+      // secret" reasoning.
+      (vp.misc||[]).forEach(m => {
+        if (!m.ip) return;
+        if (m.category === 'AP/Router') units.push({ name: m.name, rows: [['IP Address', m.ip], ['Username', 'admin'], ['Password', 'Admin123']] });
+        else units.push({ name: m.name, rows: [['IP Address', m.ip]] });
+      });
       return units;
     });
 
@@ -7376,6 +7427,11 @@ createApp({
     // things as not-yet-expired for that 8-hour window every day.
     function _localDateStr(d){ const dt=d||new Date(); const y=dt.getFullYear(); const m=String(dt.getMonth()+1).padStart(2,'0'); const day=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
     function fmtDate(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}/${m}/${y}`; }
+    // Dash-separated variant (dd-mm-yyyy) — used specifically for
+    // "Tarikh Penyelenggaraan" in the main borang info block, per client
+    // request. fmtDate() above (slash-separated) stays the default
+    // everywhere else in the app; this doesn't replace it globally.
+    function fmtDateDash(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}-${m}-${y}`; }
     function shortSite(name){
       if(!name) return '';
       // Extract last meaningful word(s)
@@ -12545,9 +12601,9 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const bulan = r.project === 'vir' ? `No. Bilik VIR: ${r.virRoomNo||'—'}` : `Bulan: ${r.month?MONTHS[r.month-1]:'—'} ${r.year}`;
       children.push(new Table({
         rows: [
-          new TableRow({ children: [infoCell('Cawangan / Site:',true), infoCell(r.siteName), infoCell('Tarikh Penyelenggaraan:',true), infoCell(r.visitDate)] }),
+          new TableRow({ children: [infoCell('Cawangan / Site:',true), infoCell(r.siteName), infoCell('Tarikh Penyelenggaraan:',true), infoCell(fmtDateDash(r.visitDate))] }),
           new TableRow({ children: [infoCell(r.project==='vir'?'No. Bilik VIR:':'Bulan Penyelenggaraan:',true), infoCell(r.project==='vir'?`${r.virRoomNo||'—'}${r.virSystem?' ('+r.virSystem+')':''}`:bulan.replace(/^Bulan: /,'')), infoCell('Jenis Penyelenggaraan:',true), infoCell(r.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance')] }),
-          ...(r.maintType==='PM' ? [new TableRow({ children: [infoCell('Penyelenggaraan Ke-:',true), infoCell(r.pmNo ? `PM ${r.pmNo}` : '—'), infoCell(''), infoCell('')] })] : []),
+          ...(r.maintType==='PM' ? [new TableRow({ children: [infoCell('Penyelenggaraan No.:',true), infoCell(r.pmNo ? `PM ${r.pmNo}` : '—'), infoCell(''), infoCell('')] })] : []),
         ],
         width: { size: 100, type: WidthType.PERCENTAGE },
       }));
@@ -13932,7 +13988,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
-      fmtDate,
+      fmtDate, fmtDateDash,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
