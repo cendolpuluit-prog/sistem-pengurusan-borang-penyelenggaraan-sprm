@@ -6936,7 +6936,20 @@ createApp({
         }
       });
     }
-    watch(page, async (p) => { if (p === 'dashboard') { await nextTick(); initMapWidget(); } });
+    // Driven purely by reactive state (page === 'dashboard' && data finished
+    // loading) rather than being called inline after login — that inline
+    // placement was fragile: if ANY unrelated call earlier in the same
+    // async chain (loadCustomEquipmentOptions/checkPmDraftRecovery/etc.)
+    // threw, execution would jump straight to that chain's `finally` block
+    // and skip the init call entirely, silently leaving the map blank.
+    // `initialLoading` genuinely flips true->false exactly once per
+    // session (unlike `page`, which restoreLastPage() may "set" back to
+    // its own current value — a no-op that never fires a plain
+    // `watch(page,...)`), so watching both together with `immediate:true`
+    // reliably catches every path that lands the user on a ready
+    // dashboard, regardless of restoreLastPage()'s outcome or any error
+    // elsewhere in that unrelated chain.
+    watch([page, initialLoading], ([p, il]) => { if (p === 'dashboard' && !il) nextTick(() => initMapWidget()); }, { immediate: true });
     watch(mapStateAssignments, () => { mapDetailState.value = null; renderMapPins(); });
 
     const allUsers = ref([]);
@@ -13815,7 +13828,6 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             checkPmDraftRecovery();
             checkEquipDraftRecovery();
             restoreLastPage();
-            if (page.value === 'dashboard') { await nextTick(); initMapWidget(); }
           } else {
             authProfile.value = null;
           }
