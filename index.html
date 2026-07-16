@@ -1092,12 +1092,20 @@ details.form-control[open] summary::after{content:'▴'}
     <div class="topbar no-print">
       <h3>{{pageTitle}}</h3>
       <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
-        <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, tarikh..." style="font-size:.83rem;padding:7px 12px">
+        <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." style="font-size:.83rem;padding:7px 12px">
         <div v-if="showSearchResults && searchResults.length" class="dropdown-panel" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
           <div v-for="r in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
             <template v-if="r._kind==='site'">
               <div style="font-weight:700;font-size:.85rem;color:#002244">🏢 {{r.name}}</div>
               <div style="font-size:.75rem;color:#666">Site {{r.proj==='vir'?'VIR':'CCTV'}} — klik untuk urus peralatan</div>
+            </template>
+            <template v-else-if="r._kind==='equipment'">
+              <div style="font-weight:700;font-size:.85rem;color:#002244">🔧 {{r.label}}</div>
+              <div style="font-size:.75rem;color:#666">{{r.siteName}} ({{r.proj==='vir'?'VIR':'CCTV'}}) &nbsp;·&nbsp; {{r.detail || 'klik untuk urus peralatan'}}</div>
+            </template>
+            <template v-else-if="r._kind==='kontraktor'">
+              <div style="font-weight:700;font-size:.85rem;color:#002244">🛠️ {{r.name}}</div>
+              <div style="font-size:.75rem;color:#666">{{r.bidangKerja||'Kontraktor/Kedai'}} ({{r.proj==='vir'?'VIR':'CCTV'}}) &nbsp;·&nbsp; {{r.areaService||'—'}}</div>
             </template>
             <template v-else>
               <div style="font-weight:700;font-size:.85rem;color:#002244">📋 {{r.refNo||'-'}}</div>
@@ -1328,7 +1336,7 @@ details.form-control[open] summary::after{content:'▴'}
 
         <!-- SITE HEALTH SCORE SUMMARY -->
         <div class="card">
-          <div class="card-title">🩺 Skor Kesihatan Site</div>
+          <div class="card-title">🩺 Skor Kesihatan Site <button class="btn btn-outline btn-sm btn-icon" style="padding:1px 6px;font-size:.72rem;vertical-align:middle;border:1px solid #ccc" @click.stop="showInfo('siteHealthScore')" title="Macam mana skor ni dikira?">ℹ️</button></div>
           <div class="form-row form-row-2">
             <div class="health-summary-card" style="background:#f0f4ff" @click="openSites('cctv')">
               <div style="font-size:.75rem;font-weight:700;color:#003366;text-transform:uppercase;margin-bottom:8px">📹 CCTV ({{SITES.length}} site)</div>
@@ -1500,11 +1508,40 @@ details.form-control[open] summary::after{content:'▴'}
               <button class="btn btn-danger btn-sm" @click="exportAuditLogPdf">🖨️ PDF</button>
             </div>
           </div>
+          <!-- Filter panel — superadmin only, per explicit request; admin/
+               staff keep seeing their scoped list unfiltered as before. -->
+          <div v-if="authProfile?.role==='superadmin'" class="flex gap-8" style="flex-wrap:wrap;margin-bottom:14px;padding:12px;background:#f8faff;border:1px solid #dde4ef;border-radius:8px">
+            <div class="form-group" style="margin:0;min-width:160px">
+              <label style="font-size:.72rem">Pengguna</label>
+              <select class="form-control" v-model="auditLogFilter.user" style="font-size:.82rem;padding:5px 8px">
+                <option value="">-- Semua --</option>
+                <option v-for="u in auditLogUserOptions" :key="u" :value="u">{{u}}</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0;min-width:160px">
+              <label style="font-size:.72rem">Jenis Tindakan</label>
+              <select class="form-control" v-model="auditLogFilter.action" style="font-size:.82rem;padding:5px 8px">
+                <option value="">-- Semua --</option>
+                <option v-for="a in auditLogActionOptions" :key="a" :value="a">{{a}}</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.72rem">Dari Tarikh</label>
+              <input class="form-control" type="date" v-model="auditLogFilter.dateFrom" style="font-size:.82rem;padding:5px 8px">
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:.72rem">Hingga Tarikh</label>
+              <input class="form-control" type="date" v-model="auditLogFilter.dateTo" style="font-size:.82rem;padding:5px 8px">
+            </div>
+            <div class="form-group" style="margin:0;display:flex;align-items:flex-end">
+              <button class="btn btn-outline btn-sm" @click="resetAuditLogFilter">✕ Kosongkan Filter</button>
+            </div>
+          </div>
           <div class="tbl-wrap">
             <table>
               <thead><tr><th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th><th v-if="authProfile?.role==='superadmin'" style="width:60px">Padam</th></tr></thead>
               <tbody>
-                <tr v-for="l in visibleAuditLogs" :key="l.id">
+                <tr v-for="l in auditLogFilteredList" :key="l.id">
                   <td style="white-space:nowrap;font-size:.8rem">{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</td>
                   <td>{{logActorDisplayName(l)}}</td>
                   <td><span class="badge badge-blue" style="font-size:.72rem">{{l.action}}</span></td>
@@ -1513,7 +1550,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <button class="btn btn-danger btn-sm btn-icon" @click="deleteAuditLog(l)" title="Padam">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!visibleAuditLogs.length"><td :colspan="authProfile?.role==='superadmin'?5:4" class="empty">Tiada log audit.</td></tr>
+                <tr v-if="!auditLogFilteredList.length"><td :colspan="authProfile?.role==='superadmin'?5:4" class="empty">Tiada log audit.</td></tr>
               </tbody>
             </table>
           </div>
@@ -1763,6 +1800,8 @@ details.form-control[open] summary::after{content:'▴'}
             <span v-if="currentProject==='vir' && eqTab!=='rooms'" class="badge" style="background:#e8f0ff;color:#003366;font-size:.75rem">Sistem: {{equipVirSystem}}</span>
             <span v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000' && eqTab!=='rooms'" class="badge" style="background:#fff3e0;color:#7a2e00;font-size:.75rem">🚪 {{currentOptagerRoomName}}</span>
             <button v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000' && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="openSiteEquip(selSite,'Optager HD4000')">🔁 Tukar Bilik</button>
+            <button v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="btn btn-outline btn-sm btn-icon" @click="showInfo('optager')" title="Tentang sistem Optager HD4000">ℹ️</button>
+            <button class="btn btn-outline btn-sm btn-icon" @click="showInfo('importOcr')" title="Tentang Import Fail & Scan OCR">ℹ️ Import/OCR</button>
           </div>
           <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
@@ -3845,11 +3884,18 @@ details.form-control[open] summary::after{content:'▴'}
 
       <!-- ====== USER MANAGEMENT ====== -->
       <div v-if="page==='user-mgmt' && authProfile?.role==='superadmin'">
-        <div class="flex justify-between items-center mb-20">
+        <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">Senarai Pengguna</div>
           <button class="btn btn-primary" @click="openAddUser">+ Tambah Pengguna</button>
         </div>
-        <div v-for="u in sortedUsers" :key="u.id" class="user-card" :class="{'disabled-user':u.disabled}">
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
+          <input class="form-control" v-model="userSearchQuery" placeholder="🔍 Cari nama, username, email, jawatan..." style="max-width:280px">
+          <button class="btn btn-sm" :class="userStatusFilter==='all'?'btn-primary':'btn-outline'" @click="userStatusFilter='all'">Semua</button>
+          <button class="btn btn-sm" :class="userStatusFilter==='active'?'btn-primary':'btn-outline'" @click="userStatusFilter='active'">✅ Aktif</button>
+          <button class="btn btn-sm" :class="userStatusFilter==='frozen'?'btn-primary':'btn-outline'" @click="userStatusFilter='frozen'">🔒 Frozen</button>
+          <button class="btn btn-sm" :class="userStatusFilter==='expiring'?'btn-primary':'btn-outline'" @click="userStatusFilter='expiring'">🕐 Akan/Dah Tamat Tempoh</button>
+        </div>
+        <div v-for="u in filteredSortedUsers" :key="u.id" class="user-card" :class="{'disabled-user':u.disabled}">
           <!-- Superadmin's own photo is changed only via Profil Saya, same
                principle as the disabled Edit button above — so this avatar
                isn't clickable for that row (plain div, no file input). -->
@@ -3878,15 +3924,17 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="text-sm text-muted">@{{u.username}} &nbsp;·&nbsp; {{u.jawatan||'-'}} &nbsp;·&nbsp; {{u.jabatan||'-'}}</div>
             <div class="text-sm text-muted">📞 {{u.phone||'-'}} &nbsp;·&nbsp; ✉️ {{u.email||'-'}}</div>
+            <div class="text-sm text-muted">🕐 Log masuk terakhir: {{u.lastLogin?.toDate ? u.lastLogin.toDate().toLocaleString('ms-MY') : 'Tidak pernah'}}</div>
           </div>
           <div class="flex gap-8 user-card-actions">
+            <button class="btn btn-sm btn-outline" @click="viewUserAuditLog(u)" title="Lihat aktiviti pengguna ini dalam Log Audit">📋 Aktiviti</button>
             <button class="btn btn-sm btn-outline" @click="openEditUser(u)" :disabled="u.role==='superadmin'" title="Superadmin edit maklumat sendiri di tab Profil Saya">✏️ Edit</button>
             <button class="btn btn-sm btn-outline" @click="openResetPw(u)" :disabled="u.role==='superadmin'" title="Reset kata laluan pengguna">🔑 Reset PW</button>
             <button class="btn btn-sm" :class="u.disabled?'btn-success':'btn-warning'" @click="toggleFreeze(u)">{{u.disabled?'✅ Aktif':'🔒 Freeze'}}</button>
             <button class="btn btn-sm btn-danger" @click="deleteUser(u)" :disabled="u.role==='superadmin'">🗑</button>
           </div>
         </div>
-        <div v-if="!allUsers.length" class="empty">Tiada pengguna lain. Tambah pengguna baru.</div>
+        <div v-if="!filteredSortedUsers.length" class="empty">{{allUsers.length ? 'Tiada pengguna sepadan dengan carian/filter.' : 'Tiada pengguna lain. Tambah pengguna baru.'}}</div>
       </div>
 
       <!-- ====== URUS MODEL CUSTOM (crowdsourced brand/model cleanup) ====== -->
@@ -4152,7 +4200,12 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="modal">
           <h3>{{userModal.editing?'Edit Pengguna':'Tambah Pengguna Baru'}}</h3>
           <div class="form-row form-row-2">
-            <div class="form-group"><label>Username *</label><input class="form-control" v-model="userModal.data.username" :disabled="userModal.editing" placeholder="cth: ahmad123"></div>
+            <div class="form-group">
+              <label>Username *</label>
+              <input class="form-control" v-model="userModal.data.username" :disabled="userModal.editing" placeholder="cth: ahmad123">
+              <div v-if="usernameAvailability==='taken'" style="color:#c62828;font-size:.76rem;margin-top:3px">✕ Username telah diambil</div>
+              <div v-else-if="usernameAvailability==='available'" style="color:#1e7e34;font-size:.76rem;margin-top:3px">✓ Username tersedia</div>
+            </div>
             <div class="form-group" v-if="!userModal.editing"><label>Kata Laluan *</label><input class="form-control" type="password" v-model="userModal.data.password" placeholder="Kata laluan"></div>
             <div class="form-group"><label>Nama Penuh *</label><input class="form-control" v-model="userModal.data.name" placeholder="Nama penuh"></div>
             <div class="form-group"><label>Peranan *</label>
@@ -4286,6 +4339,17 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="warrantyModal.show=false">Batal</button>
             <button class="btn btn-primary" @click="submitWarranty" :disabled="loading">{{loading?'Menyimpan...':warrantyModal.editing?'Simpan Perubahan':'Tambah Peralatan'}}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== ℹ️ PAGE/FEATURE INFO MODAL (generic, reused by showInfo()) ====== -->
+      <div v-if="infoModal.show" class="modal-bg" @click.self="infoModal.show=false">
+        <div class="modal" style="max-width:480px">
+          <h3>{{infoModal.title}}</h3>
+          <p style="white-space:pre-line;font-size:.88rem;line-height:1.6;color:#333;margin-bottom:16px">{{infoModal.body}}</p>
+          <div class="flex gap-8 justify-end">
+            <button class="btn btn-primary" @click="infoModal.show=false">Faham</button>
           </div>
         </div>
       </div>
@@ -4431,7 +4495,7 @@ details.form-control[open] summary::after{content:'▴'}
           <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor/Kedai — {{kontraktorLuarProject==='vir'?'VIR':'CCTV'}}</h3>
           <div class="form-group"><label>Nama Kontraktor/Kedai</label><input class="form-control" v-model="kModal.name" placeholder="cth: ABC Aircond Services"></div>
           <div class="form-group"><label>Skop Kerja/Barang Dijual</label><input class="form-control" v-model="kModal.bidangKerja" placeholder="cth: Servis & Baiki Aircond"></div>
-          <div class="form-group"><label>Area Service — Negeri</label>
+          <div class="form-group"><label>Area Service — Negeri <button type="button" class="btn btn-outline btn-sm btn-icon" style="padding:1px 6px;font-size:.72rem;vertical-align:middle" @click="showInfo('kontraktorArea')" title="Tentang Area Service">ℹ️</button></label>
             <select class="form-control" v-model="kModal.negeri">
               <option value="">-- Pilih Negeri --</option>
               <option v-for="n in MALAYSIA_NEGERI" :key="n">{{n}}</option>
@@ -7096,6 +7160,20 @@ createApp({
     const sortedUsers = computed(() =>
       [...allUsers.value].sort((a,b) => (a.name||a.username||'').localeCompare((b.name||b.username||''), 'ms', {sensitivity:'base'}))
     );
+    // ---- Senarai Pengguna: search + status filter ----
+    const userSearchQuery = ref('');
+    const userStatusFilter = ref('all'); // all | active | frozen | expiring
+    const filteredSortedUsers = computed(() => {
+      let list = sortedUsers.value;
+      const q = userSearchQuery.value.trim().toLowerCase();
+      if(q) {
+        list = list.filter(u => [u.name,u.username,u.email,u.jawatan,u.jabatan].filter(Boolean).join(' ').toLowerCase().includes(q));
+      }
+      if(userStatusFilter.value === 'active') list = list.filter(u => !u.disabled);
+      else if(userStatusFilter.value === 'frozen') list = list.filter(u => u.disabled);
+      else if(userStatusFilter.value === 'expiring') list = list.filter(u => ['soon','expired'].includes(userExpiryStatus(u)));
+      return list;
+    });
     const allStaff = computed(() => {
       const list = [...allUsers.value];
       const uid = authUser.value?.uid;
@@ -7115,7 +7193,12 @@ createApp({
     function teamsForDay(day) {
       if(!day) return [];
       const dateStr = `${calYear.value}-${String(calMonth.value+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-      return teamAssignments.value.filter(t => t.date === dateStr);
+      // Sort alphabetically by team letter (A, B, C, D…) rather than
+      // whatever order they happen to be in the assignments list — a team
+      // added later (e.g. D before A) shouldn't sit above A in the day
+      // cell. Feeds both the on-screen calendar and the printed PDF grid
+      // (printJadual), since both call this same function.
+      return teamAssignments.value.filter(t => t.date === dateStr).sort((a,b) => a.team.localeCompare(b.team));
     }
 
     function teamsForMonth() {
@@ -8967,9 +9050,15 @@ createApp({
       return [...years].sort((a,b)=>b-a);
     });
 
-    // ---- Global Search (sites + PM records, mixed results) ----
+    // ---- Global Search (sites + PM records + equipment + kontraktor, mixed results) ----
     const globalSearch = ref('');
     const showSearchResults = ref(false);
+    // Data-key (siteEquip.cameras/nvr/.../tablets) -> the eqTab id the UI
+    // actually uses to select that tab — a few don't match 1:1 ('switches'
+    // is tab 'switch', 'alarms' is tab 'alarm'). Only used for CCTV results;
+    // VIR's equipment UI is room/system-gated so a direct tab jump isn't
+    // meaningful there (see openSiteEquip's mode routing).
+    const EQUIP_KIND_TO_TAB = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switches:'switch', alarms:'alarm', misc:'misc', servers:'servers', tablets:'tablets' };
     const searchResults = computed(() => {
       const q = globalSearch.value.trim().toLowerCase();
       if(q.length < 2) return [];
@@ -8984,7 +9073,43 @@ createApp({
           || (r.siteName||'').toLowerCase().includes(q)
           || (r.visitDate||'').toLowerCase().includes(q);
       }).slice(0, 8).map(r => ({ _kind:'record', ...r }));
-      return [...siteMatches, ...recordMatches];
+
+      // Equipment — scan every site's cameras/nvr/hdd/switches/alarms/misc/
+      // servers/tablets for a matching name/IP/serial/model/brand, across
+      // both CCTV and VIR sites.
+      const equipMatches = [];
+      [['cctv', siteEquip.value, SITES], ['vir', virSiteEquip.value, VIR_SITES]].forEach(([proj, store, sites]) => {
+        Object.keys(store||{}).forEach(siteId => {
+          if(equipMatches.length >= 8) return;
+          const site = sites.find(s => s.id === siteId);
+          if(!site) return;
+          Object.keys(EQUIP_KIND_TO_TAB).forEach(kind => {
+            (store[siteId]?.[kind]||[]).forEach(item => {
+              if(equipMatches.length >= 8) return;
+              const hay = [item.name, item.ip, item.serial, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
+              if(!hay.includes(q)) return;
+              equipMatches.push({
+                _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
+                siteId, proj, kind, siteName:site.name,
+                label: item.name || item.model || item.serial || item.ip || '(tiada nama)',
+                detail: [item.brand, item.model, item.serial, item.ip].filter(Boolean).join(' · '),
+              });
+            });
+          });
+        });
+      });
+
+      // Kontraktor/Supplier luar
+      const kontraktorMatches = [];
+      ['cctv','vir'].forEach(proj => {
+        (kontraktorLuar.value[proj]||[]).forEach(c => {
+          if(kontraktorMatches.length >= 5) return;
+          const hay = [c.name, c.bidangKerja, c.areaService].filter(Boolean).join(' ').toLowerCase();
+          if(hay.includes(q)) kontraktorMatches.push({ _kind:'kontraktor', id:'k-'+c.id, proj, ...c });
+        });
+      });
+
+      return [...siteMatches, ...recordMatches, ...equipMatches, ...kontraktorMatches];
     });
 
     function handleSearchResultClick(item) {
@@ -8993,6 +9118,16 @@ createApp({
         currentProject.value = item.proj;
         const site = (item.proj==='vir'?VIR_SITES:SITES).find(s=>s.id===item.siteId);
         if(site) openSiteEquip(site);
+      } else if(item._kind === 'equipment') {
+        currentProject.value = item.proj;
+        const site = (item.proj==='vir'?VIR_SITES:SITES).find(s=>s.id===item.siteId);
+        if(site) {
+          openSiteEquip(site);
+          if(item.proj === 'cctv') eqTab.value = EQUIP_KIND_TO_TAB[item.kind] || eqTab.value;
+        }
+      } else if(item._kind === 'kontraktor') {
+        kontraktorLuarProject.value = item.proj;
+        page.value = 'kontraktor-luar';
       } else {
         viewRecord(item);
       }
@@ -9286,6 +9421,43 @@ createApp({
       if(role === 'staff') return auditLogs.value.filter(l => _resolveLogActorRole(l) === 'staff');
       return [];
     });
+    // ---- Audit log filter (superadmin only — see auditLogFilteredList) ----
+    const auditLogFilter = reactive({ user:'', action:'', dateFrom:'', dateTo:'' });
+    function resetAuditLogFilter() { auditLogFilter.user=''; auditLogFilter.action=''; auditLogFilter.dateFrom=''; auditLogFilter.dateTo=''; }
+    // Distinct actor names / action types seen in the currently-visible
+    // logs, for the filter dropdowns — built from visibleAuditLogs (not
+    // the raw collection) so options never include something the current
+    // role can't otherwise see.
+    const auditLogUserOptions = computed(() => {
+      const names = new Set(visibleAuditLogs.value.map(l => logActorDisplayName(l)).filter(Boolean));
+      return [...names].sort((a,b) => a.localeCompare(b));
+    });
+    const auditLogActionOptions = computed(() => {
+      const actions = new Set(visibleAuditLogs.value.map(l => l.action).filter(Boolean));
+      return [...actions].sort((a,b) => a.localeCompare(b));
+    });
+    // Applies the filter panel on top of visibleAuditLogs — only for
+    // superadmin, per explicit request that this filter UI/behaviour stays
+    // superadmin-exclusive; every other role keeps seeing its scoped list
+    // completely unfiltered, exactly as before this feature existed.
+    const auditLogFilteredList = computed(() => {
+      const base = visibleAuditLogs.value;
+      if(authProfile.value?.role !== 'superadmin') return base;
+      const { user, action, dateFrom, dateTo } = auditLogFilter;
+      if(!user && !action && !dateFrom && !dateTo) return base;
+      return base.filter(l => {
+        if(user && logActorDisplayName(l) !== user) return false;
+        if(action && l.action !== action) return false;
+        if(dateFrom || dateTo) {
+          const d = l.timestamp?.toDate ? l.timestamp.toDate() : null;
+          if(!d) return false;
+          const dayStr = d.toISOString().slice(0,10);
+          if(dateFrom && dayStr < dateFrom) return false;
+          if(dateTo && dayStr > dateTo) return false;
+        }
+        return true;
+      });
+    });
     async function deleteAuditLog(log) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!confirm('Padam log audit ini? Tindakan ini tidak boleh dibatalkan.')) return;
@@ -9297,7 +9469,12 @@ createApp({
     }
 
     function _auditLogRows() {
-      return visibleAuditLogs.value.map(l => [
+      // Exports the currently-filtered view (superadmin) so "Excel"/"PDF"
+      // matches what's actually on screen; for other roles
+      // auditLogFilteredList already just passes visibleAuditLogs through
+      // unchanged, so behaviour there is identical to before this filter
+      // existed.
+      return auditLogFilteredList.value.map(l => [
         l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-',
         logActorDisplayName(l),
         l.action || '-',
@@ -9312,7 +9489,7 @@ createApp({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Log Audit');
       XLSX.writeFile(wb, 'Log_Audit_'+_localDateStr()+'.xlsx');
-      await logAudit('EXPORT_AUDIT_EXCEL', `${visibleAuditLogs.value.length} rekod`);
+      await logAudit('EXPORT_AUDIT_EXCEL', `${auditLogFilteredList.value.length} rekod`);
     }
 
     async function exportAuditLogPdf() {
@@ -9819,6 +9996,13 @@ createApp({
 
         await auth.signInWithEmailAndPassword(email, loginPass.value);
         await clearLoginFailures(uid);
+        // Fire-and-forget — surfaces in Senarai Pengguna as "Log masuk
+        // terakhir" so a stale/duplicate account (like the mohdasrul@pm.admin
+        // one) is visibly dormant instead of invisible. Never block login on
+        // this write, and swallow any permission-denied silently.
+        db.collection('users').doc(auth.currentUser.uid)
+          .set({ lastLogin: firebase.firestore.FieldValue.serverTimestamp() }, { merge:true })
+          .catch(()=>{});
         // Load profile from Firestore or fallback to USER_MAP
         if(builtIn) {
           // Only seed the initial profile doc on the very first-ever login —
@@ -10626,6 +10810,10 @@ createApp({
           db.collection('pmRecords').orderBy('createdAt','desc').get(),
           db.collection('teamAssignments').orderBy('date','asc').get(),
           loadUsers(), // sets allUsers.value itself — no snapshot to capture
+          // Also loaded eagerly (not just on nav-click) — global search
+          // needs kontraktorLuar populated from the start, not only after
+          // the user happens to visit that page first.
+          loadKontraktorLuar(),
         ]);
 
         // Merge onto the default shape (not a full overwrite) — a site doc
@@ -10771,6 +10959,30 @@ createApp({
     // since anyone can call these functions directly from devtools.
     function isAdminRole(){ return ['superadmin','admin'].includes(authProfile.value?.role); }
 
+    // Shared by submitUser()'s authoritative check and usernameAvailability's
+    // live-typing feedback below, so the two can't silently drift apart.
+    // `uname` must already be trimmed+lowercased by the caller.
+    function _isUsernameTaken(uname) {
+      if(!uname) return false;
+      const takenByBuiltIn = Object.prototype.hasOwnProperty.call(USER_MAP, uname);
+      // allUsers.value deliberately excludes the currently-logged-in user's
+      // own record (see loadUsers) — check authProfile separately so an
+      // admin/superadmin can't accidentally recreate their own username as
+      // a second, different account either.
+      const takenBySelf = (authProfile.value?.username||'').trim().toLowerCase() === uname;
+      const takenByFirestoreUser = allUsers.value.some(u => (u.username||'').trim().toLowerCase() === uname);
+      return takenByBuiltIn || takenBySelf || takenByFirestoreUser;
+    }
+    // Live feedback under the Username field while typing, instead of only
+    // finding out it's taken after clicking Simpan. null while the field's
+    // empty or during edit (username is locked/irrelevant then).
+    const usernameAvailability = computed(() => {
+      if(userModal.editing) return null;
+      const uname = (userModal.data.username||'').trim().toLowerCase();
+      if(!uname) return null;
+      return _isUsernameTaken(uname) ? 'taken' : 'available';
+    });
+
     async function submitUser() {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       userModal.err='';
@@ -10780,6 +10992,17 @@ createApp({
       // log in even with the correct password.
       userModal.data.username = (userModal.data.username||'').trim().toLowerCase();
       if(!userModal.data.username||!userModal.data.name){ userModal.err='Username dan Nama wajib diisi.'; return; }
+      // Username uniqueness was previously only enforced indirectly via
+      // Firebase Auth's email-uniqueness check — since login is looked up
+      // by USERNAME (doLogin), not email, two accounts could silently end
+      // up sharing one username with different emails/passwords. Only
+      // matters on create: the username field is locked during edit (see
+      // template), so an existing user's own username can never collide
+      // with itself here.
+      if(!userModal.editing && _isUsernameTaken(userModal.data.username)) {
+        userModal.err = `Username "${userModal.data.username}" sudah digunakan. Sila pilih username lain.`;
+        return;
+      }
       if(!userModal.data.email){ userModal.err='Email sebenar wajib diisi (untuk reset kata laluan).'; return; }
       if(!userModal.editing && !userModal.data.password){ userModal.err='Kata laluan wajib diisi.'; return; }
       if(!isValidEmail(userModal.data.email)){ userModal.err='Format emel tidak sah.'; return; }
@@ -11276,6 +11499,17 @@ createApp({
       } catch(e) { showToast('Gagal padam pengguna: ' + e.message, 'error'); }
     }
 
+    // Jumps to the Log Audit page pre-filtered to this user — reuses the
+    // same display-name string logActorDisplayName() would resolve for
+    // their log rows (same source record), so the dropdown-based filter
+    // picks up every entry for them without needing a separate by-id path.
+    function viewUserAuditLog(u) {
+      resetAuditLogFilter();
+      auditLogFilter.user = u.name || u.username || '';
+      loadAuditLogs();
+      page.value = 'audit-log';
+    }
+
     function openResetPw(u) {
       if(u.role==='superadmin'){ showToast('Tidak boleh reset kata laluan Superadmin.','error'); return; }
       resetPwModal.userId = u.id;
@@ -11666,6 +11900,39 @@ createApp({
     // a single equipment list at once (reuses the same equipSelected Sets
     // that already power bulk-delete). Kept to the fields that are common
     // to all 6 equipment types and safe to overwrite in bulk.
+    // ---- ℹ️ Page/feature info popups — only on pages whose behaviour isn't
+    // obvious from the label alone (OCR import, room-scoped Optager
+    // equipment, cascading Area Service dropdown, health score formula).
+    // Deliberately NOT added to every page — most are already clear from
+    // their name/columns, and a popup on every single page would just be
+    // clutter (and stale copy waiting to happen) more than actual help.
+    const infoModal = reactive({ show:false, title:'', body:'' });
+    const INFO_CONTENT = {
+      importOcr: {
+        title: '📄 Import Fail & Scan OCR',
+        body: 'Upload fail Excel/CSV/PDF (teks) ATAU gambar/scan (guna OCR) untuk auto-isi senarai peralatan (Nama, IP, Brand, Model, No. Siri). Sistem cuba kesan lajur & jenama secara automatik.\n\nSelepas proses, semua rekod ditandakan ✓ automatik dalam jadual pratonton — SILA SEMAK & BETULKAN dahulu (terutama hasil scan gambar, yang kadang tersilap baca) sebelum klik "Tambah". Rekod yang IP/No. Siri sama dengan yang sedia ada akan dilangkau automatik (elak duplicate).',
+      },
+      optager: {
+        title: '🖥️ Sistem Optager HD4000',
+        body: 'Peralatan untuk sistem Optager HD4000 diurus mengikut BILIK (bukan terus ikut site) — setiap bilik VIR yang bertag "Optager HD4000" ada set peralatan sendiri (Appliance/SVR, Tablet, Kamera Rakaman, dll).\n\nSebelum urus peralatan, sistem akan minta korang pilih bilik dahulu. Bilik perlu didaftarkan dulu di halaman "🚪 Bilik & Sistem" sebelum boleh urus peralatan untuknya.',
+      },
+      kontraktorArea: {
+        title: '📍 Area Service',
+        body: 'Medan Area Service guna 3 peringkat: Negeri → Kawasan (daerah) → Sub-Kawasan (bandar/mukim dalam daerah tu).\n\nPilih Negeri dan Kawasan dahulu — dropdown Sub-Kawasan (pilihan) akan muncul selepas tu dengan senarai bandar dalam daerah yang dipilih.',
+      },
+      siteHealthScore: {
+        title: '🩺 Skor Kesihatan Site',
+        body: 'Skor (0-100) dikira daripada 3 komponen untuk kitaran PM semasa site tu:\n\n• Pematuhan PM (50pt) — bilangan PM sebenar vs jangkaan setakat ini\n• Kesegaran (30pt) — berapa lama sejak PM terakhir, berbanding selang wajib (CCTV 4 bulan / VIR 6 bulan)\n• Beban CM (20pt) — tolak 4pt setiap rekod CM dalam kitaran semasa (kurang CM = lebih baik)\n\n≥75 = 🟢 Baik &nbsp;·&nbsp; 45-74 = 🟡 Sederhana &nbsp;·&nbsp; <45 = 🔴 Kritikal',
+      },
+    };
+    function showInfo(key) {
+      const c = INFO_CONTENT[key];
+      if(!c) return;
+      infoModal.title = c.title;
+      infoModal.body = c.body;
+      infoModal.show = true;
+    }
+
     const bulkEditModal = reactive({ show:false, kind:'', field:'installDate', value:'' });
     const BULK_EDIT_FIELDS = { installDate:{label:'Tarikh Pasang', type:'date'}, brand:{label:'Brand', type:'text'} };
     function openBulkEdit(kind) {
@@ -14259,6 +14526,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS,
+      userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
       contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canViewCredentials, canEditEquip, canEditPmRecord,
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
@@ -14283,6 +14551,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
       revealedPw, togglePwReveal,
       bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
+      infoModal, showInfo,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
@@ -14294,6 +14563,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
       auditLogs, visibleAuditLogs, logActorDisplayName, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
+      auditLogFilter, resetAuditLogFilter, auditLogUserOptions, auditLogActionOptions, auditLogFilteredList,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
       showOnlinePanel, onlineUsers,
