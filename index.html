@@ -1429,16 +1429,36 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="card-title" style="margin:0;border:none;padding:0">🗺️ Peta Penugasan</div>
             <input type="date" class="form-control" style="width:auto" v-model="mapSelectedDate">
           </div>
-          <div ref="mapContainerEl"></div>
-          <div v-if="mapDetailState" style="margin-top:12px;background:#f7f9fc;border-radius:8px;padding:12px 14px">
-            <div style="font-weight:700;color:#003366;margin-bottom:6px">{{mapDetailState}}</div>
-            <template v-if="mapDetailList">
-              <div v-for="(a,i) in mapDetailList" :key="i" style="padding:4px 0">
-                <div style="font-size:.85rem;font-weight:600">{{a.siteName}}</div>
-                <div style="font-size:.78rem;color:#666">{{a.team}} · {{a.members}}</div>
+          <div style="position:relative">
+            <div ref="mapContainerEl"></div>
+            <!-- Floating popup anchored to the clicked pin's own position on
+                 the map (percent-based, matching the SVG viewBox so it tracks
+                 correctly at any container width) instead of a plain list
+                 below the map — mapPopupPos is set from the pin's centroid
+                 in mapPinClick(). -->
+            <div v-if="mapDetailState" class="map-pin-popup"
+              :style="'position:absolute;left:'+mapPopupPos.left+';top:'+mapPopupPos.top+';transform:translate(-50%,-100%);margin-top:-12px;background:#fff;border:1px solid #dfe6ef;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.18);padding:10px 12px;min-width:190px;max-width:260px;z-index:50'">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px">
+                <span style="font-weight:700;color:#003366;font-size:.85rem">{{mapDetailState}}</span>
+                <button @click="mapDetailState=null" style="border:none;background:none;cursor:pointer;font-size:.9rem;color:#888;line-height:1;padding:0">✕</button>
               </div>
-            </template>
-            <div v-else style="font-size:.8rem;color:#888">Tiada penugasan di negeri ini pada tarikh ini.</div>
+              <template v-if="mapDetailList">
+                <div v-for="(a,i) in mapDetailList" :key="i" :style="i>0?'margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0':''">
+                  <div style="font-size:.8rem;font-weight:600;color:#222">{{a.siteName}}</div>
+                  <div style="font-size:.7rem;color:#999;margin-bottom:5px">{{a.team}}</div>
+                  <div style="display:flex;gap:6px;flex-wrap:wrap">
+                    <div v-for="m in a.membersList" :key="m.uid" style="display:flex;align-items:center;gap:5px;background:#f4f7fb;border-radius:12px;padding:2px 8px 2px 2px">
+                      <div style="width:20px;height:20px;border-radius:50%;overflow:hidden;background:#dbe4f0;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:#7a8aa0">
+                        <img v-if="staffPhoto(m.uid)" :src="staffPhoto(m.uid)" alt="" style="width:100%;height:100%;object-fit:cover">
+                        <span v-else>👤</span>
+                      </div>
+                      <span style="font-size:.7rem;color:#333">{{m.name}}</span>
+                    </div>
+                  </div>
+                </div>
+              </template>
+              <div v-else style="font-size:.78rem;color:#888">Tiada penugasan di negeri ini pada tarikh ini.</div>
+            </div>
           </div>
           <div style="font-size:.72rem;color:#888;margin-top:8px">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0056b3;margin-right:6px;vertical-align:middle"></span>ada penugasan pada tarikh dipilih — klik pin untuk butiran
@@ -1503,6 +1523,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
             <span>🗒 Log Audit</span>
             <div class="flex gap-8">
+              <button v-if="authProfile?.role==='superadmin' && auditLogSelected.size" class="btn btn-danger btn-sm" @click="bulkDeleteAuditLogs">🗑️ Padam Terpilih ({{auditLogSelected.size}})</button>
               <button class="btn btn-outline btn-sm" @click="loadAuditLogs">↺ Muat Semula</button>
               <button class="btn btn-success btn-sm" @click="exportAuditLogExcel">📊 Excel</button>
               <button class="btn btn-danger btn-sm" @click="exportAuditLogPdf">🖨️ PDF</button>
@@ -1539,9 +1560,13 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th><th v-if="authProfile?.role==='superadmin'" style="width:60px">Padam</th></tr></thead>
+              <thead><tr>
+                <th v-if="authProfile?.role==='superadmin'" style="width:30px"><input type="checkbox" :checked="isAuditLogAllSelected" @change="toggleAuditLogSelectAll"></th>
+                <th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th><th v-if="authProfile?.role==='superadmin'" style="width:60px">Padam</th>
+              </tr></thead>
               <tbody>
                 <tr v-for="l in auditLogFilteredList" :key="l.id">
+                  <td v-if="authProfile?.role==='superadmin'"><input type="checkbox" :checked="auditLogSelected.has(l.id)" @change="toggleAuditLogRow(l.id)"></td>
                   <td style="white-space:nowrap;font-size:.8rem">{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</td>
                   <td>{{logActorDisplayName(l)}}</td>
                   <td><span class="badge badge-blue" style="font-size:.72rem">{{l.action}}</span></td>
@@ -1550,7 +1575,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <button class="btn btn-danger btn-sm btn-icon" @click="deleteAuditLog(l)" title="Padam">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!auditLogFilteredList.length"><td :colspan="authProfile?.role==='superadmin'?5:4" class="empty">Tiada log audit.</td></tr>
+                <tr v-if="!auditLogFilteredList.length"><td :colspan="authProfile?.role==='superadmin'?6:4" class="empty">Tiada log audit.</td></tr>
               </tbody>
             </table>
           </div>
@@ -3034,7 +3059,7 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Tarikh Borang Submit</th><th>Jam/Masa Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Tarikh Borang Submit</th><th>Jam/Masa Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in filteredPM" :key="r.id">
@@ -3042,6 +3067,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td><b>{{r.refNo||'-'}}</b></td>
                   <td><span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span></td>
                   <td>{{r.siteName}}</td>
+                  <td v-if="currentProject!=='vir'">{{cctvSystemBrands(r.cameras) || '—'}}</td>
                   <td v-if="currentProject==='vir'">{{(r.virSystem||'BCD')==='Optager HD4000' ? 'OPT' : 'BCD'}}</td>
                   <td>{{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</td>
                   <td>{{fmtDateDash(r.visitDate)}}</td>
@@ -3068,7 +3094,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!filteredPM.length"><td :colspan="currentProject==='vir'?12:11" class="empty">Tiada rekod.</td></tr>
+                <tr v-if="!filteredPM.length"><td colspan="12" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
           </div>
@@ -3081,7 +3107,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <b class="pmc-ref">{{r.refNo||'-'}}</b>
                 <span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span>
               </div>
-              <div class="pmc-site">{{r.siteName}} <span v-if="currentProject==='vir'" class="badge badge-gray" style="font-size:.65rem">{{(r.virSystem||'BCD')==='Optager HD4000' ? 'OPT' : 'BCD'}}</span></div>
+              <div class="pmc-site">{{r.siteName}} <span v-if="currentProject==='vir'" class="badge badge-gray" style="font-size:.65rem">{{(r.virSystem||'BCD')==='Optager HD4000' ? 'OPT' : 'BCD'}}</span><span v-else class="badge badge-gray" style="font-size:.65rem">{{cctvSystemBrands(r.cameras) || '—'}}</span></div>
               <div class="pmc-meta">
                 <span>📅 {{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</span>
                 <span>🛠 {{fmtDateDash(r.visitDate)}}</span>
@@ -3181,16 +3207,24 @@ details.form-control[open] summary::after{content:'▴'}
                 <span v-else>{{viewPM?.rootCause || '—'}}</span>
               </div>
             </template>
-            <!-- CCTV — same label/content swap as VIR above, now shown for
+            <!-- CCTV — mirrors the VIR row above: Jenis Sistem CCTV on the
+                 left (auto-derived from the distinct camera brands actually
+                 recorded in this PM record, since a site can run more than
+                 one brand at once — e.g. Gua Musang has both Hanwha and
+                 Axis — so this can't be a single manual dropdown), and the
+                 same label/content swap as VIR on the right, now shown for
                  both PM and CM (used to be PM-only, leaving CM records
                  with no row here at all and no way to see the root
                  cause on the printed borang). -->
-            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir'"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>
-              <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
-                <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
-              </span>
-              <span v-else>{{viewPM?.rootCause || '—'}}</span>
-            </div>
+            <template v-if="viewPM?.project!=='vir'">
+              <div class="pm-info-cell"><b>Jenis Sistem CCTV:</b> {{cctvSystemBrands(viewPM?.cameras) || '—'}}</div>
+              <div class="pm-info-cell"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>
+                <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
+                  <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
+                </span>
+                <span v-else>{{viewPM?.rootCause || '—'}}</span>
+              </div>
+            </template>
             <div class="pm-info-cell pm-info-full" v-if="viewPM?.project!=='vir'">
               <b>Rumusan Kamera:</b>
               <div class="pm-cam-summary">
@@ -5420,7 +5454,7 @@ const CAMERA_MODELS = {
     'Lain-lain',
   ],
   'Bosch': [
-    'NDE-3703-AL (Dome)','NBE-3703-AL (Bullet)',
+    'NDE-3703-AL (Dome)','NBE-3703-AL (Bullet)','NCE-7703-FK','NDP-7604-Z12L',
     'Lain-lain',
   ],
   'Hikvision': [
@@ -7072,31 +7106,49 @@ createApp({
           byState[state].push({
             siteName: a.siteName, team: a.team, project: a.project,
             members: (a.members||[]).map(m => m.name).join(', ') || '-',
+            membersList: a.members || [],
           });
         });
       return byState;
     });
     const mapDetailState = ref(null);
     const mapDetailList = computed(() => mapDetailState.value ? (mapStateAssignments.value[mapDetailState.value] || null) : null);
-    function mapPinClick(stateName) { mapDetailState.value = stateName; }
+    // Percent-based (not pixel) so the popup tracks the pin correctly at
+    // any container width — matches the SVG's 560x340 viewBox, which scales
+    // responsively via width:100%/height:auto.
+    const mapPopupPos = reactive({ left: '50%', top: '50%' });
+    function mapPinClick(stateName, cx, cy) {
+      mapDetailState.value = stateName;
+      if (cx != null && cy != null) {
+        mapPopupPos.left = (cx / 560 * 100) + '%';
+        mapPopupPos.top = (cy / 340 * 100) + '%';
+      }
+    }
 
     // D3/topojson rendering — plain (non-reactive) module state, since a
-    // D3 selection isn't meaningfully reactive data; `mapD3Ready` just
-    // guards against re-fetching/re-building the SVG shell every time the
-    // user navigates back to the dashboard (the ref lives inside a
-    // v-if="page==='dashboard'" block, so its DOM node is recreated on
-    // every visit — only the one-time shell needs the guard, pin redraw
-    // happens on every mapStateAssignments change regardless).
+    // D3 selection isn't meaningfully reactive data. The ref lives inside a
+    // v-if="page==='dashboard'" block, so its DOM node is DESTROYED and a
+    // brand-new empty one is created every time the user navigates back to
+    // the dashboard — the SVG shell built on a previous visit is gone with
+    // it. So the shell must be rebuilt on every mount (guarded by checking
+    // the current container for an existing <svg>, not a one-shot flag —
+    // an earlier version used a plain `mapD3Ready` boolean that, once set,
+    // permanently skipped rebuilding after the very first visit, leaving
+    // the map blank for the rest of the session as soon as the user left
+    // and came back to the dashboard). Only the topology fetch itself is
+    // cached (module-level, survives remounts) since the boundary data
+    // never changes — no need to hit the network again each visit.
     const mapContainerEl = ref(null);
-    let mapD3Ready = false;
+    let mapTopologyCache = null;
     let mapPath = null, mapCentroids = [];
     async function initMapWidget() {
-      if (mapD3Ready || !mapContainerEl.value) return;
-      mapD3Ready = true;
+      if (!mapContainerEl.value || mapContainerEl.value.querySelector('svg')) return;
       try {
-        const res = await fetch('malaysia-states.topojson');
-        const topology = await res.json();
-        const geo = topojson.feature(topology, topology.objects.states);
+        if (!mapTopologyCache) {
+          const res = await fetch('malaysia-states.topojson');
+          mapTopologyCache = await res.json();
+        }
+        const geo = topojson.feature(mapTopologyCache, mapTopologyCache.objects.states);
         const width = 560, height = 340;
         const projection = d3.geoMercator().fitSize([width, height], geo);
         mapPath = d3.geoPath(projection);
@@ -7112,7 +7164,7 @@ createApp({
         mapCentroids = geo.features.map(f => ({ name: f.properties.Name, c: mapPath.centroid(f) }));
         renderMapPins();
       } catch (e) {
-        mapD3Ready = false; // allow retry (e.g. next dashboard visit) if the fetch failed transiently
+        mapTopologyCache = null; // allow retry (e.g. next dashboard visit) if the fetch failed transiently
         if (mapContainerEl.value) mapContainerEl.value.innerHTML = '<p style="font-size:.8rem;color:#888;padding:12px 0">Peta tidak dapat dimuat: ' + e.message + '</p>';
       }
     }
@@ -7127,13 +7179,13 @@ createApp({
         g.append('circle')
           .attr('cx', d.c[0]).attr('cy', d.c[1]).attr('r', has ? 7 : 3)
           .style('fill', has ? '#0056b3' : '#c3cfe0').style('cursor', 'pointer')
-          .on('click', () => mapPinClick(d.name));
+          .on('click', () => mapPinClick(d.name, d.c[0], d.c[1]));
         if (has) {
           g.append('text')
             .attr('x', d.c[0] + 9).attr('y', d.c[1] + 4)
             .style('font-size', '10px').style('font-weight', '700').style('fill', '#0056b3')
             .style('cursor', 'pointer').text(d.name)
-            .on('click', () => mapPinClick(d.name));
+            .on('click', () => mapPinClick(d.name, d.c[0], d.c[1]));
         }
       });
     }
@@ -7558,6 +7610,15 @@ createApp({
     // request. fmtDate() above (slash-separated) stays the default
     // everywhere else in the app; this doesn't replace it globally.
     function fmtDateDash(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}-${m}-${y}`; }
+    // "Jenis Sistem CCTV" on the printed borang — a site can run more than
+    // one camera brand at once (e.g. Gua Musang has both Hanwha and Axis),
+    // so this is derived from the distinct brands actually recorded on
+    // this PM record's cameras rather than a manually-picked single value.
+    function cctvSystemBrands(cameras){
+      if(!cameras || !cameras.length) return '';
+      const brands = [...new Set(cameras.map(c => c.brand).filter(Boolean))];
+      return brands.join(', ');
+    }
     function shortSite(name){
       if(!name) return '';
       // Extract last meaningful word(s)
@@ -9464,8 +9525,47 @@ createApp({
       try {
         await db.collection('auditLogs').doc(log.id).delete();
         auditLogs.value = auditLogs.value.filter(l => l.id !== log.id);
+        auditLogSelected.delete(log.id); // in case it was mid-selection for a bulk delete
         showToast('Log audit dipadam.');
       } catch(e) { showToast('Gagal padam log: '+e.message, 'error'); }
+    }
+
+    // ---- Bulk select/delete for audit log entries — superadmin only,
+    // same as single-row delete. Keyed by Firestore doc id (already
+    // stable/unique, no need for a synthetic _uid like equipment rows). ----
+    const auditLogSelected = reactive(new Set());
+    function toggleAuditLogRow(id) {
+      auditLogSelected.has(id) ? auditLogSelected.delete(id) : auditLogSelected.add(id);
+    }
+    const isAuditLogAllSelected = computed(() => {
+      const list = auditLogFilteredList.value;
+      return list.length>0 && list.every(l => auditLogSelected.has(l.id));
+    });
+    function toggleAuditLogSelectAll() {
+      const list = auditLogFilteredList.value;
+      if(isAuditLogAllSelected.value) auditLogSelected.clear();
+      else { auditLogSelected.clear(); list.forEach(l => auditLogSelected.add(l.id)); }
+    }
+    async function bulkDeleteAuditLogs() {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const ids = [...auditLogSelected];
+      if(!ids.length) return;
+      if(!confirm(`Padam ${ids.length} log audit terpilih? Tindakan ini tidak boleh dibatalkan.`)) return;
+      loading.value = true;
+      try {
+        // Firestore batched writes cap at 500 ops — chunk defensively in
+        // case a superadmin ever selects more than that in one go.
+        for(let i=0; i<ids.length; i+=500) {
+          const batch = db.batch();
+          ids.slice(i, i+500).forEach(id => batch.delete(db.collection('auditLogs').doc(id)));
+          await batch.commit();
+        }
+        const idSet = new Set(ids);
+        auditLogs.value = auditLogs.value.filter(l => !idSet.has(l.id));
+        auditLogSelected.clear();
+        showToast(`${ids.length} log audit dipadam.`);
+      } catch(e) { showToast('Gagal padam log: '+e.message, 'error'); }
+      loading.value = false;
     }
 
     function _auditLogRows() {
@@ -11323,8 +11423,14 @@ createApp({
     const kModal = reactive({ show:false, editId:null, name:'', bidangKerja:'', negeri:'', kawasan:'', subKawasan:'', phone:'', err:'' });
     const kModalKawasanOptions = computed(() => MALAYSIA_KAWASAN[kModal.negeri] || []);
     const kModalSubKawasanOptions = computed(() => (MALAYSIA_SUBKAWASAN[kModal.negeri] || {})[kModal.kawasan] || []);
-    watch(() => kModal.negeri, () => { kModal.kawasan = ''; kModal.subKawasan = ''; });
-    watch(() => kModal.kawasan, () => { kModal.subKawasan = ''; });
+    // Guard so openKModal() can populate negeri/kawasan/subKawasan together
+    // when loading an existing entry for edit — without this, the watchers
+    // below (which exist to clear the child dropdown when the USER changes
+    // the parent one) would fire right after and wipe out the values
+    // openKModal just set, since watchers run after the current tick.
+    let _kModalLoading = false;
+    watch(() => kModal.negeri, () => { if(_kModalLoading) return; kModal.kawasan = ''; kModal.subKawasan = ''; });
+    watch(() => kModal.kawasan, () => { if(_kModalLoading) return; kModal.subKawasan = ''; });
 
     async function loadKontraktorLuar() {
       try {
@@ -11341,6 +11447,7 @@ createApp({
 
     function openKModal(existing) {
       kModal.err = '';
+      _kModalLoading = true;
       if(existing) {
         kModal.editId = existing.id;
         kModal.name = existing.name;
@@ -11373,6 +11480,7 @@ createApp({
         kModal.name = ''; kModal.bidangKerja = ''; kModal.negeri = ''; kModal.kawasan = ''; kModal.subKawasan = ''; kModal.phone = '';
       }
       kModal.show = true;
+      nextTick(() => { _kModalLoading = false; });
     }
 
     async function saveKModal() {
@@ -14455,6 +14563,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       document.addEventListener('click', (e) => {
         if(showOnlinePanel.value && !e.target.closest('.online-panel-wrap')) showOnlinePanel.value = false;
         if(showNotifPanel.value && !e.target.closest('.notif-panel-wrap')) showNotifPanel.value = false;
+        // Excludes the map's own <svg> too, not just the popup — a pin
+        // click's own handler (mapPinClick) already ran by the time this
+        // bubbles up to document, so without the svg exclusion this would
+        // immediately re-close the popup it just opened.
+        if(mapDetailState.value && !e.target.closest('.map-pin-popup') && !e.target.closest('svg')) mapDetailState.value = null;
       });
 
       auth.onAuthStateChanged(async user=>{
@@ -14515,13 +14628,13 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
-      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl,
+      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos,
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
-      fmtDate, fmtDateDash,
+      fmtDate, fmtDateDash, cctvSystemBrands,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
@@ -14564,6 +14677,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
       auditLogs, visibleAuditLogs, logActorDisplayName, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       auditLogFilter, resetAuditLogFilter, auditLogUserOptions, auditLogActionOptions, auditLogFilteredList,
+      auditLogSelected, toggleAuditLogRow, isAuditLogAllSelected, toggleAuditLogSelectAll, bulkDeleteAuditLogs,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
       showOnlinePanel, onlineUsers,
