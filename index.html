@@ -1050,7 +1050,7 @@ details.form-control[open] summary::after{content:'▴'}
         <span class="icon">📈</span> Laporan Lanjutan
       </div>
       <div class="nav-item" :class="{active:page==='kontraktor-luar'}" @click="loadKontraktorLuar();page='kontraktor-luar'">
-        <span class="icon">🛠️</span> Senarai Kontraktor Luar
+        <span class="icon">🛠️</span> Senarai Kontraktor/Supplier Luar
       </div>
       <div class="nav-item" :class="{active:page==='custom-equip'}" @click="page='custom-equip'" v-if="authProfile?.role==='superadmin'">
         <span class="icon">🧹</span> Urus Model Custom
@@ -2956,6 +2956,10 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">Semua Tahun</option>
                 <option v-for="y in yearList" :key="y">{{y}}</option>
               </select>
+              <select class="form-control" style="width:130px" v-model="filterMonth">
+                <option value="">Semua Bulan</option>
+                <option v-for="(m,i) in MONTHS" :key="i" :value="i+1">{{m}}</option>
+              </select>
               <select class="form-control" style="width:110px" v-model="filterMaintType">
                 <option value="">Semua Jenis</option>
                 <option value="PM">PM Sahaja</option>
@@ -2991,7 +2995,7 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th>Bulan</th><th>Tahun</th><th>Tarikh Penyelenggaraan</th><th>Status</th><th>Tarikh Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Tarikh Borang Submit</th><th>Jam/Masa Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in filteredPM" :key="r.id">
@@ -2999,11 +3003,11 @@ details.form-control[open] summary::after{content:'▴'}
                   <td><b>{{r.refNo||'-'}}</b></td>
                   <td><span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span></td>
                   <td>{{r.siteName}}</td>
-                  <td>{{r.month?MONTHS[r.month-1]:'—'}}</td>
-                  <td>{{r.year}}</td>
-                  <td>{{r.visitDate||'-'}}</td>
-                  <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
+                  <td v-if="currentProject==='vir'">{{(r.virSystem||'BCD')==='Optager HD4000' ? 'OPT' : 'BCD'}}</td>
+                  <td>{{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</td>
+                  <td>{{fmtDateDash(r.visitDate)}}</td>
                   <td>{{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</td>
+                  <td>{{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}) : '-'}}</td>
                   <td>{{submittedByDisplayName(r)}}</td>
                   <td>
                     <template v-if="r.maintType==='CM'">
@@ -3025,7 +3029,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!filteredPM.length"><td colspan="12" class="empty">Tiada rekod.</td></tr>
+                <tr v-if="!filteredPM.length"><td :colspan="currentProject==='vir'?12:11" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
           </div>
@@ -3037,15 +3041,15 @@ details.form-control[open] summary::after{content:'▴'}
                 <input type="checkbox" :value="r.id" v-model="batchSelected">
                 <b class="pmc-ref">{{r.refNo||'-'}}</b>
                 <span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span>
-                <span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span>
               </div>
-              <div class="pmc-site">{{r.siteName}}</div>
+              <div class="pmc-site">{{r.siteName}} <span v-if="currentProject==='vir'" class="badge badge-gray" style="font-size:.65rem">{{(r.virSystem||'BCD')==='Optager HD4000' ? 'OPT' : 'BCD'}}</span></div>
               <div class="pmc-meta">
                 <span>📅 {{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</span>
-                <span>🛠 {{r.visitDate||'-'}}</span>
+                <span>🛠 {{fmtDateDash(r.visitDate)}}</span>
               </div>
               <div v-if="r.submittedAt" class="pmc-meta">
                 <span>📤 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</span>
+                <span>🕒 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}) : '-'}}</span>
                 <span>👤 {{submittedByDisplayName(r)}}</span>
               </div>
               <div v-if="r.maintType==='CM'" class="pmc-cm">
@@ -3846,13 +3850,20 @@ details.form-control[open] summary::after{content:'▴'}
           <button class="btn btn-primary" @click="openAddUser">+ Tambah Pengguna</button>
         </div>
         <div v-for="u in sortedUsers" :key="u.id" class="user-card" :class="{'disabled-user':u.disabled}">
-          <label style="cursor:pointer;flex-shrink:0" title="Klik untuk tukar gambar profil pengguna">
+          <!-- Superadmin's own photo is changed only via Profil Saya, same
+               principle as the disabled Edit button above — so this avatar
+               isn't clickable for that row (plain div, no file input). -->
+          <label v-if="u.role!=='superadmin'" style="cursor:pointer;flex-shrink:0" title="Klik untuk tukar gambar profil pengguna (wajib pilih gambar baharu — tidak boleh buang tanpa gantikan)">
             <div class="user-avatar-sm">
               <img v-if="u.photoURL" :src="u.photoURL" alt="">
               <span v-else>{{u.name?.charAt(0)||u.username?.charAt(0)||'?'}}</span>
             </div>
             <input type="file" accept="image/*" style="display:none" @change="uploadPhoto($event, u.id)">
           </label>
+          <div v-else class="user-avatar-sm" style="flex-shrink:0" title="Superadmin tukar gambar sendiri di tab Profil Saya">
+            <img v-if="u.photoURL" :src="u.photoURL" alt="">
+            <span v-else>{{u.name?.charAt(0)||u.username?.charAt(0)||'?'}}</span>
+          </div>
           <div style="flex:1;min-width:0">
             <div class="flex items-center gap-8" style="flex-wrap:wrap">
               <b>{{u.name||u.username}}</b>
@@ -3869,7 +3880,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="text-sm text-muted">📞 {{u.phone||'-'}} &nbsp;·&nbsp; ✉️ {{u.email||'-'}}</div>
           </div>
           <div class="flex gap-8 user-card-actions">
-            <button class="btn btn-sm btn-outline" @click="openEditUser(u)">✏️ Edit</button>
+            <button class="btn btn-sm btn-outline" @click="openEditUser(u)" :disabled="u.role==='superadmin'" title="Superadmin edit maklumat sendiri di tab Profil Saya">✏️ Edit</button>
             <button class="btn btn-sm btn-outline" @click="openResetPw(u)" :disabled="u.role==='superadmin'" title="Reset kata laluan pengguna">🔑 Reset PW</button>
             <button class="btn btn-sm" :class="u.disabled?'btn-success':'btn-warning'" @click="toggleFreeze(u)">{{u.disabled?'✅ Aktif':'🔒 Freeze'}}</button>
             <button class="btn btn-sm btn-danger" @click="deleteUser(u)" :disabled="u.role==='superadmin'">🗑</button>
@@ -3926,10 +3937,19 @@ details.form-control[open] summary::after{content:'▴'}
       <!-- ====== PROFILE ====== -->
       <div v-if="page==='profile'">
         <div class="profile-header">
-          <div class="profile-avatar">
+          <!-- Self-service photo change — the ONLY profile field admin/staff
+               can update themselves (name/username/jawatan/jabatan/phone/
+               email below stay disabled for them, editable only via
+               Pengurusan Pengguna, which is superadmin-only). Same
+               uploadPhoto() flow as Senarai Pengguna: picking a file is
+               the only way anything changes, so there's no way to end up
+               with a removed-but-not-replaced photo — cancelling the
+               picker leaves the current photo untouched. -->
+          <label class="profile-avatar" title="Klik untuk tukar gambar profil (wajib pilih gambar baharu)">
             <img v-if="authProfile?.photoURL" :src="authProfile.photoURL" alt="Profil">
             <span v-else>{{authProfile?.name?.charAt(0)||'?'}}</span>
-          </div>
+            <input type="file" accept="image/*" style="display:none" @change="uploadPhoto($event, authProfile.id)">
+          </label>
           <div>
             <div class="profile-name">{{authProfile?.name||authProfile?.username}}</div>
             <div class="profile-role">@{{authProfile?.username}} &nbsp;·&nbsp; <span style="background:rgba(255,255,255,.2);padding:2px 10px;border-radius:20px;font-size:.8rem">{{authProfile?.role}}</span></div>
@@ -4368,12 +4388,12 @@ details.form-control[open] summary::after{content:'▴'}
       <div v-if="page==='kontraktor-luar'">
         <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
           <div>
-            <div style="font-size:1.1rem;font-weight:700;color:#002244">🛠️ Senarai Kontraktor Luar</div>
+            <div style="font-size:1.1rem;font-weight:700;color:#002244">🛠️ Senarai Kontraktor/Supplier Luar</div>
             <div style="font-size:.8rem;color:#888;margin-top:2px">Rujukan pantas bidang kerja &amp; no. telefon kontraktor pihak ketiga untuk kerja-kerja urgent</div>
           </div>
           <div class="flex gap-8">
             <button class="btn btn-outline btn-sm" @click="exportKontraktorPdf">🖨️ Export PDF</button>
-            <button v-if="canEditKontraktor" class="btn btn-primary btn-sm" @click="openKModal(null)">+ Tambah Kontraktor</button>
+            <button v-if="canEditKontraktor" class="btn btn-primary btn-sm" @click="openKModal(null)">+ Tambah Kontraktor/Kedai</button>
           </div>
         </div>
 
@@ -4385,7 +4405,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="card">
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th style="width:40px">#</th><th>Nama Kontraktor</th><th>Bidang Kerja</th><th>Area Service</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
+              <thead><tr><th style="width:40px">#</th><th>Nama Kontraktor/Kedai</th><th>Skop Kerja/Barang Dijual</th><th>Area Service</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
               <tbody>
                 <tr v-for="(c,i) in (kontraktorLuar[kontraktorLuarProject]||[])" :key="c.id">
                   <td style="text-align:center;color:#888;font-size:.8rem">{{i+1}}</td>
@@ -4408,10 +4428,27 @@ details.form-control[open] summary::after{content:'▴'}
       <!-- Kontraktor Luar add/edit modal -->
       <div v-if="kModal.show" class="modal-bg" @click.self="kModal.show=false">
         <div class="modal">
-          <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor — {{kontraktorLuarProject==='vir'?'VIR':'CCTV'}}</h3>
-          <div class="form-group"><label>Nama Kontraktor</label><input class="form-control" v-model="kModal.name" placeholder="cth: ABC Aircond Services"></div>
-          <div class="form-group"><label>Bidang Kerja</label><input class="form-control" v-model="kModal.bidangKerja" placeholder="cth: Servis & Baiki Aircond"></div>
-          <div class="form-group"><label>Area Service</label><input class="form-control" v-model="kModal.areaService" placeholder="cth: Selangor & Kuala Lumpur"></div>
+          <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor/Kedai — {{kontraktorLuarProject==='vir'?'VIR':'CCTV'}}</h3>
+          <div class="form-group"><label>Nama Kontraktor/Kedai</label><input class="form-control" v-model="kModal.name" placeholder="cth: ABC Aircond Services"></div>
+          <div class="form-group"><label>Skop Kerja/Barang Dijual</label><input class="form-control" v-model="kModal.bidangKerja" placeholder="cth: Servis & Baiki Aircond"></div>
+          <div class="form-group"><label>Area Service — Negeri</label>
+            <select class="form-control" v-model="kModal.negeri">
+              <option value="">-- Pilih Negeri --</option>
+              <option v-for="n in MALAYSIA_NEGERI" :key="n">{{n}}</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Area Service — Kawasan</label>
+            <select class="form-control" v-model="kModal.kawasan" :disabled="!kModal.negeri" :title="!kModal.negeri?'Pilih negeri dahulu':''">
+              <option value="">-- Pilih Kawasan --</option>
+              <option v-for="k in kModalKawasanOptions" :key="k">{{k}}</option>
+            </select>
+          </div>
+          <div class="form-group" v-if="kModalSubKawasanOptions.length"><label>Area Service — Sub-Kawasan</label>
+            <select class="form-control" v-model="kModal.subKawasan" :disabled="!kModal.kawasan" :title="!kModal.kawasan?'Pilih kawasan dahulu':''">
+              <option value="">-- Pilih Sub-Kawasan (pilihan) --</option>
+              <option v-for="sk in kModalSubKawasanOptions" :key="sk">{{sk}}</option>
+            </select>
+          </div>
           <div class="form-group"><label>No. Telefon</label><input class="form-control" v-model="kModal.phone" placeholder="cth: 012-3456789"></div>
           <p v-if="kModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{kModal.err}}</p>
           <div class="flex gap-8 justify-end">
@@ -8491,6 +8528,7 @@ createApp({
       currentProject.value = proj;
       filterSite.value = '';
       filterYear.value = '';
+      filterMonth.value = '';
       filterPmNo.value = '';
       page.value = 'pm-list';
     }
@@ -8821,6 +8859,7 @@ createApp({
     const viewPM = ref(null);
     const filterSite = ref('');
     const filterYear = ref('');
+    const filterMonth = ref('');
     const filterMaintType = ref('');
     const filterPmNo = ref('');
 
@@ -8836,7 +8875,7 @@ createApp({
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
       'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
       'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV'),
-      'kontraktor-luar': 'Senarai Kontraktor Luar', 'warranty': 'Waranti Peralatan (CCTV)'
+      'kontraktor-luar': 'Senarai Kontraktor/Supplier Luar', 'warranty': 'Waranti Peralatan (CCTV)'
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
@@ -8912,6 +8951,7 @@ createApp({
       if(rProj !== currentProject.value) return false;
       if(filterSite.value && r.siteId!==filterSite.value) return false;
       if(filterYear.value && r.year!=filterYear.value) return false;
+      if(filterMonth.value && r.month!=filterMonth.value) return false;
       if(filterMaintType.value && (r.maintType||'PM')!==filterMaintType.value) return false;
       // "Penyelenggaraan Ke-" (PM1/PM2/PM3) only applies to PM records — CM
       // records have no such concept, but older records may still carry a
@@ -10679,8 +10719,15 @@ createApp({
     // ---- User Management ----
     async function loadUsers() {
       const snap = await db.collection('users').get();
+      // Excludes the viewer's own account — self-editing here would bypass
+      // the dedicated "Profil Saya" flow. Superadmin is the one exception:
+      // their profile should always be visible in Senarai Pengguna (so
+      // other admins/staff can see it exists), Edit is just disabled on
+      // that row instead (see the button's :disabled check) rather than
+      // hiding the row outright — which also means a superadmin viewing
+      // their own list sees themselves listed, unlike other roles.
       allUsers.value = snap.docs.map(d=>({id:d.id,...d.data()}))
-        .filter(u=>u.username !== authProfile.value?.username);
+        .filter(u => u.role === 'superadmin' || u.username !== authProfile.value?.username);
     }
 
     function openAddUser() {
@@ -10876,7 +10923,185 @@ createApp({
     );
     const kontraktorLuar = ref({ cctv:[], vir:[] });
     const kontraktorLuarProject = ref('cctv'); // internal CCTV/VIR toggle within the one shared page
-    const kModal = reactive({ show:false, editId:null, name:'', bidangKerja:'', areaService:'', phone:'', err:'' });
+    // Negeri -> Kawasan (daerah) cascading dropdown for kontraktor Area
+    // Service — replaces the old free-text field. The final selection is
+    // still stored/displayed as a single "areaService" string ("Kawasan,
+    // Negeri") so the table column and PDF export need no changes.
+    const MALAYSIA_NEGERI = ['Perlis','Kedah','Pulau Pinang','Perak','Selangor','Kuala Lumpur','Putrajaya','Negeri Sembilan','Melaka','Johor','Pahang','Terengganu','Kelantan','Sabah','Sarawak','Labuan'];
+    const MALAYSIA_KAWASAN = {
+      'Perlis': ['Kangar','Arau','Padang Besar'],
+      'Kedah': ['Kota Setar','Alor Setar','Sungai Petani','Kulim','Langkawi','Baling','Yan','Pendang','Kubang Pasu','Padang Terap','Pokok Sena','Bandar Baharu'],
+      'Pulau Pinang': ['Timur Laut (George Town)','Barat Daya','Seberang Perai Utara','Seberang Perai Tengah','Seberang Perai Selatan'],
+      'Perak': ['Ipoh (Kinta)','Taiping (Larut, Matang & Selama)','Teluk Intan (Hilir Perak)','Manjung (Dinding)','Kuala Kangsar','Batang Padang (Tapah)','Kerian','Hulu Perak (Gerik)','Perak Tengah','Muallim (Tanjung Malim)','Bagan Datuk'],
+      'Selangor': ['Petaling','Klang','Hulu Langat','Gombak','Sepang','Kuala Langat','Kuala Selangor','Hulu Selangor','Sabak Bernam'],
+      'Kuala Lumpur': ['Wilayah Persekutuan Kuala Lumpur'],
+      'Putrajaya': ['Wilayah Persekutuan Putrajaya'],
+      'Negeri Sembilan': ['Seremban','Port Dickson','Jempol','Jelebu','Kuala Pilah','Rembau','Tampin'],
+      'Melaka': ['Melaka Tengah','Alor Gajah','Jasin'],
+      'Johor': ['Johor Bahru','Kluang','Batu Pahat','Muar','Segamat','Kota Tinggi','Mersing','Pontian','Kulai','Tangkak'],
+      'Pahang': ['Kuantan','Temerloh','Bentong','Raub','Jerantut','Pekan','Rompin','Cameron Highlands','Maran','Lipis','Bera'],
+      'Terengganu': ['Kuala Terengganu','Kemaman','Dungun','Marang','Hulu Terengganu','Setiu','Besut'],
+      'Kelantan': ['Kota Bharu','Pasir Mas','Tumpat','Tanah Merah','Machang','Kuala Krai','Gua Musang','Bachok','Pasir Puteh','Jeli'],
+      'Sabah': ['Kota Kinabalu','Sandakan','Tawau','Lahad Datu','Keningau','Beaufort','Papar','Kudat','Semporna','Ranau','Kota Belud','Tuaran'],
+      'Sarawak': ['Kuching','Miri','Sibu','Bintulu','Sri Aman','Sarikei','Kapit','Limbang','Samarahan','Betong','Mukah'],
+      'Labuan': ['Wilayah Persekutuan Labuan'],
+    };
+    // Negeri -> Kawasan -> Sub-Kawasan — third cascading level, one step
+    // more specific than Kawasan. Since MALAYSIA_KAWASAN's "Kawasan" list
+    // is actually district-level (daerah) names rather than strict
+    // electoral Parlimen boundaries, Sub-Kawasan is populated with real
+    // towns/pekan/mukim within each district — more useful for "which area
+    // does this contractor service" than official DUN seats would be, and
+    // stays consistent with the district-level data already above it.
+    // Keys must match MALAYSIA_KAWASAN's district names exactly.
+    // Federal territories (Kuala Lumpur, Putrajaya, Labuan) have only one
+    // district each matching the whole territory, so there's no useful
+    // further breakdown — absent here, kModalSubKawasanOptions just
+    // returns [] and the third dropdown stays hidden for those.
+    const MALAYSIA_SUBKAWASAN = {
+      'Perlis': {
+        'Kangar': ['Kangar', 'Kuala Perlis', 'Jejawi', 'Kechor', 'Seriab', 'Utan Aji'],
+        'Arau': ['Arau', 'Wang Bintong', 'Kayang', 'Simpang Empat', 'Beseri'],
+        'Padang Besar': ['Padang Besar', 'Chuping', 'Titi Tinggi', 'Sanglang', 'Kurong Anai'],
+      },
+      'Kedah': {
+        'Kota Setar': ['Alor Setar', 'Anak Bukit', 'Kuala Kedah', 'Langgar', 'Mergong', 'Kepala Batas', 'Kubang Rotan', 'Pumpong'],
+        'Alor Setar': ['Alor Setar', 'Anak Bukit', 'Mergong', 'Bakar Bata', 'Kubang Rotan', 'Alor Malai'],
+        'Sungai Petani': ['Sungai Petani', 'Bedong', 'Guar Chempedak', 'Bakar Arang', 'Sidam', 'Pantai Merdeka', 'Tikam Batu'],
+        'Kulim': ['Kulim', 'Bandar Baru Kulim', 'Padang Serai', 'Kulim Hi-Tech Park', 'Tawar', 'Simpang Empat'],
+        'Langkawi': ['Kuah', 'Padang Matsirat', 'Kedawang', 'Ulu Melaka', 'Ayer Hangat', 'Bohor'],
+        'Baling': ['Baling', 'Kuala Ketil', 'Kupang', 'Siong', 'Bongor', 'Kati'],
+        'Yan': ['Yan', 'Guar Chempedak', 'Sungai Limau', 'Tanjung Dawai', 'Sungai Tiang'],
+        'Pendang': ['Pendang', 'Tokai', 'Guar Kepayang', 'Sungai Tiang'],
+        'Kubang Pasu': ['Jitra', 'Changlun', 'Bukit Kayu Hitam', 'Kodiang', 'Naka'],
+        'Padang Terap': ['Kuala Nerang', 'Naka', 'Kupang', 'Batu Hampar'],
+        'Pokok Sena': ['Pokok Sena', 'Pengkalan Kundur', 'Bukit Pinang', 'Bukit Meriam'],
+        'Bandar Baharu': ['Bandar Baharu', 'Serdang', 'Kuala Ketil', 'Lunas'],
+      },
+      'Pulau Pinang': {
+        'Timur Laut (George Town)': ['George Town', 'Ayer Itam', 'Tanjung Bungah', 'Tanjung Tokong', 'Batu Ferringhi', 'Pulau Tikus', 'Gelugor', 'Jelutong'],
+        'Barat Daya': ['Balik Pulau', 'Bayan Lepas', 'Bayan Baru', 'Paya Terubong', 'Sungai Ara', 'Teluk Bahang'],
+        'Seberang Perai Utara': ['Butterworth', 'Kepala Batas', 'Bertam', 'Bagan Ajam', 'Alma', 'Penaga'],
+        'Seberang Perai Tengah': ['Bukit Mertajam', 'Bandar Perda', 'Perai', 'Juru', 'Machang Bubuk', 'Batu Kawan'],
+        'Seberang Perai Selatan': ['Nibong Tebal', 'Simpang Ampat', 'Sungai Jawi', 'Sungai Bakap', 'Jawi', 'Parit Buntar Fringe (Bukit Tambun)'],
+      },
+      'Perak': {
+        'Ipoh (Kinta)': ['Ipoh', 'Gunung Rapat', 'Menglembu', 'Tambun', 'Chemor', 'Falim', 'Simpang Pulai', 'Jelapang'],
+        'Taiping (Larut, Matang & Selama)': ['Taiping', 'Kamunting', 'Matang', 'Kuala Sepetang', 'Selama', 'Changkat Jering'],
+        'Teluk Intan (Hilir Perak)': ['Teluk Intan', 'Langkap', 'Hutan Melintang', 'Chenderong Balai', 'Bagan Datoh Fringe (Sungai Tiram)'],
+        'Manjung (Dinding)': ['Sitiawan', 'Lumut', 'Pangkor', 'Pengkalan Baharu', 'Beruas', 'Lekir'],
+        'Kuala Kangsar': ['Kuala Kangsar', 'Sayong', 'Enggor', 'Padang Rengas', 'Sungai Siput', 'Manong'],
+        'Batang Padang (Tapah)': ['Tapah', 'Bidor', 'Sungkai', 'Chenderiang', 'Sungai Bil', 'Ringlet'],
+        'Kerian': ['Parit Buntar', 'Bagan Serai', 'Kuala Kurau', 'Gunung Semanggol', 'Tanjung Piandang', 'Selinsing'],
+        'Hulu Perak (Gerik)': ['Gerik', 'Pengkalan Hulu', 'Lenggong', 'Kenering', 'Temenggor'],
+        'Perak Tengah': ['Seri Iskandar', 'Parit', 'Bota', 'Trong (Tronoh)', 'Kota Setia', 'Lambor Kanan'],
+        'Muallim (Tanjung Malim)': ['Tanjung Malim', 'Behrang', 'Sungkai Fringe (Sungkai)', 'Kalumpang', 'Slim River'],
+        'Bagan Datuk': ['Bagan Datuk', 'Hutan Melintang Fringe (Sungai Sumun)', 'Sungai Tiram', 'Sungai Burong', 'Sabak Bernam Border (Batak Rabit)'],
+      },
+      'Selangor': {
+        'Petaling': ['Petaling Jaya', 'Subang Jaya', 'Shah Alam', 'Puchong', 'Sungai Buloh', 'Damansara', 'Bukit Raja', 'Kelana Jaya'],
+        'Klang': ['Klang', 'Port Klang', 'Kapar', 'Meru', 'Pandamaran', 'Bukit Kemuning', 'Bandar Sultan Sulaiman', 'Telok Menegun'],
+        'Hulu Langat': ['Kajang', 'Cheras', 'Bangi', 'Semenyih', 'Ampang', 'Balakong', 'Beranang', 'Batu 14 Hulu Langat'],
+        'Gombak': ['Selayang', 'Rawang', 'Batu Caves', 'Gombak', 'Sungai Buloh', 'Kepong', 'Kuang', 'Batu Arang'],
+        'Sepang': ['Sepang', 'Dengkil', 'Salak Tinggi', 'Nilai (Sepang side)', 'Sungai Pelek', 'Kampung Sungai Merab', 'Bandar Baru Salak Tinggi'],
+        'Kuala Langat': ['Banting', 'Morib', 'Jugra', 'Telok Panglima Garang', 'Bandar Saujana Putra', 'Bukit Changgang', 'Pulau Carey'],
+        'Kuala Selangor': ['Kuala Selangor', 'Tanjong Karang', 'Bestari Jaya', 'Jeram', 'Batang Berjuntai', 'Sungai Buloh (Kuala Selangor)', 'Bukit Rotan'],
+        'Hulu Selangor': ['Kuala Kubu Bharu', 'Rasa', 'Serendah', 'Batang Kali', 'Ulu Yam', 'Kerling', 'Kalumpang'],
+        'Sabak Bernam': ['Sabak Bernam', 'Sungai Besar', 'Sekinchan', 'Panchang Bedena', 'Bagan Nakhoda Omar', 'Pasir Panjang'],
+      },
+      'Negeri Sembilan': {
+        'Seremban': ['Seremban', 'Nilai', 'Mantin', 'Rasah', 'Ampangan', 'Senawang', 'Labu', 'Rantau'],
+        'Port Dickson': ['Port Dickson', 'Si Rusa', 'Lukut', 'Pasir Panjang', 'Teluk Kemang', 'Linggi', 'Pengkalan Kempas'],
+        'Jempol': ['Bahau', 'Seri Jempol', 'Batu Kikir', 'Rompin', 'Serting', 'Kuala Jempol'],
+        'Jelebu': ['Kuala Klawang', 'Titi', 'Simpang Durian', 'Simpang Pertang', 'Pertang', 'Sungai Lui'],
+        'Kuala Pilah': ['Kuala Pilah', 'Juasseh', 'Johol', 'Seri Menanti', 'Terachi', 'Parit Tinggi'],
+        'Rembau': ['Rembau', 'Chengkau', 'Pedas', 'Seri Kota', 'Kendong', 'Gemencheh (Rembau side)'],
+        'Tampin': ['Tampin', 'Gemas', 'Repah', 'Gemencheh', 'Air Kuning', 'Pasir Besar'],
+      },
+      'Melaka': {
+        'Melaka Tengah': ['Bandaraya Melaka', 'Ayer Keroh', 'Bukit Baru', 'Batu Berendam', 'Bandar Hilir', 'Klebang', 'Tanjong Kling', 'Bukit Rambai'],
+        'Alor Gajah': ['Alor Gajah', 'Masjid Tanah', 'Pulau Sebang (Tampin Road)', 'Durian Tunggal', 'Lubok China', 'Simpang Empat', 'Kuala Sungai Baru'],
+        'Jasin': ['Jasin', 'Merlimau', 'Selandar', 'Nyalas', 'Asahan', 'Bemban', 'Sungai Rambai'],
+      },
+      'Johor': {
+        'Johor Bahru': ['Johor Bahru', 'Skudai', 'Ulu Tiram', 'Tebrau', 'Pasir Gudang', 'Tampoi', 'Bandar Dato Onn', 'Larkin'],
+        'Kluang': ['Kluang', 'Renggam', 'Paloh', 'Layang-Layang', 'Kahang', 'Simpang Renggam', 'Machap'],
+        'Batu Pahat': ['Batu Pahat', 'Ayer Hitam', 'Parit Raja', 'Rengit', 'Parit Jawa', 'Semerah', 'Yong Peng'],
+        'Muar': ['Muar', 'Bukit Pasir', 'Bukit Bakri', 'Parit Jawa', 'Panchor', 'Sungai Balang', 'Grisek'],
+        'Segamat': ['Segamat', 'Buloh Kasap', 'Labis', 'Gemas', 'Chaah', 'Jementah'],
+        'Kota Tinggi': ['Kota Tinggi', 'Bandar Penawar', 'Desaru', 'Sedili', 'Johor Lama', 'Pengerang', 'Ulu Tiram'],
+        'Mersing': ['Mersing', 'Endau', 'Jemaluang', 'Kahang', 'Tenggaroh', 'Padang Endau'],
+        'Pontian': ['Pontian Kechil', 'Benut', 'Kukup', 'Ayer Baloi', 'Sungai Karang', 'Pekan Nenas'],
+        'Kulai': ['Kulai', 'Sedenak', 'Bandar Indahpura', 'Senai', 'Kelapa Sawit', 'Bukit Batu'],
+        'Tangkak': ['Tangkak', 'Sagil', 'Bukit Gambir', 'Serom', 'Gudang', 'Sungai Mati'],
+      },
+      'Pahang': {
+        'Kuantan': ['Kuantan', 'Beserah', 'Sungai Lembing', 'Gambang', 'Kuala Kuantan', 'Semambu', 'Balok'],
+        'Temerloh': ['Temerloh', 'Mentakab', 'Lanchang', 'Bandar Tun Razak', 'Kerdau', 'Kuala Semantan'],
+        'Bentong': ['Bentong', 'Bukit Tinggi', 'Ketari', 'Sabai', 'Bukit Ibam', 'Karak'],
+        'Raub': ['Raub', "Fraser's Hill", 'Ampang Pecah', 'Dong', 'Sega'],
+        'Jerantut': ['Jerantut', 'Kuala Tembeling', 'Padang Piol', 'Kuala Tahan', 'Damak', 'Sungai Yap'],
+        'Pekan': ['Pekan', 'Nenasi', 'Peramu Jaya', 'Chini', 'Kuala Pahang', 'Ganchong'],
+        'Rompin': ['Rompin', 'Muadzam Shah', 'Kuala Rompin', 'Endau', 'Selendang'],
+        'Cameron Highlands': ['Tanah Rata', 'Brinchang', 'Ringlet', 'Kea Farm', 'Kampung Raja', 'Bertam Valley'],
+        'Maran': ['Maran', 'Chenor', 'Kertau', 'Ladang Maran', 'Tersang', 'Sungai Lui'],
+        'Lipis': ['Kuala Lipis', 'Benta', 'Padang Tengku', 'Merapoh', 'Kechau', 'Batu Balai'],
+        'Bera': ['Bera', 'Triang', 'Bukit Serok', 'Kampung Awah'],
+      },
+      'Terengganu': {
+        'Kuala Terengganu': ['Kuala Terengganu', 'Kuala Nerus', 'Batu Rakit', 'Chalok', 'Losong', 'Manir'],
+        'Kemaman': ['Kemaman', 'Chukai', 'Kerteh', 'Kijal', 'Paka', 'Kemasik'],
+        'Dungun': ['Dungun', 'Kuala Dungun', 'Rasau', 'Jerangau', 'Kuala Paka', 'Sura'],
+        'Marang': ['Marang', 'Rusila', 'Kuala Marang', 'Bukit Payung', 'Batu Rakit', 'Alur Limbat'],
+        'Hulu Terengganu': ['Kuala Berang', 'Ajil', 'Air Tawar', 'Kenyir', 'Bandar Ajil', 'Bukit Payong'],
+        'Setiu': ['Bandar Permaisuri', 'Chalok', 'Guntong', 'Kuala Setiu', 'Merang'],
+        'Besut': ['Kampung Raja', 'Jerteh', 'Kuala Besut', 'Bukit Puteri'],
+      },
+      'Kelantan': {
+        'Kota Bharu': ['Kota Bharu', 'Kubang Kerian', 'Pengkalan Chepa', 'Ketereh', 'Peringat', 'Wakaf Che Yeh'],
+        'Pasir Mas': ['Pasir Mas', 'Rantau Panjang', 'Chetok', 'Kubang Sepat', 'Bunut Susu', 'Gual Periuk'],
+        'Tumpat': ['Tumpat', 'Pengkalan Kubor', 'Wakaf Bharu', 'Sungai Pinang', 'Kebakat', 'Jal Besar'],
+        'Tanah Merah': ['Tanah Merah', 'Bukit Panau', 'Jedok', 'Ulu Kusial', 'Gunong Chabang'],
+        'Machang': ['Machang', 'Pulai Chondong', 'Cherang Ruku', 'Bunut Payong'],
+        'Kuala Krai': ['Kuala Krai', 'Dabong', 'Manek Urai', 'Batu Melintang', 'Mengkebang', 'Guchil'],
+        'Gua Musang': ['Gua Musang', 'Chiku', 'Limau Kasturi', 'Bertam', 'Sungai Betis', 'Aring'],
+        'Bachok': ['Bachok', 'Pantai Irama', 'Melor', 'Perupok', 'Gunung', 'Kubang Golok'],
+        'Pasir Puteh': ['Pasir Puteh', 'Semerak', 'Bukit Bator', 'Kemasin', 'Padang Pak Amat'],
+        'Jeli': ['Jeli', 'Kuala Balah', 'Lubok Sireh', 'Bukit Bunga', 'Air Lanas'],
+      },
+      'Sabah': {
+        'Kota Kinabalu': ['Kota Kinabalu', 'Inanam', 'Menggatal', 'Telipok', 'Sepanggar', 'Likas'],
+        'Sandakan': ['Sandakan', 'Sibuga', 'Batu Sapi', 'Libaran', 'Beluran', 'Sungai Batang'],
+        'Tawau': ['Tawau', 'Balung', 'Merotai', 'Apas', 'Kalabakan', 'Sebatik'],
+        'Lahad Datu': ['Lahad Datu', 'Kunak', 'Silabukan', 'Tungku', 'Segama', 'Felda Sahabat'],
+        'Keningau': ['Keningau', 'Apin-Apin', 'Bingkor', 'Sook', 'Nabawan'],
+        'Beaufort': ['Beaufort', 'Membakut', 'Weston', 'Kota Klias', 'Bongawan', 'Padas Damit'],
+        'Papar': ['Papar', 'Kimanis', 'Kinarut', 'Benoni', 'Bongawan'],
+        'Kudat': ['Kudat', 'Sikuati', 'Bak Bak', 'Kota Marudu', 'Pitas'],
+        'Semporna': ['Semporna', 'Pulau Bum Bum', 'Tagasan', 'Kabimbangan'],
+        'Ranau': ['Ranau', 'Kundasang', 'Bundu Tuhan', 'Pekan Nabalu', 'Mesilau'],
+        'Kota Belud': ['Kota Belud', 'Tempasuk', 'Kadamaian', 'Taginambur'],
+        'Tuaran': ['Tuaran', 'Tamparuli', 'Kiulu', 'Sulaman', 'Pantai Dalit'],
+      },
+      'Sarawak': {
+        'Kuching': ['Kuching', 'Bau', 'Padawan', 'Siburan', 'Batu Kawa', 'Matang'],
+        'Miri': ['Miri', 'Lutong', 'Marudi', 'Niah', 'Beluru', 'Sibuti'],
+        'Sibu': ['Sibu', 'Sungai Merah', 'Durin', 'Bukit Assek', 'Dudong', 'Bawang Assan'],
+        'Bintulu': ['Bintulu', 'Kidurong', 'Tubau', 'Sebauh', 'Tatau', 'Labang'],
+        'Sri Aman': ['Sri Aman', 'Lingga', 'Engkilili', 'Pantu', 'Lubok Antu'],
+        'Sarikei': ['Sarikei', 'Bintangor', 'Meradong', 'Julau', 'Pakan'],
+        'Kapit': ['Kapit', 'Song', 'Belaga', 'Nanga Merit', 'Bukit Mabong'],
+        'Limbang': ['Limbang', 'Lawas', 'Sundar', 'Nanga Medamit', 'Trusan', 'Merapok'],
+        'Samarahan': ['Kota Samarahan', 'Asajaya', 'Sebuyau', 'Simunjan', 'Sebangan'],
+        'Betong': ['Betong', 'Debak', 'Spaoh', 'Pusa', 'Meludam'],
+        'Mukah': ['Mukah', 'Dalat', 'Balingian', 'Oya', 'Matu', 'Daro'],
+      },
+    };
+    const kModal = reactive({ show:false, editId:null, name:'', bidangKerja:'', negeri:'', kawasan:'', subKawasan:'', phone:'', err:'' });
+    const kModalKawasanOptions = computed(() => MALAYSIA_KAWASAN[kModal.negeri] || []);
+    const kModalSubKawasanOptions = computed(() => (MALAYSIA_SUBKAWASAN[kModal.negeri] || {})[kModal.kawasan] || []);
+    watch(() => kModal.negeri, () => { kModal.kawasan = ''; kModal.subKawasan = ''; });
+    watch(() => kModal.kawasan, () => { kModal.subKawasan = ''; });
 
     async function loadKontraktorLuar() {
       try {
@@ -10897,11 +11122,32 @@ createApp({
         kModal.editId = existing.id;
         kModal.name = existing.name;
         kModal.bidangKerja = existing.bidangKerja;
-        kModal.areaService = existing.areaService || '';
+        if(existing.negeri) {
+          // Cascading-dropdown record — stored fields are authoritative.
+          kModal.negeri = existing.negeri;
+          kModal.kawasan = existing.kawasan || '';
+          kModal.subKawasan = existing.subKawasan || '';
+        } else {
+          // Best-effort parse of the old "Kawasan, Negeri" combined string
+          // back into the dropdowns — matches the LAST comma-separated
+          // segment against MALAYSIA_NEGERI. A pre-cascading-dropdown record
+          // (free text that doesn't match this shape) just leaves the
+          // dropdowns blank; its original text stays intact in the table
+          // until this entry is re-saved through the new dropdowns.
+          const parts = (existing.areaService||'').split(',').map(s=>s.trim());
+          const lastPart = parts[parts.length-1];
+          if(parts.length > 1 && MALAYSIA_NEGERI.includes(lastPart)) {
+            kModal.negeri = lastPart;
+            kModal.kawasan = parts.slice(0,-1).join(', ');
+          } else {
+            kModal.negeri = ''; kModal.kawasan = '';
+          }
+          kModal.subKawasan = '';
+        }
         kModal.phone = existing.phone;
       } else {
         kModal.editId = null;
-        kModal.name = ''; kModal.bidangKerja = ''; kModal.areaService = ''; kModal.phone = '';
+        kModal.name = ''; kModal.bidangKerja = ''; kModal.negeri = ''; kModal.kawasan = ''; kModal.subKawasan = ''; kModal.phone = '';
       }
       kModal.show = true;
     }
@@ -10913,7 +11159,9 @@ createApp({
       if(!isValidPhone(kModal.phone)) { kModal.err = 'Format no. telefon tidak sah.'; return; }
       const proj = kontraktorLuarProject.value;
       const list = [...(kontraktorLuar.value[proj] || [])];
-      const entry = { id: kModal.editId || _genId(), name: kModal.name.trim(), bidangKerja: kModal.bidangKerja.trim(), areaService: kModal.areaService.trim(), phone: kModal.phone.trim() };
+      const areaParts = [kModal.subKawasan, kModal.kawasan, kModal.negeri].filter(Boolean);
+      const areaService = areaParts.join(', ');
+      const entry = { id: kModal.editId || _genId(), name: kModal.name.trim(), bidangKerja: kModal.bidangKerja.trim(), areaService, negeri: kModal.negeri, kawasan: kModal.kawasan, subKawasan: kModal.subKawasan, phone: kModal.phone.trim() };
       const idx = list.findIndex(c => c.id === entry.id);
       if(idx !== -1) list[idx] = entry; else list.push(entry);
       try {
@@ -10954,7 +11202,7 @@ createApp({
         </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#888;padding:12px">Tiada kontraktor direkodkan.</td></tr>';
 
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
-        <title>Senarai Kontraktor Luar ${projLabel}</title>
+        <title>Senarai Kontraktor/Supplier Luar ${projLabel}</title>
         <style>
           *{box-sizing:border-box;margin:0;padding:0}
           body{font-family:Arial,sans-serif;font-size:10pt;color:#000;padding:14mm 16mm}
@@ -10973,15 +11221,15 @@ createApp({
         <div class="header">
           <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
           <div class="header-mid">
-            <h2>Senarai Kontraktor Luar — ${projLabel}</h2>
+            <h2>Senarai Kontraktor/Supplier Luar — ${projLabel}</h2>
             <p class="sub">Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
           </div>
           <img src="logo_sprm.png" alt="SPRM" class="header-logo">
         </div>
         <table><thead><tr>
-          <th style="width:6%">#</th><th style="width:26%">Nama Kontraktor</th><th style="width:26%">Bidang Kerja</th><th style="width:26%">Area Service</th><th style="width:16%">No. Telefon</th>
+          <th style="width:6%">#</th><th style="width:26%">Nama Kontraktor/Kedai</th><th style="width:26%">Skop Kerja/Barang Dijual</th><th style="width:26%">Area Service</th><th style="width:16%">No. Telefon</th>
         </tr></thead><tbody>${rows}</tbody></table>
-        <div class="footer"><span>Sistem Pengurusan Borang PM — SPRM</span><span>Senarai Kontraktor Luar ${projLabel}</span></div>
+        <div class="footer"><span>Sistem Pengurusan Borang PM — SPRM</span><span>Senarai Kontraktor/Supplier Luar ${projLabel}</span></div>
       </body></html>`;
 
       const w = window.open('','_blank','width=900,height=700');
@@ -10996,7 +11244,7 @@ createApp({
       const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
       await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
       setTimeout(()=>{ w.print(); }, 200);
-      await logAudit('EXPORT_PDF', 'Senarai Kontraktor Luar '+projLabel);
+      await logAudit('EXPORT_PDF', 'Senarai Kontraktor/Supplier Luar '+projLabel);
     }
 
     async function toggleFreeze(u) {
@@ -13986,7 +14234,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
-      pmRecords, viewPM, filterSite, filterYear, filterMaintType, filterPmNo,
+      pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
@@ -14061,7 +14309,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, canEditContact, cpSites,
-      kontraktorLuar, kontraktorLuarProject, kModal, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
+      kontraktorLuar, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       mobileNavOpen,
       darkMode,
       setTimeout
