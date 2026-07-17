@@ -4566,12 +4566,12 @@ details.form-control[open] summary::after{content:'▴'}
                 <a href="#" @click.prevent="previewServiceReport(r)" style="font-weight:600;font-size:.85rem;word-break:break-all">{{r.name}}</a>
                 <div class="text-muted text-sm">{{fmtDate(r.uploadedAt?.slice(0,10))}} · {{r.uploadedBy}} · {{(r.size/1024/1024).toFixed(2)}}MB</div>
               </div>
-              <button v-if="_canEditWarrantyReportFor(serviceReportModal.collection)" class="btn btn-sm btn-danger btn-icon" @click="deleteServiceReport(r)" title="Padam">🗑</button>
+              <button v-if="canEditWarrantyReportFor(serviceReportModal.collection)" class="btn btn-sm btn-danger btn-icon" @click="deleteServiceReport(r)" title="Padam">🗑</button>
             </div>
           </div>
 
           <p v-if="serviceReportModal.err" style="color:red;font-size:.82rem;margin:8px 0">{{serviceReportModal.err}}</p>
-          <div v-if="_canAddWarrantyReportFor(serviceReportModal.collection)" class="form-group" style="margin-top:10px">
+          <div v-if="canAddWarrantyReportFor(serviceReportModal.collection)" class="form-group" style="margin-top:10px">
             <label>Muat Naik Fail Baharu <span class="text-muted text-sm">(PDF scan auto-dimampatkan, maks {{SERVICE_REPORT_MAX_MB_PDF}}MB selepas mampat · JPG/PNG/DOC/DOCX maks {{SERVICE_REPORT_MAX_MB}}MB)</span></label>
             <input type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" @change="uploadServiceReport" :disabled="serviceReportModal.uploading">
             <p v-if="serviceReportModal.uploading" class="text-muted text-sm" style="margin-top:6px">⏳ Sedang memuat naik...</p>
@@ -7864,10 +7864,10 @@ createApp({
     // (equipmentWarranty) and VIR (virEquipmentWarranty) records, each with
     // its own permission tier — resolve the right one from whichever
     // collection the modal is currently pointed at.
-    function _canAddWarrantyReportFor(collection) {
+    function canAddWarrantyReportFor(collection) {
       return collection === 'virEquipmentWarranty' ? canEditVirWarranty.value : canAddWarranty.value;
     }
-    function _canEditWarrantyReportFor(collection) {
+    function canEditWarrantyReportFor(collection) {
       return collection === 'virEquipmentWarranty' ? canEditVirWarranty.value : canEditWarranty.value;
     }
     // CCTV site equipment: staff may also add/edit/delete records (only
@@ -8566,7 +8566,7 @@ createApp({
       const file = event.target.files[0];
       event.target.value = '';
       if(!file) return;
-      if(!_canAddWarrantyReportFor(serviceReportModal.collection)){ serviceReportModal.err = 'Anda tiada kebenaran untuk tindakan ini.'; return; }
+      if(!canAddWarrantyReportFor(serviceReportModal.collection)){ serviceReportModal.err = 'Anda tiada kebenaran untuk tindakan ini.'; return; }
       const ext = file.name.split('.').pop().toLowerCase();
       if(!SERVICE_REPORT_EXT.includes(ext)) {
         serviceReportModal.err = `Jenis fail tidak disokong. Guna: ${SERVICE_REPORT_EXT.join(', ')}`; return;
@@ -8611,7 +8611,7 @@ createApp({
     }
     async function deleteServiceReport(report) {
       const w = serviceReportModal.warranty;
-      if(!_canEditWarrantyReportFor(serviceReportModal.collection)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!canEditWarrantyReportFor(serviceReportModal.collection)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!confirm(`Padam fail servis "${report.name}"?`)) return;
       try {
         await storage.ref(report.path).delete().catch(()=>{}); // ignore if already gone
@@ -15395,7 +15395,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
       contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
       virWarranty, virWarrantyModal, virWarrantyFilterStatus, loadVirWarranty, virWarrantyStatus, virWarrantyExpiringCount, virWarrantyFiltered, virWarrantyBySite,
-      onVirWarrantySiteChange, openAddVirWarranty, openEditVirWarranty, submitVirWarranty, deleteVirWarranty, canEditVirWarranty, _canAddWarrantyReportFor, _canEditWarrantyReportFor,
+      onVirWarrantySiteChange, openAddVirWarranty, openEditVirWarranty, submitVirWarranty, deleteVirWarranty, canEditVirWarranty, canAddWarrantyReportFor, canEditWarrantyReportFor,
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
