@@ -1430,7 +1430,16 @@ details.form-control[open] summary::after{content:'▴'}
             <input type="date" class="form-control" style="width:auto" v-model="mapSelectedDate">
           </div>
           <div style="position:relative">
-            <div ref="mapContainerEl"></div>
+            <!-- Explicit loading feedback while initMapWidget() fetches/
+                 builds the SVG shell — without this the widget was just a
+                 blank area for however long that takes (worse on a cold,
+                 slow connection right after a browser refresh), which read
+                 as "the map is broken/glitchy" rather than "still loading". -->
+            <div v-if="mapLoading" style="min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:#888">
+              <span style="width:26px;height:26px;border:3px solid #dbe4f0;border-top-color:#0056b3;border-radius:50%;animation:spin .8s linear infinite;display:inline-block"></span>
+              <span style="font-size:.78rem">Memuatkan peta...</span>
+            </div>
+            <div ref="mapContainerEl" v-show="!mapLoading"></div>
             <!-- Floating popup anchored to the clicked pin's own position on
                  the map (percent-based, matching the SVG viewBox so it tracks
                  correctly at any container width) instead of a plain list
@@ -1462,6 +1471,32 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div style="font-size:.72rem;color:#888;margin-top:8px">
             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#0056b3;margin-right:6px;vertical-align:middle"></span>ada penugasan pada tarikh dipilih — klik pin untuk butiran
+          </div>
+          <!-- A genuinely empty map (correct filtering, zero pins for the
+               selected date) is otherwise indistinguishable from "the data
+               admin set isn't showing up" — this makes the distinction
+               explicit and points at the nearest date that DOES have
+               something scheduled, if any. -->
+          <div v-if="!mapLoading && !Object.keys(mapStateAssignments).length" style="font-size:.75rem;color:#b26a00;background:#fff8e1;border:1px solid #ffe0a3;border-radius:6px;padding:8px 12px;margin-top:8px">
+            <template v-if="mapNearestUpcomingDate">
+              ℹ️ Tiada penugasan pada {{fmtDateDash(mapSelectedDate)}}. Penugasan seterusnya: <b>{{fmtDateDash(mapNearestUpcomingDate)}}</b> — <a href="#" @click.prevent="mapSelectedDate=mapNearestUpcomingDate" style="color:#0056b3;font-weight:600">tukar ke tarikh ini</a>.
+            </template>
+            <template v-else>
+              ℹ️ Tiada penugasan direkod untuk {{fmtDateDash(mapSelectedDate)}} atau mana-mana tarikh akan datang. Isi di "Jadual Penyelenggaraan" dahulu.
+            </template>
+          </div>
+          <!-- Surfaces the exact case that otherwise looks like "the admin's
+               data isn't showing up" but is actually correct — an
+               assignment saved with a siteId that isn't (or is no longer)
+               one of the app's known SITES/VIR_SITES ids, so it can never
+               get a state and can never get a pin. This is real diagnostic
+               info, not a rendering bug, and previously had no visible
+               trace at all. -->
+          <div v-if="!mapLoading && mapUnmappedToday.length" style="font-size:.75rem;color:#a33;background:#fff0f0;border:1px solid #f5c2c2;border-radius:6px;padding:8px 12px;margin-top:8px">
+            ⚠️ {{mapUnmappedToday.length}} penugasan pada {{fmtDateDash(mapSelectedDate)}} <b>tidak dapat dipetakan</b> ke peta (site tak dikenali):
+            <div v-for="(u,i) in mapUnmappedToday" :key="i" style="margin-top:3px;padding-left:8px">
+              &bull; {{u.team}} — {{u.siteName}} <span style="color:#c88">(siteId: {{u.siteId}})</span>
+            </div>
           </div>
         </div>
 
@@ -3037,6 +3072,14 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="1">PM 1 Sahaja</option>
                 <option value="2">PM 2 Sahaja</option>
                 <option value="3">PM 3 Sahaja</option>
+              </select>
+              <select v-if="currentProject!=='vir'" class="form-control" style="width:150px" v-model="filterSystem" title="Site bersistem campuran (lebih dari 1 brand) akan muncul di bawah SEMUA brand yang ada padanya">
+                <option value="">Semua Sistem</option>
+                <option v-for="b in filterSystemOptionsCCTV" :key="b">{{b}}</option>
+              </select>
+              <select v-if="currentProject==='vir'" class="form-control" style="width:150px" v-model="filterSystem">
+                <option value="">Semua Sistem</option>
+                <option v-for="s in VIR_SYSTEMS" :key="s" :value="s">{{s==='Optager HD4000'?'Optager HD4000 (OPT)':s}}</option>
               </select>
               <button v-if="batchSelected.length" class="btn btn-danger btn-sm" @click="printBatch">🖨️ Print ({{batchSelected.length}})</button>
               <button v-if="batchSelected.length" class="btn btn-success btn-sm" @click="exportBatchExcel">📊 Excel ({{batchSelected.length}})</button>
@@ -7102,6 +7145,38 @@ createApp({
     // Defaults to today; the date input lets the user look at any other
     // day's schedule too, not just "today".
     const mapSelectedDate = ref(_localDateStr());
+    // Purely cosmetic — true while initMapWidget() is fetching/building the
+    // SVG shell. Without this the widget shows a blank area for however
+    // long the fetch takes (worse on a cold/slow connection right after a
+    // browser refresh), which reads as "broken" rather than "loading" —
+    // reported as the map "sometimes just doesn't show up".
+    const mapLoading = ref(false);
+    // The nearest scheduled date (today or later) that actually HAS an
+    // assignment — shown as a hint when the currently-selected date has
+    // none, since a genuinely empty map (correct filtering, zero pins) is
+    // otherwise indistinguishable from "the data admin set isn't showing
+    // up" at a glance. Excludes the currently-selected date itself so the
+    // hint doesn't point at the date already being viewed.
+    const mapNearestUpcomingDate = computed(() => {
+      const today = _localDateStr();
+      const dates = [...new Set(teamAssignments.value.map(a => a.date))]
+        .filter(d => d && d !== mapSelectedDate.value && d >= today)
+        .sort();
+      return dates[0] || null;
+    });
+    // Diagnostic only — the raw count of assignments matching the selected
+    // date, BEFORE the SITE_STATE_MAP lookup that mapStateAssignments below
+    // does. Compared against mapMappedCount in the template: if raw > 0 but
+    // mapped is lower, some assignment's siteId genuinely isn't in
+    // SITE_STATE_MAP (a real data/config gap, not a rendering bug) — surface
+    // that difference explicitly instead of it silently vanishing, since
+    // "the data admin set isn't showing up" is otherwise unfalsifiable from
+    // the UI alone.
+    const mapTodayRawCount = computed(() =>
+      teamAssignments.value.filter(a => a.date === mapSelectedDate.value).length);
+    const mapUnmappedToday = computed(() =>
+      teamAssignments.value.filter(a => a.date === mapSelectedDate.value && !SITE_STATE_MAP[a.siteId])
+        .map(a => ({ siteName: a.siteName || '(tiada nama)', siteId: a.siteId || '(kosong)', team: a.team })));
     // Groups team assignments for the selected date by real state name
     // (via SITE_STATE_MAP) — a state only gets a pin on the map if
     // someone is actually scheduled there that day, never "all sites".
@@ -7153,6 +7228,7 @@ createApp({
     let mapPath = null, mapCentroids = [];
     async function initMapWidget() {
       if (!mapContainerEl.value || mapContainerEl.value.querySelector('svg')) return;
+      mapLoading.value = true;
       try {
         if (!mapTopologyCache) {
           const res = await fetch('malaysia-states.topojson');
@@ -7189,6 +7265,8 @@ createApp({
       } catch (e) {
         mapTopologyCache = null; // allow retry (e.g. next dashboard visit) if the fetch failed transiently
         if (mapContainerEl.value) mapContainerEl.value.innerHTML = '<p style="font-size:.8rem;color:#888;padding:12px 0">Peta tidak dapat dimuat: ' + e.message + '</p>';
+      } finally {
+        mapLoading.value = false;
       }
     }
     function renderMapPins() {
@@ -8697,6 +8775,7 @@ createApp({
       filterYear.value = '';
       filterMonth.value = '';
       filterPmNo.value = '';
+      filterSystem.value = '';
       page.value = 'pm-list';
     }
     function openBackup() { page.value = 'backup'; }
@@ -9029,6 +9108,12 @@ createApp({
     const filterMonth = ref('');
     const filterMaintType = ref('');
     const filterPmNo = ref('');
+    // "Jenis Sistem" filter — CCTV uses the actual camera brands (see
+    // cctvSystemBrands), VIR uses the fixed BCD/Optager HD4000 pair. Shared
+    // by both projects (see filteredPM below); reset whenever the filter
+    // options change since a value valid for CCTV brands makes no sense
+    // once switched to VIR's BCD/Optager pair, and vice versa.
+    const filterSystem = ref('');
 
     // ---- Computed ----
     const pageTitle = computed(() => ({
@@ -9113,6 +9198,18 @@ createApp({
     const cctvTargetPct  = computed(() => cctvYearTarget.value ? Math.min(100, Math.round(pmThisYearCCTV.value / cctvYearTarget.value * 100)) : 0);
     const virTargetPct   = computed(() => virYearTarget.value ? Math.min(100, Math.round(pmThisYearVIR.value / virYearTarget.value * 100)) : 0);
 
+    // Distinct camera brands actually present across every CCTV PM record —
+    // built from live data (not the static BRANDS dropdown list) so the
+    // filter only ever offers brands that some site genuinely has, and
+    // automatically covers any custom "Lain-lain" brand someone's typed in.
+    const filterSystemOptionsCCTV = computed(() => {
+      const brands = new Set();
+      pmRecords.value.forEach(r => {
+        if((r.project||'cctv') !== 'cctv') return;
+        (r.cameras||[]).forEach(c => { if(c.brand) brands.add(c.brand); });
+      });
+      return [...brands].sort((a,b)=>a.localeCompare(b));
+    });
     const filteredPM = computed(() => pmRecords.value.filter(r=>{
       const rProj = r.project || 'cctv';
       if(rProj !== currentProject.value) return false;
@@ -9126,6 +9223,15 @@ createApp({
       // Excluding non-PM records here (not just checking the number) keeps
       // this filter PM-only even against that stale data.
       if(filterPmNo.value && ((r.maintType||'PM')!=='PM' || Number(r.pmNo)!==Number(filterPmNo.value))) return false;
+      // "Jenis Sistem" — VIR compares the single stored virSystem value;
+      // CCTV checks whether the selected brand is ANY of the camera brands
+      // on this record, since one site can run more than one brand at once
+      // (e.g. Gua Musang has both Hanwha and Axis) — a mixed-system site
+      // should show up under every brand it actually has, not just one.
+      if(filterSystem.value) {
+        if(rProj === 'vir') { if((r.virSystem||'BCD') !== filterSystem.value) return false; }
+        else { if(!(r.cameras||[]).some(c => c.brand === filterSystem.value)) return false; }
+      }
       return true;
     }));
 
@@ -11302,7 +11408,7 @@ createApp({
           td{padding:5px 8px;border-bottom:1px solid #ddd;vertical-align:top}
           tr:nth-child(even) td{background:#f5f7ff}
           .footer{margin-top:18px;border-top:1px solid #ccc;padding-top:7px;font-size:8pt;color:#888;display:flex;justify-content:space-between}
-          @media print{@page{size:A4;margin:12mm 15mm} h3{page-break-after:avoid} table{page-break-inside:auto} tr{page-break-inside:avoid}}
+          @media print{@page{size:A4 landscape;margin:12mm 15mm} h3{page-break-after:avoid} table{page-break-inside:auto} tr{page-break-inside:avoid}}
         </style></head><body>
         <div class="header">
           <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
@@ -14713,7 +14819,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
-      pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo,
+      pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
@@ -14727,7 +14833,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
-      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos,
+      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos, mapLoading, mapNearestUpcomingDate, mapTodayRawCount, mapUnmappedToday,
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
