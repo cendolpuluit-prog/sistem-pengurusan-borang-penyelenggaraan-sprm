@@ -12,6 +12,7 @@
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://unpkg.com/docx@8/build/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
@@ -4444,7 +4445,7 @@ details.form-control[open] summary::after{content:'▴'}
 
           <p v-if="serviceReportModal.err" style="color:red;font-size:.82rem;margin:8px 0">{{serviceReportModal.err}}</p>
           <div v-if="canAddWarranty" class="form-group" style="margin-top:10px">
-            <label>Muat Naik Fail Baharu <span class="text-muted text-sm">(PDF maks {{SERVICE_REPORT_MAX_MB_PDF}}MB · JPG/PNG/DOC/DOCX maks {{SERVICE_REPORT_MAX_MB}}MB)</span></label>
+            <label>Muat Naik Fail Baharu <span class="text-muted text-sm">(PDF scan auto-dimampatkan, maks {{SERVICE_REPORT_MAX_MB_PDF}}MB selepas mampat · JPG/PNG/DOC/DOCX maks {{SERVICE_REPORT_MAX_MB}}MB)</span></label>
             <input type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" @change="uploadServiceReport" :disabled="serviceReportModal.uploading">
             <p v-if="serviceReportModal.uploading" class="text-muted text-sm" style="margin-top:6px">⏳ Sedang memuat naik...</p>
           </div>
@@ -8374,6 +8375,40 @@ createApp({
       for(let i=2; usedNames.has(name.toLowerCase()); i++) name = `${base}_${i}.${ext}`;
       return name;
     }
+    // Auto-compress PDF HANYA kalau ia scan/gambar (xda lapisan teks
+    // sebenar) — reuse _extractPdfPages (dah wujud utk OCR import) utk baca
+    // teks + render setiap page ke canvas sekali gus. Kalau purata aksara
+    // teks/page sangat rendah (<20), anggap tu scan → render semula setiap
+    // page pada resolusi terkawal, mampatkan jadi JPEG, bina semula sebagai
+    // PDF baharu (jsPDF) supaya struktur multi-page & format PDF dikekalkan.
+    // PDF native (teks digital sebenar, cth export dari Word) — DIBIARKAN,
+    // sebab rasterize teks vector jadi gambar hanya jadikan fail lebih
+    // besar & hilang teks boleh cari/select, tak berbaloi.
+    async function _maybeCompressScannedPdf(file) {
+      try {
+        const { text, canvases } = await _extractPdfPages(file);
+        if(!canvases.length) return file;
+        const avgCharsPerPage = (text||'').trim().length / canvases.length;
+        if(avgCharsPerPage > 20) return file; // PDF native/teks — jangan sentuh
+        if(!window.jspdf) return file; // library gagal load — fallback selamat
+        const { jsPDF } = window.jspdf;
+        let doc = null;
+        canvases.forEach((canvas, i) => {
+          // Canvas dirender pada scale 2 (2px = 1pt PDF asal), so bahagi 2
+          // utk dapatkan semula saiz page sebenar dalam point.
+          const wPt = canvas.width / 2, hPt = canvas.height / 2;
+          const imgData = canvas.toDataURL('image/jpeg', 0.72);
+          if(i === 0) doc = new jsPDF({ unit:'pt', format:[wPt, hPt] });
+          else doc.addPage([wPt, hPt]);
+          doc.addImage(imgData, 'JPEG', 0, 0, wPt, hPt);
+        });
+        const blob = doc.output('blob');
+        if(blob.size < file.size) {
+          return new File([blob], file.name, { type:'application/pdf' });
+        }
+        return file; // compress tak berkesan (jarang berlaku) — kekal asal
+      } catch(e) { return file; } // gagal baca/render PDF — fallback ke asal, jangan gagalkan upload
+    }
     async function uploadServiceReport(event) {
       const file = event.target.files[0];
       event.target.value = '';
@@ -8383,15 +8418,25 @@ createApp({
       if(!SERVICE_REPORT_EXT.includes(ext)) {
         serviceReportModal.err = `Jenis fail tidak disokong. Guna: ${SERVICE_REPORT_EXT.join(', ')}`; return;
       }
-      const maxMb = ext === 'pdf' ? SERVICE_REPORT_MAX_MB_PDF : SERVICE_REPORT_MAX_MB;
-      if(file.size > maxMb * 1024 * 1024) {
-        serviceReportModal.err = `Saiz fail melebihi ${maxMb}MB${ext==='pdf' ? ' (PDF dihadkan lebih ketat — sila compress PDF sebelum upload)' : ''}.`; return;
+      // Had "pra-proses" digenerus (elak fail gergasi buat browser hang
+      // semasa render/compress) — had SEBENAR (ikut jenis fail) disemak
+      // SELEPAS compress, sebab PDF scan besar yang berjaya dimampat patut
+      // dibenarkan lepas walaupun asalnya melebihi had akhir.
+      if(file.size > SERVICE_REPORT_MAX_MB * 1024 * 1024) {
+        serviceReportModal.err = `Saiz fail melebihi ${SERVICE_REPORT_MAX_MB}MB.`; return;
       }
       const w = serviceReportModal.warranty;
       serviceReportModal.uploading = true; serviceReportModal.err = '';
       try {
-        const compressedFile = ['jpg','jpeg','png'].includes(ext) ? await _compressImageFile(file) : file;
+        const compressedFile = ext === 'pdf' ? await _maybeCompressScannedPdf(file)
+          : ['jpg','jpeg','png'].includes(ext) ? await _compressImageFile(file) : file;
         const finalExt = compressedFile.name.split('.').pop().toLowerCase();
+        const finalMaxMb = finalExt === 'pdf' ? SERVICE_REPORT_MAX_MB_PDF : SERVICE_REPORT_MAX_MB;
+        if(compressedFile.size > finalMaxMb * 1024 * 1024) {
+          serviceReportModal.err = `Saiz fail (${(compressedFile.size/1024/1024).toFixed(1)}MB) masih melebihi had ${finalMaxMb}MB selepas dimampatkan${finalExt==='pdf' ? ' — sila compress PDF sebelum upload' : ''}.`;
+          serviceReportModal.uploading = false;
+          return;
+        }
         const cleanName = _buildServiceReportFileName(w, finalExt);
         const uploadFile = new File([compressedFile], cleanName, { type: compressedFile.type });
         const path = `warrantyReports/${w.id}/${Date.now()}_${uploadFile.name}`;
