@@ -1041,6 +1041,10 @@ details.form-control[open] summary::after{content:'▴'}
         <span class="icon">📜</span> Kontrak &amp; SLA
         <span v-if="contractsExpiringCountVir>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountVir}}</span>
       </div>
+      <div class="nav-item" :class="{active:page==='vir-warranty'}" @click="currentProject='vir';loadVirWarranty();page='vir-warranty'" v-if="canViewCredentials">
+        <span class="icon">🛡️</span> Waranti Peralatan
+        <span v-if="virWarrantyExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{virWarrantyExpiringCount}}</span>
+      </div>
       <div class="nav-section-label" style="margin-top:6px">JADUAL, LAPORAN &amp; SUPPORT</div>
       <div class="nav-item" :class="{active:page==='jadual'}" @click="openJadual">
         <span class="icon">📅</span> Jadual Penyelenggaraan
@@ -1665,6 +1669,34 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
         <p class="text-sm text-muted mb-16">Tracking waranti peralatan yang diwarisi daripada 3 kontraktor pemasang asal SPRM (sebelum Daya One ambil alih penyelenggaraan). Data ini berasingan sepenuhnya daripada borang PM/CM — semata-mata untuk rujukan &amp; laporan dalaman.</p>
 
+        <div class="card" style="margin-bottom:18px">
+          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer" @click="showAllServiceReports=!showAllServiceReports">
+            <span>📎 Fail Servis Terkini (Semua Site) <span class="text-muted" style="font-weight:400">({{allServiceReports.length}})</span></span>
+            <span style="font-size:.8rem;color:#888">{{showAllServiceReports?'▲ Tutup':'▼ Buka'}}</span>
+          </div>
+          <div v-if="showAllServiceReports">
+            <input v-if="allServiceReports.length" class="form-control" style="margin-bottom:10px" v-model="serviceReportSearchQuery" placeholder="Cari ikut nama fail, peralatan, site, vendor, atau siapa upload...">
+            <div v-if="!allServiceReports.length" class="empty" style="padding:14px 0">Tiada fail servis dimuat naik lagi merentasi mana-mana site.</div>
+            <div v-else-if="!allServiceReportsFiltered.length" class="empty" style="padding:14px 0">Tiada fail sepadan carian.</div>
+            <div v-else class="tbl-wrap">
+              <table>
+                <thead><tr><th>Nama Fail</th><th>Peralatan</th><th>Site</th><th>Vendor</th><th>Tarikh Upload</th><th>Diupload Oleh</th><th>Saiz</th></tr></thead>
+                <tbody>
+                  <tr v-for="r in allServiceReportsFiltered" :key="r.path" style="cursor:pointer" @click="previewServiceReport(r)">
+                    <td style="font-weight:600;font-size:.82rem">{{r.name}}</td>
+                    <td style="font-size:.82rem">{{r.warranty?.equipmentName||'-'}}</td>
+                    <td style="font-size:.82rem">{{r.warranty?.siteName||'-'}}</td>
+                    <td style="font-size:.82rem">{{r.warranty?.vendor||'-'}}</td>
+                    <td style="font-size:.8rem;white-space:nowrap">{{fmtDate(r.uploadedAt?.slice(0,10))}}</td>
+                    <td style="font-size:.82rem">{{r.uploadedBy||'-'}}</td>
+                    <td style="font-size:.8rem;white-space:nowrap">{{(r.size/1024/1024).toFixed(2)}}MB</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
           <select class="form-control" style="width:auto;min-width:200px" v-model="warrantyFilterVendor">
             <option value="">Semua Vendor</option>
@@ -1756,6 +1788,62 @@ details.form-control[open] summary::after{content:'▴'}
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== WARANTI PERALATAN (VIR) ====== -->
+      <div v-if="page==='vir-warranty'">
+        <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin:0;border:none;padding:0">🛡️ Waranti Peralatan — Projek VIR</div>
+          <button v-if="canEditVirWarranty" class="btn btn-primary btn-sm" @click="openAddVirWarranty">+ Tambah Part</button>
+        </div>
+        <p class="text-sm text-muted mb-16">Tracking waranti spare part (cth: graphic card, sound card, PSU) yang dibeli sendiri oleh Daya One Resources Sdn. Bhd. dari kedai/supplier luar untuk sistem VIR (Optager HD4000/BCD) — berasingan sepenuhnya daripada waranti asal produk CCTV.</p>
+
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
+          <select class="form-control" style="width:auto;min-width:180px" v-model="virWarrantyFilterStatus">
+            <option value="">Semua Status</option>
+            <option value="active">🟢 Aktif</option>
+            <option value="expiring">🟡 Hampir Tamat</option>
+            <option value="expired">🔴 Tamat Tempoh</option>
+          </select>
+        </div>
+
+        <div v-if="!virWarrantyFiltered.length" class="empty">Tiada rekod waranti peralatan VIR lagi.</div>
+        <div v-for="grp in virWarrantyBySite" :key="grp.siteId" class="warranty-vendor-group">
+          <div class="warranty-vendor-header">📍 {{grp.siteName}}
+            <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} part)</span>
+          </div>
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Part</th><th>Brand/Model</th><th>No. Siri</th><th>Sistem/Bilik</th><th>Dibeli Dari</th><th>Tarikh Beli</th><th>Tempoh Waranti</th><th>Kos (RM)</th><th>Status</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="w in grp.items" :key="w.id">
+                  <td>{{w.equipmentName||'-'}}</td>
+                  <td>{{w.brand}} {{w.model}}</td>
+                  <td>{{w.serial||'-'}}</td>
+                  <td style="font-size:.8rem">{{w.system||'-'}}<span v-if="w.room"> — {{w.room}}</span></td>
+                  <td style="font-size:.8rem">{{w.purchasedFrom||'-'}}</td>
+                  <td style="font-size:.8rem">{{fmtDate(w.purchaseDate)}}</td>
+                  <td style="font-size:.8rem">{{fmtDate(w.endDate)}}</td>
+                  <td style="font-size:.8rem">{{w.cost ? Number(w.cost).toFixed(2) : '-'}}</td>
+                  <td>
+                    <span :class="['expiry-badge', virWarrantyStatus(w)]">
+                      <template v-if="virWarrantyStatus(w)==='expired'">🔴 Tamat</template>
+                      <template v-else-if="virWarrantyStatus(w)==='expiring'">🟡 Hampir Tamat</template>
+                      <template v-else>🟢 Aktif</template>
+                    </span>
+                  </td>
+                  <td class="flex gap-8">
+                    <button class="btn btn-sm btn-outline btn-icon" @click="openServiceReports(w,'virEquipmentWarranty','virWarrantyReceipts')" :title="`Resit/Bukti (${(w.serviceReports||[]).length})`">📎<span v-if="(w.serviceReports||[]).length" style="font-size:.7rem;margin-left:2px">{{(w.serviceReports||[]).length}}</span></button>
+                    <template v-if="canEditVirWarranty">
+                      <button class="btn btn-sm btn-outline btn-icon" @click="openEditVirWarranty(w)" title="Edit">✏️</button>
+                      <button class="btn btn-sm btn-danger btn-icon" @click="deleteVirWarranty(w)" title="Padam">🗑</button>
+                    </template>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -4425,26 +4513,65 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
       </div>
 
+      <!-- ====== ADD/EDIT WARANTI PERALATAN VIR MODAL ====== -->
+      <div v-if="virWarrantyModal.show" class="modal-bg">
+        <div class="modal" style="position:relative">
+          <button @click="virWarrantyModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
+          <h3>{{virWarrantyModal.editing?'Edit Waranti Peralatan VIR':'Tambah Waranti Peralatan VIR'}}</h3>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Site VIR *</label>
+              <select class="form-control" v-model="virWarrantyModal.data.siteId" @change="onVirWarrantySiteChange">
+                <option value="">-- Pilih Site --</option>
+                <option v-for="s in VIR_SITES" :key="s.id" :value="s.id">{{s.name}}</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Sistem *</label>
+              <select class="form-control" v-model="virWarrantyModal.data.system">
+                <option value="">-- Pilih Sistem --</option>
+                <option v-for="s in VIR_SYSTEMS" :key="s">{{s}}</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Bilik <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="virWarrantyModal.data.room" placeholder="cth: Bilik 3"></div>
+            <div class="form-group"><label>Nama Part *</label><input class="form-control" v-model="virWarrantyModal.data.partName" placeholder="cth: Graphic Card, Sound Card, PSU"></div>
+            <div class="form-group"><label>Brand</label><input class="form-control" v-model="virWarrantyModal.data.brand" placeholder="cth: ASUS, Corsair"></div>
+            <div class="form-group"><label>Model</label><input class="form-control" v-model="virWarrantyModal.data.model"></div>
+            <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="virWarrantyModal.data.serial" placeholder="Serial No."></div>
+            <div class="form-group"><label>Dibeli Dari <span class="text-muted text-sm">(kedai/supplier)</span></label><input class="form-control" v-model="virWarrantyModal.data.purchasedFrom" placeholder="cth: Tech Store Sdn Bhd"></div>
+            <div class="form-group"><label>No. Resit/Invois <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="virWarrantyModal.data.receiptNo"></div>
+            <div class="form-group"><label>Kos (RM) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="number" min="0" step="0.01" v-model="virWarrantyModal.data.cost"></div>
+            <div class="form-group"><label>Tarikh Beli *</label><input class="form-control" type="date" v-model="virWarrantyModal.data.purchaseDate"></div>
+            <div class="form-group"><label>Tarikh Tamat Waranti *</label><input class="form-control" type="date" v-model="virWarrantyModal.data.endDate"></div>
+            <div class="form-group"><label>Reminder (hari sebelum tamat)</label><input class="form-control" type="number" min="1" v-model.number="virWarrantyModal.data.reminderDays" placeholder="60"></div>
+          </div>
+          <div class="form-group"><label>Nota</label><textarea class="form-control" rows="3" v-model="virWarrantyModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
+          <p v-if="virWarrantyModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{virWarrantyModal.err}}</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="virWarrantyModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="submitVirWarranty" :disabled="loading">{{loading?'Menyimpan...':virWarrantyModal.editing?'Simpan Perubahan':'Tambah Part'}}</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== FAIL SERVIS VENDOR (service report) MODAL ====== -->
       <div v-if="serviceReportModal.show" class="modal-bg" @click.self="serviceReportModal.show=false">
         <div class="modal" style="position:relative;max-width:520px">
           <button @click="serviceReportModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
-          <h3>📎 Fail Servis Vendor</h3>
+          <h3>{{serviceReportModal.collection==='virEquipmentWarranty' ? '📎 Resit/Bukti Pembelian' : '📎 Fail Servis Vendor'}}</h3>
           <p class="text-muted text-sm" style="margin-top:-6px">{{serviceReportModal.warranty?.equipmentName}} — {{serviceReportModal.warranty?.siteName}}</p>
 
-          <div v-if="!(serviceReportModal.warranty?.serviceReports||[]).length" class="empty" style="padding:14px 0">Tiada fail servis dimuat naik lagi.</div>
+          <div v-if="!(serviceReportModal.warranty?.serviceReports||[]).length" class="empty" style="padding:14px 0">Tiada fail dimuat naik lagi.</div>
           <div v-else style="display:flex;flex-direction:column;gap:8px;margin:10px 0">
             <div v-for="r in serviceReportModal.warranty.serviceReports" :key="r.path" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #eee;border-radius:8px">
               <div style="flex:1;min-width:0">
                 <a href="#" @click.prevent="previewServiceReport(r)" style="font-weight:600;font-size:.85rem;word-break:break-all">{{r.name}}</a>
                 <div class="text-muted text-sm">{{fmtDate(r.uploadedAt?.slice(0,10))}} · {{r.uploadedBy}} · {{(r.size/1024/1024).toFixed(2)}}MB</div>
               </div>
-              <button v-if="canEditWarranty" class="btn btn-sm btn-danger btn-icon" @click="deleteServiceReport(r)" title="Padam">🗑</button>
+              <button v-if="_canEditWarrantyReportFor(serviceReportModal.collection)" class="btn btn-sm btn-danger btn-icon" @click="deleteServiceReport(r)" title="Padam">🗑</button>
             </div>
           </div>
 
           <p v-if="serviceReportModal.err" style="color:red;font-size:.82rem;margin:8px 0">{{serviceReportModal.err}}</p>
-          <div v-if="canAddWarranty" class="form-group" style="margin-top:10px">
+          <div v-if="_canAddWarrantyReportFor(serviceReportModal.collection)" class="form-group" style="margin-top:10px">
             <label>Muat Naik Fail Baharu <span class="text-muted text-sm">(PDF scan auto-dimampatkan, maks {{SERVICE_REPORT_MAX_MB_PDF}}MB selepas mampat · JPG/PNG/DOC/DOCX maks {{SERVICE_REPORT_MAX_MB}}MB)</span></label>
             <input type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" @change="uploadServiceReport" :disabled="serviceReportModal.uploading">
             <p v-if="serviceReportModal.uploading" class="text-muted text-sm" style="margin-top:6px">⏳ Sedang memuat naik...</p>
@@ -4458,13 +4585,19 @@ details.form-control[open] summary::after{content:'▴'}
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #eee">
             <span style="font-weight:600;font-size:.88rem;word-break:break-all">{{filePreviewModal.name}}</span>
             <div class="flex gap-8">
+              <template v-if="filePreviewModal.type==='image'">
+                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.max(.25,filePreviewModal.zoom-.25)" title="Kecilkan">➖</button>
+                <span class="text-muted text-sm" style="min-width:42px;text-align:center;align-self:center">{{Math.round(filePreviewModal.zoom*100)}}%</span>
+                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.min(4,filePreviewModal.zoom+.25)" title="Besarkan">➕</button>
+                <button class="btn btn-sm btn-outline" @click="printImagePreview" title="Cetak">🖨 Cetak</button>
+              </template>
               <a :href="filePreviewModal.url" target="_blank" rel="noopener" class="btn btn-sm btn-outline">⬇ Muat Turun</a>
               <button @click="filePreviewModal.show=false" style="background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
             </div>
           </div>
           <div style="flex:1;overflow:auto;background:#525659;display:flex;align-items:center;justify-content:center">
             <iframe v-if="filePreviewModal.type==='pdf'" :src="filePreviewModal.url" style="width:100%;height:100%;border:none"></iframe>
-            <img v-else-if="filePreviewModal.type==='image'" :src="filePreviewModal.url" style="max-width:100%;max-height:100%;object-fit:contain">
+            <img v-else-if="filePreviewModal.type==='image'" :src="filePreviewModal.url" :style="{maxWidth: filePreviewModal.zoom<=1?'100%':'none', maxHeight: filePreviewModal.zoom<=1?'100%':'none', width: filePreviewModal.zoom>1?(filePreviewModal.zoom*100)+'%':'auto', objectFit:'contain'}">
           </div>
         </div>
       </div>
@@ -7722,6 +7855,21 @@ createApp({
       isAdminRole() || WARRANTY_EDIT_STAFF_OVERRIDE.includes((authProfile.value?.username||'').toLowerCase())
     );
     const canAddWarranty = computed(()=> canEditWarranty.value || authProfile.value?.role==='staff');
+    // Waranti Peralatan VIR (spare part dibeli Daya One sendiri) — admin+
+    // only, no staff-add exception, mirrors canEditEquip's existing VIR
+    // rule (VIR equipment stays admin+ only, unlike CCTV where staff can
+    // add/edit equipment too).
+    const canEditVirWarranty = computed(()=> isAdminRole());
+    // The service-report modal/upload pipeline is shared between CCTV
+    // (equipmentWarranty) and VIR (virEquipmentWarranty) records, each with
+    // its own permission tier — resolve the right one from whichever
+    // collection the modal is currently pointed at.
+    function _canAddWarrantyReportFor(collection) {
+      return collection === 'virEquipmentWarranty' ? canEditVirWarranty.value : canAddWarranty.value;
+    }
+    function _canEditWarrantyReportFor(collection) {
+      return collection === 'virEquipmentWarranty' ? canEditVirWarranty.value : canEditWarranty.value;
+    }
     // CCTV site equipment: staff may also add/edit/delete records (only
     // admin+ can touch the Firestore doc for other write-restricted things
     // elsewhere in the app). VIR stays admin+ only.
@@ -8317,7 +8465,10 @@ createApp({
     // percuma online/app) sebelum upload kalau melebihi had ni.
     const SERVICE_REPORT_MAX_MB_PDF = 2;
     const SERVICE_REPORT_EXT = ['pdf','jpg','jpeg','png','doc','docx'];
-    const serviceReportModal = reactive({ show:false, warranty:null, uploading:false, err:'' });
+    // collection/storagePrefix let this one modal+upload pipeline be reused
+    // for both CCTV service reports (equipmentWarranty) and VIR purchase
+    // receipts (virEquipmentWarranty) — see openServiceReports().
+    const serviceReportModal = reactive({ show:false, warranty:null, uploading:false, err:'', collection:'equipmentWarranty', storagePrefix:'warrantyReports' });
     // Auto-compress gambar (JPG/PNG) sebelum upload, jimat storan — PDF/DOC
     // sengaja TIDAK disentuh (compress PDF perlu library besar & berisiko
     // rosakkan kualiti/struktur dokumen, tak berbaloi memandangkan quota
@@ -8352,8 +8503,10 @@ createApp({
         img.src = objUrl;
       });
     }
-    function openServiceReports(w) {
+    function openServiceReports(w, collection='equipmentWarranty', storagePrefix='warrantyReports') {
       serviceReportModal.warranty = w;
+      serviceReportModal.collection = collection;
+      serviceReportModal.storagePrefix = storagePrefix;
       serviceReportModal.err = '';
       serviceReportModal.show = true;
     }
@@ -8413,7 +8566,7 @@ createApp({
       const file = event.target.files[0];
       event.target.value = '';
       if(!file) return;
-      if(!canAddWarranty.value){ serviceReportModal.err = 'Anda tiada kebenaran untuk tindakan ini.'; return; }
+      if(!_canAddWarrantyReportFor(serviceReportModal.collection)){ serviceReportModal.err = 'Anda tiada kebenaran untuk tindakan ini.'; return; }
       const ext = file.name.split('.').pop().toLowerCase();
       if(!SERVICE_REPORT_EXT.includes(ext)) {
         serviceReportModal.err = `Jenis fail tidak disokong. Guna: ${SERVICE_REPORT_EXT.join(', ')}`; return;
@@ -8439,14 +8592,14 @@ createApp({
         }
         const cleanName = _buildServiceReportFileName(w, finalExt);
         const uploadFile = new File([compressedFile], cleanName, { type: compressedFile.type });
-        const path = `warrantyReports/${w.id}/${Date.now()}_${uploadFile.name}`;
+        const path = `${serviceReportModal.storagePrefix}/${w.id}/${Date.now()}_${uploadFile.name}`;
         const snap = await storage.ref(path).put(uploadFile);
         const url = await snap.ref.getDownloadURL();
         const entry = {
           name: uploadFile.name, url, path, size: uploadFile.size,
           uploadedAt: new Date().toISOString(), uploadedBy: authProfile.value?.name || authUser.value?.email || '',
         };
-        await db.collection('equipmentWarranty').doc(w.id).update({
+        await db.collection(serviceReportModal.collection).doc(w.id).update({
           serviceReports: firebase.firestore.FieldValue.arrayUnion(entry),
         });
         if(!w.serviceReports) w.serviceReports = [];
@@ -8458,11 +8611,11 @@ createApp({
     }
     async function deleteServiceReport(report) {
       const w = serviceReportModal.warranty;
-      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!_canEditWarrantyReportFor(serviceReportModal.collection)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!confirm(`Padam fail servis "${report.name}"?`)) return;
       try {
         await storage.ref(report.path).delete().catch(()=>{}); // ignore if already gone
-        await db.collection('equipmentWarranty').doc(w.id).update({
+        await db.collection(serviceReportModal.collection).doc(w.id).update({
           serviceReports: firebase.firestore.FieldValue.arrayRemove(report),
         });
         w.serviceReports = (w.serviceReports||[]).filter(r => r.path !== report.path);
@@ -8472,7 +8625,7 @@ createApp({
     }
     // In-app preview (PDF/gambar render terus dalam modal via iframe/img —
     // DOC/DOCX tiada native browser viewer, jadi buka tab baharu je terus).
-    const filePreviewModal = reactive({ show:false, url:'', name:'', type:'' });
+    const filePreviewModal = reactive({ show:false, url:'', name:'', type:'', zoom:1 });
     function previewServiceReport(r) {
       const ext = r.name.split('.').pop().toLowerCase();
       if(ext === 'pdf') { filePreviewModal.type = 'pdf'; }
@@ -8480,7 +8633,19 @@ createApp({
       else { window.open(r.url, '_blank'); return; }
       filePreviewModal.url = r.url;
       filePreviewModal.name = r.name;
+      filePreviewModal.zoom = 1;
       filePreviewModal.show = true;
+    }
+    // Gambar (JPG/PNG) xda toolbar print terbina-dalam macam PDF viewer —
+    // buka tetingkap baharu berisi gambar penuh & terus panggil print(),
+    // sama pattern macam export PDF laporan lain dalam app ni.
+    function printImagePreview() {
+      const w = window.open('', '_blank', 'width=900,height=700');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(`<!DOCTYPE html><html><head><title>${esc(filePreviewModal.name)}</title>
+        <style>body{margin:0;display:flex;justify-content:center}img{max-width:100%;height:auto}</style>
+      </head><body><img src="${filePreviewModal.url}" onload="setTimeout(()=>{window.print();window.close();},200)"></body></html>`);
+      w.document.close();
     }
     // Agregat semua fail servis merentasi site/vendor — utk paparan ringkas
     // kat Pelaporan tanpa perlu susur satu-satu rekod waranti.
@@ -8489,8 +8654,132 @@ createApp({
       warranty.value.forEach(w => (w.serviceReports||[]).forEach(r => rows.push({ ...r, warranty: w })));
       return rows.sort((a,b) => (b.uploadedAt||'').localeCompare(a.uploadedAt||''));
     });
+    // Toggle + carian untuk kad "Fail Servis Terkini (Semua Site)" — collapse
+    // default (senarai boleh jadi panjang lepas beberapa bulan penggunaan).
+    const showAllServiceReports = ref(false);
+    const serviceReportSearchQuery = ref('');
+    const allServiceReportsFiltered = computed(() => {
+      const q = serviceReportSearchQuery.value.trim().toLowerCase();
+      if(!q) return allServiceReports.value;
+      return allServiceReports.value.filter(r =>
+        (r.name||'').toLowerCase().includes(q) ||
+        (r.warranty?.equipmentName||'').toLowerCase().includes(q) ||
+        (r.warranty?.siteName||'').toLowerCase().includes(q) ||
+        (r.warranty?.vendor||'').toLowerCase().includes(q) ||
+        (r.uploadedBy||'').toLowerCase().includes(q)
+      );
+    });
 
     const WARRANTY_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
+
+    // ── Waranti Peralatan (VIR only) ────────────────────────────────────
+    // Beza konsep sepenuhnya dari waranti CCTV di atas: ini bukan waranti
+    // warisan dari kontraktor pemasang, tapi spare part (cth graphic card,
+    // sound card) yang DIBELI SENDIRI oleh Daya One dari kedai/supplier
+    // luar utk sistem VIR (Optager HD4000/BCD). Field "equipmentName" &
+    // "siteName" sengaja dikekalkan sama nama dengan collection CCTV
+    // supaya boleh reuse terus modal fail servis/preview yang sama tanpa
+    // perlu cabang logic — equipmentName di sini diisi dgn nama part.
+    const virWarranty = ref([]);
+    const virWarrantyModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
+      siteId:'', siteName:'', system:'', room:'', partName:'', brand:'', model:'', serial:'',
+      purchasedFrom:'', receiptNo:'', purchaseDate:'', endDate:'', cost:'', reminderDays:60, notes:'',
+    } });
+    const virWarrantyFilterStatus = ref('');
+    async function loadVirWarranty() {
+      try {
+        const snap = await db.collection('virEquipmentWarranty').orderBy('endDate','asc').get();
+        virWarranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      } catch(e) { showToast('Gagal muat waranti peralatan VIR: ' + e.message, 'error'); }
+    }
+    function virWarrantyStatus(w) { return warrantyStatus(w); } // same active/expiring/expired logic, reused
+    const virWarrantyExpiringCount = computed(() =>
+      virWarranty.value.filter(w => virWarrantyStatus(w) !== 'active').length
+    );
+    const virWarrantyFiltered = computed(() => virWarranty.value.filter(w =>
+      !virWarrantyFilterStatus.value || virWarrantyStatus(w) === virWarrantyFilterStatus.value
+    ));
+    // Grouped by site (no "vendor" concept here — every VIR item is bought
+    // by Daya One itself, so grouping by kedai/supplier isn't as useful as
+    // grouping by which site the part actually lives in).
+    const virWarrantyBySite = computed(() => {
+      const groups = {}; const order = [];
+      virWarrantyFiltered.value.forEach(w => {
+        const key = w.siteId || w.siteName || '—';
+        if(!groups[key]) { groups[key] = []; order.push(key); }
+        groups[key].push(w);
+      });
+      return order.map(key => ({ siteId:key, siteName: groups[key][0].siteName || '—', items: groups[key] }));
+    });
+    function onVirWarrantySiteChange() {
+      const s = VIR_SITES.find(x => x.id === virWarrantyModal.data.siteId);
+      virWarrantyModal.data.siteName = s?.name || '';
+    }
+    function openAddVirWarranty() {
+      if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      virWarrantyModal.editing = false; virWarrantyModal.err = '';
+      Object.assign(virWarrantyModal.data, {
+        siteId:'', siteName:'', system:'', room:'', partName:'', brand:'', model:'', serial:'',
+        purchasedFrom:'', receiptNo:'', purchaseDate:'', endDate:'', cost:'', reminderDays:60, notes:'',
+      });
+      virWarrantyModal.show = true;
+    }
+    function openEditVirWarranty(w) {
+      if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      virWarrantyModal.editing = true; virWarrantyModal.err = '';
+      Object.assign(virWarrantyModal.data, {
+        siteId:w.siteId||'', siteName:w.siteName||'', system:w.system||'', room:w.room||'',
+        partName:w.equipmentName||'', brand:w.brand||'', model:w.model||'', serial:w.serial||'',
+        purchasedFrom:w.purchasedFrom||'', receiptNo:w.receiptNo||'',
+        purchaseDate:w.purchaseDate||'', endDate:w.endDate||'', cost:w.cost||'',
+        reminderDays:w.reminderDays||60, notes:w.notes||'',
+      });
+      virWarrantyModal._editId = w.id;
+      virWarrantyModal.show = true;
+    }
+    async function submitVirWarranty() {
+      if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      virWarrantyModal.err = '';
+      const d = virWarrantyModal.data;
+      if(!d.siteId || !d.system || !d.partName || !d.purchaseDate || !d.endDate) {
+        virWarrantyModal.err = 'Site, sistem, nama part, tarikh beli dan tarikh tamat waranti wajib diisi.'; return;
+      }
+      if(d.endDate < d.purchaseDate) {
+        virWarrantyModal.err = 'Tarikh tamat mesti selepas tarikh beli.'; return;
+      }
+      loading.value = true;
+      try {
+        const data = {
+          siteId:d.siteId, siteName:d.siteName, system:d.system, room:d.room,
+          equipmentName: d.partName, brand:d.brand, model:d.model, serial:d.serial,
+          purchasedFrom:d.purchasedFrom, receiptNo:d.receiptNo,
+          purchaseDate:d.purchaseDate, startDate:d.purchaseDate, endDate:d.endDate,
+          cost: d.cost || '', reminderDays: d.reminderDays || 60, notes:d.notes,
+        };
+        if(!virWarrantyModal.editing) {
+          await db.collection('virEquipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          await logAudit('VIR_WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
+          showToast('Waranti peralatan VIR berjaya ditambah!');
+        } else {
+          await db.collection('virEquipmentWarranty').doc(virWarrantyModal._editId).update(data);
+          await logAudit('VIR_WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
+          showToast('Waranti peralatan VIR dikemaskini!');
+        }
+        virWarrantyModal.show = false;
+        await loadVirWarranty();
+      } catch(e) { virWarrantyModal.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    async function deleteVirWarranty(w) {
+      if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})?`)) return;
+      try {
+        await db.collection('virEquipmentWarranty').doc(w.id).delete();
+        virWarranty.value = virWarranty.value.filter(x => x.id !== w.id);
+        await logAudit('VIR_WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
+        showToast('Rekod waranti VIR dipadam.');
+      } catch(e) { showToast('Gagal padam rekod waranti VIR: ' + e.message, 'error'); }
+    }
     async function exportWarrantyExcel() {
       const rows = warrantyFiltered.value.map((w,i) => ({
         '#': i+1, 'Vendor': w.vendor||'-',
@@ -9045,7 +9334,7 @@ createApp({
     // assignments, audit logs and custom equipment options. Fetched fresh
     // from Firestore (not the local reactive refs) so it's always complete
     // regardless of what happens to be loaded in the app right now.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -9080,7 +9369,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -9336,6 +9625,7 @@ createApp({
         if(data.loginAttempts?.length) { await _batchRestoreCollection('loginAttempts', data.loginAttempts); }
         if(data.kontraktorLuar?.length) { await _batchRestoreCollection('kontraktorLuar', data.kontraktorLuar); await loadKontraktorLuar(); }
         if(data.equipmentWarranty?.length) { await _batchRestoreCollection('equipmentWarranty', data.equipmentWarranty); await loadWarranty(); }
+        if(data.virEquipmentWarranty?.length) { await _batchRestoreCollection('virEquipmentWarranty', data.virEquipmentWarranty); await loadVirWarranty(); }
         if(data.warrantyVendorContracts?.length) { await _batchRestoreCollection('warrantyVendorContracts', data.warrantyVendorContracts); await loadVendorContracts(); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
@@ -12287,7 +12577,18 @@ createApp({
     // new-PM draft, the site-compare picker) can't be safely reconstructed
     // from just a page name, so those fall back to their parent list page
     // instead of silently landing on a broken/blank view.
-    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty'];
+    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty'];
+    // Pages whose data is otherwise ONLY fetched by the nav item's own
+    // @click handler (loadX();page='x') — landing on them via restore
+    // bypasses that click entirely, so page.value flips but the underlying
+    // ref stays at its empty initial state until the user navigates away
+    // and back. Re-fire the same loader here so a refresh lands with data
+    // already populated, not a blank page that "fixes itself" on next click.
+    const RESTORE_PAGE_LOADERS = {
+      warranty: loadWarranty, 'vir-warranty': loadVirWarranty,
+      contracts: loadContracts, 'audit-log': loadAuditLogs,
+      'contact-person': loadContactPersons,
+    };
     const LAST_PAGE_KEY = 'pmapp_lastPage';
     watch([page, currentProject, selSite], () => {
       try {
@@ -12310,7 +12611,10 @@ createApp({
         else page.value = 'sites'; // site was removed/renamed since last visit
         return;
       }
-      if(RESTORABLE_PAGES.includes(saved.page)) page.value = saved.page;
+      if(RESTORABLE_PAGES.includes(saved.page)) {
+        page.value = saved.page;
+        RESTORE_PAGE_LOADERS[saved.page]?.();
+      }
       // else (new-pm/pm-view/compare/etc): leave page.value at its 'dashboard' default
     }
 
@@ -15090,6 +15394,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS,
       userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
       contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
+      virWarranty, virWarrantyModal, virWarrantyFilterStatus, loadVirWarranty, virWarrantyStatus, virWarrantyExpiringCount, virWarrantyFiltered, virWarrantyBySite,
+      onVirWarrantySiteChange, openAddVirWarranty, openEditVirWarranty, submitVirWarranty, deleteVirWarranty, canEditVirWarranty, _canAddWarrantyReportFor, _canEditWarrantyReportFor,
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
@@ -15097,7 +15403,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
       serviceReportModal, SERVICE_REPORT_MAX_MB, SERVICE_REPORT_MAX_MB_PDF, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
-      filePreviewModal, previewServiceReport,
+      showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
+      filePreviewModal, previewServiceReport, printImagePreview,
       vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
