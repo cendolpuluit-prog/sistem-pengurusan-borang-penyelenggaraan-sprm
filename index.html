@@ -8,6 +8,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
@@ -1743,6 +1744,7 @@ details.form-control[open] summary::after{content:'▴'}
                       </span>
                     </td>
                     <td class="flex gap-8">
+                      <button class="btn btn-sm btn-outline btn-icon" @click="openServiceReports(w)" :title="`Fail Servis (${(w.serviceReports||[]).length})`">📎<span v-if="(w.serviceReports||[]).length" style="font-size:.7rem;margin-left:2px">{{(w.serviceReports||[]).length}}</span></button>
                       <template v-if="canEditContract">
                         <button class="btn btn-sm btn-outline btn-icon" @click="openEditWarranty(w)" title="Edit">✏️</button>
                         <button class="btn btn-sm btn-danger btn-icon" @click="deleteWarranty(w)" title="Padam">🗑</button>
@@ -4422,6 +4424,33 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
       </div>
 
+      <!-- ====== FAIL SERVIS VENDOR (service report) MODAL ====== -->
+      <div v-if="serviceReportModal.show" class="modal-bg" @click.self="serviceReportModal.show=false">
+        <div class="modal" style="position:relative;max-width:520px">
+          <button @click="serviceReportModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
+          <h3>📎 Fail Servis Vendor</h3>
+          <p class="text-muted text-sm" style="margin-top:-6px">{{serviceReportModal.warranty?.equipmentName}} — {{serviceReportModal.warranty?.siteName}}</p>
+
+          <div v-if="!(serviceReportModal.warranty?.serviceReports||[]).length" class="empty" style="padding:14px 0">Tiada fail servis dimuat naik lagi.</div>
+          <div v-else style="display:flex;flex-direction:column;gap:8px;margin:10px 0">
+            <div v-for="r in serviceReportModal.warranty.serviceReports" :key="r.path" style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #eee;border-radius:8px">
+              <div style="flex:1;min-width:0">
+                <a :href="r.url" target="_blank" rel="noopener" style="font-weight:600;font-size:.85rem;word-break:break-all">{{r.name}}</a>
+                <div class="text-muted text-sm">{{fmtDate(r.uploadedAt?.slice(0,10))}} · {{r.uploadedBy}} · {{(r.size/1024/1024).toFixed(2)}}MB</div>
+              </div>
+              <button v-if="isAdminRole()" class="btn btn-sm btn-danger btn-icon" @click="deleteServiceReport(r)" title="Padam">🗑</button>
+            </div>
+          </div>
+
+          <p v-if="serviceReportModal.err" style="color:red;font-size:.82rem;margin:8px 0">{{serviceReportModal.err}}</p>
+          <div class="form-group" style="margin-top:10px">
+            <label>Muat Naik Fail Baharu <span class="text-muted text-sm">(PDF, JPG, PNG, DOC/DOCX — maks {{SERVICE_REPORT_MAX_MB}}MB)</span></label>
+            <input type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" @change="uploadServiceReport" :disabled="serviceReportModal.uploading">
+            <p v-if="serviceReportModal.uploading" class="text-muted text-sm" style="margin-top:6px">⏳ Sedang memuat naik...</p>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== ℹ️ PAGE/FEATURE INFO MODAL (generic, reused by showInfo()) ====== -->
       <div v-if="infoModal.show" class="modal-bg" @click.self="infoModal.show=false">
         <div class="modal" style="max-width:480px">
@@ -5899,7 +5928,7 @@ createApp({
     let _toastIdSeq = 0;
     const isOnline = ref(navigator.onLine);
     const pendingWrites = ref(0);
-    let db, auth;
+    let db, auth, storage;
 
     // ---- Equipment state ----
     const siteEquip = ref({});
@@ -8247,6 +8276,73 @@ createApp({
         showToast('Rekod waranti dipadam.');
       } catch(e) { showToast('Gagal padam rekod waranti: ' + e.message, 'error'); }
     }
+    // ── Fail Servis Vendor (service report) — PDF/gambar/dokumen yang
+    // vendor bagi lepas repair/replacement barang under warranty. Disimpan
+    // dalam Firebase Storage (bukan Firestore — fail boleh besar), Firestore
+    // cuma simpan senarai metadata (nama, url, tarikh, siapa upload) dalam
+    // field serviceReports pada rekod equipmentWarranty berkaitan, supaya
+    // report kekal terikat kepada equipment + site asal.
+    const SERVICE_REPORT_MAX_MB = 15;
+    const SERVICE_REPORT_EXT = ['pdf','jpg','jpeg','png','doc','docx'];
+    const serviceReportModal = reactive({ show:false, warranty:null, uploading:false, err:'' });
+    function openServiceReports(w) {
+      serviceReportModal.warranty = w;
+      serviceReportModal.err = '';
+      serviceReportModal.show = true;
+    }
+    async function uploadServiceReport(event) {
+      const file = event.target.files[0];
+      event.target.value = '';
+      if(!file) return;
+      const ext = file.name.split('.').pop().toLowerCase();
+      if(!SERVICE_REPORT_EXT.includes(ext)) {
+        serviceReportModal.err = `Jenis fail tidak disokong. Guna: ${SERVICE_REPORT_EXT.join(', ')}`; return;
+      }
+      if(file.size > SERVICE_REPORT_MAX_MB * 1024 * 1024) {
+        serviceReportModal.err = `Saiz fail melebihi ${SERVICE_REPORT_MAX_MB}MB.`; return;
+      }
+      const w = serviceReportModal.warranty;
+      serviceReportModal.uploading = true; serviceReportModal.err = '';
+      try {
+        const path = `warrantyReports/${w.id}/${Date.now()}_${file.name}`;
+        const snap = await storage.ref(path).put(file);
+        const url = await snap.ref.getDownloadURL();
+        const entry = {
+          name: file.name, url, path, size: file.size,
+          uploadedAt: new Date().toISOString(), uploadedBy: authProfile.value?.name || authUser.value?.email || '',
+        };
+        await db.collection('equipmentWarranty').doc(w.id).update({
+          serviceReports: firebase.firestore.FieldValue.arrayUnion(entry),
+        });
+        if(!w.serviceReports) w.serviceReports = [];
+        w.serviceReports.push(entry);
+        await logAudit('WARRANTY_SERVICE_REPORT_UPLOAD', `${w.equipmentName} — ${w.siteName} — ${file.name}`);
+        showToast('Fail servis berjaya dimuat naik!');
+      } catch(e) { serviceReportModal.err = 'Ralat muat naik: ' + e.message; }
+      serviceReportModal.uploading = false;
+    }
+    async function deleteServiceReport(report) {
+      const w = serviceReportModal.warranty;
+      if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm(`Padam fail servis "${report.name}"?`)) return;
+      try {
+        await storage.ref(report.path).delete().catch(()=>{}); // ignore if already gone
+        await db.collection('equipmentWarranty').doc(w.id).update({
+          serviceReports: firebase.firestore.FieldValue.arrayRemove(report),
+        });
+        w.serviceReports = (w.serviceReports||[]).filter(r => r.path !== report.path);
+        await logAudit('WARRANTY_SERVICE_REPORT_DELETE', `${w.equipmentName} — ${w.siteName} — ${report.name}`);
+        showToast('Fail servis dipadam.');
+      } catch(e) { showToast('Gagal padam fail servis: ' + e.message, 'error'); }
+    }
+    // Agregat semua fail servis merentasi site/vendor — utk paparan ringkas
+    // kat Pelaporan tanpa perlu susur satu-satu rekod waranti.
+    const allServiceReports = computed(() => {
+      const rows = [];
+      warranty.value.forEach(w => (w.serviceReports||[]).forEach(r => rows.push({ ...r, warranty: w })));
+      return rows.sort((a,b) => (b.uploadedAt||'').localeCompare(a.uploadedAt||''));
+    });
+
     const WARRANTY_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
     async function exportWarrantyExcel() {
       const rows = warrantyFiltered.value.map((w,i) => ({
@@ -9880,7 +9976,7 @@ createApp({
     // re-check real elapsed time whenever the page becomes visible again,
     // on focus, and on load/refresh — so idle logout is enforced even after
     // the tab was backgrounded or the browser was reopened.
-    const SESSION_IDLE_MS = 15 * 60 * 1000; // 15 minutes
+    const SESSION_IDLE_MS = 30 * 60 * 1000; // 30 minutes
     const SESSION_WARN_S  = 10;             // 10 second warning
     const LAST_ACTIVITY_KEY = 'pm_sprm_last_activity';
     const sessionWarning = reactive({ show: false, countdown: SESSION_WARN_S });
@@ -14753,6 +14849,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
       auth = firebase.auth();
+      storage = firebase.storage();
 
       // Offline persistence — data cached locally, writes queued & auto-synced when back online
       db.enablePersistence({ synchronizeTabs: true }).catch(e => {
@@ -14852,6 +14949,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
+      serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
       vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
