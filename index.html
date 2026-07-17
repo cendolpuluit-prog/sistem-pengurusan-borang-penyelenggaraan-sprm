@@ -1875,6 +1875,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.ip" placeholder="192.168.0.11"></div>
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nCam.camType">
+                  <option value="">-- Pilih --</option>
                   <option>Indoor</option><option>Outdoor</option><option>IR Cam</option><option>PTZ</option>
                 </select>
               </div>
@@ -1966,7 +1967,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama *</label><input class="form-control" v-model="nNVR.name" placeholder="cth: Network Video Recorder (NVR) 1"></div>
               <div class="form-group"><label>Jenis</label>
-                <select class="form-control" v-model="nNVR.type"><option>NVR</option><option>NVR (Server)</option><option>Server</option><option>Extension NVR</option><option>SAN Appliance (Head Unit)</option><option>SAN Appliance (Expansion Unit)</option></select>
+                <select class="form-control" v-model="nNVR.type"><option value="">-- Pilih --</option><option>NVR</option><option>NVR (Server)</option><option>Server</option><option>Extension NVR</option><option>SAN Appliance (Head Unit)</option><option>SAN Appliance (Expansion Unit)</option></select>
               </div>
               <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nNVR.brand">
@@ -2064,7 +2065,7 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
               <div class="form-group"><label>Jumlah Unit</label><input class="form-control" type="number" min="1" v-model="nHDD.totalUnit" placeholder="cth: 10"></div>
               <div class="form-group"><label>Konfigurasi</label>
-                <select class="form-control" v-model="nHDD.config"><option>RAID 5</option><option>RAID 1</option><option>Single</option><option>JBOD</option></select>
+                <select class="form-control" v-model="nHDD.config"><option value="">-- Pilih --</option><option>RAID 5</option><option>RAID 1</option><option>Single</option><option>JBOD</option></select>
               </div>
               <div class="form-group"><label>NVR Berkaitan</label><input class="form-control" v-model="nHDD.nvrRef" placeholder="cth: NVR 1"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nHDD.installDate"></div>
@@ -2205,6 +2206,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.serial"></div>
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nALM.type">
+                  <option value="">-- Pilih --</option>
                   <option>SMS Alert System</option>
                   <option value="Lain-lain">Lain-lain</option>
                 </select>
@@ -2463,6 +2465,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>Nama / Lokasi *</label><input class="form-control" v-model="nMISC.name" placeholder="cth: Monitor Bilik Kawalan"></div>
               <div class="form-group"><label>Kategori</label>
                 <select class="form-control" v-model="nMISC.category" @change="onMiscCategoryChange">
+                  <option value="">-- Pilih --</option>
                   <option v-for="c in miscCategoriesShown" :key="c">{{c}}</option>
                   <option value="Lain-lain">Lain-lain</option>
                 </select>
@@ -3059,7 +3062,7 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Tarikh Borang Submit</th><th>Jam/Masa Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Tarikh &amp; Jam Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in filteredPM" :key="r.id">
@@ -3071,8 +3074,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td v-if="currentProject==='vir'">{{(r.virSystem||'BCD')==='Optager HD4000' ? 'OPT' : 'BCD'}}</td>
                   <td>{{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</td>
                   <td>{{fmtDateDash(r.visitDate)}}</td>
-                  <td>{{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</td>
-                  <td>{{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}) : '-'}}</td>
+                  <td>{{r.submittedAt?.toDate ? (r.submittedAt.toDate().toLocaleDateString('ms-MY') + ' ' + r.submittedAt.toDate().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'})) : '-'}}</td>
                   <td>{{submittedByDisplayName(r)}}</td>
                   <td>
                     <template v-if="r.maintType==='CM'">
@@ -3094,7 +3096,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <button v-if="canEditPmRecord(r)" class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!filteredPM.length"><td colspan="12" class="empty">Tiada rekod.</td></tr>
+                <tr v-if="!filteredPM.length"><td colspan="11" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
           </div>
@@ -5454,7 +5456,7 @@ const CAMERA_MODELS = {
     'Lain-lain',
   ],
   'Bosch': [
-    'NDE-3703-AL (Dome)','NBE-3703-AL (Bullet)','NCE-7703-FK','NDP-7604-Z12L',
+    'NDE-3703-AL (Dome)','NBE-3703-AL (Bullet)','NCE-7703-FK (Dome)','NDP-7604-Z12L (PTZ)',
     'Lain-lain',
   ],
   'Hikvision': [
@@ -5683,7 +5685,7 @@ const HDD_CAPACITIES = ['500GB','1TB','2TB','3TB','4TB','6TB','8TB','10TB','12TB
 
 // PoE/network switch brands & models commonly used by CCTV integrators over
 // roughly the last 5 years (2020-2025).
-const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Allied Telesis','Huawei','Lain-lain'];
+const SWITCH_BRANDS = ['Hikvision','Dahua','TP-Link','D-Link','Cisco','Ubiquiti','Netgear','Uniview','Allied Telesis','Huawei','H3C','Lain-lain'];
 const SWITCH_MODELS = {
   'Hikvision': [
     'DS-3E0105P-E (5-Port PoE)','DS-3E0109P-E (8-Port PoE)','DS-3E0510HP-E (8-Port PoE)',
@@ -5709,7 +5711,7 @@ const SWITCH_MODELS = {
     'TL-SG2210P (8-Port PoE)','TL-SG2210MP (8-Port PoE)','TL-SG2424P (24-Port PoE)',
     'TL-SG3210 (8-Port, non-PoE uplink)','TL-SX3016F',
     'TL-SL1218P (16-Port PoE)','TL-SL1310P (8-Port PoE)',
-    'Omada TL-SG3210XHP-M2','LS108GP (8-Port PoE)',
+    'Omada TL-SG3210XHP-M2','LS108GP (8-Port PoE)','LS1005',
     'Lain-lain',
   ],
   'D-Link': [
@@ -5760,6 +5762,10 @@ const SWITCH_MODELS = {
   ],
   'Huawei': [
     'CloudEngine S5735-L24P4XE-A-V2',
+    'Lain-lain',
+  ],
+  'H3C': [
+    'H3C S5170-28S-HPWR-EI (24 Port)',
     'Lain-lain',
   ],
   'Lain-lain': [],
@@ -5853,12 +5859,12 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
-    const nNVR = reactive({name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
-    const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''});
+    const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+    const nNVR = reactive({name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
+    const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'',nvrRef:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nRoom = reactive({name:'', nameCustom:'', system:'BCD', excludedGroups:[]});
-    const nALM = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''});
+    const nALM = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''});
     // Alarm SMS System brand → model options (fixed short lists, not the
     // crowdsourced BRANDS/HDD_BRANDS-style dictionaries).
     const ALARM_BRAND_MODELS = {
@@ -5866,7 +5872,7 @@ createApp({
       'Teltonika Networks': ['TRM240'],
     };
     const ALARM_BRANDS = Object.keys(ALARM_BRAND_MODELS);
-    const nMISC = reactive({name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
+    const nMISC = reactive({name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
     const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable (HDMI)','Digital Clock'];
     // Workstation-level PC brand/model dropdowns — only shown when Kategori
     // is "PC" (other categories keep the free-text brand/model inputs since
@@ -5874,7 +5880,7 @@ createApp({
     const PC_BRANDS = ['HP','Dell','Acer','Lenovo','Lain-lain'];
     const PC_MODELS = {
       'HP': ['Lain-lain'],
-      'Dell': ['Precision 5860 Tower','OptiPlex SFF 7020','OptiPlex SFF+ 7020','Lain-lain'],
+      'Dell': ['Precision 5860 Tower','Precision 3680 Tower','OptiPlex SFF 7020','OptiPlex SFF+ 7020','OptiPlex Micro 7020','Lain-lain'],
       'Acer': ['Veriton X2720G','Altos P130 F9','Altos P130 F7','Veriton Vero 4000 All-in-One Z4724GT','Lain-lain'],
       'Lenovo': ['Lain-lain'],
       'Lain-lain': [],
@@ -5885,7 +5891,7 @@ createApp({
       'LG': ['55UM5N-H','Lain-lain'],
       'SONY': ['Lain-lain'],
       'Hisense': ['50DM66D','43DM66D','Lain-lain'],
-      'Samsung': ['UA43U8000FK (43")','Lain-lain'],
+      'Samsung': ['UA43U8000FK (43")','LH50QMCEBGCXGO (50")','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "AP/Router".
@@ -5896,19 +5902,20 @@ createApp({
       'Lain-lain': [],
     };
     // Same idea for Kategori "Monitor".
-    const MONITOR_BRANDS = ['Acer','HP','Lain-lain'];
+    const MONITOR_BRANDS = ['Acer','HP','Samsung','Lain-lain'];
     const MONITOR_MODELS = {
       'Acer': ['EK221Q','Lain-lain'],
       'HP': ['Series 5 23.8" FHD - 524sf','Lain-lain'],
+      'Samsung': ['LS22C310EAEXXS (22")','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "UPS".
     const UPS_BRANDS = ['Neuropower','MyCamExpert','Right Power','Koss','Lain-lain'];
     const UPS_MODELS = {
       'Neuropower': ['Cronus 2KR (2kVA)','Cronus 3KR','Cronus 1KR','Lain-lain'],
-      'MyCamExpert': ['MC10930','MC10930R','MC800VA','Lain-lain'],
+      'MyCamExpert': ['MC10930','MC10930R','MC800VA','MC10910','Lain-lain'],
       'Right Power': ['Titan Vista 9+ 1K (1kVA)','Titan Vista 9+ 2K (2kVA)','Titan Vista 9+ 3K (3kVA)','PowerBridge 9+ RT 3K','Lain-lain'],
-      'Koss': ['Maxtron MX-1KR (1kVA)','Maxtron MX-2KR (2kVA)','Maxtron MX-3KR (3kVA)','Lain-lain'],
+      'Koss': ['Maxtron MX-1KR (1kVA)','Maxtron MX-2KR (2kVA)','Maxtron MX-3KR (3kVA)','AXCELL AX-1KWR (1kVA)','Lain-lain'],
       'Lain-lain': [],
     };
     // Same idea for Kategori "UPS Battery Pack".
@@ -8370,13 +8377,13 @@ createApp({
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'Indoor',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
-      nNVR:  {name:'',type:'NVR',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
-      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'RAID 5',nvrRef:'',installDate:''},
+      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
+      nNVR:  {name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'',nvrRef:'',installDate:''},
       nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
-      nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'SMS Alert System',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nMISC: {name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nMISC: {name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nServer: {name:'', brand:'OPTAGER', model:'HD4000', serial:'',
         processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
@@ -12232,6 +12239,7 @@ createApp({
 
     function addCamera() {
       if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
+      if(!nCam.camType){showToast('Sila pilih Jenis kamera','error');return;}
       if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _resolveBrandModel(nCam);
       // Same "Lain-lain + custom text" resolution as brand/model, but for
@@ -12251,6 +12259,7 @@ createApp({
     }
     function addNVR() {
       if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
+      if(!nNVR.type){showToast('Sila pilih Jenis','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _resolveBrandModel(nNVR);
       ensureSite(selSite.value.id);
@@ -12267,6 +12276,7 @@ createApp({
     function addHDD() {
       if(!nHDD.brand){showToast('Sila masukkan brand HDD','error');return;}
       if(!nHDD.model){showToast('Sila masukkan model HDD','error');return;}
+      if(!nHDD.config){showToast('Sila pilih Konfigurasi','error');return;}
       const resolved = _resolveBrandModel(nHDD);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].hdd;
@@ -12337,6 +12347,7 @@ createApp({
     function addAlarm() {
       if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
       if(!nALM.model){showToast('Sila masukkan model alarm','error');return;}
+      if(!nALM.type){showToast('Sila pilih Jenis','error');return;}
       if(!isValidIp(nALM.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].alarms;
@@ -12360,6 +12371,7 @@ createApp({
     }
     function addMisc() {
       if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
+      if(!nMISC.category){showToast('Sila pilih Kategori','error');return;}
       if(!isValidIp(nMISC.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].misc;
@@ -12372,7 +12384,7 @@ createApp({
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Peralatan berjaya ditambah!'); }
       _sortByName(list);
-      Object.assign(nMISC,{name:'',category:'Monitor',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+      Object.assign(nMISC,{name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     }
     // Resolves one "dropdown value + optional custom text" pair the same
     // way brand/model dropdowns do elsewhere — falls back to the typed
