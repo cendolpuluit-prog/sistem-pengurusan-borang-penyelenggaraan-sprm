@@ -4572,7 +4572,7 @@ details.form-control[open] summary::after{content:'▴'}
 
           <p v-if="serviceReportModal.err" style="color:red;font-size:.82rem;margin:8px 0">{{serviceReportModal.err}}</p>
           <div v-if="canAddWarrantyReportFor(serviceReportModal.collection)" class="form-group" style="margin-top:10px">
-            <label>Muat Naik Fail Baharu <span class="text-muted text-sm">(PDF scan auto-dimampatkan, maks {{SERVICE_REPORT_MAX_MB_PDF}}MB selepas mampat · JPG/PNG/DOC/DOCX maks {{SERVICE_REPORT_MAX_MB}}MB)</span></label>
+            <label>Muat Naik Fail Baharu <span class="text-muted text-sm">(PDF/gambar auto-dimampatkan · semua jenis fail maks {{SERVICE_REPORT_MAX_MB}}MB selepas mampat)</span></label>
             <input type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" @change="uploadServiceReport" :disabled="serviceReportModal.uploading">
             <p v-if="serviceReportModal.uploading" class="text-muted text-sm" style="margin-top:6px">⏳ Sedang memuat naik...</p>
           </div>
@@ -4580,24 +4580,26 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== IN-APP FILE PREVIEW MODAL (PDF/gambar) ====== -->
-      <div v-if="filePreviewModal.show" class="modal-bg" @click.self="filePreviewModal.show=false">
+      <div v-if="filePreviewModal.show" class="modal-bg" @click.self="closeFilePreview">
         <div style="position:relative;background:#fff;border-radius:10px;width:min(900px,94vw);height:min(85vh,85dvh);display:flex;flex-direction:column;overflow:hidden">
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid #eee">
             <span style="font-weight:600;font-size:.88rem;word-break:break-all">{{filePreviewModal.name}}</span>
             <div class="flex gap-8">
               <template v-if="filePreviewModal.type==='image'">
-                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.max(.25,filePreviewModal.zoom-.25)" title="Kecilkan">➖</button>
+                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.max(.25,filePreviewModal.zoom-.25);filePreviewModal.panX=0;filePreviewModal.panY=0" title="Kecilkan">➖</button>
                 <span class="text-muted text-sm" style="min-width:42px;text-align:center;align-self:center">{{Math.round(filePreviewModal.zoom*100)}}%</span>
-                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.min(4,filePreviewModal.zoom+.25)" title="Besarkan">➕</button>
+                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.min(4,filePreviewModal.zoom+.25);filePreviewModal.panX=0;filePreviewModal.panY=0" title="Besarkan">➕</button>
                 <button class="btn btn-sm btn-outline" @click="printImagePreview" title="Cetak">🖨 Cetak</button>
               </template>
               <a :href="filePreviewModal.url" target="_blank" rel="noopener" class="btn btn-sm btn-outline">⬇ Muat Turun</a>
               <button @click="filePreviewModal.show=false" style="background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
             </div>
           </div>
-          <div style="flex:1;overflow:auto;background:#525659;display:flex;align-items:center;justify-content:center">
+          <div style="flex:1;overflow:hidden;background:#525659;display:flex;align-items:center;justify-content:center">
             <iframe v-if="filePreviewModal.type==='pdf'" :src="filePreviewModal.url" style="width:100%;height:100%;border:none"></iframe>
-            <img v-else-if="filePreviewModal.type==='image'" :src="filePreviewModal.url" :style="{maxWidth: filePreviewModal.zoom<=1?'100%':'none', maxHeight: filePreviewModal.zoom<=1?'100%':'none', width: filePreviewModal.zoom>1?(filePreviewModal.zoom*100)+'%':'auto', objectFit:'contain'}">
+            <img v-else-if="filePreviewModal.type==='image'" :src="filePreviewModal.url" draggable="false"
+              @mousedown="startImagePan" @touchstart="startImagePan"
+              :style="{maxWidth:'100%', maxHeight:'100%', objectFit:'contain', transform:`translate(${filePreviewModal.panX}px, ${filePreviewModal.panY}px) scale(${filePreviewModal.zoom})`, cursor: filePreviewModal.zoom>1 ? (filePreviewModal.panning?'grabbing':'grab') : 'default', userSelect:'none'}">
           </div>
         </div>
       </div>
@@ -8459,11 +8461,16 @@ createApp({
     // cuma simpan senarai metadata (nama, url, tarikh, siapa upload) dalam
     // field serviceReports pada rekod equipmentWarranty berkaitan, supaya
     // report kekal terikat kepada equipment + site asal.
-    const SERVICE_REPORT_MAX_MB = 15;
-    // PDF dihadkan lebih ketat sebab kita tak auto-compress PDF (lihat nota
-    // di _compressImageFile) — user kena compress PDF sendiri (banyak tool
-    // percuma online/app) sebelum upload kalau melebihi had ni.
-    const SERVICE_REPORT_MAX_MB_PDF = 2;
+    // Had AKHIR (selepas compress/proses) — sama 2MB untuk SEMUA jenis fail,
+    // supaya storan Firestore Blaze free-tier kekal jimat merentasi semua
+    // upload, bukan cuma PDF. Gambar (JPG/PNG) auto-compress dulu sebelum
+    // disemak had ni, jadi kebanyakan foto masih lepas tanpa masalah; DOC/
+    // DOCX xda auto-compress, so user kena kecilkan sendiri kalau > 2MB.
+    const SERVICE_REPORT_MAX_MB = 2;
+    // Had "pra-proses" lebih longgar (elak fail gergasi buat browser hang
+    // semasa render/compress) — dikenakan pada SAIZ ASAL sebelum apa-apa
+    // compress berjalan, bukan had akhir yang user akan nampak.
+    const SERVICE_REPORT_PREPROCESS_MAX_MB = 15;
     const SERVICE_REPORT_EXT = ['pdf','jpg','jpeg','png','doc','docx'];
     // collection/storagePrefix let this one modal+upload pipeline be reused
     // for both CCTV service reports (equipmentWarranty) and VIR purchase
@@ -8572,11 +8579,11 @@ createApp({
         serviceReportModal.err = `Jenis fail tidak disokong. Guna: ${SERVICE_REPORT_EXT.join(', ')}`; return;
       }
       // Had "pra-proses" digenerus (elak fail gergasi buat browser hang
-      // semasa render/compress) — had SEBENAR (ikut jenis fail) disemak
-      // SELEPAS compress, sebab PDF scan besar yang berjaya dimampat patut
-      // dibenarkan lepas walaupun asalnya melebihi had akhir.
-      if(file.size > SERVICE_REPORT_MAX_MB * 1024 * 1024) {
-        serviceReportModal.err = `Saiz fail melebihi ${SERVICE_REPORT_MAX_MB}MB.`; return;
+      // semasa render/compress) — had AKHIR (2MB, sama semua jenis fail)
+      // disemak SELEPAS compress, sebab fail besar yang berjaya dimampat
+      // patut dibenarkan lepas walaupun saiz asal melebihi had akhir.
+      if(file.size > SERVICE_REPORT_PREPROCESS_MAX_MB * 1024 * 1024) {
+        serviceReportModal.err = `Saiz fail melebihi ${SERVICE_REPORT_PREPROCESS_MAX_MB}MB.`; return;
       }
       const w = serviceReportModal.warranty;
       serviceReportModal.uploading = true; serviceReportModal.err = '';
@@ -8584,9 +8591,8 @@ createApp({
         const compressedFile = ext === 'pdf' ? await _maybeCompressScannedPdf(file)
           : ['jpg','jpeg','png'].includes(ext) ? await _compressImageFile(file) : file;
         const finalExt = compressedFile.name.split('.').pop().toLowerCase();
-        const finalMaxMb = finalExt === 'pdf' ? SERVICE_REPORT_MAX_MB_PDF : SERVICE_REPORT_MAX_MB;
-        if(compressedFile.size > finalMaxMb * 1024 * 1024) {
-          serviceReportModal.err = `Saiz fail (${(compressedFile.size/1024/1024).toFixed(1)}MB) masih melebihi had ${finalMaxMb}MB selepas dimampatkan${finalExt==='pdf' ? ' — sila compress PDF sebelum upload' : ''}.`;
+        if(compressedFile.size > SERVICE_REPORT_MAX_MB * 1024 * 1024) {
+          serviceReportModal.err = `Saiz fail (${(compressedFile.size/1024/1024).toFixed(1)}MB) masih melebihi had ${SERVICE_REPORT_MAX_MB}MB selepas dimampatkan — sila kecilkan/compress fail sebelum upload.`;
           serviceReportModal.uploading = false;
           return;
         }
@@ -8625,7 +8631,7 @@ createApp({
     }
     // In-app preview (PDF/gambar render terus dalam modal via iframe/img —
     // DOC/DOCX tiada native browser viewer, jadi buka tab baharu je terus).
-    const filePreviewModal = reactive({ show:false, url:'', name:'', type:'', zoom:1 });
+    const filePreviewModal = reactive({ show:false, url:'', name:'', type:'', zoom:1, panX:0, panY:0, panning:false });
     function previewServiceReport(r) {
       const ext = r.name.split('.').pop().toLowerCase();
       if(ext === 'pdf') { filePreviewModal.type = 'pdf'; }
@@ -8634,7 +8640,55 @@ createApp({
       filePreviewModal.url = r.url;
       filePreviewModal.name = r.name;
       filePreviewModal.zoom = 1;
+      filePreviewModal.panX = 0; filePreviewModal.panY = 0;
       filePreviewModal.show = true;
+    }
+    // Click-and-hold drag-to-pan for zoomed images — plain CSS overflow
+    // scroll doesn't work cleanly here since the image is centered via flex
+    // (overflow before the centered point becomes unreachable by scroll in
+    // most browsers), so panning is done manually via transform: translate
+    // instead, tracked in filePreviewModal.panX/panY.
+    let _panStart = null;
+    // Set true the moment an actual drag movement happens (not just a
+    // plain click) — lets closeFilePreview() below tell "user dragged the
+    // image and happened to release outside the modal box" apart from "user
+    // genuinely clicked the backdrop to close", since a drag that ends over
+    // the dark backdrop would otherwise also satisfy modal-bg's @click.self.
+    let _justPanned = false;
+    function startImagePan(e) {
+      if(filePreviewModal.zoom <= 1) return;
+      const pt = e.touches ? e.touches[0] : e;
+      _panStart = { x: pt.clientX, y: pt.clientY, panX: filePreviewModal.panX, panY: filePreviewModal.panY };
+      filePreviewModal.panning = true;
+      window.addEventListener('mousemove', _dragImagePan);
+      window.addEventListener('mouseup', _stopImagePan);
+      window.addEventListener('touchmove', _dragImagePan, { passive:false });
+      window.addEventListener('touchend', _stopImagePan);
+    }
+    function _dragImagePan(e) {
+      if(!_panStart) return;
+      if(e.touches) e.preventDefault(); // stop page scroll while panning on mobile
+      const pt = e.touches ? e.touches[0] : e;
+      const newPanX = _panStart.panX + (pt.clientX - _panStart.x);
+      const newPanY = _panStart.panY + (pt.clientY - _panStart.y);
+      if(newPanX !== filePreviewModal.panX || newPanY !== filePreviewModal.panY) _justPanned = true;
+      filePreviewModal.panX = newPanX;
+      filePreviewModal.panY = newPanY;
+    }
+    function _stopImagePan() {
+      _panStart = null;
+      filePreviewModal.panning = false;
+      window.removeEventListener('mousemove', _dragImagePan);
+      window.removeEventListener('mouseup', _stopImagePan);
+      window.removeEventListener('touchmove', _dragImagePan);
+      window.removeEventListener('touchend', _stopImagePan);
+    }
+    // Backdrop click-to-close — skipped once right after a real drag ends
+    // there (see _justPanned above), so panning past the modal's edge
+    // doesn't accidentally close the whole preview.
+    function closeFilePreview() {
+      if(_justPanned) { _justPanned = false; return; }
+      filePreviewModal.show = false;
     }
     // Gambar (JPG/PNG) xda toolbar print terbina-dalam macam PDF viewer —
     // buka tetingkap baharu berisi gambar penuh & terus panggil print(),
@@ -15402,9 +15456,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
-      serviceReportModal, SERVICE_REPORT_MAX_MB, SERVICE_REPORT_MAX_MB_PDF, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
+      serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
       showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
-      filePreviewModal, previewServiceReport, printImagePreview,
+      filePreviewModal, previewServiceReport, printImagePreview, startImagePan, closeFilePreview,
       vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
