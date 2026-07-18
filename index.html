@@ -4591,12 +4591,31 @@ details.form-control[open] summary::after{content:'▴'}
                 <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.min(4,filePreviewModal.zoom+.25);filePreviewModal.panX=0;filePreviewModal.panY=0" title="Besarkan">➕</button>
                 <button class="btn btn-sm btn-outline" @click="printImagePreview" title="Cetak">🖨 Cetak</button>
               </template>
+              <!-- The drag-to-pan overlay below sits on top of the PDF
+                   iframe, which necessarily blocks the browser's own PDF
+                   toolbar (its zoom/print/page-nav controls) — this button
+                   is the workaround: opens the same PDF in a full browser
+                   tab where that native toolbar works normally. -->
+              <button v-if="filePreviewModal.type==='pdf'" class="btn btn-sm btn-outline" @click="openPdfInNewTab" title="Buka dalam tab baharu untuk zoom/cetak guna toolbar PDF asal">🖨 Buka &amp; Cetak</button>
+              <button v-if="filePreviewModal.type==='pdf' && (filePreviewModal.panX||filePreviewModal.panY)" class="btn btn-sm btn-outline" @click="filePreviewModal.panX=0;filePreviewModal.panY=0" title="Reset kedudukan">↺ Reset</button>
               <a :href="filePreviewModal.url" target="_blank" rel="noopener" class="btn btn-sm btn-outline">⬇ Muat Turun</a>
               <button @click="filePreviewModal.show=false" style="background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
             </div>
           </div>
-          <div style="flex:1;overflow:hidden;background:#525659;display:flex;align-items:center;justify-content:center">
-            <iframe v-if="filePreviewModal.type==='pdf'" :src="filePreviewModal.url" style="width:100%;height:100%;border:none"></iframe>
+          <div style="flex:1;overflow:hidden;background:#525659;display:flex;align-items:center;justify-content:center;position:relative">
+            <template v-if="filePreviewModal.type==='pdf'">
+              <iframe :src="filePreviewModal.url" style="width:100%;height:100%;border:none"
+                :style="{transform:`translate(${filePreviewModal.panX}px, ${filePreviewModal.panY}px)`}"></iframe>
+              <!-- Transparent drag-capture layer — a cross-origin PDF
+                   iframe's own content can't be reached by parent-page
+                   mouse/touch listeners (browser sandboxing), so this is the
+                   only way to detect a grab-drag gesture over it. Trade-off
+                   accepted: this also blocks the iframe's native vertical
+                   scroll and toolbar while the preview is open (see the
+                   "Buka & Cetak" button above for the toolbar workaround). -->
+              <div @mousedown="startPdfPan" @touchstart="startPdfPan"
+                :style="{position:'absolute', inset:'0', cursor: filePreviewModal.panning?'grabbing':'grab'}"></div>
+            </template>
             <img v-else-if="filePreviewModal.type==='image'" :src="filePreviewModal.url" draggable="false"
               @mousedown="startImagePan" @touchstart="startImagePan"
               :style="{maxWidth:'100%', maxHeight:'100%', objectFit:'contain', transform:`translate(${filePreviewModal.panX}px, ${filePreviewModal.panY}px) scale(${filePreviewModal.zoom})`, cursor: filePreviewModal.zoom>1 ? (filePreviewModal.panning?'grabbing':'grab') : 'default', userSelect:'none'}">
@@ -8664,6 +8683,25 @@ createApp({
       window.addEventListener('mouseup', _stopImagePan);
       window.addEventListener('touchmove', _dragImagePan, { passive:false });
       window.addEventListener('touchend', _stopImagePan);
+    }
+    // PDF pan has no zoom concept of its own (that's the native browser PDF
+    // viewer's job) — panning is always available here, unlike the image's
+    // zoom>1 gate above, since it's the ONLY way to move around the PDF now
+    // that the drag-capture overlay blocks the iframe's native scroll.
+    function startPdfPan(e) {
+      const pt = e.touches ? e.touches[0] : e;
+      _panStart = { x: pt.clientX, y: pt.clientY, panX: filePreviewModal.panX, panY: filePreviewModal.panY };
+      filePreviewModal.panning = true;
+      window.addEventListener('mousemove', _dragImagePan);
+      window.addEventListener('mouseup', _stopImagePan);
+      window.addEventListener('touchmove', _dragImagePan, { passive:false });
+      window.addEventListener('touchend', _stopImagePan);
+    }
+    // Workaround for the PDF toolbar (zoom/print/page nav) becoming
+    // unreachable behind the drag overlay — opens the same file in a full
+    // browser tab, where the native PDF viewer's own toolbar works normally.
+    function openPdfInNewTab() {
+      window.open(filePreviewModal.url, '_blank');
     }
     function _dragImagePan(e) {
       if(!_panStart) return;
@@ -13178,7 +13216,12 @@ createApp({
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Peralatan berjaya ditambah!'); }
       _sortByName(list);
-      Object.assign(nMISC,{name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+      // Was a hand-rolled Object.assign reset (missing `ip:''` — meaning a
+      // leftover IP from the previous item silently carried into the next
+      // add) instead of the standard resetForm() every sibling equipment
+      // function uses. Switched to resetForm() so it can never drift out
+      // of sync with FORM_DEFAULTS.nMISC again.
+      resetForm('nMISC');
     }
     // Resolves one "dropdown value + optional custom text" pair the same
     // way brand/model dropdowns do elsewhere — falls back to the typed
@@ -15458,7 +15501,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
       serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
       showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
-      filePreviewModal, previewServiceReport, printImagePreview, startImagePan, closeFilePreview,
+      filePreviewModal, previewServiceReport, printImagePreview, startImagePan, startPdfPan, openPdfInNewTab, closeFilePreview,
       vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
