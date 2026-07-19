@@ -1253,7 +1253,7 @@ details.form-control[open] summary::after{content:'▴'}
               <span style="font-size:1.05rem">{{it.icon}}</span>
               <div style="flex:1;min-width:0">
                 <div style="font-size:.84rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{it.label}}</div>
-                <div style="font-size:.74rem;color:#888">{{it.sub}}{{it.date?' · '+fmtDate(it.date):''}}</div>
+                <div style="font-size:.74rem;color:#888">{{it.sub}}{{it.date?' · '+fmtDateDash(it.date):''}}</div>
               </div>
               <span v-if="it.urgency===0" class="badge badge-red" style="font-size:.68rem">Lampau</span>
             </div>
@@ -1375,7 +1375,7 @@ details.form-control[open] summary::after{content:'▴'}
               <span :class="['team-badge','badge-'+a.team]">{{a.team}}</span>
               <div style="flex:1;min-width:0">
                 <div style="font-size:.85rem;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{a.siteName}}</div>
-                <div style="font-size:.75rem;color:#888">{{fmtDate(a.date)}} &nbsp;·&nbsp; {{(a.maintType||'PM')}} {{a.project==='vir'?'VIR':'CCTV'}}</div>
+                <div style="font-size:.75rem;color:#888">{{fmtDateDash(a.date)}} &nbsp;·&nbsp; {{(a.maintType||'PM')}} {{a.project==='vir'?'VIR':'CCTV'}}</div>
               </div>
             </div>
           </div>
@@ -1521,7 +1521,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td><b>{{r.refNo||'-'}}</b></td>
                   <td>{{r.siteName}}</td>
                   <td>{{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</td>
-                  <td>{{r.visitDate||'-'}}</td>
+                  <td>{{r.visitDate?fmtDateDash(r.visitDate):'-'}}</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
                   <td><button class="btn btn-sm btn-outline" @click="viewRecord(r)">Lihat</button></td>
                 </tr>
@@ -1546,7 +1546,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td><b>{{r.refNo||'-'}}</b></td>
                   <td>{{r.siteName}}</td>
                   <td>{{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</td>
-                  <td>{{r.visitDate||'-'}}</td>
+                  <td>{{r.visitDate?fmtDateDash(r.visitDate):'-'}}</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
                   <td><button class="btn btn-sm btn-outline" @click="viewRecord(r)">Lihat</button></td>
                 </tr>
@@ -5108,13 +5108,17 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th></tr></thead>
+                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th><th>Waranti</th></tr></thead>
                 <tbody>
                   <tr v-for="(r,i) in assetRegister" :key="i">
                     <td>{{i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
                     <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.serial}}</td><td>{{r.extra}}</td>
+                    <td>
+                      <a v-if="warrantyCheckUrl(r)" :href="warrantyCheckUrl(r)" target="_blank" rel="noopener" class="btn btn-outline btn-sm">🔗 Semak Waranti</a>
+                      <span v-else class="text-muted text-sm">-</span>
+                    </td>
                   </tr>
-                  <tr v-if="!assetRegister.length"><td colspan="9" class="empty">Tiada peralatan sepadan.</td></tr>
+                  <tr v-if="!assetRegister.length"><td colspan="10" class="empty">Tiada peralatan sepadan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -15028,6 +15032,45 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         return true;
       });
     });
+    // One-click warranty lookup per equipment row. Dell has a well-known
+    // public service-tag URL that lands directly on the real warranty page,
+    // so serials for Dell gear resolve there. Hanwha and H3C both have real
+    // verification tools too, but neither exposes a confirmed URL parameter
+    // to pre-fill the serial — they land on the correct tool, not a
+    // pre-filled result, so the serial still needs pasting in once there.
+    // Any other brand falls back to a pre-filled Google search instead of
+    // guessing a vendor URL that might be wrong or break.
+    function warrantyCheckUrl(r) {
+      const brand = (r.brand||'').toLowerCase();
+      const serial = (r.serial||'').trim();
+      if(!serial || serial === '-') return null;
+      if(brand.includes('dell')) {
+        return 'https://www.dell.com/support/home/en-my/product-support/servicetag/' + encodeURIComponent(serial);
+      }
+      if(brand.includes('hanwha') || brand.includes('wisenet')) {
+        return 'https://hanwha-security.my.salesforce-sites.com/webissue/snsearch';
+      }
+      if(brand.includes('h3c')) {
+        return 'https://es.h3c.com/entitlement/?locale=en';
+      }
+      // Bosch has no public self-service serial-lookup tool — their
+      // process is invoice + RMA form via distributor/Bosch directly — so
+      // this points at the real official warranty/after-sales info page
+      // instead of a search engine.
+      if(brand.includes('bosch')) {
+        return 'https://www.boschsecurity.com/en/support/after-sales-services/warranty/';
+      }
+      if(brand.includes('allied telesis')) {
+        return 'https://support.alliedtelesis.com.sg/';
+      }
+      if(brand.includes('toshiba')) {
+        return 'https://myapps.taec.toshiba.com/myapps/admin/jsp/webrma/addRequest1NoLogin.jsp?Action=NEW';
+      }
+      if(brand.includes('western digital') || brand === 'wd') {
+        return 'https://support-en.wd.com/app/warrantystatusweb';
+      }
+      return 'https://www.google.com/search?q=' + encodeURIComponent(`${r.brand} ${r.model} warranty check ${serial}`);
+    }
     function exportAssetRegister() {
       const rows = assetRegister.value.map((r,i) => ({
         '#': i+1, Site: r.site, Projek: r.proj, Kategori: r.cat, 'Nama/Jenis': r.name,
@@ -15566,7 +15609,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
       healthCountCctv, healthCountVir, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
-      reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister,
+      reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
