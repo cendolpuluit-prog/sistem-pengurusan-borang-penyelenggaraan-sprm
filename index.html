@@ -2198,14 +2198,13 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>Konfigurasi</label>
                 <select class="form-control" v-model="nHDD.config"><option value="">-- Pilih --</option><option>RAID 5</option><option>RAID 1</option><option>Single</option><option>JBOD</option></select>
               </div>
-              <div class="form-group"><label>NVR Berkaitan <span class="text-muted text-sm">(pilihan)</span></label>
-                <select v-if="hddNvrOptions.length" class="form-control" v-model="nHDD.nvrRef">
-                  <option value="">-- Tiada --</option>
-                  <option v-for="n in hddNvrOptions" :key="n">{{n}}</option>
+              <div class="form-group"><label>NVR Berkaitan</label>
+                <select class="form-control" v-model="nHDD.nvrRef">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="n in (selSiteEquip.nvr||[])" :key="n._uid||n.name" :value="n.name">{{n.name}}</option>
                   <option value="Lain-lain">Lain-lain</option>
                 </select>
-                <input v-else class="form-control" v-model="nHDD.nvrRef" placeholder="cth: NVR 1">
-                <input v-if="hddNvrOptions.length && nHDD.nvrRef==='Lain-lain'" class="form-control" v-model="nHDD.nvrRefCustom" placeholder="Nyatakan NVR sebenar" style="margin-top:6px">
+                <input v-if="nHDD.nvrRef==='Lain-lain'" class="form-control" v-model="nHDD.nvrRefCustom" placeholder="Nyatakan NVR" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nHDD.installDate"></div>
             </div>
@@ -2222,27 +2221,26 @@ details.form-control[open] summary::after{content:'▴'}
                 <button v-if="equipSelected.hdd.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('hdd')">🗑 Padam Terpilih ({{equipSelected.hdd.size}})</button>
               </div>
             </div>
-            <div class="tbl-wrap">
+            <div class="tbl-wrap" v-for="grp in hddGroupedByNvr" :key="grp.name" style="margin-bottom:20px">
+              <div class="flex items-center gap-8 mb-8">
+                <strong>{{grp.name==='Tiada NVR' ? '⚠️ Tiada NVR Berkaitan' : '📼 '+grp.name}}</strong>
+                <span class="badge">{{grp.items.length}} HDD</span>
+              </div>
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('hdd')" @change="toggleEquipSelectAll('hdd')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>NVR</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('hdd')" @change="toggleEquipSelectAll('hdd')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <template v-for="grp in hddGrouped" :key="grp.nvrRef">
-                    <tr v-if="hddGrouped.length>1">
-                      <td colspan="10" style="background:#eef2f8;color:#003366;font-weight:700;font-size:.82rem">🖥️ {{grp.nvrRef}} ({{grp.items.length}} unit)</td>
-                    </tr>
-                    <tr v-for="h in grp.items" :key="h._uid||h._idx" :class="{'highlight-row':equipEditIdx.hdd===h._idx}">
-                      <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
-                      <td>{{h._idx+1}}</td><td>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td><td>{{h.nvrRef||'-'}}</td>
-                      <td class="flex gap-8">
-                        <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
-                        <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',h._idx)" title="Padam">🗑</button>
-                      </td>
-                    </tr>
-                  </template>
-                  <tr v-if="!(selSiteEquip.hdd||[]).length"><td colspan="10" class="empty">Tiada HDD.</td></tr>
+                  <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="{'highlight-row':equipEditIdx.hdd===h._idx}">
+                    <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
+                    <td>{{gi+1}}</td><td>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
+                    <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',h._idx)" title="Padam">🗑</button>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
+            <div v-if="!(selSiteEquip.hdd||[]).length" class="empty">Tiada HDD.</div>
           </div>
         </div>
 
@@ -5121,13 +5119,17 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th></tr></thead>
+                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th><th>Waranti</th></tr></thead>
                 <tbody>
                   <tr v-for="(r,i) in assetRegister" :key="i">
                     <td>{{i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
                     <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.serial}}</td><td>{{r.extra}}</td>
+                    <td>
+                      <a v-if="warrantyCheckUrl(r)" :href="warrantyCheckUrl(r)" target="_blank" rel="noopener" class="btn btn-outline btn-sm">🔗 Semak Waranti</a>
+                      <span v-else class="text-muted text-sm">-</span>
+                    </td>
                   </tr>
-                  <tr v-if="!assetRegister.length"><td colspan="9" class="empty">Tiada peralatan sepadan.</td></tr>
+                  <tr v-if="!assetRegister.length"><td colspan="10" class="empty">Tiada peralatan sepadan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -12793,23 +12795,22 @@ createApp({
       }
       return base;
     });
-    // Lets "NVR Berkaitan" (HDD tab) be picked from the NVR names actually
-    // keyed in for this site instead of free-typed — so HDDs stay grouped
-    // consistently under whichever NVR they really belong to.
-    const hddNvrOptions = computed(() => [...new Set((selSiteEquip.value.nvr||[]).map(n => n.name).filter(Boolean))]);
-    // Groups the HDD list by "NVR Berkaitan" for display (a big site like
-    // Negeri Sembilan can have 3 NVRs, each with its own set of HDDs) —
-    // keeps each item's real index (`_idx`) from the unfiltered list so
-    // edit/delete/checkbox handlers (which take that index) still work.
-    const hddGrouped = computed(() => {
-      const list = (selSiteEquip.value.hdd||[]).map((h,i) => ({...h, _idx:i}));
-      const groups = {}, order = [];
+    // Groups the flat HDD list by NVR name for sites with multiple NVRs
+    // (e.g. Negeri Sembilan has 2-3 NVRs, each with its own distinct HDD
+    // set) — "Tiada NVR" bucket sorted last catches HDDs with no NVR
+    // assigned. _idx preserves each item's REAL index in the unfiltered
+    // hdd array so edit/delete still target the correct underlying record.
+    const hddGroupedByNvr = computed(() => {
+      const list = (selSiteEquip.value.hdd || []).map((h, idx) => ({ ...h, _idx: idx }));
+      const groups = {};
       list.forEach(h => {
-        const key = h.nvrRef || '— Tiada NVR —';
-        if(!groups[key]) { groups[key] = []; order.push(key); }
+        const key = h.nvrRef && h.nvrRef.trim() ? h.nvrRef.trim() : 'Tiada NVR';
+        if(!groups[key]) groups[key] = [];
         groups[key].push(h);
       });
-      return order.map(k => ({ nvrRef:k, items:groups[k] }));
+      const names = Object.keys(groups).filter(k => k !== 'Tiada NVR').sort();
+      if(groups['Tiada NVR']) names.push('Tiada NVR');
+      return names.map(name => ({ name, items: groups[name] }));
     });
     // "Senarai Bilik" filter — the list otherwise always shows every room
     // for the site regardless of system, which is correct for management
@@ -13072,11 +13073,12 @@ createApp({
           }
         }
         if(key === 'hdd') {
-          // "NVR Berkaitan" reflects the actual NVR names keyed in for this
-          // site — a saved value that no longer matches one (NVR renamed/
-          // deleted since, or free-typed before this dropdown existed)
-          // still needs to show correctly rather than a blank dropdown.
-          if(item.nvrRef && !hddNvrOptions.value.includes(item.nvrRef)) {
+          // NVR Berkaitan dropdown is autopopulated from this site's current
+          // NVR names — a saved value that no longer matches any existing
+          // NVR (renamed/deleted NVR, or a pre-dropdown free-text value)
+          // reflects as "Lain-lain" + custom text, same pattern as everywhere else.
+          const knownNvrNames = (selSiteEquip.value.nvr||[]).map(n => n.name);
+          if(item.nvrRef && !knownNvrNames.includes(item.nvrRef)) {
             nHDD.nvrRef = 'Lain-lain';
             nHDD.nvrRefCustom = item.nvrRef;
           } else {
@@ -13176,16 +13178,16 @@ createApp({
       if(!nHDD.model){showToast('Sila masukkan model HDD','error');return;}
       if(!nHDD.config){showToast('Sila pilih Konfigurasi','error');return;}
       const resolved = _resolveBrandModel(nHDD);
-      const { nvrRefCustom, ...hddResolved } = resolved;
-      hddResolved.nvrRef = (hddResolved.nvrRef === 'Lain-lain' && nvrRefCustom && nvrRefCustom.trim()) ? nvrRefCustom.trim() : hddResolved.nvrRef;
+      resolved.nvrRef = _resolveDropdownCustom(nHDD.nvrRef, nHDD.nvrRefCustom);
+      delete resolved.nvrRefCustom;
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].hdd;
-      const dup = _findDupConflict('hdd', list, hddResolved, equipEditIdx.hdd);
+      const dup = _findDupConflict('hdd', list, resolved, equipEditIdx.hdd);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...hddResolved, _uid:list[equipEditIdx.hdd]._uid||_genId(), _ts:Date.now()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
-      else { list.push({...hddResolved, _uid:_genId(), _ts:Date.now()}); showToast('HDD berjaya ditambah!'); }
-      _maybeAddCustomBrand('HDD_BRANDS', hddResolved.brand);
-      _maybeAddCustomModel('hdd', hddResolved.brand, hddResolved.model);
+      if(equipEditIdx.hdd !== null) { list[equipEditIdx.hdd] = {...resolved, _uid:list[equipEditIdx.hdd]._uid||_genId(), _ts:Date.now()}; equipEditIdx.hdd = null; showToast('HDD dikemaskini!'); }
+      else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('HDD berjaya ditambah!'); }
+      _maybeAddCustomBrand('HDD_BRANDS', resolved.brand);
+      _maybeAddCustomModel('hdd', resolved.brand, resolved.model);
       resetForm('nHDD');
     }
     function addSwitch() {
@@ -15073,6 +15075,45 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         return true;
       });
     });
+    // One-click warranty lookup per equipment row. Dell has a well-known
+    // public service-tag URL that lands directly on the real warranty page,
+    // so serials for Dell gear resolve there. Hanwha and H3C both have real
+    // verification tools too, but neither exposes a confirmed URL parameter
+    // to pre-fill the serial — they land on the correct tool, not a
+    // pre-filled result, so the serial still needs pasting in once there.
+    // Any other brand falls back to a pre-filled Google search instead of
+    // guessing a vendor URL that might be wrong or break.
+    function warrantyCheckUrl(r) {
+      const brand = (r.brand||'').toLowerCase();
+      const serial = (r.serial||'').trim();
+      if(!serial || serial === '-') return null;
+      if(brand.includes('dell')) {
+        return 'https://www.dell.com/support/home/en-my/product-support/servicetag/' + encodeURIComponent(serial);
+      }
+      if(brand.includes('hanwha') || brand.includes('wisenet')) {
+        return 'https://hanwha-security.my.salesforce-sites.com/webissue/snsearch';
+      }
+      if(brand.includes('h3c')) {
+        return 'https://es.h3c.com/entitlement/?locale=en';
+      }
+      // Bosch has no public self-service serial-lookup tool — their
+      // process is invoice + RMA form via distributor/Bosch directly — so
+      // this points at the real official warranty/after-sales info page
+      // instead of a search engine.
+      if(brand.includes('bosch')) {
+        return 'https://www.boschsecurity.com/en/support/after-sales-services/warranty/';
+      }
+      if(brand.includes('allied telesis')) {
+        return 'https://support.alliedtelesis.com.sg/';
+      }
+      if(brand.includes('toshiba')) {
+        return 'https://myapps.taec.toshiba.com/myapps/admin/jsp/webrma/addRequest1NoLogin.jsp?Action=NEW';
+      }
+      if(brand.includes('western digital') || brand === 'wd') {
+        return 'https://support-en.wd.com/app/warrantystatusweb';
+      }
+      return 'https://www.google.com/search?q=' + encodeURIComponent(`${r.brand} ${r.model} warranty check ${serial}`);
+    }
     function exportAssetRegister() {
       const rows = assetRegister.value.map((r,i) => ({
         '#': i+1, Site: r.site, Projek: r.proj, Kategori: r.cat, 'Nama/Jenis': r.name,
@@ -15579,8 +15620,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       profileEdit, initProfile, saveProfile, pwChange, showPwNew, showPwConfirm, changePassword,
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp, sortEquipListByName,
-      openSiteEquip, selSiteEquip, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
-      hddNvrOptions, hddGrouped,
+      openSiteEquip, selSiteEquip, hddGroupedByNvr, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
       equipVirRoomUid, virRoomPickerModal, currentOptagerRoomName, optagerRoomChoicesForSite, pickOptagerRoom, openOptagerRoomEquip,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
@@ -15612,7 +15652,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
       healthCountCctv, healthCountVir, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
-      reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister,
+      reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
