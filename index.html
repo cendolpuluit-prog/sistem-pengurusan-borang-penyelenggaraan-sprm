@@ -2979,7 +2979,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="card-title">🖥️ Pemeriksaan NVR</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Software Operation</th><th>Status</th><th>Nota</th></tr></thead>
+                <thead><tr><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th>Software Operation</th><th>Status</th><th>Nota</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in pm.nvr" :key="n._uid||i">
                     <td>{{i+1}}</td>
@@ -2987,11 +2987,12 @@ details.form-control[open] summary::after{content:'▴'}
                     <td><select class="form-control status-sel" v-model="n.brand"><option v-for="b in BRANDS" :key="b">{{b}}</option></select></td>
                     <td><input class="form-control" style="min-width:100px" v-model="n.model"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="n.serial"></td>
+                    <td><input class="form-control" style="min-width:110px" v-model="n.ip"></td>
                     <td><select class="status-sel" v-model="n.asmOp" :class="n.asmOp==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                     <td><select class="status-sel" v-model="n.status" :class="n.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                     <td><input class="form-control" style="min-width:100px" v-model="n.nota" placeholder="cth: Tingkat 2, Bilik Server"></td>
                   </tr>
-                  <tr v-if="!pm.nvr.length"><td colspan="8" class="empty">Tiada NVR didaftar.</td></tr>
+                  <tr v-if="!pm.nvr.length"><td colspan="9" class="empty">Tiada NVR didaftar.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -3525,16 +3526,17 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">2. &nbsp;NETWORK VIDEO RECORDER (NVR)</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:22%">Nama / Jenis</th><th style="width:10%">Brand</th><th style="width:11%">Model</th><th style="width:15%">No. Siri</th><th style="width:10%">Software Operation</th><th style="width:8%">Status</th><th style="width:20%">Nota</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:18%">Nama / Jenis</th><th style="width:9%">Brand</th><th style="width:10%">Model</th><th style="width:12%">No. Siri</th><th style="width:10%">IP Address</th><th style="width:9%">Software Operation</th><th style="width:8%">Status</th><th style="width:17%">Nota</th></tr></thead>
             <tbody>
               <tr v-for="(n,i) in viewPM?.nvr" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.brand}}</td><td class="ctr">{{n.model}}</td>
                 <td class="ctr" style="font-family:monospace">{{n.serial}}</td>
+                <td class="ctr" style="font-family:monospace">{{n.ip}}</td>
                 <td :class="n.asmOp==='Baik'?'ok':'no'">{{n.asmOp}}</td>
                 <td :class="n.status==='Baik'?'ok':'no'">{{n.status}}</td>
                 <td>{{n.nota}}</td>
               </tr>
-              <tr v-if="!viewPM?.nvr?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
+              <tr v-if="!viewPM?.nvr?.length"><td colspan="9" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
             </tbody>
           </table>
           </div>
@@ -13529,6 +13531,22 @@ createApp({
       page.value='new-pm';
     }
 
+    // Borang HDD table shows one row per brand+model+capacity combo, summing
+    // totalUnit across every matching record regardless of which NVR it
+    // belongs to (the NVR-grouped breakdown is for the Urus Peralatan Site
+    // view only — the borang would get unreadably long if it listed every
+    // NVR's HDDs separately, e.g. 10 units under NVR1 + 5 under NVR2 becomes
+    // one "x15 unit" row here).
+    function _groupHddForPm(hddList) {
+      const groups = {}; const order = [];
+      (hddList||[]).forEach(h => {
+        const key = [h.brand||'', h.model||'', h.capacity||''].join('|');
+        if(!groups[key]) { groups[key] = {...h, totalUnit:0}; order.push(key); }
+        groups[key].totalUnit += Number(h.totalUnit) || 1;
+      });
+      return order.map(k => groups[k]);
+    }
+
     function loadPMEquip() {
       if(!pm.siteId){showToast('Sila pilih site','error');return;}
       if(currentProject.value === 'vir') {
@@ -13551,7 +13569,7 @@ createApp({
 
       pm.cameras = (eq.cameras||[]).map(c=>({...c,display:'Baik',icam:'Baik',nota:''}));
       pm.nvr = (eq.nvr||[]).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
-      pm.hdd = (eq.hdd||[]).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'}));
+      pm.hdd = _groupHddForPm((eq.hdd||[]).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'})));
       pm.switches = (eq.switches||[]).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = (eq.alarms||[]).map(a=>({...a,func:'Baik',status:'Baik'}));
       pm.misc = (eq.misc||[]).map(m=>({...m,status:'Baik',nota:''}));
@@ -14193,8 +14211,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         children.push(sectionHdr('2.  NETWORK VIDEO RECORDER (NVR)'));
         if (r.nvr?.length) {
           children.push(makeTable(
-            ['No.','Nama/Jenis','Brand','Model','No. Siri','Software Operation','Status','Nota'],
-            r.nvr.map((n,i)=>[i+1,n.name,n.brand,n.model,n.serial,n.asmOp,n.status,n.nota||''])
+            ['No.','Nama/Jenis','Brand','Model','No. Siri','IP Address','Software Operation','Status','Nota'],
+            r.nvr.map((n,i)=>[i+1,n.name,n.brand,n.model,n.serial,n.ip||'',n.asmOp,n.status,n.nota||''])
           ));
         } else { children.push(emptyNote('Tiada rekod NVR.')); }
         children.push(spacer());
