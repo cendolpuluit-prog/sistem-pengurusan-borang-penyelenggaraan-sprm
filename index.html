@@ -889,7 +889,7 @@ details.form-control[open] summary::after{content:'▴'}
 <div v-if="authChecking" class="splash-screen">
   <div class="splash-logos">
     <img src="logo_dayaone.png" alt="Daya One">
-    <img src="logo_sprm.png" alt="SPRM">
+    <img v-if="SHOW_SPRM_LOGO_LOGIN" src="logo_sprm.png" alt="SPRM">
   </div>
   <div class="splash-spinner"></div>
   <div class="splash-text">Memuatkan...</div>
@@ -908,7 +908,7 @@ details.form-control[open] summary::after{content:'▴'}
       <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:5px 10px">
         <img src="logo_dayaone.png" alt="Daya One" style="height:32px;object-fit:contain;display:block">
       </div>
-      <img src="logo_sprm.png" alt="SPRM" style="height:54px;object-fit:contain">
+      <img v-if="SHOW_SPRM_LOGO_LOGIN" src="logo_sprm.png" alt="SPRM" style="height:54px;object-fit:contain">
     </div>
 
     <!-- Title -->
@@ -6112,6 +6112,14 @@ createApp({
       'mohdasrul': { email: 'asrul@dayaone.com.my', name: 'Mohd Asrul', role: 'superadmin' }
     };
 
+    // App isn't on the official dayaone.com.my domain yet — showing the
+    // SPRM logo on the public-facing pre-login screens (splash + login
+    // card) risks looking like an unofficial/unauthorized use of SPRM's
+    // branding until the move happens. Flip this to `true` once the app is
+    // on the official domain — every SPRM logo spot on those two screens is
+    // gated on this same constant, and stays in its exact original position
+    // in the markup, so re-enabling needs no layout changes.
+    const SHOW_SPRM_LOGO_LOGIN = false;
     const page = ref('dashboard');
     const authUser = ref(null);
     const authProfile = ref(null);
@@ -15582,7 +15590,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     return {
-      page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession,
+      page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virEquipCombined, virDefaultSettingUnits, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
