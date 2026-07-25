@@ -904,7 +904,7 @@ details.form-control[open] summary::after{content:'▴'}
 
   <div :class="['login-card login-card-anim', loginShake ? 'login-shake' : '']">
     <!-- Logos -->
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:22px">
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:22px">
       <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:5px 10px">
         <img src="logo_dayaone.png" alt="Daya One" style="height:32px;object-fit:contain;display:block">
       </div>
@@ -2227,7 +2227,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <span class="badge">{{grp.items.length}} HDD</span>
               </div>
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('hdd')" @change="toggleEquipSelectAll('hdd')"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isHddGroupAllSelected(grp.items)" @change="toggleHddGroupSelectAll(grp.items)"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="{'highlight-row':equipEditIdx.hdd===h._idx}">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
@@ -12891,6 +12891,20 @@ createApp({
       // picked up by every dependent effect.
       else { equipSelected[kind].clear(); list.forEach(it => equipSelected[kind].add(it._uid)); }
     }
+    // HDD's "select all" checkbox is rendered once PER NVR GROUP (see
+    // hddGroupedByNvr) rather than once for the whole tab, so it can't reuse
+    // isEquipAllSelected/toggleEquipSelectAll above — those operate on the
+    // full site-wide hdd list, which would make a group's checkbox silently
+    // select/deselect every OTHER group's rows too (and then Edit
+    // Pukal/Padam Terpilih would act on all of them, not just this group's).
+    // These scope the same equipSelected.hdd Set to just the group's items.
+    function isHddGroupAllSelected(items) {
+      return items.length>0 && items.every(it => equipSelected.hdd.has(it._uid));
+    }
+    function toggleHddGroupSelectAll(items) {
+      if(isHddGroupAllSelected(items)) items.forEach(it => equipSelected.hdd.delete(it._uid));
+      else items.forEach(it => equipSelected.hdd.add(it._uid));
+    }
     function bulkDeleteEquip(kind) {
       const sel = equipSelected[kind];
       if(!sel.size) return;
@@ -15652,7 +15666,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
-      equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, bulkDeleteEquip,
+      equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isHddGroupAllSelected, toggleHddGroupSelectAll, bulkDeleteEquip,
       revealedPw, togglePwReveal,
       bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
       infoModal, showInfo,
