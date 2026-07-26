@@ -66,6 +66,13 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .login-divider{display:flex;align-items:center;gap:10px;margin:4px 0}
 .login-divider span{font-size:.7rem;font-family:monospace;color:#006633;white-space:nowrap}
 .login-divider:before,.login-divider:after{content:'';flex:1;height:1px;background:rgba(0,180,100,.25)}
+@keyframes loginClockIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.login-clock-block{text-align:center;margin-bottom:20px;opacity:0;animation:loginClockIn .6s ease-out .5s both}
+.login-clock-row{display:flex;align-items:baseline;justify-content:center;gap:8px;flex-wrap:wrap}
+.login-clock-time{font-family:monospace;font-size:1.05rem;font-weight:700;color:#fff;letter-spacing:.03em;text-shadow:0 0 18px rgba(0,200,100,.35)}
+.login-clock-sep{color:#3a6650;font-size:.8rem}
+.login-clock-date{font-size:.76rem;color:#8ac9a0}
+.login-clock-greeting{font-size:.8rem;color:#5aaf7a;font-weight:600;margin-top:6px}
 
 /* LAYOUT */
 .app-wrap{display:flex;min-height:100vh;min-height:100dvh;max-width:100vw}
@@ -78,7 +85,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .sidebar-logo-pill{background:rgba(255,255,255,.95);border-radius:8px;padding:5px 8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .sidebar-logo-pill img{height:30px;object-fit:contain;display:block}
 .sidebar-brand h2{font-size:.75rem;font-weight:700;line-height:1.45;text-align:center;margin:0;color:#e0f0ff;letter-spacing:.01em}
-.sidebar-nav{flex:1;padding:12px 0}
+.sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
 .nav-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;font-size:.88rem;transition:.2s;border-left:3px solid transparent}
 .nav-item:hover{background:rgba(255,255,255,.09);border-left-color:rgba(255,255,255,.3)}
 .nav-item.active{background:linear-gradient(90deg,rgba(0,160,80,.25),rgba(0,80,180,.15));border-left-color:#4dff99}
@@ -911,10 +918,19 @@ details.form-control[open] summary::after{content:'▴'}
       <img v-if="SHOW_SPRM_LOGO_LOGIN" src="logo_sprm.png" alt="SPRM" style="height:54px;object-fit:contain">
     </div>
 
+    <!-- Live clock + date + time-of-day greeting -->
+    <div class="login-clock-block">
+      <div class="login-clock-row">
+        <span class="login-clock-time">{{loginClock}}</span>
+        <span class="login-clock-sep">·</span>
+        <span class="login-clock-date">{{loginDateStr}}</span>
+      </div>
+      <div class="login-clock-greeting">{{loginGreeting}}</div>
+    </div>
+
     <!-- Title -->
     <div style="text-align:center;margin-bottom:24px">
-      <h1 style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:.01em;margin:0 0 4px;text-shadow:0 0 28px rgba(0,200,100,.4);line-height:1.35">Sistem Pengurusan Borang Penyelenggaraan Projek SPRM</h1>
-      <p style="color:#5aaf7a;font-size:.76rem;font-weight:600;letter-spacing:.04em;margin:0 0 12px">SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA</p>
+      <h1 style="color:#fff;font-size:1rem;font-weight:800;letter-spacing:.01em;margin:0 0 12px;text-shadow:0 0 28px rgba(0,200,100,.4);line-height:1.35">Sistem Pengurusan Borang Penyelenggaraan</h1>
       <div class="login-divider"><span>AKSES SELAMAT</span></div>
     </div>
 
@@ -985,6 +1001,7 @@ details.form-control[open] summary::after{content:'▴'}
     <div class="welcome-popup-card">
       <button class="welcome-popup-close" @click="welcomePopup=false" title="Tutup">✕</button>
       <div class="welcome-popup-icon">👋</div>
+      <p style="font-weight:700;margin-bottom:8px">Assalamualaikum W.B.T {{authProfile?.nickname || authProfile?.name || authProfile?.username}}</p>
       <p>Sistem ini dibangunkan oleh <b>Mohd Asrul Bin Adanan, Technical Engineer</b>, sebagai satu inisiatif untuk menyelaraskan dan melancarkan pengurusan kemaskini borang berkaitan projek Suruhanjaya Pencegahan Rasuah Malaysia (SPRM) bagi projek CCTV dan VIR.</p>
     </div>
   </div>
@@ -1606,7 +1623,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th><th v-if="authProfile?.role==='superadmin'" style="width:60px">Padam</th>
               </tr></thead>
               <tbody>
-                <tr v-for="l in auditLogFilteredList" :key="l.id">
+                <tr v-for="l in auditLogPagedList" :key="l.id">
                   <td v-if="authProfile?.role==='superadmin'"><input type="checkbox" :checked="auditLogSelected.has(l.id)" @change="toggleAuditLogRow(l.id)"></td>
                   <td style="white-space:nowrap;font-size:.8rem">{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</td>
                   <td>{{logActorDisplayName(l)}}</td>
@@ -1619,6 +1636,14 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-if="!auditLogFilteredList.length"><td :colspan="authProfile?.role==='superadmin'?6:4" class="empty">Tiada log audit.</td></tr>
               </tbody>
             </table>
+          </div>
+          <div v-if="auditLogTotalPages>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
+            <span class="text-sm text-muted">Halaman {{auditLogPage}} / {{auditLogTotalPages}} &nbsp;·&nbsp; {{auditLogFilteredList.length}} rekod</span>
+            <div class="flex gap-8">
+              <button class="btn btn-outline btn-sm" :disabled="auditLogPage===1" @click="auditLogGoToPage(auditLogPage-1)">‹ Sebelum</button>
+              <button v-for="p in auditLogPageNumbers" :key="p" class="btn btn-sm" :class="p===auditLogPage?'btn-primary':'btn-outline'" @click="auditLogGoToPage(p)">{{p}}</button>
+              <button class="btn btn-outline btn-sm" :disabled="auditLogPage===auditLogTotalPages" @click="auditLogGoToPage(auditLogPage+1)">Seterus ›</button>
+            </div>
           </div>
         </div>
       </div>
@@ -4193,6 +4218,16 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
         </div>
         <div class="card">
+          <div class="card-title">Nama Panggilan</div>
+          <p style="color:#888;font-size:.82rem;margin-bottom:14px">Nama santai untuk paparan sahaja — tidak menggantikan Nama Penuh rasmi yang digunakan dalam rekod borang.</p>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Nama Panggilan</label>
+              <input class="form-control" v-model="profileEdit.nickname" placeholder="cth: Amin" maxlength="40">
+            </div>
+          </div>
+          <button class="btn btn-primary" @click="saveNickname" :disabled="loading">💾 Simpan Nama Panggilan</button>
+        </div>
+        <div class="card">
           <div class="card-title">Maklumat Profil</div>
           <p v-if="authProfile?.role!=='superadmin'" style="color:#888;font-size:.82rem;margin-bottom:14px">Maklumat profil hanya boleh dikemaskini oleh Admin/Superadmin melalui Pengurusan Pengguna.</p>
           <div class="form-row form-row-2">
@@ -6120,6 +6155,23 @@ createApp({
     // gated on this same constant, and stays in its exact original position
     // in the markup, so re-enabling needs no layout changes.
     const SHOW_SPRM_LOGO_LOGIN = false;
+    // Live clock + date + time-of-day greeting shown on the login screen —
+    // ticks every second but only while the login screen is actually up
+    // (checked inside the callback rather than start/stop on auth state, to
+    // keep this simple; a 1s interval doing a cheap string format is
+    // negligible even once logged in and the value just stops being read).
+    const loginClock = ref('');
+    const loginDateStr = ref('');
+    const loginGreeting = ref('');
+    function _tickLoginClock() {
+      const now = new Date();
+      loginClock.value = now.toLocaleTimeString('ms-MY', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      loginDateStr.value = now.toLocaleDateString('ms-MY', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+      const h = now.getHours();
+      loginGreeting.value = h < 12 ? 'Selamat Pagi ☀️' : h < 18 ? 'Selamat Petang 🌤️' : 'Selamat Malam 🌙';
+    }
+    _tickLoginClock();
+    setInterval(_tickLoginClock, 1000);
     const page = ref('dashboard');
     const authUser = ref(null);
     const authProfile = ref(null);
@@ -8142,15 +8194,31 @@ createApp({
     // Superadmin may edit their own info (except username) directly here;
     // everyone else's info is admin/superadmin-managed via User Management
     // and shown read-only. Password change, however, is open to ALL roles.
-    const profileEdit = reactive({ name:'', jawatan:'', jabatan:'', jabatanCustom:'', phone:'', email:'' });
+    const profileEdit = reactive({ name:'', jawatan:'', jabatan:'', jabatanCustom:'', phone:'', email:'', nickname:'' });
     function initProfile() {
-      profileEdit.name    = authProfile.value?.name||'';
-      profileEdit.jawatan = authProfile.value?.jawatan||'';
-      profileEdit.phone   = authProfile.value?.phone||'';
-      profileEdit.email   = authProfile.value?.email||'';
+      profileEdit.name     = authProfile.value?.name||'';
+      profileEdit.jawatan  = authProfile.value?.jawatan||'';
+      profileEdit.phone    = authProfile.value?.phone||'';
+      profileEdit.email    = authProfile.value?.email||'';
+      profileEdit.nickname = authProfile.value?.nickname||'';
       const j = authProfile.value?.jabatan||'';
       if(j && !JABATAN_OPTIONS.includes(j)) { profileEdit.jabatan = 'Lain-lain'; profileEdit.jabatanCustom = j; }
       else { profileEdit.jabatan = j; profileEdit.jabatanCustom = ''; }
+    }
+    // Nickname is separate from "Nama Penuh" (which stays admin-managed for
+    // every role except superadmin, per saveProfile() below) — any signed-in
+    // user may set their own casual display nickname without touching the
+    // official name used for record attribution.
+    async function saveNickname() {
+      loading.value = true;
+      try {
+        const uid = auth.currentUser.uid;
+        const nickname = profileEdit.nickname.trim();
+        await db.collection('users').doc(uid).set({ nickname }, {merge:true});
+        authProfile.value.nickname = nickname;
+        showToast('Nama panggilan berjaya disimpan!');
+      } catch(e){ showToast('Gagal: '+e.message,'error'); }
+      loading.value = false;
     }
     async function saveProfile() {
       if(authProfile.value?.role !== 'superadmin') return;
@@ -10230,6 +10298,7 @@ createApp({
       try {
         const snap = await db.collection('auditLogs').orderBy('timestamp','desc').get();
         auditLogs.value = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        auditLogPage.value = 1;
       } catch(e) { console.warn('loadAuditLogs failed:', e); }
     }
 
@@ -10321,6 +10390,35 @@ createApp({
         }
         return true;
       });
+    });
+    // Paginated view of auditLogFilteredList — the raw list can grow long
+    // over time (every equipment/user/schedule change logs an entry), which
+    // made the Log Audit page scroll on forever and pushed the sidebar
+    // logout button far down. 20 rows per page, reset to page 1 whenever the
+    // filter changes so a stale page number never shows "Tiada log audit"
+    // for a filter that actually has results on page 1.
+    const AUDIT_LOG_PAGE_SIZE = 20;
+    const auditLogPage = ref(1);
+    watch(auditLogFilter, () => { auditLogPage.value = 1; }, { deep: true });
+    const auditLogTotalPages = computed(() => Math.max(1, Math.ceil(auditLogFilteredList.value.length / AUDIT_LOG_PAGE_SIZE)));
+    const auditLogPagedList = computed(() => {
+      const start = (auditLogPage.value - 1) * AUDIT_LOG_PAGE_SIZE;
+      return auditLogFilteredList.value.slice(start, start + AUDIT_LOG_PAGE_SIZE);
+    });
+    function auditLogGoToPage(p) {
+      auditLogPage.value = Math.min(Math.max(1, p), auditLogTotalPages.value);
+    }
+    // Caps visible page-number buttons at 7 (current page ± 3) so a log with
+    // dozens of pages doesn't turn the pager itself into another long row.
+    const auditLogPageNumbers = computed(() => {
+      const total = auditLogTotalPages.value;
+      const cur = auditLogPage.value;
+      const span = 3;
+      const from = Math.max(1, cur - span);
+      const to = Math.min(total, cur + span);
+      const nums = [];
+      for(let i = from; i <= to; i++) nums.push(i);
+      return nums;
     });
     async function deleteAuditLog(log) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
@@ -15605,6 +15703,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
+      loginClock, loginDateStr, loginGreeting,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virEquipCombined, virDefaultSettingUnits, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
@@ -15658,7 +15757,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       forcePwModal, submitForcePwChange, showResetNew, showResetConfirm,
       uploadPhoto,
       showLoginPw,
-      profileEdit, initProfile, saveProfile, pwChange, showPwNew, showPwConfirm, changePassword,
+      profileEdit, initProfile, saveProfile, saveNickname, pwChange, showPwNew, showPwConfirm, changePassword,
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp, sortEquipListByName,
       openSiteEquip, selSiteEquip, hddGroupedByNvr, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
@@ -15682,6 +15781,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
       auditLogs, visibleAuditLogs, logActorDisplayName, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       auditLogFilter, resetAuditLogFilter, auditLogUserOptions, auditLogActionOptions, auditLogFilteredList,
+      auditLogPage, auditLogTotalPages, auditLogPagedList, auditLogGoToPage, auditLogPageNumbers,
       auditLogSelected, toggleAuditLogRow, isAuditLogAllSelected, toggleAuditLogSelectAll, bulkDeleteAuditLogs,
       updateCMStatus,
       notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
