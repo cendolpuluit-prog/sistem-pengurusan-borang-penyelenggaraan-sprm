@@ -86,10 +86,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .sidebar-logo-pill img{height:30px;object-fit:contain;display:block}
 .sidebar-brand h2{font-size:.75rem;font-weight:700;line-height:1.45;text-align:center;margin:0;color:#e0f0ff;letter-spacing:.01em}
 .sidebar-nav{flex:1;padding:12px 0;overflow-y:auto}
-.nav-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;font-size:.88rem;transition:.2s;border-left:3px solid transparent}
+.nav-item{display:flex;align-items:center;gap:10px;padding:11px 16px;cursor:pointer;font-size:.88rem;transition:background .2s,border-color .2s;border-left:3px solid transparent}
 .nav-item:hover{background:rgba(255,255,255,.09);border-left-color:rgba(255,255,255,.3)}
 .nav-item.active{background:linear-gradient(90deg,rgba(0,160,80,.25),rgba(0,80,180,.15));border-left-color:#4dff99}
-.nav-item .icon{font-size:1.1rem;width:20px;text-align:center}
+.nav-item .icon{font-size:1.1rem;width:20px;text-align:center;display:inline-block;transition:transform .2s}
+.nav-item:hover .icon{transform:scale(1.15)}
 .sidebar-footer{padding:14px 16px;border-top:1px solid rgba(255,255,255,.1);font-size:.8rem;opacity:.7}
 .main{flex:1;overflow-y:auto;overflow-x:hidden;min-width:0}
 .topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05)}
@@ -103,8 +104,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .app-footer b{color:#5a6a85}
 
 /* CARDS */
-.card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s}
-.card:hover{box-shadow:0 6px 26px rgba(0,40,100,.1)}
+.card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 10px 32px rgba(0,40,100,.12);transform:translateY(-1px)}
 .card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px;padding-left:10px;border-left:3px solid #003366;position:relative}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
 .laporan-chart-row{display:grid;gap:16px;margin-bottom:16px}
@@ -155,6 +156,7 @@ details.form-control[open] summary::after{content:'▴'}
 .btn-outline:hover{background:#f0f4ff;transform:translateY(-1px)}
 .btn-sm{padding:5px 12px;font-size:.8rem}
 .btn-icon{padding:6px 10px;font-size:.9rem}
+.btn:active:not(:disabled){transform:scale(.96)}
 
 /* TABS */
 .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #e0e0e0}
@@ -179,8 +181,10 @@ details.form-control[open] summary::after{content:'▴'}
 .equip-table td{border-bottom:1px solid #eee}
 
 /* MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center}
-.modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.2)}
+@keyframes modalBgIn{from{opacity:0}to{opacity:1}}
+@keyframes modalPopIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;animation:modalBgIn .18s ease-out both}
+.modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both}
 .modal h3{font-size:1rem;color:#003366;margin-bottom:20px}
 
 /* STATUS SELECT */
@@ -3241,7 +3245,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Tarikh &amp; Jam Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
-                <tr v-for="r in filteredPM" :key="r.id">
+                <tr v-for="r in pmListPagedList" :key="r.id">
                   <td><input type="checkbox" :value="r.id" v-model="batchSelected"></td>
                   <td><b>{{r.refNo||'-'}}</b></td>
                   <td><span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span></td>
@@ -3279,7 +3283,7 @@ details.form-control[open] summary::after{content:'▴'}
 
           <!-- Mobile card list -->
           <div class="pm-mobile-cards">
-            <div v-for="r in filteredPM" :key="r.id" class="pm-mobile-card">
+            <div v-for="r in pmListPagedList" :key="r.id" class="pm-mobile-card">
               <div class="pmc-top">
                 <input type="checkbox" :value="r.id" v-model="batchSelected">
                 <b class="pmc-ref">{{r.refNo||'-'}}</b>
@@ -3313,6 +3317,15 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
             </div>
             <div v-if="!filteredPM.length" class="empty">Tiada rekod.</div>
+          </div>
+
+          <div v-if="pmListTotalPages>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
+            <span class="text-sm text-muted">Halaman {{pmListPage}} / {{pmListTotalPages}} &nbsp;·&nbsp; {{filteredPM.length}} rekod</span>
+            <div class="flex gap-8" style="flex-wrap:wrap">
+              <button class="btn btn-outline btn-sm" :disabled="pmListPage===1" @click="pmListGoToPage(pmListPage-1)">‹ Sebelum</button>
+              <button v-for="p in pmListPageNumbers" :key="p" class="btn btn-sm" :class="p===pmListPage?'btn-primary':'btn-outline'" @click="pmListGoToPage(p)">{{p}}</button>
+              <button class="btn btn-outline btn-sm" :disabled="pmListPage===pmListTotalPages" @click="pmListGoToPage(pmListPage+1)">Seterus ›</button>
+            </div>
           </div>
         </div>
       </div>
@@ -4476,6 +4489,19 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
             </div>
           </div>
+          <!-- CAPABILITY OVERRIDES — bagi Staff/Internship kebenaran tambahan
+               di luar default role mereka, tanpa perlu ubah code. Xda kesan
+               untuk Admin/Superadmin sebab mereka dah ada semua kebenaran ni
+               secara automatik. -->
+          <div v-if="['staff','internship'].includes(userModal.data.role)" class="form-group" style="margin-top:4px">
+            <label>Kebenaran Tambahan <span class="text-muted text-sm">(di luar default peranan {{userModal.data.role==='staff'?'Staff':'Internship'}})</span></label>
+            <div style="background:#f5f7fa;border:1px solid #e0e4e8;border-radius:8px;padding:10px 14px">
+              <label v-for="cap in PERMISSION_OVERRIDE_CAPABILITIES" :key="cap.key" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem;padding:5px 0">
+                <input type="checkbox" :checked="!!userModal.data.permissionOverrides[cap.key]" @change="e => userModal.data.permissionOverrides[cap.key] = e.target.checked">
+                {{cap.label}}
+              </label>
+            </div>
+          </div>
           <p v-if="userModal.editing" class="text-sm text-muted mb-12" style="background:#fff8e1;border-radius:6px;padding:8px 12px">⚠️ Menukar emel di sini <b>hanya</b> mengemaskini profil dalam sistem — emel log masuk sebenar di Firebase Authentication TIDAK berubah. Jika emel log masuk sebenar silap/lapuk, tukar terus di Firebase Console (Authentication → Users), kemudian padankan semula emel di sini.</p>
           <p v-if="userModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{userModal.err}}</p>
           <div class="flex gap-8">
@@ -4814,8 +4840,8 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr><th style="width:40px">#</th><th>Nama Kontraktor/Kedai</th><th>Skop Kerja/Barang Dijual</th><th>Area Service</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
               <tbody>
-                <tr v-for="(c,i) in (kontraktorLuar[kontraktorLuarProject]||[])" :key="c.id">
-                  <td style="text-align:center;color:#888;font-size:.8rem">{{i+1}}</td>
+                <tr v-for="(c,i) in kontraktorLuarPagedList" :key="c.id">
+                  <td style="text-align:center;color:#888;font-size:.8rem">{{(kontraktorLuarPage-1)*20+i+1}}</td>
                   <td style="font-weight:600;color:#002244">{{c.name}}</td>
                   <td>{{c.bidangKerja}}</td>
                   <td>{{c.areaService}}</td>
@@ -4825,9 +4851,17 @@ details.form-control[open] summary::after{content:'▴'}
                     <button class="btn btn-danger btn-sm btn-icon" @click="deleteKontraktor(c.id)" title="Padam">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="!(kontraktorLuar[kontraktorLuarProject]||[]).length"><td :colspan="canEditKontraktor?6:5" style="text-align:center;color:#bbb;font-style:italic;padding:20px">Tiada kontraktor lagi. Tambah di atas.</td></tr>
+                <tr v-if="!kontraktorLuarList.length"><td :colspan="canEditKontraktor?6:5" style="text-align:center;color:#bbb;font-style:italic;padding:20px">Tiada kontraktor lagi. Tambah di atas.</td></tr>
               </tbody>
             </table>
+          </div>
+          <div v-if="kontraktorLuarTotalPages>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px;padding:0 16px 16px">
+            <span class="text-sm text-muted">Halaman {{kontraktorLuarPage}} / {{kontraktorLuarTotalPages}} &nbsp;·&nbsp; {{kontraktorLuarList.length}} rekod</span>
+            <div class="flex gap-8" style="flex-wrap:wrap">
+              <button class="btn btn-outline btn-sm" :disabled="kontraktorLuarPage===1" @click="kontraktorLuarGoToPage(kontraktorLuarPage-1)">‹ Sebelum</button>
+              <button v-for="p in kontraktorLuarPageNumbers" :key="p" class="btn btn-sm" :class="p===kontraktorLuarPage?'btn-primary':'btn-outline'" @click="kontraktorLuarGoToPage(p)">{{p}}</button>
+              <button class="btn btn-outline btn-sm" :disabled="kontraktorLuarPage===kontraktorLuarTotalPages" @click="kontraktorLuarGoToPage(kontraktorLuarPage+1)">Seterus ›</button>
+            </div>
           </div>
         </div>
       </div>
@@ -5158,8 +5192,8 @@ details.form-control[open] summary::after{content:'▴'}
               <table>
                 <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th><th>Waranti</th></tr></thead>
                 <tbody>
-                  <tr v-for="(r,i) in assetRegister" :key="i">
-                    <td>{{i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
+                  <tr v-for="(r,i) in assetRegisterPagedList" :key="(assetRegisterPage-1)*20+i">
+                    <td>{{(assetRegisterPage-1)*20+i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
                     <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.serial}}</td><td>{{r.extra}}</td>
                     <td>
                       <a v-if="warrantyCheckUrl(r)" :href="warrantyCheckUrl(r)" target="_blank" rel="noopener" class="btn btn-outline btn-sm">🔗 Semak Waranti</a>
@@ -5169,6 +5203,14 @@ details.form-control[open] summary::after{content:'▴'}
                   <tr v-if="!assetRegister.length"><td colspan="10" class="empty">Tiada peralatan sepadan.</td></tr>
                 </tbody>
               </table>
+            </div>
+            <div v-if="assetRegisterTotalPages>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
+              <span class="text-sm text-muted">Halaman {{assetRegisterPage}} / {{assetRegisterTotalPages}} &nbsp;·&nbsp; {{assetRegister.length}} rekod</span>
+              <div class="flex gap-8" style="flex-wrap:wrap">
+                <button class="btn btn-outline btn-sm" :disabled="assetRegisterPage===1" @click="assetRegisterGoToPage(assetRegisterPage-1)">‹ Sebelum</button>
+                <button v-for="p in assetRegisterPageNumbers" :key="p" class="btn btn-sm" :class="p===assetRegisterPage?'btn-primary':'btn-outline'" @click="assetRegisterGoToPage(p)">{{p}}</button>
+                <button class="btn btn-outline btn-sm" :disabled="assetRegisterPage===assetRegisterTotalPages" @click="assetRegisterGoToPage(assetRegisterPage+1)">Seterus ›</button>
+              </div>
             </div>
           </div>
         </div>
@@ -7974,14 +8016,15 @@ createApp({
     // never edit or delete an existing one.
     const WARRANTY_EDIT_STAFF_OVERRIDE = ['izwan'];
     const canEditWarranty = computed(()=>
-      isAdminRole() || WARRANTY_EDIT_STAFF_OVERRIDE.includes((authProfile.value?.username||'').toLowerCase())
+      isAdminRole() || WARRANTY_EDIT_STAFF_OVERRIDE.includes((authProfile.value?.username||'').toLowerCase()) ||
+      hasPermOverride('editWarrantyCctv')
     );
     const canAddWarranty = computed(()=> canEditWarranty.value || authProfile.value?.role==='staff');
     // Waranti Peralatan VIR (spare part dibeli Daya One sendiri) — admin+
     // only, no staff-add exception, mirrors canEditEquip's existing VIR
     // rule (VIR equipment stays admin+ only, unlike CCTV where staff can
     // add/edit equipment too).
-    const canEditVirWarranty = computed(()=> isAdminRole());
+    const canEditVirWarranty = computed(()=> isAdminRole() || hasPermOverride('editWarrantyVir'));
     // The service-report modal/upload pipeline is shared between CCTV
     // (equipmentWarranty) and VIR (virEquipmentWarranty) records, each with
     // its own permission tier — resolve the right one from whichever
@@ -7996,7 +8039,9 @@ createApp({
     // admin+ can touch the Firestore doc for other write-restricted things
     // elsewhere in the app). VIR stays admin+ only.
     const canEditEquip = computed(()=>
-      isAdminRole() || (currentProject.value==='cctv' && authProfile.value?.role==='staff')
+      isAdminRole() || (currentProject.value==='cctv' && authProfile.value?.role==='staff') ||
+      (currentProject.value==='cctv' && hasPermOverride('editEquipmentCctv')) ||
+      (currentProject.value==='vir' && hasPermOverride('editEquipmentVir'))
     );
     function canEditPmRecord(r){
       return isAdminRole() || (r.createdBy && r.createdBy === authUser.value?.email);
@@ -8264,7 +8309,23 @@ createApp({
 
     // ---- User management ----
     const JABATAN_OPTIONS = ['Pengurusan','Teknikal'];
-    const userModal = reactive({ show:false, editing:false, err:'', data:{ username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',jabatanCustom:'',phone:'',email:'',accessType:'permanent',expiryDate:'' } });
+    const userModal = reactive({ show:false, editing:false, err:'', data:{ username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',jabatanCustom:'',phone:'',email:'',accessType:'permanent',expiryDate:'',permissionOverrides:{} } });
+    // Superadmin-configurable capability toggles — grants a SPECIFIC staff/
+    // internship account extra capability beyond their role's default,
+    // without needing a code change each time (replaces one-off hardcoded
+    // exceptions like the old WARRANTY_EDIT_STAFF_OVERRIDE=['izwan'] pattern
+    // going forward). Deliberately scoped to non-sensitive capabilities only
+    // — nothing here can grant user management, audit log deletion, backups,
+    // etc., which stay hardcoded to isAdminRole() regardless of overrides.
+    const PERMISSION_OVERRIDE_CAPABILITIES = [
+      { key:'editEquipmentCctv', label:'Edit/Padam Peralatan CCTV' },
+      { key:'editEquipmentVir', label:'Edit/Padam Peralatan VIR' },
+      { key:'editWarrantyCctv', label:'Edit/Padam Waranti Peralatan CCTV' },
+      { key:'editWarrantyVir', label:'Edit/Padam Waranti Peralatan VIR' },
+    ];
+    function hasPermOverride(key) {
+      return authProfile.value?.permissionOverrides?.[key] === true;
+    }
 
     // ── CONTRACT / SLA TRACKING ──
     const contracts = ref([]);
@@ -9976,6 +10037,32 @@ createApp({
       }
       return true;
     }));
+
+    // Paginated view of filteredPM — same fix as Log Audit (AUDIT_LOG_PAGE_SIZE
+    // above): the raw list grows long over the years, which made Rekod Borang
+    // scroll on forever. 20 rows per page, reset to page 1 whenever the
+    // filtered result set changes (new filter, or switching CCTV/VIR project).
+    const PM_LIST_PAGE_SIZE = 20;
+    const pmListPage = ref(1);
+    watch(filteredPM, () => { pmListPage.value = 1; });
+    const pmListTotalPages = computed(() => Math.max(1, Math.ceil(filteredPM.value.length / PM_LIST_PAGE_SIZE)));
+    const pmListPagedList = computed(() => {
+      const start = (pmListPage.value - 1) * PM_LIST_PAGE_SIZE;
+      return filteredPM.value.slice(start, start + PM_LIST_PAGE_SIZE);
+    });
+    function pmListGoToPage(p) {
+      pmListPage.value = Math.min(Math.max(1, p), pmListTotalPages.value);
+    }
+    const pmListPageNumbers = computed(() => {
+      const total = pmListTotalPages.value;
+      const cur = pmListPage.value;
+      const span = 3;
+      const from = Math.max(1, cur - span);
+      const to = Math.min(total, cur + span);
+      const nums = [];
+      for(let i = from; i <= to; i++) nums.push(i);
+      return nums;
+    });
 
     const yearList = computed(() => {
       const years = new Set(pmRecords.value.map(r=>r.year));
@@ -11921,13 +12008,13 @@ createApp({
 
     function openAddUser() {
       userModal.editing=false; userModal.err='';
-      Object.assign(userModal.data,{username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',jabatanCustom:'',phone:'',email:'',accessType:'permanent',expiryDate:''});
+      Object.assign(userModal.data,{username:'',password:'',name:'',role:'staff',jawatan:'',jabatan:'',jabatanCustom:'',phone:'',email:'',accessType:'permanent',expiryDate:'',permissionOverrides:{}});
       userModal.show=true;
     }
 
     function openEditUser(u) {
       userModal.editing=true; userModal.err='';
-      Object.assign(userModal.data,{username:u.username,password:'',name:u.name,role:u.role,jawatan:u.jawatan||'',jabatan:u.jabatan||'',jabatanCustom:'',phone:u.phone||'',email:u.email||'',accessType:u.accessType||'permanent',expiryDate:u.expiryDate||''});
+      Object.assign(userModal.data,{username:u.username,password:'',name:u.name,role:u.role,jawatan:u.jawatan||'',jabatan:u.jabatan||'',jabatanCustom:'',phone:u.phone||'',email:u.email||'',accessType:u.accessType||'permanent',expiryDate:u.expiryDate||'',permissionOverrides:{...(u.permissionOverrides||{})}});
       // Saved jabatan may be a free-text legacy value not in JABATAN_OPTIONS
       // — reflect that as "Lain-lain" + the custom text so editing shows it
       // correctly, same pattern as other smart dropdowns in this app.
@@ -12032,6 +12119,7 @@ createApp({
             phone: userModal.data.phone,
             accessType: userModal.data.accessType || 'permanent',
             expiryDate: userModal.data.accessType === 'temporary' ? (userModal.data.expiryDate || '') : '',
+            permissionOverrides: userModal.data.permissionOverrides || {},
             disabled: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
@@ -12048,6 +12136,7 @@ createApp({
             email: userModal.data.email,
             accessType: userModal.data.accessType || 'permanent',
             expiryDate: userModal.data.accessType === 'temporary' ? (userModal.data.expiryDate || '') : '',
+            permissionOverrides: userModal.data.permissionOverrides || {},
           });
           await logAudit('USER_EDIT', userModal.data.username);
           showToast('Maklumat pengguna dikemaskini!');
@@ -12218,6 +12307,31 @@ createApp({
     );
     const kontraktorLuar = ref({ cctv:[], vir:[] });
     const kontraktorLuarProject = ref('cctv'); // internal CCTV/VIR toggle within the one shared page
+    // Paginated view — same fix as Log Audit/Rekod Borang above, in case this
+    // list grows long over time. 20 rows per page, reset to page 1 whenever
+    // the CCTV/VIR toggle changes.
+    const KONTRAKTOR_LUAR_PAGE_SIZE = 20;
+    const kontraktorLuarPage = ref(1);
+    watch(kontraktorLuarProject, () => { kontraktorLuarPage.value = 1; });
+    const kontraktorLuarList = computed(() => kontraktorLuar.value[kontraktorLuarProject.value] || []);
+    const kontraktorLuarTotalPages = computed(() => Math.max(1, Math.ceil(kontraktorLuarList.value.length / KONTRAKTOR_LUAR_PAGE_SIZE)));
+    const kontraktorLuarPagedList = computed(() => {
+      const start = (kontraktorLuarPage.value - 1) * KONTRAKTOR_LUAR_PAGE_SIZE;
+      return kontraktorLuarList.value.slice(start, start + KONTRAKTOR_LUAR_PAGE_SIZE);
+    });
+    function kontraktorLuarGoToPage(p) {
+      kontraktorLuarPage.value = Math.min(Math.max(1, p), kontraktorLuarTotalPages.value);
+    }
+    const kontraktorLuarPageNumbers = computed(() => {
+      const total = kontraktorLuarTotalPages.value;
+      const cur = kontraktorLuarPage.value;
+      const span = 3;
+      const from = Math.max(1, cur - span);
+      const to = Math.min(total, cur + span);
+      const nums = [];
+      for(let i = from; i <= to; i++) nums.push(i);
+      return nums;
+    });
     // Negeri -> Kawasan (daerah) cascading dropdown for kontraktor Area
     // Service — replaces the old free-text field. The final selection is
     // still stored/displayed as a single "areaService" string ("Kawasan,
@@ -15215,6 +15329,32 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         return true;
       });
     });
+    // Paginated view of assetRegister — same fix as Log Audit/Rekod Borang/
+    // Kontraktor Luar above: with 17+ CCTV sites and dozens of VIR
+    // rooms/sites, this consolidated list across every equipment category
+    // gets very long. 20 rows per page, reset to page 1 whenever the
+    // filtered result set changes (project/category filter or search).
+    const ASSET_REGISTER_PAGE_SIZE = 20;
+    const assetRegisterPage = ref(1);
+    watch(assetRegister, () => { assetRegisterPage.value = 1; });
+    const assetRegisterTotalPages = computed(() => Math.max(1, Math.ceil(assetRegister.value.length / ASSET_REGISTER_PAGE_SIZE)));
+    const assetRegisterPagedList = computed(() => {
+      const start = (assetRegisterPage.value - 1) * ASSET_REGISTER_PAGE_SIZE;
+      return assetRegister.value.slice(start, start + ASSET_REGISTER_PAGE_SIZE);
+    });
+    function assetRegisterGoToPage(p) {
+      assetRegisterPage.value = Math.min(Math.max(1, p), assetRegisterTotalPages.value);
+    }
+    const assetRegisterPageNumbers = computed(() => {
+      const total = assetRegisterTotalPages.value;
+      const cur = assetRegisterPage.value;
+      const span = 3;
+      const from = Math.max(1, cur - span);
+      const to = Math.min(total, cur + span);
+      const nums = [];
+      for(let i = from; i <= to; i++) nums.push(i);
+      return nums;
+    });
     // One-click warranty lookup per equipment row. Dell has a well-known
     // public service-tag URL that lands directly on the real warranty page,
     // so serials for Dell gear resolve there. Hanwha and H3C both have real
@@ -15724,6 +15864,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
       filteredPM, yearList, submittedByDisplayName,
+      pmListPage, pmListTotalPages, pmListPagedList, pmListGoToPage, pmListPageNumbers,
       PROJECT_TYPES, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
@@ -15738,7 +15879,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
-      allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS,
+      allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS, PERMISSION_OVERRIDE_CAPABILITIES,
       userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
       contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
       virWarranty, virWarrantyModal, virWarrantyFilterStatus, loadVirWarranty, virWarrantyStatus, virWarrantyExpiringCount, virWarrantyFiltered, virWarrantyBySite,
@@ -15795,11 +15936,13 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       healthCountCctv, healthCountVir, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
+      assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
       kontraktorLuar, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
+      kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
       mobileNavOpen,
       darkMode,
       setTimeout
