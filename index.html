@@ -10368,25 +10368,49 @@ createApp({
     }
 
     async function loadAuditLogs() {
-      // Purge in background — never blocks the load if it fails
-      (async () => {
-        try {
-          const cutoff = new Date();
-          cutoff.setDate(cutoff.getDate() - 30);
-          const old = await db.collection('auditLogs').where('timestamp','<', cutoff).get();
-          if(old.size > 0) {
-            for(let i = 0; i < old.docs.length; i += 500) {
-              const batch = db.batch();
-              old.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
-              await batch.commit();
+      // Purge in background — never blocks the load if it fails. Only
+      // superadmin can actually delete auditLogs (Firestore rules), so
+      // there's no point even attempting this for other roles — it would
+      // just fail the read (rules now also restrict READ per-role below).
+      if(authProfile.value?.role === 'superadmin') {
+        (async () => {
+          try {
+            const cutoff = new Date();
+            cutoff.setDate(cutoff.getDate() - 30);
+            const old = await db.collection('auditLogs').where('timestamp','<', cutoff).get();
+            if(old.size > 0) {
+              for(let i = 0; i < old.docs.length; i += 500) {
+                const batch = db.batch();
+                old.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+                await batch.commit();
+              }
             }
-          }
-        } catch(e) { console.warn('auditLog purge failed:', e); }
-      })();
-      // Load current logs independently
+          } catch(e) { console.warn('auditLog purge failed:', e); }
+        })();
+      }
+      // Load current logs, scoped by role hierarchy: superadmin sees
+      // everything; admin sees admin+staff entries (not superadmin's); staff
+      // sees only staff entries. Matches firestore.rules' per-document read
+      // check exactly — each query below is deliberately a single equality
+      // filter + orderBy (not a combined `in` + orderBy), since that
+      // combination needs a composite index Firestore may not have; two
+      // simple queries merged client-side avoids that risk entirely.
       try {
-        const snap = await db.collection('auditLogs').orderBy('timestamp','desc').get();
-        auditLogs.value = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        const myRole = authProfile.value?.role;
+        let snaps;
+        if(myRole === 'superadmin') {
+          snaps = [await db.collection('auditLogs').orderBy('timestamp','desc').get()];
+        } else if(myRole === 'admin') {
+          snaps = await Promise.all([
+            db.collection('auditLogs').where('userRole','==','admin').orderBy('timestamp','desc').get(),
+            db.collection('auditLogs').where('userRole','==','staff').orderBy('timestamp','desc').get(),
+          ]);
+        } else {
+          snaps = [await db.collection('auditLogs').where('userRole','==','staff').orderBy('timestamp','desc').get()];
+        }
+        const merged = snaps.flatMap(s => s.docs.map(d => ({id: d.id, ...d.data()})));
+        merged.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
+        auditLogs.value = merged;
         auditLogPage.value = 1;
       } catch(e) { console.warn('loadAuditLogs failed:', e); }
     }
