@@ -2222,10 +2222,11 @@ details.form-control[open] summary::after{content:'▴'}
                   <option value="">-- Pilih --</option>
                   <option v-for="c in HDD_CAPACITIES" :key="c">{{c}}</option>
                 </select>
+                <input v-if="nHDD.capacity==='Lain-lain'" class="form-control" v-model="nHDD.capacityCustom" placeholder="Nyatakan kapasiti sebenar (cth: 22TB)" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Jumlah Unit</label><input class="form-control" type="number" min="1" v-model="nHDD.totalUnit" placeholder="cth: 10"></div>
               <div class="form-group"><label>Konfigurasi</label>
-                <select class="form-control" v-model="nHDD.config"><option value="">-- Pilih --</option><option>RAID 5</option><option>RAID 1</option><option>Single</option><option>JBOD</option></select>
+                <select class="form-control" v-model="nHDD.config"><option value="">-- Pilih --</option><option>RAID 0</option><option>RAID 1</option><option>RAID 5</option><option>RAID 6</option><option>Single</option><option>JBOD</option></select>
               </div>
               <div class="form-group"><label>NVR Berkaitan</label>
                 <select class="form-control" v-model="nHDD.nvrRef">
@@ -6017,6 +6018,7 @@ const HDD_MODELS = {
     'ST10000VX0004','ST10000VE0008','ST10000VE001','ST12000VX0001','ST12000VE001',
     'ST16000VE001','ST16000VE002','ST18000VE002','ST20000VE002',
     'ST8000NM017B-2TJ103',
+    'ST20000NM007D (Exos 20)','ST24000NM000H',
     'Lain-lain',
   ],
   'Toshiba': [
@@ -6037,7 +6039,7 @@ const HDD_MODELS = {
   ],
   'Lain-lain': [],
 };
-const HDD_CAPACITIES = ['500GB','1TB','2TB','3TB','4TB','6TB','8TB','10TB','12TB','14TB','16TB','18TB','20TB','Lain-lain'];
+const HDD_CAPACITIES = ['500GB','1TB','2TB','3TB','4TB','6TB','8TB','10TB','12TB','14TB','16TB','18TB','20TB','24TB','Lain-lain'];
 
 // PoE/network switch brands & models commonly used by CCTV integrators over
 // roughly the last 5 years (2020-2025).
@@ -6251,7 +6253,7 @@ createApp({
     const eqTab = ref('cameras');
     const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
     const nNVR = reactive({name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
-    const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''});
+    const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nRoom = reactive({name:'', nameCustom:'', system:'BCD', excludedGroups:[]});
     const nALM = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''});
@@ -9275,7 +9277,7 @@ createApp({
     const FORM_DEFAULTS = {
       nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
       nNVR:  {name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
-      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
+      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
       nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
@@ -11970,13 +11972,19 @@ createApp({
         }
         initDbStorageWidgetIfStale(); // fire-and-forget — no-op for non-superadmin, cache-first for superadmin
 
-        checkAutoBackup();
-        // Re-check periodically too — checkAutoBackup only fires once per
-        // calendar day, so re-running it is a cheap no-op except right
-        // after 10pm, when it catches sessions left open through the mark
-        // instead of only checking once at login.
-        clearInterval(_autoBackupWatcher);
-        _autoBackupWatcher = setInterval(checkAutoBackup, 30*60*1000);
+        // systemBackups is superadmin-only in Firestore rules — calling this
+        // for any other role means the read inside it always fails
+        // permission-denied (silently swallowed, but still a wasted round
+        // trip on every login + every 30-min re-check).
+        if(authProfile.value?.role === 'superadmin') {
+          checkAutoBackup();
+          // Re-check periodically too — checkAutoBackup only fires once per
+          // calendar day, so re-running it is a cheap no-op except right
+          // after 10pm, when it catches sessions left open through the mark
+          // instead of only checking once at login.
+          clearInterval(_autoBackupWatcher);
+          _autoBackupWatcher = setInterval(checkAutoBackup, 30*60*1000);
+        }
         buildNotifications();
         // Re-run periodically too — buildNotifications is otherwise only
         // triggered by pmRecords/contracts watchers, so day-threshold alerts
@@ -13322,6 +13330,15 @@ createApp({
           } else {
             nHDD.nvrRefCustom = '';
           }
+          // Capacity is a fixed list (not crowdsourced like brand/model), so
+          // a saved custom value never gets added to HDD_CAPACITIES — same
+          // "reflect as Lain-lain + custom text" reconciliation either way.
+          if(item.capacity && !HDD_CAPACITIES.includes(item.capacity)) {
+            nHDD.capacity = 'Lain-lain';
+            nHDD.capacityCustom = item.capacity;
+          } else {
+            nHDD.capacityCustom = '';
+          }
         }
       }
       equipEditIdx[key] = idx;
@@ -13417,7 +13434,9 @@ createApp({
       if(!nHDD.config){showToast('Sila pilih Konfigurasi','error');return;}
       const resolved = _resolveBrandModel(nHDD);
       resolved.nvrRef = _resolveDropdownCustom(nHDD.nvrRef, nHDD.nvrRefCustom);
+      resolved.capacity = _resolveDropdownCustom(nHDD.capacity, nHDD.capacityCustom);
       delete resolved.nvrRefCustom;
+      delete resolved.capacityCustom;
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].hdd;
       const dup = _findDupConflict('hdd', list, resolved, equipEditIdx.hdd);
