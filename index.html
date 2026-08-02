@@ -257,7 +257,7 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-print table{width:100%;border-collapse:collapse;margin-bottom:8px}
 .pm-print table th,.pm-print table td{border:1px solid #000;padding:3px 6px;font-size:9pt}
 .pm-print table th{background:#dce6f1;font-weight:bold;text-align:center;white-space:normal}
-.pm-print .section-title{background:#006633;color:#fff;padding:4px 8px;font-weight:bold;margin:8px 0 4px;font-size:9.5pt}
+.pm-print .section-title{background:#1A2332;color:#fff;padding:4px 8px;font-weight:bold;margin:8px 0 4px;font-size:9.5pt}
 .pm-print .sign-table td{height:60px;vertical-align:bottom}
 
 /* PASSWORD REVEAL */
@@ -476,7 +476,7 @@ details.form-control[open] summary::after{content:'▴'}
      need to wrap onto the next line as whole words, not split mid-word —
      break-all above is meant for long unbroken data values, not titles. */
   .pm-tbl td.pm-hdr-lbl{word-break:normal!important;overflow-wrap:break-word!important}
-  .pm-tbl th{word-break:break-word!important;overflow-wrap:break-word!important;max-width:0!important;white-space:normal!important}
+  .pm-tbl th{white-space:nowrap!important;max-width:0!important}
   .pm-corp-title,.pm-section-hdr,.pm-nota-box .pm-nota-hdr{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   .pm-tbl th,.pm-tbl tr:nth-child(even) td{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
@@ -531,18 +531,18 @@ details.form-control[open] summary::after{content:'▴'}
    that's what Mod Borang is for. Screen-only: print CSS ignores all this. */
 .pm-read-mode table{display:block;overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
 .pm-read-mode .pm-corp-header{display:flex;flex-wrap:wrap;justify-content:center;text-align:center}
-.pm-corp-header{border-bottom:3px solid #006633;padding-bottom:10px;margin-bottom:10px;display:grid;grid-template-columns:130px 1fr 130px;align-items:flex-start;gap:8px}
+.pm-corp-header{border-bottom:3px solid #1A2332;padding-bottom:10px;margin-bottom:10px;display:grid;grid-template-columns:130px 1fr 130px;align-items:flex-start;gap:8px}
 .pm-corp-logo-img{height:56px;max-width:100%;object-fit:contain;display:block}
 .pm-corp-center{text-align:center}
-.pm-corp-logo-txt{font-size:12pt;font-weight:bold;color:#006633;letter-spacing:.3px}
+.pm-corp-logo-txt{font-size:12pt;font-weight:bold;color:#1A2332;letter-spacing:.3px}
 .pm-corp-logo-sub{font-size:8pt;color:#444;margin-top:3px;line-height:1.5}
 .pm-corp-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .pm-corp-ref{text-align:right;font-size:7.5pt;color:#333;white-space:normal;overflow-wrap:break-word}
-.pm-corp-ref .ref-no{font-size:8.5pt;font-weight:bold;color:#006633;display:block;margin-top:1px}
+.pm-corp-ref .ref-no{font-size:8.5pt;font-weight:bold;color:#1A2332;display:block;margin-top:1px}
 .pm-classification{text-align:right;font-size:7.5pt;font-weight:700;color:#b71c1c;letter-spacing:.06em;margin-bottom:4px}
-.pm-corp-title{background:#006633;color:#fff;text-align:center;padding:6px 0;font-size:10.5pt;font-weight:bold;letter-spacing:.5px;margin-bottom:10px}
-.pm-corp-info{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #006633;margin-bottom:10px}
-.pm-info-cell{padding:5px 10px;font-size:9.5pt;border-right:1px solid #b2d8b2;border-bottom:1px solid #b2d8b2;word-break:break-word;overflow-wrap:break-word}
+.pm-corp-title{background:#1A2332;color:#fff;text-align:center;padding:6px 0;font-size:10.5pt;font-weight:bold;letter-spacing:.5px;margin-bottom:10px}
+.pm-corp-info{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #1A2332;margin-bottom:10px}
+.pm-info-cell{padding:5px 10px;font-size:9.5pt;border-right:1px solid #D5D9E0;border-bottom:1px solid #D5D9E0;word-break:break-word;overflow-wrap:break-word}
 .pm-info-cell:nth-child(even){border-right:none}
 /* Removing the bottom border on "the last row" used to be done by counting
    DOM position (nth-last-child), which assumed the grid always ends on a
@@ -553,28 +553,28 @@ details.form-control[open] summary::after{content:'▴'}
    is correct regardless of how many rows or full-width rows exist. */
 .pm-info-cell:not(.pm-info-full):not(:has(~ .pm-info-cell)){border-bottom:none}
 .pm-info-full{grid-column:1/-1;border-right:none;border-bottom:none}
-.pm-info-cell b{color:#006633}
-.pm-section-hdr{background:#006633;color:#fff;padding:4px 10px;font-size:9.5pt;font-weight:bold;margin:8px 0 3px;letter-spacing:.3px}
+.pm-info-cell b{color:#1A2332}
+.pm-section-hdr{background:#1A2332;color:#fff;padding:4px 10px;font-size:9.5pt;font-weight:bold;margin:8px 0 3px;letter-spacing:.3px}
 .pm-section-hdr span{opacity:.75;font-size:8.5pt;font-weight:normal;margin-left:6px}
 .pm-tbl{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:2px;table-layout:fixed}
 .pm-vir-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
 .pm-chk-box{display:inline-block;width:11px;height:11px;line-height:10px;border:1px solid #444;text-align:center;font-size:7.5pt;color:transparent;margin:0 1px;vertical-align:middle}
 .pm-chk-box.filled{color:#000;font-weight:700}
 .pm-vir-2col>.pm-tbl{min-width:0}
-.pm-tbl th{background:#cfe8d6;color:#003d1f;padding:3px 4px;text-align:center;border:1px solid #004d26;font-weight:800;font-size:7.3pt;word-break:break-word;overflow-wrap:break-word;max-width:0;white-space:normal;line-height:1.2}
-.pm-tbl td{padding:2px 4px;border:1px solid #b2d8b2;vertical-align:middle;word-break:break-all;overflow-wrap:break-word;max-width:0}
-.pm-tbl tr:nth-child(even) td{background:#f0f9f0}
+.pm-tbl th{background:#E9EBEF;color:#1A2332;padding:2px 3px;text-align:center;border:1px solid #111A26;font-weight:800;font-size:6.5pt;font-family:Arial,Helvetica,sans-serif;letter-spacing:0;white-space:nowrap;max-width:0;line-height:1.3}
+.pm-tbl td{padding:2px 4px;border:1px solid #D5D9E0;vertical-align:middle;word-break:break-all;overflow-wrap:break-word;max-width:0;font-family:'Times New Roman',Times,serif;font-size:8pt}
+.pm-tbl tr:nth-child(even) td{background:#F5F6F8}
 .pm-tbl .ok{color:#155724;font-weight:bold;text-align:center}
 .pm-tbl .no{color:#721c24;font-weight:bold;text-align:center}
 .pm-tbl .ctr{text-align:center}
 .pm-cam-summary{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:3px}
-.pm-cam-chip{display:inline-flex;align-items:center;gap:3px;background:#f0f9f0;border:1px solid #b2d8b2;border-radius:4px;padding:2px 8px;font-size:8.5pt;color:#333}
-.pm-cam-chip b{color:#006633}
-.pm-cam-total{margin-left:auto;font-weight:bold;color:#006633;font-size:9.5pt;background:#e0f2e0;border:1px solid #006633;border-radius:4px;padding:2px 10px}
+.pm-cam-chip{display:inline-flex;align-items:center;gap:3px;background:#F5F6F8;border:1px solid #D5D9E0;border-radius:4px;padding:2px 8px;font-size:8.5pt;color:#333}
+.pm-cam-chip b{color:#1A2332}
+.pm-cam-total{margin-left:auto;font-weight:bold;color:#1A2332;font-size:9.5pt;background:#F4F7DC;border:1px solid #7A841A;border-radius:4px;padding:2px 10px}
 .pm-sign-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
 .pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr}
-.pm-sign-box{border:1px solid #006633;padding:10px 12px}
-.pm-sign-box h4{font-size:9pt;color:#006633;margin-bottom:6px;font-weight:bold;border-bottom:1px solid #b2d8b2;padding-bottom:4px}
+.pm-sign-box{border:1px solid #1A2332;padding:10px 12px}
+.pm-sign-box h4{font-size:9pt;color:#1A2332;margin-bottom:6px;font-weight:bold;border-bottom:1px solid #D5D9E0;padding-bottom:4px}
 .pm-sign-box p{font-size:8.5pt;margin:2px 0;color:#333}
 /* The 3 sign boxes' italic description text differs in length (Kontraktor's
    own wording vs the 2 SPRM boxes' shared wording) — without a fixed
@@ -582,13 +582,13 @@ details.form-control[open] summary::after{content:'▴'}
    everything below) up, so the 3 boxes stop lining up underneath. */
 .pm-sign-box .pm-sign-desc{font-size:8pt;color:#555;font-style:italic;min-height:3.9em;line-height:1.3}
 .pm-sign-box .sig-space{height:140px;border-bottom:1px dashed #999;margin:8px 0 4px}
-.pm-footer{margin-top:10px;padding-top:6px;border-top:2px solid #006633;font-size:8pt;color:#555;display:flex;justify-content:space-between}
+.pm-footer{margin-top:10px;padding-top:6px;border-top:2px solid #1A2332;font-size:8pt;color:#555;display:flex;justify-content:space-between}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
 .pm-no-box{width:22px;height:22px;border:1.5px solid #333;display:inline-flex;align-items:center;justify-content:center;font-size:9pt;font-weight:700;border-radius:3px;color:#333}
-.pm-no-box-ticked{background:#006633;color:#fff;border-color:#006633}
+.pm-no-box-ticked{background:#1A2332;color:#fff;border-color:#1A2332}
 .pm-no-box-ticked::after{content:' ✓';font-size:7pt}
 .pm-nota-box{margin:16px 0 10px;border:1.5px solid #333;border-radius:3px}
-.pm-nota-box .pm-nota-hdr{background:#006633;color:#fff;font-size:9pt;font-weight:700;padding:4px 10px;letter-spacing:.04em}
+.pm-nota-box .pm-nota-hdr{background:#1A2332;color:#fff;font-size:9pt;font-weight:700;padding:4px 10px;letter-spacing:.04em}
 .pm-nota-box .pm-nota-lines{padding:6px 10px 4px}
 .pm-nota-line{border-bottom:1px solid #bbb;height:22px;margin-bottom:4px}
 .pm-watermark-ok{color:#155724;font-weight:bold}
@@ -1690,8 +1690,8 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">🛡️ Waranti Peralatan — Projek CCTV</div>
           <div class="flex gap-8">
-            <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportWarrantyExcel">⬇ Excel</button>
-            <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportWarrantyDocx">📝 Word</button>
+            <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportComingSoon">⬇ Excel</button>
+            <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportComingSoon">📝 Word</button>
             <button v-if="warrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportWarrantyPdf">🖨 PDF</button>
             <button v-if="canAddWarranty" class="btn btn-primary btn-sm" @click="openAddWarranty">+ Tambah Peralatan</button>
           </div>
@@ -1830,7 +1830,11 @@ details.form-control[open] summary::after{content:'▴'}
       <div v-if="page==='vir-warranty'">
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">🛡️ Waranti Peralatan — Projek VIR</div>
-          <button v-if="canEditVirWarranty" class="btn btn-primary btn-sm" @click="openAddVirWarranty">+ Tambah Part</button>
+          <div class="flex gap-8">
+            <button v-if="virWarrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportComingSoon">⬇ Excel</button>
+            <button v-if="virWarrantyFiltered.length" class="btn btn-outline btn-sm" @click="exportComingSoon">📝 Word</button>
+            <button v-if="canEditVirWarranty" class="btn btn-primary btn-sm" @click="openAddVirWarranty">+ Tambah Part</button>
+          </div>
         </div>
         <p class="text-sm text-muted mb-16">Tracking waranti spare part (cth: graphic card, sound card, PSU) yang dibeli sendiri oleh Daya One Resources Sdn. Bhd. dari kedai/supplier luar untuk sistem VIR (Optager HD4000/BCD) — berasingan sepenuhnya daripada waranti asal produk CCTV.</p>
 
@@ -2806,7 +2810,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <option v-for="r in pmVirSiteRooms.filter(x=>x.system===sys)" :key="r._uid" :value="r.name">{{r.name}}</option>
                   </optgroup>
                 </select>
-                <small v-if="pm.virSystem" style="color:#006633;font-size:.75rem">Sistem: <b>{{pm.virSystem}}</b></small>
+                <small v-if="pm.virSystem" style="color:#1A2332;font-size:.75rem">Sistem: <b>{{pm.virSystem}}</b></small>
               </template>
               <template v-else>
                 <select class="form-control" v-model="pm.virRoomNo">
@@ -2853,12 +2857,12 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="form-group">
               <label>No. Rujukan</label>
               <div style="display:flex;align-items:center;gap:0">
-                <span v-if="refNoPrefix" style="background:#e8f5e9;border:1px solid #b2d8b2;border-right:none;padding:6px 10px;border-radius:4px 0 0 4px;font-size:.85rem;color:#006633;font-weight:600;white-space:nowrap">{{refNoPrefix}}</span>
+                <span v-if="refNoPrefix" style="background:#F5F6F8;border:1px solid #D5D9E0;border-right:none;padding:6px 10px;border-radius:4px 0 0 4px;font-size:.85rem;color:#1A2332;font-weight:600;white-space:nowrap">{{refNoPrefix}}</span>
                 <input class="form-control" v-model="refNoSuffix" placeholder="001" :style="refNoPrefix?'border-radius:0 4px 4px 0;flex:1;min-width:60px':''" :disabled="!refNoPrefix" :title="!pm.siteId?'Pilih site dahulu':(currentProject==='vir'&&!pm.virRoomNo?'Pilih bilik dahulu':(!pm.maintType?'Pilih jenis penyelenggaraan dahulu':''))">
               </div>
               <small v-if="refNoDuplicate" style="color:#c62828;font-size:.75rem;font-weight:600">⚠️ No. rujukan <b>{{pm.refNo}}</b> sudah wujud dalam rekod. Sila guna nombor lain.</small>
               <small v-else-if="refNoGapWarning" style="color:#e65100;font-size:.75rem;font-weight:600">⚠️ No. <b>{{nextRefNoSuggestion}}</b> untuk site ini belum digunakan — guna <b>{{refNoSuffix}}</b> akan tinggalkan gap. Cadangan seterusnya: <b>{{nextRefNoSuggestion}}</b>.</small>
-              <small v-else-if="pm.refNo" style="color:#006633;font-size:.75rem">No. Rujukan: <b>{{pm.refNo}}</b></small>
+              <small v-else-if="pm.refNo" style="color:#1A2332;font-size:.75rem">No. Rujukan: <b>{{pm.refNo}}</b></small>
               <small v-else-if="!pm.siteId" style="color:#888;font-size:.75rem">Pilih site dahulu untuk jana no. rujukan</small>
               <small v-else-if="currentProject==='vir' && !pm.virRoomNo" style="color:#888;font-size:.75rem">Pilih bilik dahulu untuk jana no. rujukan (setiap bilik ada nombor sendiri)</small>
               <small v-else-if="!pm.maintType" style="color:#888;font-size:.75rem">Pilih jenis penyelenggaraan (PM/CM) dahulu untuk jana no. rujukan — nombor PM dan CM diasingkan</small>
@@ -2889,7 +2893,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="pmStep===2 && currentProject==='vir'" class="card">
           <div class="card-title">✅ Senarai Semak Peralatan VIR <span v-if="pm.virSystem" style="font-weight:400;color:#888;font-size:.8rem">({{pm.virSystem}})</span></div>
           <template v-for="section in virSectionsFor(pm.virSystem)" :key="section">
-            <div style="font-weight:700;color:#006633;font-size:.85rem;padding:10px 0 6px;border-bottom:2px solid #006633;margin-bottom:8px;margin-top:14px">
+            <div style="font-weight:700;color:#1A2332;font-size:.85rem;padding:10px 0 6px;border-bottom:2px solid #1A2332;margin-bottom:8px;margin-top:14px">
               {{section}}
             </div>
             <div class="tbl-wrap">
@@ -2898,7 +2902,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <template v-for="(item,idx) in pm.virItems.filter(x=>x.section===section)" :key="item.key">
                     <tr v-if="item.isHeader">
-                      <td colspan="4" style="font-weight:700;background:#f0f7f2;color:#006633;padding:6px 8px">{{item.label}}</td>
+                      <td colspan="4" style="font-weight:700;background:#F5F6F8;color:#1A2332;padding:6px 8px">{{item.label}}</td>
                     </tr>
                     <tr v-else>
                       <td>{{idx+1}}</td>
@@ -2935,19 +2939,19 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="card-title">✍️ Tandatangan</div>
           <div class="form-row form-row-2" style="margin-bottom:14px">
             <div>
-              <p class="fw-600 mb-12" style="color:#006633">Wakil Kontraktor</p>
+              <p class="fw-600 mb-12" style="color:#1A2332">Wakil Kontraktor</p>
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.contractorName"></div>
               <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.contractorJawatan"></div>
               <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.contractorTarikh"></div>
             </div>
             <div>
-              <p class="fw-600 mb-12" style="color:#006633">Wakil SPRM (Negeri/Cawangan)</p>
+              <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Negeri/Cawangan)</p>
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.clientName"></div>
               <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.clientJawatan"></div>
               <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.clientTarikh"></div>
             </div>
             <div style="grid-column:1/-1">
-              <p class="fw-600 mb-12" style="color:#006633">Wakil SPRM (Ibu Pejabat / HQ)</p>
+              <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Ibu Pejabat / HQ)</p>
               <div class="form-row form-row-2">
                 <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.client2Name"></div>
                 <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.client2Jawatan"></div>
@@ -3152,19 +3156,19 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="card-title">✍️ Tandatangan</div>
             <div class="form-row form-row-2">
               <div>
-                <p class="fw-600 mb-12" style="color:#006633">Wakil Kontraktor</p>
+                <p class="fw-600 mb-12" style="color:#1A2332">Wakil Kontraktor</p>
                 <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.contractorName"></div>
                 <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.contractorJawatan"></div>
                 <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.contractorTarikh"></div>
               </div>
               <div>
-                <p class="fw-600 mb-12" style="color:#006633">Wakil SPRM (Negeri/Cawangan)</p>
+                <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Negeri/Cawangan)</p>
                 <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.clientName"></div>
                 <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.clientJawatan"></div>
                 <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.clientTarikh"></div>
               </div>
               <div style="grid-column:1/-1">
-                <p class="fw-600 mb-12" style="color:#006633">Wakil SPRM (Ibu Pejabat / HQ)</p>
+                <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Ibu Pejabat / HQ)</p>
                 <div class="form-row form-row-2">
                   <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.client2Name"></div>
                   <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.client2Jawatan"></div>
@@ -3382,7 +3386,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="pm-info-cell"><b>Tarikh Penyelenggaraan:</b> {{fmtDateDash(viewPM?.visitDate)}}</div>
             <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}}</div>
             <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{viewPM?.month?MONTHS[viewPM.month-1]:'—'}} {{viewPM?.year}}</div>
-            <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#006633">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
+            <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#1A2332">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
             <!-- VIR only — row split into 2 columns instead of a lone
                  full-width "Penyelenggaraan No." bar: Jenis Sistem VIR
                  (BCD/Optager HD4000) always shows on the left, paired with
@@ -3442,16 +3446,16 @@ details.form-control[open] summary::after{content:'▴'}
                   <tbody>
                     <template v-for="(item,idx) in col.items" :key="item.key">
                       <tr v-if="item.isHeader">
-                        <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#e8f4ee">{{item.label}}</td>
-                        <td style="text-align:center;white-space:nowrap;background:#e8f4ee;font-size:7pt;color:#555;font-weight:400">
+                        <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#F5F6F8">{{item.label}}</td>
+                        <td style="text-align:center;white-space:nowrap;background:#F5F6F8;font-size:7pt;color:#555;font-weight:400">
                           <template v-if="idx+1<col.items.length && !col.items[idx+1].isHeader">
                             <span style="color:#155724">&#10003;</span>&nbsp;/&nbsp;<span style="color:#721c24">&#10007;</span>
                           </template>
                         </td>
-                        <td style="background:#e8f4ee"></td>
+                        <td style="background:#F5F6F8"></td>
                       </tr>
                       <tr v-else>
-                        <td style="white-space:nowrap;text-align:center;color:#006633">&#8211;</td>
+                        <td style="white-space:nowrap;text-align:center;color:#1A2332">&#8211;</td>
                         <td>{{item.label}}</td>
                         <td style="text-align:center;white-space:nowrap">
                           <span class="pm-chk-box"></span>
@@ -3511,7 +3515,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="pm-vir-2col">
               <table class="pm-tbl" v-for="(u,ui) in virDefaultSettingUnits" :key="ui">
                 <thead>
-                  <tr><th colspan="3" style="text-align:left;background:#e8f4ee">{{u.name}}</th></tr>
+                  <tr><th colspan="3" style="text-align:left;background:#F5F6F8">{{u.name}}</th></tr>
                   <tr><th style="width:34%">Setting</th><th>IP Address</th><th style="width:20%;text-align:center">Status</th></tr>
                 </thead>
                 <tbody>
@@ -3539,25 +3543,22 @@ details.form-control[open] summary::after{content:'▴'}
           <table class="pm-tbl">
             <thead><tr>
               <th style="width:4%">No.</th>
-              <th style="width:20%">Nama / Lokasi</th>
-              <th style="width:13%">IP Address</th>
-              <th style="width:9%">Brand</th>
-              <th style="width:16%">Model</th>
-              <th style="width:14%">No. Siri</th>
-              <th style="width:8%">Jenis</th>
-              <th style="width:10%">Kualiti Paparan</th>
-              <th style="width:6%">Nota</th>
+              <th style="width:25%">Nama / Lokasi</th>
+              <th style="width:15%">IP Address</th>
+              <th style="width:19%">Model</th>
+              <th style="width:16%">No. Siri</th>
+              <th style="width:9%">Jenis</th>
+              <th style="width:12%">Status</th>
             </tr></thead>
             <tbody>
               <tr v-for="(c,i) in viewPM?.cameras" :key="i">
                 <td class="ctr">{{i+1}}</td>
-                <td>{{c.name}}</td><td class="ctr">{{c.ip}}</td><td class="ctr">{{c.brand}}</td>
-                <td class="ctr">{{c.model}}</td><td class="ctr" style="font-family:monospace">{{c.serial}}</td>
+                <td>{{c.name}}</td><td class="ctr">{{c.ip}}</td>
+                <td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
                 <td class="ctr">{{c.camType}}</td>
                 <td :class="c.display==='Baik'?'ok':'no'">{{c.display}}</td>
-                <td>{{c.nota}}</td>
               </tr>
-              <tr v-if="!viewPM?.cameras?.length"><td colspan="9" class="ctr" style="padding:8px;color:#888">Tiada rekod kamera</td></tr>
+              <tr v-if="!viewPM?.cameras?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod kamera</td></tr>
             </tbody>
           </table>
 
@@ -3565,17 +3566,15 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">2. &nbsp;NETWORK VIDEO RECORDER (NVR)</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:18%">Nama / Jenis</th><th style="width:9%">Brand</th><th style="width:10%">Model</th><th style="width:12%">No. Siri</th><th style="width:10%">IP Address</th><th style="width:9%">Software Operation</th><th style="width:8%">Status</th><th style="width:17%">Nota</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:33%">Nama / Jenis</th><th style="width:17%">Model</th><th style="width:18%">No. Siri</th><th style="width:16%">IP Address</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(n,i) in viewPM?.nvr" :key="i">
-                <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.brand}}</td><td class="ctr">{{n.model}}</td>
-                <td class="ctr" style="font-family:monospace">{{n.serial}}</td>
-                <td class="ctr" style="font-family:monospace">{{n.ip}}</td>
-                <td :class="n.asmOp==='Baik'?'ok':'no'">{{n.asmOp}}</td>
+                <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.model}}</td>
+                <td class="ctr">{{n.serial}}</td>
+                <td class="ctr">{{n.ip}}</td>
                 <td :class="n.status==='Baik'?'ok':'no'">{{n.status}}</td>
-                <td>{{n.nota}}</td>
               </tr>
-              <tr v-if="!viewPM?.nvr?.length"><td colspan="9" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
+              <tr v-if="!viewPM?.nvr?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
             </tbody>
           </table>
           </div>
@@ -3584,7 +3583,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">3. &nbsp;CAKERA KERAS (HARD DISK)</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:16%">Brand</th><th style="width:18%">Model</th><th style="width:24%">Total HDD &amp; Konfigurasi</th><th style="width:18%">Jenis RAID</th><th style="width:20%">Status</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:20%">Brand</th><th style="width:22%">Model</th><th style="width:24%">Saiz Storan</th><th style="width:18%">Konfigurasi Storan</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(h,i) in viewPM?.hdd" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td>
@@ -3601,17 +3600,14 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">4. &nbsp;POE/NETWORK SWITCH</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:12%">Brand</th><th style="width:15%">Model</th><th style="width:16%">No. Siri</th><th style="width:13%">Error Notification</th><th style="width:13%">Port Status</th><th style="width:9%">Status</th><th style="width:18%">Nota</th></tr></thead>
+            <thead><tr><th style="width:5%">No.</th><th style="width:17%">Brand</th><th style="width:43%">Model</th><th style="width:23%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(s,i) in viewPM?.switches" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}}</td>
-                <td class="ctr" style="font-family:monospace">{{s.serial}}</td>
-                <td :class="s.errNotif==='Tiada'?'ok':'no'">{{s.errNotif}}</td>
-                <td :class="s.portStatus==='Baik'?'ok':'no'">{{s.portStatus}}</td>
+                <td class="ctr">{{s.serial}}</td>
                 <td :class="s.status==='Baik'?'ok':'no'">{{s.status}}</td>
-                <td>{{s.nota}}</td>
               </tr>
-              <tr v-if="!viewPM?.switches?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
+              <tr v-if="!viewPM?.switches?.length"><td colspan="5" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
             </tbody>
           </table>
           </div>
@@ -3620,15 +3616,14 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">5. &nbsp;SMS ALARM SYSTEM</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:20%">Nama</th><th style="width:15%">Jenis</th><th style="width:15%">Model</th><th style="width:17%">No. Siri</th><th style="width:14%">Functionality</th><th style="width:14%">Status</th></tr></thead>
+            <thead><tr><th style="width:5%">No.</th><th style="width:24%">Nama</th><th style="width:22%">Jenis</th><th style="width:15%">Model</th><th style="width:22%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(a,i) in viewPM?.alarms" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{a.name}}</td><td>{{a.type}}</td><td>{{a.model}}</td>
-                <td class="ctr" style="font-family:monospace">{{a.serial}}</td>
-                <td :class="a.func==='Baik'?'ok':'no'">{{a.func}}</td>
+                <td class="ctr">{{a.serial}}</td>
                 <td :class="a.status==='Baik'?'ok':'no'">{{a.status}}</td>
               </tr>
-              <tr v-if="!viewPM?.alarms?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod Alarm</td></tr>
+              <tr v-if="!viewPM?.alarms?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod Alarm</td></tr>
             </tbody>
           </table>
           </div>
@@ -3637,15 +3632,14 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">6. &nbsp;PERALATAN LAIN-LAIN</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:22%">Nama/Lokasi</th><th style="width:10%">Kategori</th><th style="width:9%">Brand</th><th style="width:16%">Model</th><th style="width:16%">No. Siri</th><th style="width:9%">Status</th><th style="width:13%">Nota</th></tr></thead>
+            <thead><tr><th style="width:5%">No.</th><th style="width:25%">Nama/Lokasi</th><th style="width:12%">Kategori</th><th style="width:11%">Brand</th><th style="width:19%">Model</th><th style="width:16%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(m,i) in viewPM?.misc" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td class="ctr">{{m.brand}}</td>
-                <td class="ctr">{{m.model}}</td><td class="ctr" style="font-family:monospace">{{m.serial}}</td>
+                <td class="ctr">{{m.model}}</td><td class="ctr">{{m.serial}}</td>
                 <td :class="m.status==='Baik'?'ok':'no'">{{m.status}}</td>
-                <td>{{m.nota}}</td>
               </tr>
-              <tr v-if="!viewPM?.misc?.length"><td colspan="8" class="ctr" style="padding:8px;color:#888">Tiada rekod peralatan lain-lain</td></tr>
+              <tr v-if="!viewPM?.misc?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod peralatan lain-lain</td></tr>
             </tbody>
           </table>
           </div>
@@ -4673,39 +4667,18 @@ details.form-control[open] summary::after{content:'▴'}
             <span style="font-weight:600;font-size:.88rem;word-break:break-all">{{filePreviewModal.name}}</span>
             <div class="flex gap-8">
               <template v-if="filePreviewModal.type==='image'">
-                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.max(.25,filePreviewModal.zoom-.25);filePreviewModal.panX=0;filePreviewModal.panY=0" title="Kecilkan">➖</button>
+                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.max(.25,filePreviewModal.zoom-.25)" title="Kecilkan">➖</button>
                 <span class="text-muted text-sm" style="min-width:42px;text-align:center;align-self:center">{{Math.round(filePreviewModal.zoom*100)}}%</span>
-                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.min(4,filePreviewModal.zoom+.25);filePreviewModal.panX=0;filePreviewModal.panY=0" title="Besarkan">➕</button>
+                <button class="btn btn-sm btn-outline" @click="filePreviewModal.zoom=Math.min(4,filePreviewModal.zoom+.25)" title="Besarkan">➕</button>
                 <button class="btn btn-sm btn-outline" @click="printImagePreview" title="Cetak">🖨 Cetak</button>
               </template>
-              <!-- The drag-to-pan overlay below sits on top of the PDF
-                   iframe, which necessarily blocks the browser's own PDF
-                   toolbar (its zoom/print/page-nav controls) — this button
-                   is the workaround: opens the same PDF in a full browser
-                   tab where that native toolbar works normally. -->
-              <button v-if="filePreviewModal.type==='pdf'" class="btn btn-sm btn-outline" @click="openPdfInNewTab" title="Buka dalam tab baharu untuk zoom/cetak guna toolbar PDF asal">🖨 Buka &amp; Cetak</button>
-              <button v-if="filePreviewModal.type==='pdf' && (filePreviewModal.panX||filePreviewModal.panY)" class="btn btn-sm btn-outline" @click="filePreviewModal.panX=0;filePreviewModal.panY=0" title="Reset kedudukan">↺ Reset</button>
               <a :href="filePreviewModal.url" target="_blank" rel="noopener" class="btn btn-sm btn-outline">⬇ Muat Turun</a>
               <button @click="filePreviewModal.show=false" style="background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
             </div>
           </div>
-          <div style="flex:1;overflow:hidden;background:#525659;display:flex;align-items:center;justify-content:center;position:relative">
-            <template v-if="filePreviewModal.type==='pdf'">
-              <iframe :src="filePreviewModal.url" style="width:100%;height:100%;border:none"
-                :style="{transform:`translate(${filePreviewModal.panX}px, ${filePreviewModal.panY}px)`}"></iframe>
-              <!-- Transparent drag-capture layer — a cross-origin PDF
-                   iframe's own content can't be reached by parent-page
-                   mouse/touch listeners (browser sandboxing), so this is the
-                   only way to detect a grab-drag gesture over it. Trade-off
-                   accepted: this also blocks the iframe's native vertical
-                   scroll and toolbar while the preview is open (see the
-                   "Buka & Cetak" button above for the toolbar workaround). -->
-              <div @mousedown="startPdfPan" @touchstart="startPdfPan"
-                :style="{position:'absolute', inset:'0', cursor: filePreviewModal.panning?'grabbing':'grab'}"></div>
-            </template>
-            <img v-else-if="filePreviewModal.type==='image'" :src="filePreviewModal.url" draggable="false"
-              @mousedown="startImagePan" @touchstart="startImagePan"
-              :style="{maxWidth:'100%', maxHeight:'100%', objectFit:'contain', transform:`translate(${filePreviewModal.panX}px, ${filePreviewModal.panY}px) scale(${filePreviewModal.zoom})`, cursor: filePreviewModal.zoom>1 ? (filePreviewModal.panning?'grabbing':'grab') : 'default', userSelect:'none'}">
+          <div :style="{flex:1, overflow:'auto', background:'#525659', display:'flex', alignItems: filePreviewModal.zoom<=1?'center':'flex-start', justifyContent: filePreviewModal.zoom<=1?'center':'flex-start'}">
+            <iframe v-if="filePreviewModal.type==='pdf'" :src="filePreviewModal.url" style="width:100%;height:100%;border:none"></iframe>
+            <img v-else-if="filePreviewModal.type==='image'" :src="filePreviewModal.url" :style="{maxWidth: filePreviewModal.zoom<=1?'100%':'none', maxHeight: filePreviewModal.zoom<=1?'100%':'none', width: filePreviewModal.zoom>1?(filePreviewModal.zoom*100)+'%':'auto', objectFit:'contain'}">
           </div>
         </div>
       </div>
@@ -5593,7 +5566,7 @@ details.form-control[open] summary::after{content:'▴'}
       <div class="hdr" style="text-align:center;margin-bottom:8px">
         <div style="font-weight:700;font-size:13pt">DAYA ONE RESOURCES SDN BHD</div>
         <div style="font-size:9pt;color:#555">No 29-1 Jalan Equine 9A, Taman Equine, Seri Kembangan 43300, Selangor &nbsp;|&nbsp; Tel: 03-89431400</div>
-        <div style="margin-top:6px;background:#006633;color:#fff;padding:4px 0;font-weight:700;font-size:11pt">
+        <div style="margin-top:6px;background:#1A2332;color:#fff;padding:4px 0;font-weight:700;font-size:11pt">
           {{r.project==='vir'?'BORANG PENYELENGGARAAN SISTEM VIR':'BORANG PENYELENGGARAAN SISTEM CCTV'}} — SPRM
         </div>
       </div>
@@ -8820,7 +8793,7 @@ createApp({
     }
     // In-app preview (PDF/gambar render terus dalam modal via iframe/img —
     // DOC/DOCX tiada native browser viewer, jadi buka tab baharu je terus).
-    const filePreviewModal = reactive({ show:false, url:'', name:'', type:'', zoom:1, panX:0, panY:0, panning:false });
+    const filePreviewModal = reactive({ show:false, url:'', name:'', type:'', zoom:1 });
     function previewServiceReport(r) {
       const ext = r.name.split('.').pop().toLowerCase();
       if(ext === 'pdf') { filePreviewModal.type = 'pdf'; }
@@ -8829,73 +8802,9 @@ createApp({
       filePreviewModal.url = r.url;
       filePreviewModal.name = r.name;
       filePreviewModal.zoom = 1;
-      filePreviewModal.panX = 0; filePreviewModal.panY = 0;
       filePreviewModal.show = true;
     }
-    // Click-and-hold drag-to-pan for zoomed images — plain CSS overflow
-    // scroll doesn't work cleanly here since the image is centered via flex
-    // (overflow before the centered point becomes unreachable by scroll in
-    // most browsers), so panning is done manually via transform: translate
-    // instead, tracked in filePreviewModal.panX/panY.
-    let _panStart = null;
-    // Set true the moment an actual drag movement happens (not just a
-    // plain click) — lets closeFilePreview() below tell "user dragged the
-    // image and happened to release outside the modal box" apart from "user
-    // genuinely clicked the backdrop to close", since a drag that ends over
-    // the dark backdrop would otherwise also satisfy modal-bg's @click.self.
-    let _justPanned = false;
-    function startImagePan(e) {
-      if(filePreviewModal.zoom <= 1) return;
-      const pt = e.touches ? e.touches[0] : e;
-      _panStart = { x: pt.clientX, y: pt.clientY, panX: filePreviewModal.panX, panY: filePreviewModal.panY };
-      filePreviewModal.panning = true;
-      window.addEventListener('mousemove', _dragImagePan);
-      window.addEventListener('mouseup', _stopImagePan);
-      window.addEventListener('touchmove', _dragImagePan, { passive:false });
-      window.addEventListener('touchend', _stopImagePan);
-    }
-    // PDF pan has no zoom concept of its own (that's the native browser PDF
-    // viewer's job) — panning is always available here, unlike the image's
-    // zoom>1 gate above, since it's the ONLY way to move around the PDF now
-    // that the drag-capture overlay blocks the iframe's native scroll.
-    function startPdfPan(e) {
-      const pt = e.touches ? e.touches[0] : e;
-      _panStart = { x: pt.clientX, y: pt.clientY, panX: filePreviewModal.panX, panY: filePreviewModal.panY };
-      filePreviewModal.panning = true;
-      window.addEventListener('mousemove', _dragImagePan);
-      window.addEventListener('mouseup', _stopImagePan);
-      window.addEventListener('touchmove', _dragImagePan, { passive:false });
-      window.addEventListener('touchend', _stopImagePan);
-    }
-    // Workaround for the PDF toolbar (zoom/print/page nav) becoming
-    // unreachable behind the drag overlay — opens the same file in a full
-    // browser tab, where the native PDF viewer's own toolbar works normally.
-    function openPdfInNewTab() {
-      window.open(filePreviewModal.url, '_blank');
-    }
-    function _dragImagePan(e) {
-      if(!_panStart) return;
-      if(e.touches) e.preventDefault(); // stop page scroll while panning on mobile
-      const pt = e.touches ? e.touches[0] : e;
-      const newPanX = _panStart.panX + (pt.clientX - _panStart.x);
-      const newPanY = _panStart.panY + (pt.clientY - _panStart.y);
-      if(newPanX !== filePreviewModal.panX || newPanY !== filePreviewModal.panY) _justPanned = true;
-      filePreviewModal.panX = newPanX;
-      filePreviewModal.panY = newPanY;
-    }
-    function _stopImagePan() {
-      _panStart = null;
-      filePreviewModal.panning = false;
-      window.removeEventListener('mousemove', _dragImagePan);
-      window.removeEventListener('mouseup', _stopImagePan);
-      window.removeEventListener('touchmove', _dragImagePan);
-      window.removeEventListener('touchend', _stopImagePan);
-    }
-    // Backdrop click-to-close — skipped once right after a real drag ends
-    // there (see _justPanned above), so panning past the modal's edge
-    // doesn't accidentally close the whole preview.
     function closeFilePreview() {
-      if(_justPanned) { _justPanned = false; return; }
       filePreviewModal.show = false;
     }
     // Gambar (JPG/PNG) xda toolbar print terbina-dalam macam PDF viewer —
@@ -9041,6 +8950,13 @@ createApp({
         await logAudit('VIR_WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
         showToast('Rekod waranti VIR dipadam.');
       } catch(e) { showToast('Gagal padam rekod waranti VIR: ' + e.message, 'error'); }
+    }
+    // Waranti Peralatan's Excel/Word export temporarily disabled (both CCTV
+    // and VIR) per admin request — buttons stay visible/clickable, just
+    // short-circuit to this notice instead of running the real export, so
+    // there's no need to touch the actual export functions/logic below.
+    function exportComingSoon() {
+      showToast('Fungsi ini masih diselenggara oleh admin.', 'error');
     }
     async function exportWarrantyExcel() {
       const rows = warrantyFiltered.value.map((w,i) => ({
@@ -12311,7 +12227,7 @@ createApp({
           <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Contact Person Pegawai SPRM — ${projLabel}</h2>
-            <p class="sub">Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
+            <p class="sub">Daya One Resources Sdn Bhd &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
           </div>
           <img src="logo_sprm.png" alt="SPRM" class="header-logo">
         </div>
@@ -15936,10 +15852,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openAddContract, openEditContract, submitContract, deleteContract,
       CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
-      openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx,
+      openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
       showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
-      filePreviewModal, previewServiceReport, printImagePreview, startImagePan, startPdfPan, openPdfInNewTab, closeFilePreview,
+      filePreviewModal, previewServiceReport, printImagePreview, closeFilePreview,
       vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract,
       setExpiryPreset, userExpiryStatus,
       resetPwModal, openResetPw, submitResetPw,
