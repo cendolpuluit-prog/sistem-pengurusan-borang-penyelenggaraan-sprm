@@ -466,8 +466,9 @@ details.form-control[open] summary::after{content:'▴'}
   .pm-preview-label{display:none!important}
   .pm-corp-header{width:100%!important;display:grid!important;grid-template-columns:110px 1fr 110px!important;box-sizing:border-box}
   .pm-corp-info{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
-  .pm-sign-wrap{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr 1fr!important;box-sizing:border-box}
+  .pm-sign-wrap{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr 1fr!important;grid-template-rows:repeat(6,auto)!important;box-sizing:border-box}
   .pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr!important}
+  .pm-sign-box{display:grid!important;grid-template-rows:subgrid!important;grid-row:span 6!important}
   .pm-vir-2col{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
   .pm-vir-2col>.pm-tbl{min-width:0!important}
   .pm-tbl{table-layout:fixed!important;width:100%!important;border-collapse:collapse!important}
@@ -571,16 +572,22 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-cam-chip{display:inline-flex;align-items:center;gap:3px;background:#F5F6F8;border:1px solid #D5D9E0;border-radius:4px;padding:2px 8px;font-size:8.5pt;color:#333}
 .pm-cam-chip b{color:#1A2332}
 .pm-cam-total{margin-left:auto;font-weight:bold;color:#1A2332;font-size:9.5pt;background:#F4F7DC;border:1px solid #7A841A;border-radius:4px;padding:2px 10px}
-.pm-sign-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:12px}
+/* Subgrid alignment — each of the 3 sign boxes' 6 children (h4, desc,
+   sig-space, Nama, Jawatan, Tarikh) are placed on 6 shared row tracks
+   defined here on the wrapper; .pm-sign-box below opts into those SAME row
+   tracks via grid-template-rows:subgrid instead of sizing its own rows
+   independently. The browser then auto-sizes each row to whichever of the
+   3 boxes needs the most height at that row (e.g. row 2 = tallest of the
+   3 description paragraphs) — every box's h4/desc/sig-space/Nama/Jawatan/
+   Tarikh lines up exactly across all 3, at ANY width (screen or PDF/print),
+   with no guessed min-height needed. Falls back to independent (unaligned)
+   row heights only in the rare case of a browser without subgrid support. */
+.pm-sign-wrap{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:repeat(6,auto);gap:12px;margin-top:12px}
 .pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr}
-.pm-sign-box{border:1px solid #1A2332;padding:10px 12px}
-.pm-sign-box h4{font-size:9pt;color:#1A2332;margin-bottom:6px;font-weight:bold;border-bottom:1px solid #D5D9E0;padding-bottom:4px}
+.pm-sign-box{border:1px solid #1A2332;padding:10px 12px;display:grid;grid-template-rows:subgrid;grid-row:span 6}
+.pm-sign-box h4{font-size:9pt;color:#1A2332;margin-bottom:6px;font-weight:bold;border-bottom:1px solid #D5D9E0;padding-bottom:4px;display:flex;align-items:flex-start}
 .pm-sign-box p{font-size:8.5pt;margin:2px 0;color:#333}
-/* The 3 sign boxes' italic description text differs in length (Kontraktor's
-   own wording vs the 2 SPRM boxes' shared wording) — without a fixed
-   height here, whichever wraps to fewer lines pushes its .sig-space (and
-   everything below) up, so the 3 boxes stop lining up underneath. */
-.pm-sign-box .pm-sign-desc{font-size:8pt;color:#555;font-style:italic;min-height:3.9em;line-height:1.3}
+.pm-sign-box .pm-sign-desc{font-size:8pt;color:#555;font-style:italic;line-height:1.3}
 .pm-sign-box .sig-space{height:140px;border-bottom:1px dashed #999;margin:8px 0 4px}
 .pm-footer{margin-top:10px;padding-top:6px;border-top:2px solid #1A2332;font-size:8pt;color:#555;display:flex;justify-content:space-between}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
