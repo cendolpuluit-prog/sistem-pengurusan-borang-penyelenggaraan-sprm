@@ -3692,7 +3692,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="sig-space"></div>
               <p><b>Nama:</b> {{viewPM?.contractorName||'................................................'}}</p>
               <p><b>Jawatan:</b> {{viewPM?.contractorJawatan||'................................................'}}</p>
-              <p><b>Tarikh:</b> {{viewPM?.contractorTarikh||'................................................'}}</p>
+              <p><b>Tarikh:</b> {{viewPM?.contractorTarikh?fmtDateDash(viewPM.contractorTarikh):'................................................'}}</p>
             </div>
             <div class="pm-sign-box">
               <h4>{{viewPM?.project==='vir' ? 'WAKIL SPRM — NEGERI / CAWANGAN / HQ' : 'WAKIL SPRM — NEGERI / CAWANGAN'}}</h4>
@@ -3700,7 +3700,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="sig-space"></div>
               <p><b>Nama:</b> {{viewPM?.clientName||'................................................'}}</p>
               <p><b>Jawatan:</b> {{viewPM?.clientJawatan||'................................................'}}</p>
-              <p><b>Tarikh:</b> {{viewPM?.clientTarikh||'................................................'}}</p>
+              <p><b>Tarikh:</b> {{viewPM?.clientTarikh?fmtDateDash(viewPM.clientTarikh):'................................................'}}</p>
             </div>
             <div class="pm-sign-box" v-if="viewPM?.project!=='vir'">
               <h4>WAKIL SPRM — IBU PEJABAT (HQ)</h4>
@@ -3708,7 +3708,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="sig-space"></div>
               <p><b>Nama:</b> {{viewPM?.client2Name||'................................................'}}</p>
               <p><b>Jawatan:</b> {{viewPM?.client2Jawatan||'................................................'}}</p>
-              <p><b>Tarikh:</b> {{viewPM?.client2Tarikh||'................................................'}}</p>
+              <p><b>Tarikh:</b> {{viewPM?.client2Tarikh?fmtDateDash(viewPM.client2Tarikh):'................................................'}}</p>
             </div>
           </div>
 
@@ -5616,15 +5616,15 @@ details.form-control[open] summary::after{content:'▴'}
         <tr>
           <td style="border:1px solid #000;padding:4px 8px;width:33%;height:60px;vertical-align:bottom">
             <div>Kontraktor: {{r.contractorName||'______________'}}</div>
-            <div>Tarikh: {{r.contractorTarikh||'______________'}}</div>
+            <div>Tarikh: {{r.contractorTarikh?fmtDateDash(r.contractorTarikh):'______________'}}</div>
           </td>
           <td style="border:1px solid #000;padding:4px 8px;width:33%;height:60px;vertical-align:bottom">
             <div>Wakil Pelanggan 1: {{r.clientName||'______________'}}</div>
-            <div>Tarikh: {{r.clientTarikh||'______________'}}</div>
+            <div>Tarikh: {{r.clientTarikh?fmtDateDash(r.clientTarikh):'______________'}}</div>
           </td>
           <td style="border:1px solid #000;padding:4px 8px;width:33%;height:60px;vertical-align:bottom">
             <div>Wakil Pelanggan 2: {{r.client2Name||'______________'}}</div>
-            <div>Tarikh: {{r.client2Tarikh||'______________'}}</div>
+            <div>Tarikh: {{r.client2Tarikh?fmtDateDash(r.client2Tarikh):'______________'}}</div>
           </td>
         </tr>
       </table>
