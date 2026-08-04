@@ -186,6 +186,12 @@ details.form-control[open] summary::after{content:'▴'}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;animation:modalBgIn .18s ease-out both}
 .modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both}
 .modal h3{font-size:1rem;color:#003366;margin-bottom:20px}
+.equip-history-timeline{position:relative;padding-left:6px}
+.equip-history-item{position:relative;padding:0 0 18px 22px;border-left:2px solid #e0e0e0}
+.equip-history-item:last-child{border-left-color:transparent;padding-bottom:0}
+.equip-history-dot{position:absolute;left:-7px;top:2px;width:12px;height:12px;border-radius:50%;background:#bbb;border:2px solid #fff;box-shadow:0 0 0 1px #ddd}
+.equip-history-dot.ok{background:#198754;box-shadow:0 0 0 1px #198754}
+.equip-history-dot.no{background:#dc3545;box-shadow:0 0 0 1px #dc3545}
 
 /* STATUS SELECT */
 .status-sel{padding:5px 10px;border-radius:5px;border:1px solid #ccc;font-size:.82rem;background:#fff}
@@ -1006,6 +1012,29 @@ details.form-control[open] summary::after{content:'▴'}
 
 <!-- MAIN APP -->
 <div v-else class="app-wrap">
+
+  <!-- EQUIPMENT HISTORY TIMELINE MODAL -->
+  <div v-if="equipHistoryModal.show" class="modal-bg" @click.self="equipHistoryModal.show=false">
+    <div class="modal" style="max-width:480px;position:relative">
+      <button @click="equipHistoryModal.show=false" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
+      <div class="card-title" style="margin:0 0 14px">🕐 Sejarah — {{equipHistoryModal.label}}</div>
+      <div v-if="!equipHistoryModal.rows.length" class="empty">Tiada rekod PM/CM (submitted) dijumpai untuk item ini.</div>
+      <div v-else class="equip-history-timeline">
+        <div v-for="(row,i) in equipHistoryModal.rows" :key="i" class="equip-history-item">
+          <div class="equip-history-dot" :class="row.status==='Baik'?'ok':(row.status==='Tidak'?'no':'')"></div>
+          <div class="equip-history-content">
+            <div class="flex items-center gap-8" style="flex-wrap:wrap">
+              <b>{{row.dateLabel}}</b>
+              <span class="badge" :class="row.maintType==='CM'?'badge-red':'badge-green'" style="font-size:.68rem">{{row.maintType}}</span>
+              <span v-if="row.status" :style="'font-size:.78rem;font-weight:700;color:'+(row.status==='Baik'?'#1b5e20':'#b71c1c')">{{row.status}}</span>
+              <span class="text-sm text-muted">{{row.refNo}}</span>
+            </div>
+            <div v-if="row.nota" class="text-sm text-muted" style="margin-top:2px">{{row.nota}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- WELCOME POPUP (shown on fresh login, auto-hides after 10s) -->
   <div v-if="welcomePopup" class="welcome-popup-bg no-print" @click.self="welcomePopup=false">
@@ -2076,6 +2105,14 @@ details.form-control[open] summary::after{content:'▴'}
                 <input v-if="nCam.accessory==='Lain-lain'" class="form-control" v-model="nCam.accessoryCustom" placeholder="Nyatakan aksesori" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.serial" placeholder="cth: KIV23767"></div>
+              <div class="form-group"><label>NVR Berkaitan <span class="text-muted text-sm">(pilihan)</span></label>
+                <select class="form-control" v-model="nCam.nvrRef">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="n in (selSiteEquip.nvr||[])" :key="n._uid||n.name" :value="n.name">{{n.name}}</option>
+                  <option value="Lain-lain">Lain-lain</option>
+                </select>
+                <input v-if="nCam.nvrRef==='Lain-lain'" class="form-control" v-model="nCam.nvrRefCustom" placeholder="Nyatakan NVR" style="margin-top:6px">
+              </div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.accessUser" autocomplete="off"></div>
@@ -2096,27 +2133,32 @@ details.form-control[open] summary::after{content:'▴'}
                 <button v-if="equipSelected.cameras.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('cameras')">🗑 Padam Terpilih ({{equipSelected.cameras.size}})</button>
               </div>
             </div>
-            <div class="tbl-wrap">
+            <div class="tbl-wrap" v-for="grp in camerasGroupedByNvr" :key="grp.name" style="margin-bottom:20px">
+              <div class="flex items-center gap-8 mb-8">
+                <strong>{{grp.name==='Tiada NVR' ? '⚠️ Tiada NVR Berkaitan' : '📼 '+grp.name}}</strong>
+                <span class="badge">{{grp.items.length}} Kamera</span>
+              </div>
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('cameras')" @change="toggleEquipSelectAll('cameras')"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(c,i) in selSiteEquip.cameras||[]" :key="c._uid||i" :class="{'highlight-row':equipEditIdx.cameras===i}">
+                  <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="{'highlight-row':equipEditIdx.cameras===c._idx}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{i+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td>{{c.serial}}</td>
+                    <td>{{gi+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td>{{c.serial}}</td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
                       <button v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('cameras',c._uid)" :title="revealedPw.cameras.has(c._uid)?'Sembunyi':'Papar'">{{revealedPw.cameras.has(c._uid)?'🙈':'👁'}}</button>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',i)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',i)" title="Padam">🗑</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('cameras',c)" title="Sejarah PM/CM">🕐</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',c._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',c._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.cameras||[]).length"><td :colspan="(currentProject!=='vir'?10:9)+(canViewCredentials?2:0)" class="empty">Tiada kamera. Tambah di atas.</td></tr>
                 </tbody>
               </table>
             </div>
+            <div v-if="!(selSiteEquip.cameras||[]).length" class="empty">Tiada kamera. Tambah di atas.</div>
           </div>
         </div>
 
@@ -2192,6 +2234,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('nvr',n._uid)" :title="revealedPw.nvr.has(n._uid)?'Sembunyi':'Papar'">{{revealedPw.nvr.has(n._uid)?'🙈':'👁'}}</button>
                     </td>
                     <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('nvr',n)" title="Sejarah PM/CM">🕐</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
                     </td>
@@ -2268,12 +2311,13 @@ details.form-control[open] summary::after{content:'▴'}
                 <span class="badge">{{grp.items.length}} HDD</span>
               </div>
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isHddGroupAllSelected(grp.items)" @change="toggleHddGroupSelectAll(grp.items)"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('hdd',grp.items)" @change="toggleEquipGroupSelectAll('hdd',grp.items)"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="{'highlight-row':equipEditIdx.hdd===h._idx}">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
                     <td>{{gi+1}}</td><td>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',h._idx)" title="Padam">🗑</button>
                     </td>
@@ -2346,6 +2390,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('switches',s._uid)" :title="revealedPw.switches.has(s._uid)?'Sembunyi':'Papar'">{{revealedPw.switches.has(s._uid)?'🙈':'👁'}}</button>
                     </td>
                     <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('switches',s)" title="Sejarah PM/CM">🕐</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
                     </td>
@@ -2429,6 +2474,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('alarms',a._uid)" :title="revealedPw.alarms.has(a._uid)?'Sembunyi':'Papar'">{{revealedPw.alarms.has(a._uid)?'🙈':'👁'}}</button>
                     </td>
                     <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('alarms',a)" title="Sejarah PM/CM">🕐</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
                     </td>
@@ -2670,7 +2716,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <input v-else class="form-control" v-model="nMISC.model">
                 <input v-if="miscBrandOptions && nMISC.model==='Lain-lain'" class="form-control" v-model="nMISC.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
+              <div class="form-group"><label>No. Siri / Kuantiti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.ip" placeholder="cth: 192.168.1.30"></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
               <template v-if="canViewCredentials">
@@ -2705,6 +2751,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('misc',m._uid)" :title="revealedPw.misc.has(m._uid)?'Sembunyi':'Papar'">{{revealedPw.misc.has(m._uid)?'🙈':'👁'}}</button>
                     </td>
                     <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('misc',m)" title="Sejarah PM/CM">🕐</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
                     </td>
@@ -2979,14 +3026,18 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="pmStep===2 && currentProject!=='vir'" class="card">
           <div class="card-title">📷 Pemeriksaan Kamera</div>
           <p class="text-sm text-muted mb-12">Semak status setiap kamera. Klik field untuk edit jika ada perubahan serial/brand.</p>
-          <div class="tbl-wrap">
+          <div class="tbl-wrap" v-for="grp in pmCamerasGrouped" :key="grp.name" style="margin-bottom:20px">
+            <div class="flex items-center gap-8 mb-8">
+              <strong>{{grp.name==='Tiada NVR' ? '⚠️ Tiada NVR Berkaitan' : '📼 '+grp.name}}</strong>
+              <span class="badge">{{grp.items.length}} Kamera</span>
+            </div>
             <table>
               <thead><tr>
                 <th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kualiti Paparan</th><th>Nota</th>
               </tr></thead>
               <tbody>
-                <tr v-for="(c,i) in pm.cameras" :key="c._uid||i">
-                  <td>{{i+1}}</td>
+                <tr v-for="(c,gi) in grp.items" :key="c._uid||gi">
+                  <td>{{gi+1}}</td>
                   <td><input class="form-control" style="min-width:120px" v-model="c.name"></td>
                   <td><input class="form-control" style="min-width:110px" v-model="c.ip"></td>
                   <td>
@@ -3003,10 +3054,10 @@ details.form-control[open] summary::after{content:'▴'}
                   </td>
                   <td><input class="form-control" style="min-width:100px" v-model="c.nota" placeholder="nota..."></td>
                 </tr>
-                <tr v-if="!pm.cameras.length"><td colspan="8" class="empty">Tiada kamera didaftar untuk site ini. Daftar dulu dalam Urus Peralatan.</td></tr>
               </tbody>
             </table>
           </div>
+          <div v-if="!pm.cameras.length" class="empty">Tiada kamera didaftar untuk site ini. Daftar dulu dalam Urus Peralatan.</div>
           <div class="flex gap-8" style="margin-top:16px">
             <button class="btn btn-outline" @click="pmStep=1">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=3">Seterusnya →</button>
@@ -3547,27 +3598,30 @@ details.form-control[open] summary::after{content:'▴'}
 
           <!-- 1. CAMERAS -->
           <div class="pm-section-hdr">1. &nbsp;PEMERIKSAAN KAMERA <span>({{viewPM?.cameras?.length||0}} unit)</span></div>
-          <table class="pm-tbl">
-            <thead><tr>
-              <th style="width:4%">No.</th>
-              <th style="width:25%">Nama / Lokasi</th>
-              <th style="width:15%">IP Address</th>
-              <th style="width:19%">Model</th>
-              <th style="width:16%">No. Siri</th>
-              <th style="width:9%">Jenis</th>
-              <th style="width:12%">Status</th>
-            </tr></thead>
-            <tbody>
-              <tr v-for="(c,i) in viewPM?.cameras" :key="i">
-                <td class="ctr">{{i+1}}</td>
-                <td>{{c.name}}</td><td class="ctr">{{c.ip}}</td>
-                <td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
-                <td class="ctr">{{c.camType}}</td>
-                <td :class="c.display==='Baik'?'ok':'no'">{{c.display}}</td>
-              </tr>
-              <tr v-if="!viewPM?.cameras?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod kamera</td></tr>
-            </tbody>
-          </table>
+          <div v-for="grp in viewPMCamerasGrouped" :key="grp.name" style="margin-bottom:8px">
+            <div style="font-weight:700;font-size:9.5pt;margin:4px 0">{{grp.name==='Tiada NVR' ? 'Tiada NVR Berkaitan' : grp.name}} ({{grp.items.length}} unit)</div>
+            <table class="pm-tbl">
+              <thead><tr>
+                <th style="width:4%">No.</th>
+                <th style="width:25%">Nama / Lokasi</th>
+                <th style="width:15%">IP Address</th>
+                <th style="width:19%">Model</th>
+                <th style="width:16%">No. Siri</th>
+                <th style="width:9%">Jenis</th>
+                <th style="width:12%">Status</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="(c,gi) in grp.items" :key="gi">
+                  <td class="ctr">{{gi+1}}</td>
+                  <td>{{c.name}}</td><td class="ctr">{{c.ip}}</td>
+                  <td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
+                  <td class="ctr">{{c.camType}}</td>
+                  <td :class="c.display==='Baik'?'ok':'no'">{{c.display}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-if="!viewPM?.cameras?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod kamera</p>
 
           <!-- 2. NVR -->
           <div class="pm-section-block">
@@ -6221,7 +6275,7 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''});
+    const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:''});
     const nNVR = reactive({name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
@@ -9188,7 +9242,7 @@ createApp({
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:''},
+      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:''},
       nNVR:  {name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
       nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
@@ -11232,7 +11286,7 @@ createApp({
       // (they end up split into the companion credentials collection on
       // save, same as manually-added ones). Scanned images simply leave
       // these columns blank.
-      cameras:  ['name','ip','camType','brand','model','accessory','serial','accessUser','accessPw'],
+      cameras:  ['name','ip','camType','brand','model','accessory','serial','accessUser','accessPw','nvrRef'],
       nvr:      ['name','type','brand','model','serial','ip','accessUser','accessPw'],
       hdd:      ['brand','model','serial','capacity','config','nvrRef'],
       switches: ['name','brand','model','serial','accessUser','accessPw'],
@@ -12978,23 +13032,26 @@ createApp({
       }
       return base;
     });
-    // Groups the flat HDD list by NVR name for sites with multiple NVRs
+    // Groups a flat equipment list by NVR name, for sites with multiple NVRs
     // (e.g. Negeri Sembilan has 2-3 NVRs, each with its own distinct HDD
-    // set) — "Tiada NVR" bucket sorted last catches HDDs with no NVR
-    // assigned. _idx preserves each item's REAL index in the unfiltered
-    // hdd array so edit/delete still target the correct underlying record.
-    const hddGroupedByNvr = computed(() => {
-      const list = (selSiteEquip.value.hdd || []).map((h, idx) => ({ ...h, _idx: idx }));
+    // set; or a site with a lokap has a separate NVR per lokap gender for
+    // sensitivity reasons) — "Tiada NVR" bucket sorted last catches items
+    // with no NVR assigned. _idx preserves each item's REAL index in the
+    // unfiltered array so edit/delete still target the correct record.
+    function _groupByNvr(list) {
+      const indexed = (list || []).map((it, idx) => ({ ...it, _idx: idx }));
       const groups = {};
-      list.forEach(h => {
-        const key = h.nvrRef && h.nvrRef.trim() ? h.nvrRef.trim() : 'Tiada NVR';
+      indexed.forEach(it => {
+        const key = it.nvrRef && it.nvrRef.trim() ? it.nvrRef.trim() : 'Tiada NVR';
         if(!groups[key]) groups[key] = [];
-        groups[key].push(h);
+        groups[key].push(it);
       });
       const names = Object.keys(groups).filter(k => k !== 'Tiada NVR').sort();
       if(groups['Tiada NVR']) names.push('Tiada NVR');
       return names.map(name => ({ name, items: groups[name] }));
-    });
+    }
+    const hddGroupedByNvr = computed(() => _groupByNvr(selSiteEquip.value.hdd));
+    const camerasGroupedByNvr = computed(() => _groupByNvr(selSiteEquip.value.cameras));
     // "Senarai Bilik" filter — the list otherwise always shows every room
     // for the site regardless of system, which is correct for management
     // but can look like a bug when a room of the "wrong" system shows up
@@ -13063,19 +13120,20 @@ createApp({
       // picked up by every dependent effect.
       else { equipSelected[kind].clear(); list.forEach(it => equipSelected[kind].add(it._uid)); }
     }
-    // HDD's "select all" checkbox is rendered once PER NVR GROUP (see
-    // hddGroupedByNvr) rather than once for the whole tab, so it can't reuse
-    // isEquipAllSelected/toggleEquipSelectAll above — those operate on the
-    // full site-wide hdd list, which would make a group's checkbox silently
-    // select/deselect every OTHER group's rows too (and then Edit
-    // Pukal/Padam Terpilih would act on all of them, not just this group's).
-    // These scope the same equipSelected.hdd Set to just the group's items.
-    function isHddGroupAllSelected(items) {
-      return items.length>0 && items.every(it => equipSelected.hdd.has(it._uid));
+    // HDD's and Kamera's "select all" checkbox is rendered once PER NVR
+    // GROUP (see hddGroupedByNvr / camerasGroupedByNvr) rather than once for
+    // the whole tab, so it can't reuse isEquipAllSelected/
+    // toggleEquipSelectAll above — those operate on the full site-wide list
+    // for that kind, which would make a group's checkbox silently select/
+    // deselect every OTHER group's rows too (and then Edit Pukal/Padam
+    // Terpilih would act on all of them, not just this group's). These scope
+    // the same equipSelected[kind] Set to just the group's items.
+    function isEquipGroupAllSelected(kind, items) {
+      return items.length>0 && items.every(it => equipSelected[kind].has(it._uid));
     }
-    function toggleHddGroupSelectAll(items) {
-      if(isHddGroupAllSelected(items)) items.forEach(it => equipSelected.hdd.delete(it._uid));
-      else items.forEach(it => equipSelected.hdd.add(it._uid));
+    function toggleEquipGroupSelectAll(kind, items) {
+      if(isEquipGroupAllSelected(kind, items)) items.forEach(it => equipSelected[kind].delete(it._uid));
+      else items.forEach(it => equipSelected[kind].add(it._uid));
     }
     function bulkDeleteEquip(kind) {
       const sel = equipSelected[kind];
@@ -13268,6 +13326,16 @@ createApp({
           } else {
             nCam.accessoryCustom = '';
           }
+          // NVR Berkaitan — same reconciliation as HDD's, so sites with a
+          // separate NVR per lokap gender (sensitivity requirement) can
+          // group cameras the same way HDDs are grouped by NVR.
+          const knownNvrNamesCam = (selSiteEquip.value.nvr||[]).map(n => n.name);
+          if(item.nvrRef && !knownNvrNamesCam.includes(item.nvrRef)) {
+            nCam.nvrRef = 'Lain-lain';
+            nCam.nvrRefCustom = item.nvrRef;
+          } else {
+            nCam.nvrRefCustom = '';
+          }
         }
         if(key === 'hdd') {
           // NVR Berkaitan dropdown is autopopulated from this site's current
@@ -13325,6 +13393,41 @@ createApp({
     function isRecentEquip(item) {
       return !!item._ts && (Date.now() - item._ts) < RECENT_EQUIP_MS;
     }
+    // Equipment history timeline — reconstructs one item's PM/CM history
+    // entirely from data already snapshotted into pmRecords at submit time
+    // (every borang stores each camera/NVR/etc's status+nota as of that
+    // visit), so this needs no new data collection. Matches by _uid first
+    // (stable across renames), falling back to ip/serial for older records
+    // predating _uid tracking.
+    const EQUIP_HISTORY_STATUS_FIELD = { cameras:'display', nvr:'status', hdd:'status', switches:'status', alarms:'status', misc:'status' };
+    const equipHistoryModal = reactive({ show:false, label:'', rows:[] });
+    function openEquipHistory(kind, item) {
+      const proj = currentProject.value;
+      const siteId = selSite.value?.id;
+      const statusField = EQUIP_HISTORY_STATUS_FIELD[kind];
+      const rows = pmRecords.value
+        .filter(r => r.siteId === siteId && (r.project||'cctv') === proj && r.status === 'submitted')
+        .map(r => {
+          const list = r[kind] || [];
+          let match = item._uid ? list.find(x => x._uid === item._uid) : null;
+          if(!match && item.ip) match = list.find(x => x.ip && x.ip === item.ip);
+          if(!match && item.serial) match = list.find(x => x.serial && x.serial === item.serial);
+          if(!match) return null;
+          return {
+            rawDate: r.visitDate || '',
+            dateLabel: r.visitDate ? fmtDateDash(r.visitDate) : (r.month ? `${MONTHS[r.month-1]} ${r.year}` : '-'),
+            refNo: r.refNo || '',
+            maintType: r.maintType || 'PM',
+            status: match[statusField] || '',
+            nota: match.nota || '',
+          };
+        })
+        .filter(Boolean)
+        .sort((a,b) => (a.rawDate||'').localeCompare(b.rawDate||''));
+      equipHistoryModal.label = item.name || item.model || item.ip || '-';
+      equipHistoryModal.rows = rows;
+      equipHistoryModal.show = true;
+    }
     function _dupErrMsg(dup) {
       const label = dup.existing.name || dup.existing.model || dup.existing.serial || 'rekod lain';
       const fieldLabel = dup.field==='ip' ? 'IP Address' : 'No. Siri';
@@ -13351,8 +13454,9 @@ createApp({
       // Same "Lain-lain + custom text" resolution as brand/model, but for
       // the accessory dropdown — _resolveBrandModel doesn't know about this
       // camera-only field, so it's handled separately here.
-      const { accessoryCustom, ...camResolved } = resolved;
+      const { accessoryCustom, nvrRefCustom, ...camResolved } = resolved;
       camResolved.accessory = (camResolved.accessory === 'Lain-lain' && accessoryCustom && accessoryCustom.trim()) ? accessoryCustom.trim() : camResolved.accessory;
+      camResolved.nvrRef = _resolveDropdownCustom(nCam.nvrRef, nvrRefCustom);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
       const dup = _findDupConflict('cameras', list, camResolved, equipEditIdx.cameras);
@@ -13751,6 +13855,29 @@ createApp({
       });
       return order.map(k => groups[k]);
     }
+
+    // Cameras can't be collapsed into a total like HDD (see _groupHddForPm)
+    // — each one needs its own individual Baik/Tidak inspection sign-off —
+    // so this groups WITHOUT cloning (unlike _groupByNvr in Urus Peralatan
+    // Site) so each grouped item stays the SAME object reference as in
+    // pm.cameras/r.cameras, keeping the borang's v-model two-way binding and
+    // DOCX export both working straight off the grouped output. Sites with
+    // a lokap typically run a separate NVR per gender for sensitivity
+    // reasons, so grouping by NVR here doubles as making that separation
+    // visually explicit in the printed borang.
+    function _groupCamerasByNvrRef(list) {
+      const groups = {};
+      (list || []).forEach(c => {
+        const key = c.nvrRef && c.nvrRef.trim() ? c.nvrRef.trim() : 'Tiada NVR';
+        if(!groups[key]) groups[key] = [];
+        groups[key].push(c);
+      });
+      const names = Object.keys(groups).filter(k => k !== 'Tiada NVR').sort();
+      if(groups['Tiada NVR']) names.push('Tiada NVR');
+      return names.map(name => ({ name, items: groups[name] }));
+    }
+    const pmCamerasGrouped = computed(() => _groupCamerasByNvrRef(pm.cameras));
+    const viewPMCamerasGrouped = computed(() => _groupCamerasByNvrRef(viewPM.value?.cameras));
 
     function loadPMEquip() {
       if(!pm.siteId){showToast('Sila pilih site','error');return;}
@@ -14397,10 +14524,16 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         // ── 1. Kamera ──
         children.push(sectionHdr(`1.  PEMERIKSAAN KAMERA (${r.cameras?.length||0} unit)`));
         if (r.cameras?.length) {
-          children.push(makeTable(
-            ['No.','Nama/Lokasi','IP Address','Brand','Model','No. Siri','Jenis','Kualiti Paparan','Nota'],
-            r.cameras.map((c,i)=>[i+1,c.name,c.ip,c.brand,c.model,c.serial,c.camType,c.display,c.nota||''])
-          ));
+          _groupCamerasByNvrRef(r.cameras).forEach(grp => {
+            children.push(new Paragraph({
+              children: [new TextRun({ text: `${grp.name==='Tiada NVR'?'Tiada NVR Berkaitan':grp.name} (${grp.items.length} unit)`, size: 16, bold: true, color: BLUE })],
+              spacing: { before: 60, after: 40 },
+            }));
+            children.push(makeTable(
+              ['No.','Nama/Lokasi','IP Address','Brand','Model','No. Siri','Jenis','Kualiti Paparan','Nota'],
+              grp.items.map((c,i)=>[i+1,c.name,c.ip,c.brand,c.model,c.serial,c.camType,c.display,c.nota||''])
+            ));
+          });
           const ic=r.cameras.filter(c=>c.camType==='Indoor').length, oc=r.cameras.filter(c=>c.camType==='Outdoor').length,
                 ir=r.cameras.filter(c=>c.camType==='IR Cam').length, pt=r.cameras.filter(c=>c.camType==='PTZ').length;
           children.push(new Paragraph({
@@ -15823,7 +15956,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
-      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning,
+      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, pmCamerasGrouped, viewPMCamerasGrouped,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
@@ -15872,12 +16005,13 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       profileEdit, initProfile, saveProfile, saveNickname, pwChange, showPwNew, showPwConfirm, changePassword,
       ocrState, ocrScan, pickOcr, resetForm,
       importState, importEquipFile, removeImportRow, confirmImportRows, IMPORT_FIELD_KEYS, resortImportRowsByIp, sortEquipListByIp, sortEquipListByName,
-      openSiteEquip, selSiteEquip, hddGroupedByNvr, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
+      openSiteEquip, selSiteEquip, hddGroupedByNvr, camerasGroupedByNvr, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
       equipVirRoomUid, virRoomPickerModal, currentOptagerRoomName, optagerRoomChoicesForSite, pickOptagerRoom, openOptagerRoomEquip,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
-      equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isHddGroupAllSelected, toggleHddGroupSelectAll, bulkDeleteEquip,
+      equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isEquipGroupAllSelected, toggleEquipGroupSelectAll, bulkDeleteEquip,
+      equipHistoryModal, openEquipHistory,
       revealedPw, togglePwReveal,
       bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
       infoModal, showInfo,
