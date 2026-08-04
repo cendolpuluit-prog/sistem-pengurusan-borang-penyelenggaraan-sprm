@@ -43,6 +43,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .login-glow-r{position:absolute;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(0,160,80,.18) 0%,transparent 70%);bottom:-60px;right:-60px;pointer-events:none;z-index:1}
 .login-card{position:relative;z-index:10;background:rgba(255,255,255,.06);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);border:1px solid rgba(180,220,180,.18);border-top-color:rgba(255,255,255,.22);border-radius:16px;padding:36px 40px;width:100%;max-width:420px;box-shadow:0 32px 64px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(0,200,100,.1)}
 @keyframes loginCardIn{from{opacity:0;transform:translateY(36px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes confettiFall{from{transform:translateY(0) rotate(0deg);opacity:1}to{transform:translateY(100vh) rotate(720deg);opacity:0}}
 @keyframes loginBorderPulse{0%,100%{box-shadow:0 32px 64px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(0,200,100,.12)}50%{box-shadow:0 32px 64px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(0,200,100,.45),0 0 55px rgba(0,200,100,.1)}}
 @keyframes loginShakeAnim{0%,100%{transform:translateX(0)}15%{transform:translateX(-10px)}30%{transform:translateX(9px)}45%{transform:translateX(-7px)}60%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
 .login-card-anim{animation:loginCardIn .6s cubic-bezier(.34,1.56,.64,1) both,loginBorderPulse 3.5s ease-in-out 1s infinite}
@@ -1416,6 +1417,23 @@ details.form-control[open] summary::after{content:'▴'}
                 <span style="color:#f57c00;font-weight:700">{{healthCountVir.yellow}} Sederhana</span>
                 <span style="color:#b71c1c;font-weight:700">{{healthCountVir.red}} Kritikal</span>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SITE LEADERBOARD -->
+        <div class="card">
+          <div class="card-title">🏆 Leaderboard Skor Kesihatan Site</div>
+          <div v-if="!siteLeaderboard.length" class="empty" style="padding:16px">Tiada data skor lagi.</div>
+          <div v-else style="display:flex;flex-direction:column;gap:6px">
+            <div v-for="s in siteLeaderboard.slice(0,5)" :key="s.id" class="flex items-center gap-8" style="padding:6px 0;border-bottom:1px solid #f0f0f0">
+              <span style="width:22px;text-align:center;font-weight:800;color:#888">{{s.rank}}</span>
+              <span style="flex:1;min-width:0;font-size:.85rem;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{s.name}} <span class="text-muted text-sm">({{s.project==='vir'?'VIR':'CCTV'}})</span></span>
+              <span :style="'font-weight:800;font-size:.9rem;color:'+(s.hs.level==='green'?'#1b5e20':s.hs.level==='yellow'?'#f57c00':'#b71c1c')">{{s.hs.score}}</span>
+            </div>
+            <div v-if="siteLeaderboard.length>5" class="flex items-center gap-8" style="padding:6px 0">
+              <span style="width:22px"></span>
+              <span class="text-sm text-muted">... dan {{siteLeaderboard.length-5}} site lain</span>
             </div>
           </div>
         </div>
@@ -3844,7 +3862,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div style="margin-top:16px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
             <div class="stat-card" v-for="proj in PROJECT_TYPES" :key="proj.val">
               <div class="num" style="font-size:1.5rem;color:#003366">{{teamsForMonth().filter(t=>t.project===proj.val).length}}</div>
-              <div class="lbl">{{proj.val}}</div>
+              <div class="lbl">{{proj.label||proj.val}}</div>
             </div>
           </div>
         </div>
@@ -3999,7 +4017,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <span :class="['jp-badge','badge-'+t.team]">{{t.team}}</span>
                 </td>
                 <td>{{t.maintType||'PM'}}</td>
-                <td>{{t.project}}</td>
+                <td>{{projectLabel(t.project)}}</td>
                 <td>{{t.siteName||'—'}}</td>
                 <td>{{t.members?.map(m=>m.name).join(', ')||'—'}}</td>
               </tr>
@@ -4048,9 +4066,12 @@ details.form-control[open] summary::after{content:'▴'}
               <select class="form-control" v-model="teamModal.data.project">
                 <option value="SPRM - CCTV">SPRM - CCTV</option>
                 <option value="SPRM - VIR">SPRM - VIR</option>
-                <option value="DOSM-Server">DOSM-Server</option>
+                <option value="DOSM-Server">DOSM</option>
+                <option value="JPM - ICU">JPM - ICU</option>
+                <option value="KLN">KLN</option>
+                <option value="UTHM">UTHM</option>
               </select>
-              <small v-if="teamModal.data.project==='DOSM-Server'" style="color:#888;font-size:.72rem">Untuk paparan Jadual sahaja — tidak dikira dalam mana-mana Laporan.</small>
+              <small v-if="NON_SPRM_PROJECTS.includes(teamModal.data.project)" style="color:#888;font-size:.72rem">Untuk paparan Jadual sahaja — tidak dikira dalam mana-mana Laporan.</small>
             </div>
             <div class="form-group">
               <label>Jenis Penyelenggaraan *</label>
@@ -4059,7 +4080,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="CM">CM — Corrective Maintenance</option>
               </select>
             </div>
-            <div class="form-group" v-if="teamModal.data.project!=='DOSM-Server'">
+            <div class="form-group" v-if="!NON_SPRM_PROJECTS.includes(teamModal.data.project)">
               <label>Site SPRM *</label>
               <select class="form-control" v-model="teamModal.data.siteId" @change="onTeamSiteChange">
                 <option value="">-- Pilih Site --</option>
@@ -4138,7 +4159,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="team-card-body">
               <div class="flex items-center gap-8 mb-6">
                 <b style="font-size:.95rem">Team {{t.team}}</b>
-                <span class="badge" style="background:#e8f5e9;color:#1b5e20;font-size:.72rem">{{t.maintType||'PM'}} · {{t.project}}</span>
+                <span class="badge" style="background:#e8f5e9;color:#1b5e20;font-size:.72rem">{{t.maintType||'PM'}} · {{projectLabel(t.project)}}</span>
               </div>
               <div style="font-size:.85rem;color:#333;margin-bottom:6px">
                 📍 <b>{{t.siteName||'—'}}</b>
@@ -4760,14 +4781,18 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="modal">
           <h3>✏️ Edit Pukal — {{equipSelected[bulkEditModal.kind]?.size||0}} rekod terpilih</h3>
           <div class="form-group"><label>Field</label>
-            <select class="form-control" v-model="bulkEditModal.field">
-              <option v-for="(f,k) in BULK_EDIT_FIELDS" :key="k" :value="k">{{f.label}}</option>
+            <select class="form-control" v-model="bulkEditModal.field" @change="bulkEditModal.value=''">
+              <option v-for="(f,k) in bulkEditFieldOptions" :key="k" :value="k">{{f.label}}</option>
             </select>
           </div>
           <div class="form-group"><label>Nilai Baru</label>
-            <input class="form-control" :type="BULK_EDIT_FIELDS[bulkEditModal.field].type" v-model="bulkEditModal.value">
+            <select v-if="bulkEditFieldOptions[bulkEditModal.field].type==='select-nvr'" class="form-control" v-model="bulkEditModal.value">
+              <option value="">-- Tiada NVR --</option>
+              <option v-for="n in (selSiteEquip.nvr||[])" :key="n._uid||n.name" :value="n.name">{{n.name}}</option>
+            </select>
+            <input v-else class="form-control" :type="bulkEditFieldOptions[bulkEditModal.field].type" v-model="bulkEditModal.value">
           </div>
-          <p style="font-size:.8rem;color:#888;margin-bottom:10px">Nilai ini akan menggantikan {{BULK_EDIT_FIELDS[bulkEditModal.field].label}} sedia ada untuk kesemua rekod terpilih.</p>
+          <p style="font-size:.8rem;color:#888;margin-bottom:10px">Nilai ini akan menggantikan {{bulkEditFieldOptions[bulkEditModal.field].label}} sedia ada untuk kesemua rekod terpilih.</p>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="bulkEditModal.show=false">Batal</button>
             <button class="btn btn-primary" @click="applyBulkEdit">✔ Terapkan</button>
@@ -5339,15 +5364,19 @@ details.form-control[open] summary::after{content:'▴'}
             <p class="text-sm text-muted mb-12">Kiraan penugasan PM/CM setiap staff (dari Jadual Penyelenggaraan), berasingan dari kadar siap Team. Berguna untuk agihan kerja yang lebih adil.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Staff</th><th>Jumlah Penugasan</th><th>PM</th><th>CM</th><th>Bil. Site Berbeza</th></tr></thead>
+                <thead><tr><th>#</th><th>Staff</th><th>Jumlah Penugasan</th><th>PM</th><th>CM</th><th>Bil. Site Berbeza</th><th>Streak</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in staffWorkload" :key="s.uid">
                     <td>{{i+1}}</td><td><b>{{s.name}}</b></td><td>{{s.total}}</td>
                     <td><span class="badge badge-blue">{{s.pm}}</span></td>
                     <td><span class="badge badge-red">{{s.cm}}</span></td>
                     <td>{{s.siteCount}}</td>
+                    <td>
+                      <span v-if="staffStreaks[s.name]>=3" class="badge badge-green" title="Bilangan PM berturut-turut tanpa CM susulan">🔥 {{staffStreaks[s.name]}}</span>
+                      <span v-else class="text-muted text-sm">-</span>
+                    </td>
                   </tr>
-                  <tr v-if="!staffWorkload.length"><td colspan="6" class="empty">Tiada penugasan direkodkan.</td></tr>
+                  <tr v-if="!staffWorkload.length"><td colspan="7" class="empty">Tiada penugasan direkodkan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -7791,7 +7820,7 @@ createApp({
       if(!teamModal.data.team || !teamModal.data.date) {
         teamModal.err = 'Team dan tarikh wajib diisi.'; return;
       }
-      if(teamModal.data.project === 'DOSM-Server') {
+      if(NON_SPRM_PROJECTS.includes(teamModal.data.project)) {
         if(!teamModal.data.siteName?.trim()) { teamModal.err = 'Sila isi nama server/lokasi.'; return; }
       } else if(!teamModal.data.siteId) {
         teamModal.err = 'Sila pilih site.'; return;
@@ -8018,9 +8047,23 @@ createApp({
     }
 
     // ---- Schedule / Jadual PM ----
+    // Non-SPRM projects tracked in Jadual Penyelenggaraan purely for
+    // scheduling visibility — free-text location instead of a Site SPRM
+    // dropdown, and excluded from every Laporan/report (see
+    // teamPerformance/staffWorkload filters below). 'DOSM-Server' keeps its
+    // original value (existing Firestore records already use this literal)
+    // even though the dropdown now labels it just "DOSM".
+    const NON_SPRM_PROJECTS = ['DOSM-Server', 'JPM - ICU', 'KLN', 'UTHM'];
     const PROJECT_TYPES = [
-      {val:'SPRM - CCTV'}, {val:'SPRM - VIR'}, {val:'DOSM-Server'}
+      {val:'SPRM - CCTV'}, {val:'SPRM - VIR'}, {val:'DOSM-Server', label:'DOSM'},
+      {val:'JPM - ICU'}, {val:'KLN'}, {val:'UTHM'},
     ];
+    // Existing Firestore records still store the raw value ('DOSM-Server'),
+    // so any display of teamAssignments.project needs this lookup to show
+    // the friendly label ('DOSM') instead of the stored literal.
+    function projectLabel(val) {
+      return PROJECT_TYPES.find(p => p.val === val)?.label || val;
+    }
     const calYear  = ref(new Date().getFullYear());
     const calMonth = ref(new Date().getMonth());
     // Jadual Penyelenggaraan is normally superadmin/admin-only, but Izwan
@@ -8188,7 +8231,7 @@ createApp({
           <td>${fmtDate(t.date)}</td>
           <td style="text-align:center"><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${bc};color:#fff;font-weight:700;font-size:8pt;line-height:20px;text-align:center">${esc(t.team)}</span></td>
           <td>${esc(t.maintType||'PM')}</td>
-          <td>${esc(t.project||'—')}</td>
+          <td>${esc(projectLabel(t.project)||'—')}</td>
           <td>${esc(t.siteName||'—')}</td>
           <td>${members}</td>
         </tr>`;
@@ -10259,6 +10302,16 @@ createApp({
       return scores;
     });
 
+    // Ranks every site (CCTV + VIR together) by health score, best first —
+    // friendly cross-zone/cross-team comparison beyond just per-site
+    // viewing. Reuses siteHealthScores as-is, just sorts + ranks it.
+    const siteLeaderboard = computed(() => {
+      return [...SITES.map(s=>({...s,project:'cctv'})), ...VIR_SITES.map(s=>({...s,project:'vir'}))]
+        .map(s => ({ ...s, hs: siteHealthScores.value[s.id] }))
+        .filter(s => s.hs)
+        .sort((a,b) => b.hs.score - a.hs.score)
+        .map((s,i) => ({ ...s, rank: i+1 }));
+    });
     const healthCountCctv = computed(() => {
       const c = { green:0, yellow:0, red:0 };
       SITES.forEach(s => { const l = siteHealthScores.value[s.id]?.level; if(l) c[l]++; });
@@ -10923,6 +10976,28 @@ createApp({
         const idx = toasts.findIndex(t => t.id === id);
         if(idx > -1) toasts.splice(idx, 1);
       }, 3000);
+    }
+
+    // Small celebratory burst shown once a site hits its full annual PM
+    // quota — pure CSS/DOM, no library, self-removing after the animation
+    // finishes so it never lingers or piles up in the DOM.
+    function fireConfetti() {
+      const colors = ['#ff595e','#ffca3a','#8ac926','#1982c4','#6a4c93'];
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden';
+      document.body.appendChild(container);
+      for(let i=0; i<40; i++) {
+        const piece = document.createElement('div');
+        const left = Math.random()*100;
+        const delay = Math.random()*0.4;
+        const duration = 2.2 + Math.random()*1.2;
+        const size = 6 + Math.random()*6;
+        const color = colors[Math.floor(Math.random()*colors.length)];
+        const rotate = Math.random()*360;
+        piece.style.cssText = `position:absolute;top:-20px;left:${left}%;width:${size}px;height:${size*0.4}px;background:${color};opacity:.9;transform:rotate(${rotate}deg);animation:confettiFall ${duration}s ease-in ${delay}s forwards;border-radius:2px`;
+        container.appendChild(piece);
+      }
+      setTimeout(() => container.remove(), 4000);
     }
 
     // ---- Firestore write wrapper — tracks pending writes for UI indicator ----
@@ -13191,7 +13266,17 @@ createApp({
     }
 
     const bulkEditModal = reactive({ show:false, kind:'', field:'installDate', value:'' });
-    const BULK_EDIT_FIELDS = { installDate:{label:'Tarikh Pasang', type:'date'}, brand:{label:'Brand', type:'text'} };
+    // NVR Berkaitan is only offered for cameras/hdd — those are the only
+    // kinds that actually carry an nvrRef field (see hddGroupedByNvr /
+    // camerasGroupedByNvr). type:'select-nvr' tells the modal to render a
+    // dropdown sourced from this site's registered NVR names instead of a
+    // plain text/date input.
+    function bulkEditFieldsFor(kind) {
+      const fields = { installDate:{label:'Tarikh Pasang', type:'date'}, brand:{label:'Brand', type:'text'} };
+      if(kind === 'cameras' || kind === 'hdd') fields.nvrRef = { label:'NVR Berkaitan', type:'select-nvr' };
+      return fields;
+    }
+    const bulkEditFieldOptions = computed(() => bulkEditFieldsFor(bulkEditModal.kind));
     function openBulkEdit(kind) {
       if(!equipSelected[kind].size) return;
       bulkEditModal.kind = kind;
@@ -13214,7 +13299,7 @@ createApp({
       let count = 0;
       list.forEach(it => { if(sel.has(it._uid)) { it[field] = value; it._ts = Date.now(); count++; } });
       bulkEditModal.show = false;
-      showToast(`${field==='installDate'?'Tarikh Pasang':'Brand'} dikemaskini untuk ${count} rekod! Jangan lupa klik "Simpan Semua".`);
+      showToast(`${bulkEditFieldsFor(kind)[field].label} dikemaskini untuk ${count} rekod! Jangan lupa klik "Simpan Semua".`);
     }
     async function editEquipItem(key, idx) {
       const item = (selSiteEquip.value[key]||[])[idx];
@@ -14019,6 +14104,16 @@ createApp({
         showToast(pm._isEdit ? 'Perubahan borang berjaya disimpan!' : (status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!'));
         clearPmDraftLocal(); // Firestore now holds the authoritative copy — local recovery draft no longer needed
         await loadAll();
+        // Celebrate the moment a site's annual PM quota is hit exactly —
+        // pmCount only crosses PM_PER_YEAR once per cycle, so this fires
+        // once per completion rather than on every submit after.
+        if(status==='submitted' && data.maintType!=='CM') {
+          const hs = siteHealthScores.value[data.siteId];
+          if(hs && hs.pmCount === PM_PER_YEAR[data.project]) {
+            fireConfetti();
+            showToast(`🎉 Tahniah! Site "${data.siteName}" capai 100% pematuhan PM tahun ini!`);
+          }
+        }
         viewPM.value = {id:pm._draftId,...data};
         pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; // clear so next new form gets fresh ID
         page.value='pm-view';
@@ -15623,9 +15718,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // ── 6. Laporan Prestasi Team ──
     const teamPerformance = computed(() => {
       const perTeam = {};
-      // DOSM-Server assignments are schedule-only (not an SPRM CCTV/VIR
-      // project) — excluded from every report, this one included.
-      teamAssignments.value.filter(t => t.project !== 'DOSM-Server').forEach(t => {
+      // Non-SPRM assignments (DOSM/JPM-ICU/KLN/UTHM) are schedule-only (not
+      // an SPRM CCTV/VIR project) — excluded from every report, this one included.
+      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project)).forEach(t => {
         const team = t.team;
         if(!team) return;
         if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, members:new Set() };
@@ -15644,7 +15739,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // PM/CM individu, untuk agihan kerja lebih adil selain rotation tracking ──
     const staffWorkload = computed(() => {
       const per = {};
-      teamAssignments.value.filter(t => t.project !== 'DOSM-Server').forEach(t => {
+      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project)).forEach(t => {
         const isCm = t.maintType === 'CM';
         // Dedup by uid within this one assignment first — a malformed/
         // duplicate member entry on a single doc would otherwise inflate
@@ -15661,6 +15756,34 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return Object.values(per)
         .map(x => ({ ...x, siteCount: x.sites.size }))
         .sort((a,b) => b.total - a.total);
+    });
+
+    // ── 6c. Streak — bilangan PM berturut-turut (paling terkini dahulu)
+    // seorang staff hantar tanpa CM susulan. Dikira dari pmRecords.submittedBy
+    // (kerja yang benar-benar disiapkan), bukan teamAssignments (kerja yang
+    // ditugaskan) — bila CM paling terkini staff tu, streak reset ke 0.
+    // Keyed by display name (bukan uid) supaya senang dipadan terus dengan
+    // staffWorkload.name dalam template, sama pattern name-based matching
+    // macam logActorDisplayName/auditLogUserOptions guna.
+    const staffStreaks = computed(() => {
+      const byStaff = {};
+      pmRecords.value.filter(r => r.status==='submitted' && r.submittedBy).forEach(r => {
+        const name = submittedByDisplayName(r);
+        if(!name || name==='-') return;
+        if(!byStaff[name]) byStaff[name] = [];
+        byStaff[name].push(r);
+      });
+      const result = {};
+      Object.entries(byStaff).forEach(([name, recs]) => {
+        const sorted = recs.slice().sort((a,b) => (_recDate(b)?.getTime()||0) - (_recDate(a)?.getTime()||0));
+        let streak = 0;
+        for(const r of sorted) {
+          if((r.maintType||'PM')==='CM') break;
+          streak++;
+        }
+        result[name] = streak;
+      });
+      return result;
     });
 
     // ── 7. Trend Tahunan PM vs CM (multi-year, bukan setakat beberapa bulan) ──
@@ -15968,7 +16091,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       next7DaysItems, handleNext7Click,
       filteredPM, yearList, submittedByDisplayName,
       pmListPage, pmListTotalPages, pmListPagedList, pmListGoToPage, pmListPageNumbers,
-      PROJECT_TYPES, calYear, calMonth, calCells, canEditSchedule,
+      PROJECT_TYPES, NON_SPRM_PROJECTS, projectLabel, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
@@ -16013,7 +16136,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isEquipGroupAllSelected, toggleEquipGroupSelectAll, bulkDeleteEquip,
       equipHistoryModal, openEquipHistory,
       revealedPw, togglePwReveal,
-      bulkEditModal, BULK_EDIT_FIELDS, openBulkEdit, applyBulkEdit,
+      bulkEditModal, bulkEditFieldOptions, openBulkEdit, applyBulkEdit,
       infoModal, showInfo,
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
@@ -16037,11 +16160,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
       yirYear, printYearInReview,
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
-      healthCountCctv, healthCountVir, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
+      healthCountCctv, healthCountVir, siteLeaderboard, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
-      slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload,
+      slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
