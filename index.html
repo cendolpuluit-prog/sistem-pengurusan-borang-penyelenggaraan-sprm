@@ -3004,8 +3004,40 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="pmStep===3 && currentProject==='vir'">
           <div class="card">
             <div class="card-title">📝 Nota / Catatan Tambahan</div>
-            <textarea class="form-control" v-model="pm.notaCatatan" rows="15" placeholder="Tulis nota atau catatan di sini..." style="resize:none;font-size:.88rem;line-height:1.6;font-family:inherit" @input="e=>{const lines=e.target.value.split('\n');if(lines.length>15){e.target.value=lines.slice(0,15).join('\n');pm.notaCatatan=e.target.value;}}"></textarea>
-            <p class="text-muted" style="font-size:.75rem;margin-top:6px">Maksimum 15 baris. Boleh biarkan kosong — ruang kekal pada borang bercetak.</p>
+            <p class="text-muted" style="font-size:.75rem;margin:-6px 0 14px">Tajuk pada borang: <b>{{pm.maintType==='CM'?'CORRECTIVE MAINTENANCE (CM)':'PREVENTIVE MAINTENANCE (PM)'}}</b> — ikut "Jenis Penyelenggaraan" yang dipilih di atas.</p>
+            <div v-for="(item,i) in pm.notaItems" :key="i" style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:12px">
+              <div class="flex justify-between items-center mb-8">
+                <b style="font-size:.85rem;color:#003366">Masalah {{i+1}}</b>
+                <button v-if="pm.notaItems.length>1" class="btn btn-outline btn-sm btn-icon" @click="removeNotaMasalah(i)" title="Buang">✕</button>
+              </div>
+              <div class="form-group"><label>Masalah {{i+1}}</label><textarea class="form-control" v-model="item.masalah" rows="2" placeholder="Nyatakan masalah..." style="resize:vertical;font-family:inherit"></textarea></div>
+              <div class="form-group"><label>Tindakan {{i+1}}</label><textarea class="form-control" v-model="item.tindakan" rows="2" placeholder="Nyatakan tindakan diambil..." style="resize:vertical;font-family:inherit"></textarea></div>
+              <div class="form-group" style="margin-bottom:0"><label>Status {{i+1}} <span class="text-muted text-sm">(remark dalaman sahaja — tak dipaparkan pada borang)</span></label>
+                <select class="form-control" v-model="item.status">
+                  <option value="">-- Pilih --</option>
+                  <option value="SELESAI">SELESAI</option>
+                  <option value="TIDAK SELESAI">TIDAK SELESAI</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm" style="margin-bottom:16px" @click="addNotaMasalah">+ Tambah Masalah</button>
+
+            <div class="form-group">
+              <label>Status</label>
+              <textarea class="form-control" v-model="pm.notaOverallStatus" rows="2" placeholder="Tulis 1 rumusan status terkini untuk kesemua masalah/tindakan di atas..." style="resize:vertical;font-family:inherit"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" v-model="pm.notaPendingEnabled" style="width:auto"> Ada kerja PENDING?</label>
+            </div>
+            <div v-if="pm.notaPendingEnabled">
+              <div v-for="(p,i) in pm.notaPending" :key="i" class="flex gap-8" style="margin-bottom:8px;align-items:center">
+                <input class="form-control" v-model="pm.notaPending[i]" :placeholder="'Pending '+(i+1)+'...'">
+                <button v-if="pm.notaPending.length>1" class="btn btn-outline btn-sm btn-icon" @click="removeNotaPending(i)" title="Buang">✕</button>
+              </div>
+              <button class="btn btn-outline btn-sm" @click="addNotaPending">+ Tambah Pending</button>
+            </div>
+            <p class="text-muted" style="font-size:.75rem;margin-top:12px">Boleh biarkan kosong — ruang pada borang bercetak akan sesuaikan ikut panjang isi.</p>
           </div>
           <div class="card">
             <div class="card-title">✍️ Tandatangan</div>
@@ -3225,8 +3257,40 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="card-title">📝 Nota / Catatan Tambahan</div>
-            <textarea class="form-control" v-model="pm.notaCatatan" rows="15" placeholder="Tulis nota atau catatan di sini..." style="resize:none;font-size:.88rem;line-height:1.6;font-family:inherit" @input="e=>{const lines=e.target.value.split('\n');if(lines.length>15){e.target.value=lines.slice(0,15).join('\n');pm.notaCatatan=e.target.value;}}"></textarea>
-            <p class="text-muted" style="font-size:.75rem;margin-top:6px">Maksimum 15 baris. Boleh biarkan kosong — ruang kekal pada borang bercetak.</p>
+            <p class="text-muted" style="font-size:.75rem;margin:-6px 0 14px">Tajuk pada borang: <b>{{pm.maintType==='CM'?'CORRECTIVE MAINTENANCE (CM)':'PREVENTIVE MAINTENANCE (PM)'}}</b> — ikut "Jenis Penyelenggaraan" yang dipilih di atas.</p>
+            <div v-for="(item,i) in pm.notaItems" :key="i" style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:12px">
+              <div class="flex justify-between items-center mb-8">
+                <b style="font-size:.85rem;color:#003366">Masalah {{i+1}}</b>
+                <button v-if="pm.notaItems.length>1" class="btn btn-outline btn-sm btn-icon" @click="removeNotaMasalah(i)" title="Buang">✕</button>
+              </div>
+              <div class="form-group"><label>Masalah {{i+1}}</label><textarea class="form-control" v-model="item.masalah" rows="2" placeholder="Nyatakan masalah..." style="resize:vertical;font-family:inherit"></textarea></div>
+              <div class="form-group"><label>Tindakan {{i+1}}</label><textarea class="form-control" v-model="item.tindakan" rows="2" placeholder="Nyatakan tindakan diambil..." style="resize:vertical;font-family:inherit"></textarea></div>
+              <div class="form-group" style="margin-bottom:0"><label>Status {{i+1}} <span class="text-muted text-sm">(remark dalaman sahaja — tak dipaparkan pada borang)</span></label>
+                <select class="form-control" v-model="item.status">
+                  <option value="">-- Pilih --</option>
+                  <option value="SELESAI">SELESAI</option>
+                  <option value="TIDAK SELESAI">TIDAK SELESAI</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-outline btn-sm" style="margin-bottom:16px" @click="addNotaMasalah">+ Tambah Masalah</button>
+
+            <div class="form-group">
+              <label>Status</label>
+              <textarea class="form-control" v-model="pm.notaOverallStatus" rows="2" placeholder="Tulis 1 rumusan status terkini untuk kesemua masalah/tindakan di atas..." style="resize:vertical;font-family:inherit"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label style="display:flex;align-items:center;gap:6px;font-weight:400"><input type="checkbox" v-model="pm.notaPendingEnabled" style="width:auto"> Ada kerja PENDING?</label>
+            </div>
+            <div v-if="pm.notaPendingEnabled">
+              <div v-for="(p,i) in pm.notaPending" :key="i" class="flex gap-8" style="margin-bottom:8px;align-items:center">
+                <input class="form-control" v-model="pm.notaPending[i]" :placeholder="'Pending '+(i+1)+'...'">
+                <button v-if="pm.notaPending.length>1" class="btn btn-outline btn-sm btn-icon" @click="removeNotaPending(i)" title="Buang">✕</button>
+              </div>
+              <button class="btn btn-outline btn-sm" @click="addNotaPending">+ Tambah Pending</button>
+            </div>
+            <p class="text-muted" style="font-size:.75rem;margin-top:12px">Boleh biarkan kosong — ruang pada borang bercetak akan sesuaikan ikut panjang isi.</p>
           </div>
           <div class="card">
             <div class="card-title">✍️ Tandatangan</div>
@@ -3741,12 +3805,12 @@ details.form-control[open] summary::after{content:'▴'}
 
           </template><!-- end CCTV-only -->
 
-          <!-- NOTA BOX -->
+          <!-- NOTA BOX — grows/shrinks with actual content (see viewPmNotaLines) instead of a fixed 15 rows -->
           <div class="pm-nota-box">
             <div class="pm-nota-hdr">NOTA / CATATAN TAMBAHAN</div>
             <div class="pm-nota-lines">
-              <template v-for="i in 15" :key="i">
-                <div class="pm-nota-line" :style="i===15?'border-bottom:none':''">{{(viewPM?.notaCatatan||'').split('\n')[i-1]||''}}</div>
+              <template v-for="(line,i) in viewPmNotaLines" :key="i">
+                <div class="pm-nota-line" :style="i===viewPmNotaLines.length-1?'border-bottom:none':''">{{line}}</div>
               </template>
             </div>
           </div>
@@ -7278,6 +7342,20 @@ createApp({
       // editRecord/savePM); tablets is Optager-only so it's declared here.
       servers:[], tablets:[],
       maintType:'', pmNo:null, rootCause:'', rootCauseCustom:'',
+      // Structured builder for Nota/Catatan Tambahan. notaItems is one
+      // Masalah+Tindakan+Status(dropdown) group per problem — status here
+      // is SELESAI/TIDAK SELESAI, kept as an internal remark for reports
+      // (Isu Berulang/root-cause) but deliberately NOT printed in the big
+      // Nota box; notaOverallStatus is the one free-text summary line the
+      // user writes that DOES show there as "STATUS: ...". The printed
+      // text (notaCatatan) groups every masalah/tindakan together under
+      // one heading each (see _buildNotaCatatan) — the accurate per-item
+      // structure for reports is saved separately as notaStruct so parsing
+      // the grouped display text back out is never required.
+      notaItems: [{ masalah:'', tindakan:'', status:'' }],
+      notaOverallStatus: '',
+      notaPendingEnabled: false,
+      notaPending: [''],
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
       clientName:'', clientJawatan:'', clientTarikh:'',
@@ -14062,6 +14140,9 @@ createApp({
         {key:'bukuLog',label:'Buku Log',status:'Baik',nota:''},
       ];
       pm.maintType=''; pm.pmNo=null; pm.rootCause=''; pm.rootCauseCustom='';
+      pm.notaItems = [{ masalah:'', tindakan:'', status:'' }];
+      pm.notaOverallStatus = '';
+      pm.notaPendingEnabled = false; pm.notaPending = [''];
       pm.notaCatatan = '';
       pm.contractorName=''; pm.contractorJawatan=''; pm.contractorTarikh='';
       pm.clientName=''; pm.clientJawatan=''; pm.clientTarikh='';
@@ -14203,7 +14284,8 @@ createApp({
           contractorName:pm.contractorName, contractorJawatan:pm.contractorJawatan, contractorTarikh:pm.contractorTarikh,
           clientName:pm.clientName, clientJawatan:pm.clientJawatan, clientTarikh:pm.clientTarikh,
           client2Name:pm.client2Name, client2Jawatan:pm.client2Jawatan, client2Tarikh:pm.client2Tarikh,
-          notaCatatan: pm.notaCatatan||'',
+          notaCatatan: _buildNotaCatatan(),
+          notaStruct: _buildNotaStruct(),
           status, createdBy: authUser.value?.email || '',
           ...(pm.maintType==='CM' && status==='submitted' ? {cmStatus:'open'} : {}),
           // pm._createdAt round-trips through localStorage JSON if the crash-recovery
@@ -14287,6 +14369,13 @@ createApp({
       return sorted;
     }
     function viewRecord(r) { viewPM.value=_sortedRecordCopy(r); currentProject.value=r.project||'cctv'; page.value='pm-view'; }
+    // Nota box on the printed/view page grows with actual content instead
+    // of a fixed 15 rows — always at least 1 line so the box never
+    // collapses to nothing for an empty note.
+    const viewPmNotaLines = computed(() => {
+      const lines = (viewPM.value?.notaCatatan||'').split('\n');
+      return lines.length ? lines : [''];
+    });
 
     // Loads an already-submitted record back into the editable pm form so
     // mistakes can be corrected without deleting + recreating the whole
@@ -14323,6 +14412,29 @@ createApp({
       } else {
         pm.rootCause = r.rootCause||'';
         pm.rootCauseCustom = '';
+      }
+      // Rebuild the structured Masalah/Tindakan/Status boxes. A record
+      // saved by this builder carries notaStruct — an exact round-trip, no
+      // guessing needed. An older record (typed free-text, or predating
+      // this feature) has none, so fall back to best-effort: _parseNota()
+      // if the text happens to match the old MASALAH:/TINDAKAN:/STATUS:
+      // convention, otherwise the whole text lands in the first Masalah box.
+      if(r.notaStruct?.items?.length) {
+        pm.notaItems = r.notaStruct.items.map(p => ({ masalah:p.masalah||'', tindakan:p.tindakan||'', status:p.status||'' }));
+        pm.notaOverallStatus = r.notaStruct.overallStatus||'';
+        pm.notaPendingEnabled = (r.notaStruct.pending||[]).length > 0;
+        pm.notaPending = (r.notaStruct.pending||[]).length ? [...r.notaStruct.pending] : [''];
+      } else {
+        const parsedItems = _parseNota(r.notaCatatan);
+        pm.notaItems = parsedItems.length
+          ? parsedItems.map(p => ({ masalah:p.masalah||'', tindakan:p.tindakan||'', status:'' }))
+          : [{ masalah: r.notaCatatan||'', tindakan:'', status:'' }];
+        // Legacy records had a per-item status, not one overall summary —
+        // best-effort fallback is the first parsed item's status, if any.
+        pm.notaOverallStatus = parsedItems[0]?.status || '';
+        const parsedPending = _parsePending(r.notaCatatan);
+        pm.notaPendingEnabled = parsedPending.length > 0;
+        pm.notaPending = parsedPending.length ? parsedPending : [''];
       }
       pm.notaCatatan = r.notaCatatan||'';
       pm.contractorName=r.contractorName||''; pm.contractorJawatan=r.contractorJawatan||''; pm.contractorTarikh=r.contractorTarikh||'';
@@ -15182,15 +15294,26 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     function _parseNota(nota) {
       if(!nota || !nota.trim()) return [];
       const items = [];
-      // Split by lines, build blocks separated by MASALAH keyword
+      // Split by lines, build blocks separated by MASALAH keyword. Labels
+      // may optionally carry a number ("MASALAH 2:") — the structured
+      // builder (_buildNotaCatatan) always numbers them; older free-typed
+      // notes never did, so \s*\d* tolerates both.
       const lines = nota.split(/\r?\n/);
       let cur = null;
+      let inPending = false;
       for(const raw of lines) {
         const line = raw.trim();
         if(!line) continue;
-        const mMas = line.match(/^MASALAH\s*[:：]\s*(.*)/i);
-        const mTid = line.match(/^TINDAKAN\s*[:：]\s*(.*)/i);
-        const mSta = line.match(/^STATUS\s*[:：]\s*(.*)/i);
+        // The PENDING block (if any) always comes after every MASALAH/
+        // TINDAKAN/STATUS triplet — stop folding lines into `cur` once it
+        // starts, otherwise "PENDING:" and its items would get appended as
+        // a continuation of the last item's status. _parsePending() below
+        // handles that block instead.
+        if(/^PENDING\b/i.test(line)) { inPending = true; continue; }
+        if(inPending) continue;
+        const mMas = line.match(/^MASALAH\s*\d*\s*[:：]\s*(.*)/i);
+        const mTid = line.match(/^TINDAKAN\s*\d*\s*[:：]\s*(.*)/i);
+        const mSta = line.match(/^STATUS\s*\d*\s*[:：]\s*(.*)/i);
         if(mMas) {
           if(cur) items.push(cur);
           cur = { masalah: mMas[1].trim(), tindakan:'', status:'' };
@@ -15208,20 +15331,97 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       if(cur) items.push(cur);
       // also handle single-line format: "MASALAH: x | TINDAKAN: y | STATUS: z"
       if(items.length === 0) {
-        const m = nota.match(/MASALAH\s*[:：]\s*([^|;\n]+)/i);
-        const t = nota.match(/TINDAKAN\s*[:：]\s*([^|;\n]+)/i);
-        const s = nota.match(/STATUS\s*[:：]\s*([^|;\n]+)/i);
+        const m = nota.match(/MASALAH\s*\d*\s*[:：]\s*([^|;\n]+)/i);
+        const t = nota.match(/TINDAKAN\s*\d*\s*[:：]\s*([^|;\n]+)/i);
+        const s = nota.match(/STATUS\s*\d*\s*[:：]\s*([^|;\n]+)/i);
         if(m || t || s) items.push({ masalah:(m?m[1].trim():''), tindakan:(t?t[1].trim():''), status:(s?s[1].trim():'') });
       }
       return items.filter(i => i.masalah || i.tindakan);
     }
+    // Extracts the optional "PENDING" list from a compiled nota string —
+    // companion to _parseNota() above, used only when re-loading an
+    // existing record into the structured builder for editing.
+    function _parsePending(nota) {
+      if(!nota) return [];
+      const items = [];
+      let inPending = false;
+      nota.split(/\r?\n/).forEach(raw => {
+        const line = raw.trim();
+        if(!line) return;
+        if(/^PENDING\b/i.test(line)) { inPending = true; return; }
+        if(!inPending) return;
+        const m = line.match(/^\d+\s*[.):]?\s*(.*)/) || line.match(/^PENDING\s*\d*\s*[:：]\s*(.*)/i);
+        items.push((m && m[1]) ? m[1].trim() : line);
+      });
+      return items.filter(Boolean);
+    }
+    // The filled (non-blank) notaItems — a row where the user never typed
+    // anything in Masalah/Tindakan is dropped, same as before.
+    function _filledNotaItems() {
+      return (pm.notaItems||[]).filter(item => (item.masalah||'').trim() || (item.tindakan||'').trim());
+    }
+    // Compiles the printed/saved text (notaCatatan) — grouped per section
+    // (every Masalah together, every Tindakan together) rather than
+    // interleaved per problem, per how this should actually read on the
+    // borang. Per-item Status (SELESAI/TIDAK SELESAI) is intentionally
+    // NOT included here — it's an internal remark only (see notaStruct
+    // below); the single free-text notaOverallStatus is what prints as
+    // "STATUS: ...".
+    function _buildNotaCatatan() {
+      const items = _filledNotaItems();
+      const lines = [pm.maintType === 'CM' ? 'CORRECTIVE MAINTENANCE (CM)' : 'PREVENTIVE MAINTENANCE (PM)', ''];
+      if(items.length) {
+        lines.push('MASALAH');
+        items.forEach((item,i) => lines.push(`${i+1}) ${(item.masalah||'').trim() || '-'}`));
+        lines.push('');
+        lines.push('TINDAKAN');
+        items.forEach((item,i) => lines.push(`${i+1}) ${(item.tindakan||'').trim() || '-'}`));
+        lines.push('');
+      }
+      lines.push(`STATUS: ${(pm.notaOverallStatus||'').trim() || '-'}`);
+      lines.push('');
+      if(pm.notaPendingEnabled) {
+        const pendingFilled = (pm.notaPending||[]).filter(p => (p||'').trim());
+        if(pendingFilled.length) {
+          lines.push('PENDING:');
+          pendingFilled.forEach((p,i) => lines.push(`${i+1}. ${p.trim()}`));
+          lines.push('');
+        }
+      }
+      return lines.join('\n').trim();
+    }
+    // The accurate structured data saved ALONGSIDE notaCatatan — since the
+    // printed text above groups masalah/tindakan together and drops
+    // per-item status entirely, it can't be regex-parsed back into
+    // per-problem detail. Isu Berulang/root-cause reports read this
+    // (see _getNotaItems) instead of re-parsing notaCatatan for any record
+    // that has it; only pre-this-feature records fall back to _parseNota().
+    function _buildNotaStruct() {
+      return {
+        items: _filledNotaItems().map(item => ({
+          masalah: (item.masalah||'').trim(), tindakan: (item.tindakan||'').trim(), status: item.status||'',
+        })),
+        overallStatus: (pm.notaOverallStatus||'').trim(),
+        pending: pm.notaPendingEnabled ? (pm.notaPending||[]).filter(p => (p||'').trim()).map(p=>p.trim()) : [],
+      };
+    }
+    // Reports want {masalah,tindakan,status} per problem regardless of
+    // whether a record has the new notaStruct (accurate) or only the old
+    // free-typed notaCatatan (regex best-effort via _parseNota).
+    function _getNotaItems(r) {
+      return (r.notaStruct?.items?.length) ? r.notaStruct.items : _parseNota(r.notaCatatan);
+    }
+    function addNotaMasalah() { pm.notaItems.push({ masalah:'', tindakan:'', status:'' }); }
+    function removeNotaMasalah(i) { if(pm.notaItems.length > 1) pm.notaItems.splice(i,1); }
+    function addNotaPending() { pm.notaPending.push(''); }
+    function removeNotaPending(i) { if(pm.notaPending.length > 1) pm.notaPending.splice(i,1); }
 
     const laporanNotaItems = computed(() => {
       const kw = laporanNotaSearch.value.toLowerCase().trim();
       const stFil = laporanNotaStatus.value.toLowerCase();
       const rows = [];
       laporanFiltered.value.forEach(r => {
-        const parsed = _parseNota(r.notaCatatan);
+        const parsed = _getNotaItems(r);
         parsed.forEach(p => {
           rows.push({ siteId:r.siteId, siteName:r.siteName||'—', visitDate:r.visitDate||(r.month?MONTHS[r.month-1]+' '+r.year:'—'), maintType:r.maintType||'PM', refNo:r.refNo||'—', project:r.project||'cctv', masalah:p.masalah, tindakan:p.tindakan, status:p.status });
         });
@@ -15284,7 +15484,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
           return d > acc ? d : acc;
         }, '');
         const fmtLatest = latestDate ? (() => { const [y,m,d] = latestDate.split('-'); return `${d||'01'}/${m}/${y}`; })() : '—';
-        const notaItems = siteRecs.flatMap(r => _parseNota(r.notaCatatan));
+        const notaItems = siteRecs.flatMap(r => _getNotaItems(r));
         const notaHtml = notaItems.length ? notaItems.map(n =>
           `<div style="margin:2px 0;font-size:9px;color:#333;padding:3px 6px;background:#fffde7;border-left:2px solid #f9a825;border-radius:2px">` +
           `${n.masalah ? '<b>M:</b> '+esc(n.masalah) : ''}${n.tindakan ? ' &nbsp;<b>T:</b> '+esc(n.tindakan) : ''}` +
@@ -15312,7 +15512,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 
       // Aggregate all masalah/tindakan items from CM records for issue summary
       const allIssues = recs.filter(r => r.maintType === 'CM').flatMap(r => {
-        const parsed = _parseNota(r.notaCatatan);
+        const parsed = _getNotaItems(r);
         return parsed.map(p => ({ ...p, siteName: r.siteName, visitDate: r.visitDate }));
       });
       const issueTableRows = allIssues.length ? allIssues.map((row, idx) => {
@@ -15467,7 +15667,7 @@ ${allIssues.length > 0 ? `
         const cmRecs = sRecs.filter(r => r.maintType === 'CM');
         const expected = PM_PER_YEAR[project];
         const pct = Math.round(pmRecs.length / expected * 100);
-        const issues = cmRecs.flatMap(r => _parseNota(r.notaCatatan));
+        const issues = cmRecs.flatMap(r => _getNotaItems(r));
         // Get PM months
         const pmMonths = pmRecs.map(r => {
           const d = r.visitDate ? new Date(r.visitDate) : (r.month ? new Date(yr, r.month-1, 1) : null);
@@ -15853,7 +16053,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     const recurringIssues = computed(() => {
       const map = {};
       pmRecords.value.forEach(r => {
-        _parseNota(r.notaCatatan).forEach(item => {
+        _getNotaItems(r).forEach(item => {
           const key = (item.masalah||'').trim().toLowerCase();
           if(!key || key.length < 4) return;
           if(!map[key]) map[key] = { text: item.masalah.trim(), count:0, sites:new Set() };
@@ -15978,7 +16178,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     const tindakanBreakdown = computed(() => {
       const map = {};
       pmRecords.value.forEach(r => {
-        _parseNota(r.notaCatatan).forEach(item => {
+        _getNotaItems(r).forEach(item => {
           const cat = _classifyTindakan(item.tindakan);
           if(!cat) return;
           map[cat] = (map[cat]||0) + 1;
@@ -16358,6 +16558,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, pmCamerasGrouped, viewPMCamerasGrouped,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
+      addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
