@@ -8277,8 +8277,11 @@ createApp({
       (currentProject.value==='cctv' && hasPermOverride('editEquipmentCctv')) ||
       (currentProject.value==='vir' && hasPermOverride('editEquipmentVir'))
     );
+    // Any staff/admin/superadmin may edit/delete ANY PM/CM record (not just
+    // admin+ or the original author) — internship excluded. `r` kept as a
+    // parameter for call-site compatibility even though it's unused now.
     function canEditPmRecord(r){
-      return isAdminRole() || (r.createdBy && r.createdBy === authUser.value?.email);
+      return ['superadmin','admin','staff'].includes(authProfile.value?.role);
     }
     // Equipment login credentials (camera/NVR/switch/alarm/misc access
     // username+password) are visible to staff and above — internship
@@ -15365,20 +15368,29 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     // interleaved per problem, per how this should actually read on the
     // borang. Per-item Status (SELESAI/TIDAK SELESAI) is intentionally
     // NOT included here — it's an internal remark only (see notaStruct
-    // below); the single free-text notaOverallStatus is what prints as
-    // "STATUS: ...".
+    // below); the single free-text notaOverallStatus is what prints under
+    // its own "STATUS" heading. Masalah/Tindakan are numbered and listed
+    // INDEPENDENTLY of each other — a blank Tindakan for a filled Masalah
+    // (or vice versa) is skipped entirely rather than printed as a
+    // placeholder "N) -", so the two lists don't have to stay the same
+    // length or share numbering.
     function _buildNotaCatatan() {
       const items = _filledNotaItems();
+      const masalahFilled = items.map(it => (it.masalah||'').trim()).filter(Boolean);
+      const tindakanFilled = items.map(it => (it.tindakan||'').trim()).filter(Boolean);
       const lines = [pm.maintType === 'CM' ? 'CORRECTIVE MAINTENANCE (CM)' : 'PREVENTIVE MAINTENANCE (PM)', ''];
-      if(items.length) {
+      if(masalahFilled.length) {
         lines.push('MASALAH');
-        items.forEach((item,i) => lines.push(`${i+1}) ${(item.masalah||'').trim() || '-'}`));
-        lines.push('');
-        lines.push('TINDAKAN');
-        items.forEach((item,i) => lines.push(`${i+1}) ${(item.tindakan||'').trim() || '-'}`));
+        masalahFilled.forEach((m,i) => lines.push(`${i+1}) ${m}`));
         lines.push('');
       }
-      lines.push(`STATUS: ${(pm.notaOverallStatus||'').trim() || '-'}`);
+      if(tindakanFilled.length) {
+        lines.push('TINDAKAN');
+        tindakanFilled.forEach((t,i) => lines.push(`${i+1}) ${t}`));
+        lines.push('');
+      }
+      lines.push('STATUS');
+      lines.push((pm.notaOverallStatus||'').trim() || '-');
       lines.push('');
       if(pm.notaPendingEnabled) {
         const pendingFilled = (pm.notaPending||[]).filter(p => (p||'').trim());
