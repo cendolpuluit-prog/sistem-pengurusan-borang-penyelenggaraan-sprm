@@ -1107,10 +1107,10 @@ details.form-control[open] summary::after{content:'▴'}
       <div class="nav-item" :class="{active:page==='jadual'}" @click="openJadual">
         <span class="icon">📅</span> Jadual Penyelenggaraan
       </div>
-      <div class="nav-item" :class="{active:page==='laporan'}" @click="page='laporan'" v-if="['superadmin','admin'].includes(authProfile?.role)">
+      <div class="nav-item" :class="{active:page==='laporan'}" @click="page='laporan'" v-if="canViewCredentials">
         <span class="icon">📋</span> Laporan
       </div>
-      <div class="nav-item" :class="{active:page==='laporan-lanjutan'}" @click="page='laporan-lanjutan'" v-if="['superadmin','admin'].includes(authProfile?.role)">
+      <div class="nav-item" :class="{active:page==='laporan-lanjutan'}" @click="page='laporan-lanjutan'" v-if="canViewCredentials">
         <span class="icon">📈</span> Laporan Lanjutan
       </div>
       <div class="nav-item" :class="{active:page==='kontraktor-luar'}" @click="loadKontraktorLuar();page='kontraktor-luar'">
@@ -5005,12 +5005,12 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== LAPORAN ====== -->
-      <div v-if="page==='laporan'">
+      <div v-if="page==='laporan' && canViewCredentials">
         <!-- Filter bar -->
         <div class="card" style="margin-bottom:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
             <div style="font-weight:700;font-size:1.05rem;color:#003366">📋 Laporan Penyelenggaraan</div>
-            <button class="btn btn-sm" style="background:#003366;color:#fff" @click="printLaporan">🖨️ Cetak PDF</button>
+            <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-sm" style="background:#003366;color:#fff" @click="printLaporan">🖨️ Cetak PDF</button>
           </div>
           <div class="flex gap-8" style="flex-wrap:wrap;margin-top:14px">
             <div class="form-group" style="margin:0">
@@ -5159,7 +5159,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div style="font-weight:700;font-size:.95rem;color:#4a148c">📊 Jana Laporan Tahunan (Year-in-Review)</div>
               <div style="font-size:.75rem;color:#888;margin-top:2px">Pematuhan PM CCTV (3x) &amp; VIR (2x), skor kesihatan semua site, peralatan kerap gagal, sorotan isu</div>
             </div>
-            <button class="btn" style="background:#4a148c;color:#fff;font-weight:700" @click="printYearInReview">📋 Jana PDF Tahunan</button>
+            <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn" style="background:#4a148c;color:#fff;font-weight:700" @click="printYearInReview">📋 Jana PDF Tahunan</button>
           </div>
           <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
             <div class="form-group" style="margin:0">
@@ -5183,7 +5183,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div style="font-weight:700;font-size:.95rem;color:#003366">📑 Jana Laporan Bulanan Rasmi</div>
               <div style="font-size:.75rem;color:#888;margin-top:2px">Format PDF untuk pembentangan kepada klien — auto-fill dari data dalam sistem</div>
             </div>
-            <button class="btn" style="background:#003366;color:#fff;font-weight:700" @click="printLaporanBulanan">📄 Jana PDF Sekarang</button>
+            <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn" style="background:#003366;color:#fff;font-weight:700" @click="printLaporanBulanan">📄 Jana PDF Sekarang</button>
           </div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
             <div class="form-group" style="margin:0">
@@ -5220,7 +5220,7 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== LAPORAN LANJUTAN ====== -->
-      <div v-if="page==='laporan-lanjutan'">
+      <div v-if="page==='laporan-lanjutan' && canViewCredentials">
         <div class="tabs no-print">
           <div class="tab" :class="{active:reportTab==='inventori'}" @click="reportTab='inventori'">📦 Inventori Peralatan</div>
           <div class="tab" :class="{active:reportTab==='sla'}" @click="reportTab='sla'">⏱ Trend Keterlambatan</div>
@@ -5243,7 +5243,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div style="font-weight:700;color:#003366;font-size:.92rem">📄 Ringkasan Eksekutif (1 Halaman)</div>
               <div class="text-sm text-muted">KPI utama + top 3 site bermasalah + top 3 isu berulang — untuk share pantas dengan pengurusan.</div>
             </div>
-            <button class="btn btn-primary" @click="printExecutiveSummary">🖨️ Cetak Ringkasan Eksekutif</button>
+            <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-primary" @click="printExecutiveSummary">🖨️ Cetak Ringkasan Eksekutif</button>
           </div>
         </div>
 
@@ -5268,7 +5268,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <option value="Lain-lain">Lain-lain</option>
                 </select>
                 <input class="form-control search-bar" v-model="assetSearch" placeholder="🔍 Cari site/brand/model/serial">
-                <button class="btn btn-success" @click="exportAssetRegister">📊 Export Excel</button>
+                <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportAssetRegister">📊 Export Excel</button>
               </div>
             </div>
             <div class="tbl-wrap">
@@ -5509,8 +5509,8 @@ details.form-control[open] summary::after{content:'▴'}
                   <option value="cctv">CCTV</option>
                   <option value="vir">VIR</option>
                 </select>
-                <button class="btn btn-success" @click="exportFailureReportExcel">📊 Export Excel</button>
-                <button class="btn btn-danger" @click="exportFailureReportPdf">🖨️ Export PDF</button>
+                <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportFailureReportExcel">📊 Export Excel</button>
+                <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-danger" @click="exportFailureReportPdf">🖨️ Export PDF</button>
               </div>
             </div>
             <p class="text-sm text-muted mb-12">Dikira daripada sebab yang dipilih setiap kali rekod peralatan dibuang di "Urus Peralatan Site" — pilih sebab "Rosak" bila padam rekod supaya kekerapan kerosakan ikut site/kategori direkod dengan tepat.</p>
@@ -15102,6 +15102,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     }
 
     async function printLaporan() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const recs = laporanFiltered.value;
       const months = _getLaporanMonthRange(laporanTempoh.value);
       // Capture chart canvases as base64 images
@@ -15232,6 +15233,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     });
 
     async function printLaporanBulanan() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const recs = lbRecords.value;
       const monthName = MONTHS[lbMonth.value - 1];
       const yr = lbYear.value;
@@ -15420,6 +15422,7 @@ ${allIssues.length > 0 ? `
     const yirYear = ref(new Date().getFullYear());
 
     async function printYearInReview() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const yr = yirYear.value;
       const recs = pmRecords.value.filter(r => {
         const recYear = r.visitDate ? new Date(r.visitDate).getFullYear() : Number(r.year);
@@ -15707,6 +15710,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       return 'https://www.google.com/search?q=' + encodeURIComponent(`${r.brand} ${r.model} warranty check ${serial}`);
     }
     function exportAssetRegister() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const rows = assetRegister.value.map((r,i) => ({
         '#': i+1, Site: r.site, Projek: r.proj, Kategori: r.cat, 'Nama/Jenis': r.name,
         Brand: r.brand, Model: r.model, 'No. Siri': r.serial, 'Maklumat Tambahan': r.extra,
@@ -15746,6 +15750,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
 
     // ── 3. Ringkasan Eksekutif (1 halaman, print) ──
     async function printExecutiveSummary() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const yr = new Date().getFullYear();
       const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
       const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
@@ -16086,6 +16091,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return Object.values(groups).sort((a,b) => b.rosak - a.rosak);
     });
     async function exportFailureReportExcel() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const rows = failureReport.value.map((r,i) => ({
         '#': i+1, Site: r.siteName, Projek: r.project.toUpperCase(), Kategori: r.category,
         'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Tersilap': r.tersilap, 'Lain-lain': r.lain, 'Jumlah': r.total,
@@ -16097,6 +16103,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       await logAudit('EXPORT_FAILURE_REPORT_EXCEL', `${rows.length} baris`);
     }
     async function exportFailureReportPdf() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const list = failureReport.value;
       const tableRows = list.map(r => `<tr>
         <td>${(r.siteName||'-').replace(/</g,'&lt;')}</td><td>${r.project.toUpperCase()}</td><td>${(r.category||'-').replace(/</g,'&lt;')}</td>
