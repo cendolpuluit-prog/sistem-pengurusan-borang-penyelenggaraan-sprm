@@ -5509,6 +5509,10 @@ details.form-control[open] summary::after{content:'▴'}
                   <option value="cctv">CCTV</option>
                   <option value="vir">VIR</option>
                 </select>
+                <select class="form-control" style="width:220px" v-model="failureFilterSite">
+                  <option value="">Semua Site</option>
+                  <option v-for="s in failureFilterSiteOptions" :key="s.id" :value="s.id">{{s.name}}</option>
+                </select>
                 <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportFailureReportExcel">📊 Export Excel</button>
                 <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-danger" @click="exportFailureReportPdf">🖨️ Export PDF</button>
               </div>
@@ -5516,7 +5520,7 @@ details.form-control[open] summary::after{content:'▴'}
             <p class="text-sm text-muted mb-12">Dikira daripada sebab yang dipilih setiap kali rekod peralatan dibuang di "Urus Peralatan Site" — pilih sebab "Rosak" bila padam rekod supaya kekerapan kerosakan ikut site/kategori direkod dengan tepat.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>🔧 Rosak</th><th>🔄 Ganti Baru</th><th>✏️ Tersilap</th><th>📋 Lain-lain</th><th>Jumlah</th></tr></thead>
+                <thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>🔧 Rosak</th><th>🔄 Ganti Baru</th><th>📋 Lain-lain</th><th>Jumlah</th></tr></thead>
                 <tbody>
                   <tr v-for="r in failureReport" :key="r.siteId+'|'+r.category">
                     <td>{{r.siteName}}</td>
@@ -5524,11 +5528,10 @@ details.form-control[open] summary::after{content:'▴'}
                     <td>{{r.category}}</td>
                     <td><span class="badge badge-red">{{r.rosak}}</span></td>
                     <td>{{r.gantiBaru}}</td>
-                    <td>{{r.tersilap}}</td>
                     <td>{{r.lain}}</td>
                     <td><b>{{r.total}}</b></td>
                   </tr>
-                  <tr v-if="!failureReport.length"><td colspan="8" class="empty">Tiada rekod penyingkiran peralatan lagi.</td></tr>
+                  <tr v-if="!failureReport.length"><td colspan="7" class="empty">Tiada rekod penyingkiran peralatan lagi.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -13941,7 +13944,11 @@ createApp({
         await db.collection('equipmentRemovalLog').add({
           project: currentProject.value,
           siteId, siteName: selSite.value?.name || siteId,
-          category: EQUIPMENT_CATEGORY_LABEL[key] || key,
+          // "Lain-lain" (misc) covers many distinct sub-categories (PC, UPS,
+          // Monitor, TV, etc.) chosen via the item's own Kategori dropdown —
+          // use that specific value instead of the generic "Lain-lain" label
+          // so the report can tell a TV failure apart from a PC failure.
+          category: key === 'misc' ? (itemSnapshot.category || 'Lain-lain') : (EQUIPMENT_CATEGORY_LABEL[key] || key),
           itemName: itemSnapshot.name || itemSnapshot.nvrRef || '-',
           brand: itemSnapshot.brand || '-', model: itemSnapshot.model || '-', serial: itemSnapshot.serial || '-',
           reason, reasonCustom: reason === 'lain' ? (reasonCustom||'').trim() : '',
@@ -16076,16 +16083,36 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       } catch(e) { console.warn('Gagal muat log penyingkiran peralatan:', e); }
     }
     const failureFilterProj = ref('all');
+    const failureFilterSite = ref('');
+    // Site dropdown options depend on the project filter — CCTV only ever
+    // has the 17 SITES, VIR has its own separate (larger) VIR_SITES list.
+    // "Semua Projek" shows both lists together since a site can only
+    // meaningfully belong to one or the other anyway.
+    const failureFilterSiteOptions = computed(() => {
+      if(failureFilterProj.value === 'cctv') return SITES;
+      if(failureFilterProj.value === 'vir') return VIR_SITES;
+      return [...SITES, ...VIR_SITES];
+    });
+    // Reset the site filter whenever the project changes — a site picked
+    // under CCTV wouldn't exist in the VIR list (or vice versa), so leaving
+    // it set would silently filter the report down to nothing.
+    watch(failureFilterProj, () => { failureFilterSite.value = ''; });
     const failureReport = computed(() => {
       const groups = {};
       equipmentRemovalLogs.value.forEach(l => {
         if(failureFilterProj.value !== 'all' && l.project !== failureFilterProj.value) return;
+        if(failureFilterSite.value && l.siteId !== failureFilterSite.value) return;
+        // "Tersilap Masuk" (data-entry mistakes, e.g. staff testing add/
+        // delete) is deliberately excluded from this report entirely — it's
+        // still logged (see confirmRemoveItem) in case the raw data is ever
+        // needed, just never counted here so test/mistake entries can't
+        // skew the rosak/ganti-baru/lain-lain figures.
+        if(l.reason === 'tersilap') return;
         const key = l.siteId + '|' + l.category;
-        if(!groups[key]) groups[key] = { siteId:l.siteId, siteName:l.siteName||l.siteId, category:l.category, project:l.project||'cctv', rosak:0, gantiBaru:0, tersilap:0, lain:0, total:0 };
+        if(!groups[key]) groups[key] = { siteId:l.siteId, siteName:l.siteName||l.siteId, category:l.category, project:l.project||'cctv', rosak:0, gantiBaru:0, lain:0, total:0 };
         groups[key].total++;
         if(l.reason === 'rosak') groups[key].rosak++;
         else if(l.reason === 'ganti-baru') groups[key].gantiBaru++;
-        else if(l.reason === 'tersilap') groups[key].tersilap++;
         else groups[key].lain++;
       });
       return Object.values(groups).sort((a,b) => b.rosak - a.rosak);
@@ -16094,7 +16121,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const rows = failureReport.value.map((r,i) => ({
         '#': i+1, Site: r.siteName, Projek: r.project.toUpperCase(), Kategori: r.category,
-        'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Tersilap': r.tersilap, 'Lain-lain': r.lain, 'Jumlah': r.total,
+        'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Lain-lain': r.lain, 'Jumlah': r.total,
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
       const wb = XLSX.utils.book_new();
@@ -16107,7 +16134,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const list = failureReport.value;
       const tableRows = list.map(r => `<tr>
         <td>${(r.siteName||'-').replace(/</g,'&lt;')}</td><td>${r.project.toUpperCase()}</td><td>${(r.category||'-').replace(/</g,'&lt;')}</td>
-        <td>${r.rosak}</td><td>${r.gantiBaru}</td><td>${r.tersilap}</td><td>${r.lain}</td><td><b>${r.total}</b></td>
+        <td>${r.rosak}</td><td>${r.gantiBaru}</td><td>${r.lain}</td><td><b>${r.total}</b></td>
       </tr>`).join('');
       const w = window.open('','_blank','width=1100,height=750');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
@@ -16139,7 +16166,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} baris</p>
           </div>
         </div>
-        <table><thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>Rosak</th><th>Ganti Baru</th><th>Tersilap</th><th>Lain-lain</th><th>Jumlah</th></tr></thead>
+        <table><thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>Rosak</th><th>Ganti Baru</th><th>Lain-lain</th><th>Jumlah</th></tr></thead>
         <tbody>${tableRows}</tbody></table>
       </body></html>`);
       w.document.close();
@@ -16373,7 +16400,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
-      equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureReport, exportFailureReportExcel, exportFailureReportPdf,
+      equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureFilterSite, failureFilterSiteOptions, failureReport, exportFailureReportExcel, exportFailureReportPdf,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
       kontraktorLuar, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
