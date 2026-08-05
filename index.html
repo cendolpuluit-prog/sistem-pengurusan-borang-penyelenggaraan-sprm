@@ -4777,6 +4777,28 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== BULK EDIT EQUIPMENT MODAL ====== -->
+      <!-- ====== SEBAB PADAM PERALATAN (powers Sejarah Ganti/Rosak report) ====== -->
+      <div v-if="removeReasonModal.show" class="modal-bg">
+        <div class="modal" style="max-width:420px">
+          <h3>🗑 Padam Peralatan</h3>
+          <p class="text-sm text-muted mb-12">Kenapa "{{removeReasonModal.itemSnapshot?.name || removeReasonModal.itemSnapshot?.nvrRef || '-'}}" ini dibuang? Maklumat ini digunakan untuk laporan kekerapan ganti/rosak peralatan.</p>
+          <div class="form-group">
+            <label>Sebab</label>
+            <select class="form-control" v-model="removeReasonModal.reason">
+              <option value="rosak">🔧 Rosak / Tidak Berfungsi</option>
+              <option value="ganti-baru">🔄 Ganti Baru / Naik Taraf (bukan rosak)</option>
+              <option value="tersilap">✏️ Tersilap Masuk (Kesilapan Data)</option>
+              <option value="lain">📋 Lain-lain</option>
+            </select>
+            <input v-if="removeReasonModal.reason==='lain'" class="form-control" v-model="removeReasonModal.reasonCustom" placeholder="Nyatakan sebab" style="margin-top:6px">
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="removeReasonModal.show=false">Batal</button>
+            <button class="btn btn-danger" @click="confirmRemoveItem">🗑 Padam</button>
+          </div>
+        </div>
+      </div>
+
       <div v-if="bulkEditModal.show" class="modal-bg" @click.self="bulkEditModal.show=false">
         <div class="modal">
           <h3>✏️ Edit Pukal — {{equipSelected[bulkEditModal.kind]?.size||0}} rekod terpilih</h3>
@@ -5211,6 +5233,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="tab" :class="{active:reportTab==='resolusi'}" @click="reportTab='resolusi'">⏳ Masa Selesai</div>
           <div class="tab" :class="{active:reportTab==='punca'}" @click="reportTab='punca'">🎯 Punca Kerosakan</div>
           <div class="tab" :class="{active:reportTab==='jangkahayat'}" @click="reportTab='jangkahayat'">📅 Jangka Hayat</div>
+          <div class="tab" :class="{active:reportTab==='gantirosak'}" @click="reportTab='gantirosak'; loadEquipmentRemovalLogs()">♻️ Sejarah Ganti/Rosak</div>
         </div>
 
         <!-- Executive summary — always visible action -->
@@ -5469,6 +5492,43 @@ details.form-control[open] summary::after{content:'▴'}
                     <td><span class="badge badge-red">{{r.ageYears}} tahun</span></td>
                   </tr>
                   <tr v-if="!equipmentLifespan.length"><td colspan="9" class="empty">Tiada peralatan lepas {{EQUIPMENT_LIFESPAN_YEARS}} tahun (atau tarikh pasang belum direkodkan untuk peralatan sedia ada).</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: SEJARAH GANTI/ROSAK PERALATAN -->
+        <div v-if="reportTab==='gantirosak'">
+          <div class="card">
+            <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
+              <div class="card-title" style="margin:0;border:none;padding:0">Sejarah Ganti/Rosak Peralatan</div>
+              <div class="flex gap-8" style="flex-wrap:wrap">
+                <select class="form-control" style="width:130px" v-model="failureFilterProj">
+                  <option value="all">Semua Projek</option>
+                  <option value="cctv">CCTV</option>
+                  <option value="vir">VIR</option>
+                </select>
+                <button class="btn btn-success" @click="exportFailureReportExcel">📊 Export Excel</button>
+                <button class="btn btn-danger" @click="exportFailureReportPdf">🖨️ Export PDF</button>
+              </div>
+            </div>
+            <p class="text-sm text-muted mb-12">Dikira daripada sebab yang dipilih setiap kali rekod peralatan dibuang di "Urus Peralatan Site" — pilih sebab "Rosak" bila padam rekod supaya kekerapan kerosakan ikut site/kategori direkod dengan tepat.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>🔧 Rosak</th><th>🔄 Ganti Baru</th><th>✏️ Tersilap</th><th>📋 Lain-lain</th><th>Jumlah</th></tr></thead>
+                <tbody>
+                  <tr v-for="r in failureReport" :key="r.siteId+'|'+r.category">
+                    <td>{{r.siteName}}</td>
+                    <td><span :class="'proj-badge proj-'+r.project">{{r.project.toUpperCase()}}</span></td>
+                    <td>{{r.category}}</td>
+                    <td><span class="badge badge-red">{{r.rosak}}</span></td>
+                    <td>{{r.gantiBaru}}</td>
+                    <td>{{r.tersilap}}</td>
+                    <td>{{r.lain}}</td>
+                    <td><b>{{r.total}}</b></td>
+                  </tr>
+                  <tr v-if="!failureReport.length"><td colspan="8" class="empty">Tiada rekod penyingkiran peralatan lagi.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -9616,7 +9676,7 @@ createApp({
     // assignments, audit logs and custom equipment options. Fetched fresh
     // from Firestore (not the local reactive refs) so it's always complete
     // regardless of what happens to be loaded in the app right now.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -9651,7 +9711,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -9908,6 +9968,7 @@ createApp({
         if(data.kontraktorLuar?.length) { await _batchRestoreCollection('kontraktorLuar', data.kontraktorLuar); await loadKontraktorLuar(); }
         if(data.equipmentWarranty?.length) { await _batchRestoreCollection('equipmentWarranty', data.equipmentWarranty); await loadWarranty(); }
         if(data.virEquipmentWarranty?.length) { await _batchRestoreCollection('virEquipmentWarranty', data.virEquipmentWarranty); await loadVirWarranty(); }
+        if(data.equipmentRemovalLog?.length) { await _batchRestoreCollection('equipmentRemovalLog', data.equipmentRemovalLog); await loadEquipmentRemovalLogs(); }
         if(data.warrantyVendorContracts?.length) { await _batchRestoreCollection('warrantyVendorContracts', data.warrantyVendorContracts); await loadVendorContracts(); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
@@ -13265,6 +13326,13 @@ createApp({
       infoModal.show = true;
     }
 
+    // Reason prompt shown by removeItem() before actually deleting a
+    // physical equipment record — see confirmRemoveItem() and the
+    // "equipmentRemovalLog" collection/rule.
+    const removeReasonModal = reactive({ show:false, siteId:null, key:null, idx:null, itemSnapshot:null, reason:'rosak', reasonCustom:'' });
+    const EQUIPMENT_CATEGORY_LABEL = { cameras:'Kamera', nvr:'NVR', hdd:'HDD', switches:'Switch', alarms:'Alarm', misc:'Lain-lain', servers:'Server', tablets:'Tablet' };
+    const REMOVAL_REASON_LABEL = { rosak:'🔧 Rosak', 'ganti-baru':'🔄 Ganti Baru/Naik Taraf', tersilap:'✏️ Tersilap Masuk', lain:'📋 Lain-lain' };
+
     const bulkEditModal = reactive({ show:false, kind:'', field:'installDate', value:'' });
     // NVR Berkaitan is only offered for cameras/hdd — those are the only
     // kinds that actually carry an nvrRef field (see hddGroupedByNvr /
@@ -13814,6 +13882,8 @@ createApp({
       // so once the room itself is gone, its equipment bucket can never be
       // selected again even though it still exists in Firestore. Warn with
       // specifics and migrate to 'legacyUnassigned' so it stays reachable.
+      // Rooms aren't physical equipment that "fails", so this path skips
+      // the removal-reason prompt below and deletes immediately like before.
       if(key === 'rooms') {
         const room = virSiteEquip.value[siteId]?.rooms?.[idx];
         if(room?.system === 'Optager HD4000' && _roomHasOptagerEquipment(siteId, room._uid)) {
@@ -13822,12 +13892,39 @@ createApp({
           }
           _migrateOptagerRoomToUnassigned(siteId, room._uid);
         } else if(!confirm('Padam rekod ini?')) return;
-      } else if(!confirm('Padam rekod ini?')) return;
-      const list = key === 'rooms' ? virSiteEquip.value[siteId].rooms : activeEquip()[siteId][key];
-      // Deleting a row before the one mid-edit shifts every later index, so
-      // equipEditIdx[key] must be re-synced by identity (_uid) — comparing
-      // it to the deleted idx directly only caught the exact-match case and
-      // left "Kemaskini" pointing at (and about to overwrite) the wrong row.
+        const list = virSiteEquip.value[siteId].rooms;
+        const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
+        list.splice(idx,1);
+        if(editedUid) {
+          const newIdx = list.findIndex(it => it._uid === editedUid);
+          if(newIdx === -1) cancelEditEquip(key);
+          else equipEditIdx[key] = newIdx;
+        }
+        return;
+      }
+      // Physical equipment: ask WHY before deleting (rosak/ganti-baru/
+      // tersilap/lain) instead of just confirm() — see confirmRemoveItem()
+      // below, which does the actual splice once a reason is picked. This is
+      // what powers "Sejarah Ganti/Rosak Peralatan" in Laporan Lanjutan:
+      // without a recorded reason, a replaced-because-broken TV and a
+      // replaced-because-upgraded TV would look identical in the data, so
+      // "how many times has X failed at site Y" could never be counted.
+      const list = activeEquip()[siteId][key];
+      const item = list[idx];
+      if(!item) return;
+      Object.assign(removeReasonModal, {
+        show: true, siteId, key, idx,
+        itemSnapshot: { ...item },
+        reason: 'rosak', reasonCustom: '',
+      });
+    }
+    // Runs the actual delete (same index-shift/edit-resync logic removeItem
+    // always had) only after the user picks a reason in removeReasonModal —
+    // called by the modal's "Padam" button.
+    async function confirmRemoveItem() {
+      const { siteId, key, idx, itemSnapshot, reason, reasonCustom } = removeReasonModal;
+      const list = activeEquip()[siteId]?.[key];
+      if(!list) { removeReasonModal.show = false; return; }
       const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
       list.splice(idx,1);
       if(editedUid) {
@@ -13835,6 +13932,23 @@ createApp({
         if(newIdx === -1) cancelEditEquip(key);
         else equipEditIdx[key] = newIdx;
       }
+      removeReasonModal.show = false;
+      // Best-effort, non-blocking: the equipment removal itself already
+      // succeeded in local state above (and will reach Firestore via the
+      // usual equipment auto-save) regardless of whether this log write
+      // succeeds — a failure here should never look like the delete failed.
+      try {
+        await db.collection('equipmentRemovalLog').add({
+          project: currentProject.value,
+          siteId, siteName: selSite.value?.name || siteId,
+          category: EQUIPMENT_CATEGORY_LABEL[key] || key,
+          itemName: itemSnapshot.name || itemSnapshot.nvrRef || '-',
+          brand: itemSnapshot.brand || '-', model: itemSnapshot.model || '-', serial: itemSnapshot.serial || '-',
+          reason, reasonCustom: reason === 'lain' ? (reasonCustom||'').trim() : '',
+          removedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          removedBy: authUser.value?.email || '',
+        });
+      } catch(e) { console.warn('Gagal log penyingkiran peralatan:', e); }
     }
     // Shared write path for both the manual "Simpan Semua" button and the
     // debounced auto-save — captures the target site/label up front since
@@ -15946,6 +16060,90 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return rows.sort((a,b) => b.ageYears - a.ageYears);
     });
 
+    // ── "Sejarah Ganti/Rosak Peralatan" — powered by equipmentRemovalLog,
+    // written once per item by confirmRemoveItem() whenever equipment is
+    // deleted from Urus Peralatan Site with a reason attached. ──
+    const equipmentRemovalLogs = ref([]);
+    async function loadEquipmentRemovalLogs() {
+      try {
+        const snap = await db.collection('equipmentRemovalLog').orderBy('removedAt','desc').get();
+        equipmentRemovalLogs.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      } catch(e) { console.warn('Gagal muat log penyingkiran peralatan:', e); }
+    }
+    const failureFilterProj = ref('all');
+    const failureReport = computed(() => {
+      const groups = {};
+      equipmentRemovalLogs.value.forEach(l => {
+        if(failureFilterProj.value !== 'all' && l.project !== failureFilterProj.value) return;
+        const key = l.siteId + '|' + l.category;
+        if(!groups[key]) groups[key] = { siteId:l.siteId, siteName:l.siteName||l.siteId, category:l.category, project:l.project||'cctv', rosak:0, gantiBaru:0, tersilap:0, lain:0, total:0 };
+        groups[key].total++;
+        if(l.reason === 'rosak') groups[key].rosak++;
+        else if(l.reason === 'ganti-baru') groups[key].gantiBaru++;
+        else if(l.reason === 'tersilap') groups[key].tersilap++;
+        else groups[key].lain++;
+      });
+      return Object.values(groups).sort((a,b) => b.rosak - a.rosak);
+    });
+    async function exportFailureReportExcel() {
+      const rows = failureReport.value.map((r,i) => ({
+        '#': i+1, Site: r.siteName, Projek: r.project.toUpperCase(), Kategori: r.category,
+        'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Tersilap': r.tersilap, 'Lain-lain': r.lain, 'Jumlah': r.total,
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Ganti-Rosak Peralatan');
+      XLSX.writeFile(wb, `sejarah_ganti_rosak_peralatan_${new Date().toISOString().slice(0,10)}.xlsx`);
+      await logAudit('EXPORT_FAILURE_REPORT_EXCEL', `${rows.length} baris`);
+    }
+    async function exportFailureReportPdf() {
+      const list = failureReport.value;
+      const tableRows = list.map(r => `<tr>
+        <td>${(r.siteName||'-').replace(/</g,'&lt;')}</td><td>${r.project.toUpperCase()}</td><td>${(r.category||'-').replace(/</g,'&lt;')}</td>
+        <td>${r.rosak}</td><td>${r.gantiBaru}</td><td>${r.tersilap}</td><td>${r.lain}</td><td><b>${r.total}</b></td>
+      </tr>`).join('');
+      const w = window.open('','_blank','width=1100,height=750');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Sejarah_Ganti_Rosak_Peralatan_${new Date().toISOString().slice(0,10)}</title>
+        <style>
+          @page{size:landscape;margin:12mm}
+          body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
+          h2{color:#003366;margin-bottom:2px}
+          p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
+          .header-side{flex-shrink:0;text-align:right}
+          .header-generated{font-style:italic;color:#888;font-size:7.5pt;margin:4px 0 0}
+          table{width:100%;border-collapse:collapse;margin-top:6px}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
+          td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt}
+          tr:nth-child(even) td{background:#f7f9fc}
+        </style>
+      </head><body>
+        <div class="header">
+          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Sejarah Ganti/Rosak Peralatan</h2>
+            <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
+          </div>
+          <div class="header-side">
+            <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} baris</p>
+          </div>
+        </div>
+        <table><thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>Rosak</th><th>Ganti Baru</th><th>Tersilap</th><th>Lain-lain</th><th>Jumlah</th></tr></thead>
+        <tbody>${tableRows}</tbody></table>
+      </body></html>`);
+      w.document.close();
+      w.focus();
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); w.close(); }, 200);
+      await logAudit('EXPORT_FAILURE_REPORT_PDF', `${list.length} baris`);
+    }
+
     // Init/destroy Laporan Lanjutan charts based on active tab
     function _destroyReportLanjutanCharts() {
       [_chartYearTrend,_chartTindakan,_chartResolution,_chartRootCause].forEach(c => { if(c) c.destroy(); });
@@ -16131,6 +16329,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openSiteEquip, selSiteEquip, hddGroupedByNvr, camerasGroupedByNvr, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
       equipVirRoomUid, virRoomPickerModal, currentOptagerRoomName, optagerRoomChoicesForSite, pickOptagerRoom, openOptagerRoomEquip,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
+      removeReasonModal, confirmRemoveItem,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isEquipGroupAllSelected, toggleEquipGroupSelectAll, bulkDeleteEquip,
@@ -16167,6 +16366,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
+      equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureReport, exportFailureReportExcel, exportFailureReportPdf,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
       kontraktorLuar, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
