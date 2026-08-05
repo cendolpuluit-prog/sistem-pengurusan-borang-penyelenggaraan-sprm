@@ -5515,6 +5515,7 @@ details.form-control[open] summary::after{content:'▴'}
                 </select>
                 <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportFailureReportExcel">📊 Export Excel</button>
                 <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-danger" @click="exportFailureReportPdf">🖨️ Export PDF</button>
+                <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-outline" @click="showRawFailureLog=!showRawFailureLog">🧹 {{showRawFailureLog?'Sembunyi':'Urus'}} Log Mentah</button>
               </div>
             </div>
             <p class="text-sm text-muted mb-12">Dikira daripada sebab yang dipilih setiap kali rekod peralatan dibuang di "Urus Peralatan Site" — pilih sebab "Rosak" bila padam rekod supaya kekerapan kerosakan ikut site/kategori direkod dengan tepat.</p>
@@ -5532,6 +5533,29 @@ details.form-control[open] summary::after{content:'▴'}
                     <td><b>{{r.total}}</b></td>
                   </tr>
                   <tr v-if="!failureReport.length"><td colspan="7" class="empty">Tiada rekod penyingkiran peralatan lagi.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div v-if="showRawFailureLog && ['superadmin','admin'].includes(authProfile?.role)" class="card" style="margin-top:16px">
+            <div class="card-title" style="margin:0 0 10px;border:none;padding:0">Urus Log Mentah (Padam Rekod Individu)</div>
+            <p class="text-sm text-muted mb-12">Guna ini untuk padam rekod ujian/silap yang tidak sepatutnya wujud (contoh staff test add/padam) — termasuk rekod bersebab "Tersilap" yang tidak dikira dalam laporan di atas tapi masih tersimpan.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Tarikh</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Peralatan</th><th>Sebab</th><th>Dipadam Oleh</th><th>Tindakan</th></tr></thead>
+                <tbody>
+                  <tr v-for="l in failureLogRaw" :key="l.id">
+                    <td style="font-size:.78rem;white-space:nowrap">{{l.removedAt?.toDate ? l.removedAt.toDate().toLocaleString('ms-MY') : '-'}}</td>
+                    <td>{{l.siteName}}</td>
+                    <td><span :class="'proj-badge proj-'+l.project">{{(l.project||'cctv').toUpperCase()}}</span></td>
+                    <td>{{l.category}}</td>
+                    <td>{{l.itemName}} <span class="text-muted text-sm">({{l.brand}} {{l.model}})</span></td>
+                    <td>{{REMOVAL_REASON_LABEL[l.reason]||l.reason}}</td>
+                    <td style="font-size:.78rem">{{l.removedBy}}</td>
+                    <td><button class="btn btn-danger btn-sm btn-icon" @click="deleteEquipmentRemovalLog(l)" title="Padam">🗑</button></td>
+                  </tr>
+                  <tr v-if="!failureLogRaw.length"><td colspan="8" class="empty">Tiada log.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -16117,6 +16141,27 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       });
       return Object.values(groups).sort((a,b) => b.rosak - a.rosak);
     });
+    // Admin+-only raw-log view/cleanup — lets a bad/test entry (e.g. staff
+    // trying the delete flow out) be removed individually instead of
+    // sitting in the data forever, since the grouped report above has no
+    // per-entry delete of its own. Reuses the same project/site filters as
+    // the grouped report, but (unlike that report) does NOT exclude
+    // 'tersilap' — this is exactly the view for finding and removing those.
+    const showRawFailureLog = ref(false);
+    const failureLogRaw = computed(() => equipmentRemovalLogs.value.filter(l => {
+      if(failureFilterProj.value !== 'all' && l.project !== failureFilterProj.value) return false;
+      if(failureFilterSite.value && l.siteId !== failureFilterSite.value) return false;
+      return true;
+    }));
+    async function deleteEquipmentRemovalLog(log) {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm(`Padam log "${log.itemName}" (${log.siteName})? Tindakan ini tidak boleh dibatalkan.`)) return;
+      try {
+        await db.collection('equipmentRemovalLog').doc(log.id).delete();
+        equipmentRemovalLogs.value = equipmentRemovalLogs.value.filter(l => l.id !== log.id);
+        showToast('Log dipadam.');
+      } catch(e) { showToast('Gagal padam log: ' + e.message, 'error'); }
+    }
     async function exportFailureReportExcel() {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const rows = failureReport.value.map((r,i) => ({
@@ -16401,6 +16446,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureFilterSite, failureFilterSiteOptions, failureReport, exportFailureReportExcel, exportFailureReportPdf,
+      showRawFailureLog, failureLogRaw, deleteEquipmentRemovalLog, REMOVAL_REASON_LABEL,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
       kontraktorLuar, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
