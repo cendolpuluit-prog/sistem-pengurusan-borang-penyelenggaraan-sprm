@@ -605,6 +605,7 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-nota-box .pm-nota-hdr{background:#1A2332;color:#fff;font-size:9pt;font-weight:700;padding:4px 10px;letter-spacing:.04em}
 .pm-nota-box .pm-nota-lines{padding:6px 10px 4px}
 .pm-nota-line{border-bottom:1px solid #bbb;min-height:22px;margin-bottom:4px;white-space:normal;word-wrap:break-word;padding-bottom:2px}
+.pm-nota-line-hdr{font-weight:700}
 .pm-watermark-ok{color:#155724;font-weight:bold}
 .pm-watermark-no{color:#721c24;font-weight:bold}
 
@@ -3810,7 +3811,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="pm-nota-hdr">NOTA / CATATAN TAMBAHAN</div>
             <div class="pm-nota-lines">
               <template v-for="(line,i) in viewPmNotaLines" :key="i">
-                <div class="pm-nota-line" :style="i===viewPmNotaLines.length-1?'border-bottom:none':''">{{line}}</div>
+                <div class="pm-nota-line" :class="{'pm-nota-line-hdr':isNotaHeaderLine(line)}" :style="i===viewPmNotaLines.length-1?'border-bottom:none':''">{{line}}</div>
               </template>
             </div>
           </div>
@@ -14385,6 +14386,14 @@ createApp({
       const lines = (viewPM.value?.notaCatatan||'').split('\n');
       return lines.length ? lines : [''];
     });
+    // Bold-heading detection for the printed Nota box — matches the fixed
+    // section labels _buildNotaCatatan() emits (PREVENTIVE/CORRECTIVE
+    // MAINTENANCE, MASALAH, TINDAKAN, STATUS, PENDING:). Exact-string match
+    // only, so a Masalah/Tindakan sentence that happens to equal one of
+    // these labels verbatim would also render bold — accepted as a rare
+    // edge case per user's explicit ask.
+    const NOTA_HEADER_LINES = new Set(['PREVENTIVE MAINTENANCE (PM)','CORRECTIVE MAINTENANCE (CM)','MASALAH','TINDAKAN','STATUS','PENDING:']);
+    function isNotaHeaderLine(line) { return NOTA_HEADER_LINES.has((line||'').trim()); }
 
     // Loads an already-submitted record back into the editable pm form so
     // mistakes can be corrected without deleting + recreating the whole
@@ -16576,7 +16585,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, pmCamerasGrouped, viewPMCamerasGrouped,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
-      addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines,
+      addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
