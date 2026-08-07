@@ -604,7 +604,7 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-nota-box{margin:16px 0 10px;border:1.5px solid #333;border-radius:3px}
 .pm-nota-box .pm-nota-hdr{background:#1A2332;color:#fff;font-size:9pt;font-weight:700;padding:4px 10px;letter-spacing:.04em}
 .pm-nota-box .pm-nota-lines{padding:6px 10px 4px}
-.pm-nota-line{border-bottom:1px solid #bbb;height:22px;margin-bottom:4px}
+.pm-nota-line{border-bottom:1px solid #bbb;min-height:22px;margin-bottom:4px;white-space:normal;word-wrap:break-word;padding-bottom:2px}
 .pm-watermark-ok{color:#155724;font-weight:bold}
 .pm-watermark-no{color:#721c24;font-weight:bold}
 
@@ -7828,7 +7828,13 @@ createApp({
         renderMapPins();
       } catch (e) {
         mapTopologyCache = null; // allow retry (e.g. next dashboard visit) if the fetch failed transiently
-        if (mapContainerEl.value) mapContainerEl.value.innerHTML = '<p style="font-size:.8rem;color:#888;padding:12px 0">Peta tidak dapat dimuat: ' + e.message + '</p>';
+        if (mapContainerEl.value) {
+          mapContainerEl.value.innerHTML = '';
+          const p = document.createElement('p');
+          p.style.cssText = 'font-size:.8rem;color:#888;padding:12px 0';
+          p.textContent = 'Peta tidak dapat dimuat: ' + e.message;
+          mapContainerEl.value.appendChild(p);
+        }
       } finally {
         mapLoading.value = false;
       }
