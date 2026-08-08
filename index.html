@@ -914,8 +914,8 @@ details.form-control[open] summary::after{content:'▴'}
      for users who are actually still logged in. -->
 <div v-if="authChecking" class="splash-screen">
   <div class="splash-logos">
-    <img src="logo_dayaone.png" alt="Daya One">
-    <img v-if="SHOW_SPRM_LOGO_LOGIN" src="logo_sprm.png" alt="SPRM">
+    <img src="LogoD1.svg" alt="Daya One">
+    <img v-if="SHOW_SPRM_LOGO_LOGIN" src="Logo-SPRM.svg" alt="SPRM">
   </div>
   <div class="splash-spinner"></div>
   <div class="splash-text">Memuatkan...</div>
@@ -932,9 +932,9 @@ details.form-control[open] summary::after{content:'▴'}
     <!-- Logos -->
     <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:22px">
       <div style="background:rgba(255,255,255,.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:5px 10px">
-        <img src="logo_dayaone.png" alt="Daya One" style="height:32px;object-fit:contain;display:block">
+        <img src="LogoD1.svg" alt="Daya One" style="height:32px;object-fit:contain;display:block">
       </div>
-      <img v-if="SHOW_SPRM_LOGO_LOGIN" src="logo_sprm.png" alt="SPRM" style="height:54px;object-fit:contain">
+      <img v-if="SHOW_SPRM_LOGO_LOGIN" src="Logo-SPRM.svg" alt="SPRM" style="height:54px;object-fit:contain">
     </div>
 
     <!-- Live clock + date + time-of-day greeting -->
@@ -1052,8 +1052,8 @@ details.form-control[open] summary::after{content:'▴'}
   <nav class="sidebar">
     <div class="sidebar-brand">
       <div class="sidebar-brand-logos">
-        <div class="sidebar-logo-pill"><img src="logo_dayaone.png" alt="Daya One"></div>
-        <div class="sidebar-logo-pill"><img src="logo_sprm.png" alt="SPRM"></div>
+        <div class="sidebar-logo-pill"><img src="LogoD1.svg" alt="Daya One"></div>
+        <div class="sidebar-logo-pill"><img src="Logo-SPRM.svg" alt="SPRM"></div>
         <button class="hamburger-btn" @click="mobileNavOpen=!mobileNavOpen">☰</button>
       </div>
       <h2>Sistem Pengurusan Borang Penyelenggaraan SPRM</h2>
@@ -3501,13 +3501,13 @@ details.form-control[open] summary::after{content:'▴'}
 
           <!-- HEADER -->
           <div class="pm-corp-header">
-            <img src="logo_dayaone.png" alt="Daya One" class="pm-corp-logo-img">
+            <img src="LogoD1.svg" alt="Daya One" class="pm-corp-logo-img">
             <div class="pm-corp-center">
               <div class="pm-corp-logo-txt">DAYA ONE RESOURCES SDN BHD</div>
               <div class="pm-corp-logo-sub">No 29-1 Jalan Equine 9A, Taman Equine, Bandar Putra Permai<br>Seri Kembangan 43300, Selangor Darul Ehsan<br>Tel: 03-89431400 &nbsp;|&nbsp; Faks: 03-89431500</div>
             </div>
             <div class="pm-corp-right">
-              <img src="logo_sprm.png" alt="SPRM" class="pm-corp-logo-img">
+              <img src="Logo-SPRM.svg" alt="SPRM" class="pm-corp-logo-img">
               <div class="pm-corp-ref">
                 <span>No. Rujukan: </span><span class="ref-no">{{viewPM?.refNo||'—'}}</span>
               </div>
@@ -8453,12 +8453,12 @@ createApp({
           @media print{@page{size:A4 landscape;margin:10mm 12mm}}
         </style></head><body>
         <div class="header">
-          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Jadual Penyelenggaraan Bulanan</h2>
             <p class="sub">${monthName} ${year} &nbsp;|&nbsp; Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
           </div>
-          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+          <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
         </div>
         ${calGrid}
         <div class="section">Senarai Penugasan Team</div>
@@ -8696,12 +8696,12 @@ createApp({
         </style>
       </head><body>
         <div class="header">
-          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Kontrak &amp; SLA — ${currentProject.value==='vir'?'VIR':'CCTV'} SPRM</h2>
             <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${list.length} rekod</p>
           </div>
-          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+          <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
         </div>
         <table><thead><tr><th>#</th><th>Tajuk Kontrak</th><th>No. Kontrak</th><th>Tarikh Mula</th><th>Tarikh Tamat</th><th>Status</th><th>Nota</th></tr></thead>
         <tbody>${tableRows}</tbody></table>
@@ -9289,14 +9289,14 @@ createApp({
         </style>
       </head><body>
         <div class="header">
-          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Ringkasan Waranti Peralatan Sistem CCTV</h2>
             <p style="font-weight:600;color:#333;font-size:8pt;line-height:1.3">TENDER BAGI PERKHIDMATAN PENYENGGARAAN PERKAKASAN SERTA PERISIAN KAMERA LITAR TERTUTUP (CCTV) UNTUK 17 PEJABAT SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM) BAGI TEMPOH 33 BULAN</p>
             <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
           </div>
           <div class="header-side">
-            <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+            <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
             <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} rekod</p>
           </div>
         </div>
@@ -10822,12 +10822,12 @@ createApp({
         </style>
       </head><body>
         <div class="header">
-          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Log Audit — Sistem PM CCTV/VIR SPRM</h2>
             <p>Dijana pada ${new Date().toLocaleString('ms-MY')} &nbsp;|&nbsp; ${rows.length} rekod</p>
           </div>
-          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+          <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
         </div>
         <table><thead><tr><th>Tarikh/Masa</th><th>Pengguna</th><th>Tindakan</th><th>Butiran</th></tr></thead>
         <tbody>${tableRows}</tbody></table>
@@ -12536,12 +12536,12 @@ createApp({
           @media print{@page{size:A4 landscape;margin:12mm 15mm} h3{page-break-after:avoid} table{page-break-inside:auto} tr{page-break-inside:avoid}}
         </style></head><body>
         <div class="header">
-          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Contact Person Pegawai SPRM — ${projLabel}</h2>
             <p class="sub">Daya One Resources Sdn Bhd &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
           </div>
-          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+          <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
         </div>
         ${zoneBlocks}
         <div class="footer"><span>Sistem Pengurusan Borang PM — SPRM</span><span>Contact Person ${projLabel}</span></div>
@@ -12900,12 +12900,12 @@ createApp({
           @media print{@page{size:A4;margin:12mm 15mm}}
         </style></head><body>
         <div class="header">
-          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Senarai Kontraktor/Supplier Luar — ${projLabel}</h2>
             <p class="sub">Daya One Resources Sdn Bhd &nbsp;|&nbsp; Dijana: ${new Date().toLocaleDateString('ms-MY')}</p>
           </div>
-          <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+          <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
         </div>
         <table><thead><tr>
           <th style="width:6%">#</th><th style="width:26%">Nama Kontraktor/Kedai</th><th style="width:26%">Skop Kerja/Barang Dijual</th><th style="width:26%">Area Service</th><th style="width:16%">No. Telefon</th>
@@ -15288,7 +15288,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Penyelenggaraan</title>
 <style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}.header-mid{flex:1}.co{font-size:13px;font-weight:800;color:#7A841A}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
 </head><body>
-<div class="header"><img src="logo_dayaone.png" alt="Daya One" class="header-logo"><div class="header-mid"><div class="co">DAYA ONE RESOURCES SDN BHD</div><div class="sub">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor</div><h1 style="margin-top:8px">LAPORAN PENYELENGGARAAN — ${months[0]?months[0].label:''} hingga ${months[months.length-1]?months[months.length-1].label:''}</h1><div class="sub">Projek: ${laporanProject.value==='all'?'Semua':laporanProject.value.toUpperCase()} &nbsp;|&nbsp; Site: ${laporanSite.value==='all'?'Semua':laporanSite.value} &nbsp;|&nbsp; Jana: ${new Date().toLocaleDateString('ms-MY')}</div></div><img src="logo_sprm.png" alt="SPRM" class="header-logo"></div>
+<div class="header"><img src="LogoD1.svg" alt="Daya One" class="header-logo"><div class="header-mid"><div class="co">DAYA ONE RESOURCES SDN BHD</div><div class="sub">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor</div><h1 style="margin-top:8px">LAPORAN PENYELENGGARAAN — ${months[0]?months[0].label:''} hingga ${months[months.length-1]?months[months.length-1].label:''}</h1><div class="sub">Projek: ${laporanProject.value==='all'?'Semua':laporanProject.value.toUpperCase()} &nbsp;|&nbsp; Site: ${laporanSite.value==='all'?'Semua':laporanSite.value} &nbsp;|&nbsp; Jana: ${new Date().toLocaleDateString('ms-MY')}</div></div><img src="Logo-SPRM.svg" alt="SPRM" class="header-logo"></div>
 <div class="stats"><div class="stat"><div class="n" style="color:#003366">${recs.length}</div><div class="l">Jumlah Rekod</div></div><div class="stat"><div class="n" style="color:#7A841A">${pmCount}</div><div class="l">Rekod PM</div></div><div class="stat"><div class="n" style="color:#b71c1c">${cmCount}</div><div class="l">Rekod CM</div></div><div class="stat"><div class="n" style="color:#4a148c">${siteCount}</div><div class="l">Site Diliputi</div></div></div>
 <div class="charts"><div class="chart-box"><h2>Trend PM vs CM per Bulan</h2>${img1?`<img src="${img1}">`:''}</div><div class="chart-box"><h2>Nisbah PM : CM</h2>${img2?`<img src="${img2}">`:''}</div></div>
 <div class="charts"><div class="chart-box"><h2>Top Site — CM Tertinggi</h2>${img3?`<img src="${img3}">`:''}</div><div class="chart-box"><h2>Peralatan Kerap Gagal</h2>${img4?`<img src="${img4}">`:''}</div></div>
@@ -15594,7 +15594,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
 </head><body>
 
 <div class="header">
-  <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+  <img src="LogoD1.svg" alt="Daya One" class="header-logo">
   <div>
     <div class="co-name">DAYA ONE RESOURCES SDN BHD</div>
     <div class="co-addr">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor &nbsp;|&nbsp; Tel: 03-XXXX XXXX</div>
@@ -15604,7 +15604,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     <div class="sub">${monthName.toUpperCase()} ${yr} &nbsp;|&nbsp; ${projLabel.toUpperCase()}</div>
     <div class="sub" style="margin-top:2px">Tarikh Jana: ${genDate}</div>
   </div>
-  <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+  <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
 </div>
 
 <div class="stats-row">
@@ -15790,8 +15790,8 @@ tr:nth-child(even) td{background:#f9fafc}
 
 <div class="cover">
   <div class="cover-logos">
-    <img src="logo_dayaone.png" alt="Daya One" class="cover-logo">
-    <img src="logo_sprm.png" alt="SPRM" class="cover-logo">
+    <img src="LogoD1.svg" alt="Daya One" class="cover-logo">
+    <img src="Logo-SPRM.svg" alt="SPRM" class="cover-logo">
   </div>
   <div class="co">DAYA ONE RESOURCES SDN BHD</div>
   <div class="addr">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor</div>
@@ -16039,7 +16039,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 .footer{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;font-size:8.5px;color:#aaa;text-align:center}
 @media print{@page{margin:12mm;size:A4}}
 </style></head><body>
-<div class="hdr"><div class="hdr-logos"><img src="logo_dayaone.png" alt="Daya One" class="hdr-logo"><img src="logo_sprm.png" alt="SPRM" class="hdr-logo"></div><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>RINGKASAN EKSEKUTIF PENYELENGGARAAN</h1><div class="sub">SPRM — CCTV &amp; VIR &nbsp;|&nbsp; ${genDate}</div></div>
+<div class="hdr"><div class="hdr-logos"><img src="LogoD1.svg" alt="Daya One" class="hdr-logo"><img src="Logo-SPRM.svg" alt="SPRM" class="hdr-logo"></div><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>RINGKASAN EKSEKUTIF PENYELENGGARAAN</h1><div class="sub">SPRM — CCTV &amp; VIR &nbsp;|&nbsp; ${genDate}</div></div>
 <div class="kpi-grid">
   <div class="kpi"><div class="n" style="color:${cctvCompliance>=75?'#7A841A':cctvCompliance>=45?'#e65100':'#b71c1c'}">${cctvCompliance}</div><div class="l">Skor CCTV</div></div>
   <div class="kpi"><div class="n" style="color:${virCompliance>=75?'#7A841A':virCompliance>=45?'#e65100':'#b71c1c'}">${virCompliance}</div><div class="l">Skor VIR</div></div>
@@ -16428,13 +16428,13 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         </style>
       </head><body>
         <div class="header">
-          <img src="logo_dayaone.png" alt="Daya One" class="header-logo">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Sejarah Ganti/Rosak Peralatan</h2>
             <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
           </div>
           <div class="header-side">
-            <img src="logo_sprm.png" alt="SPRM" class="header-logo">
+            <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
             <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} baris</p>
           </div>
         </div>
