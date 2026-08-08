@@ -82,7 +82,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .sidebar::after{content:'';position:absolute;top:-80px;left:-60px;width:220px;height:220px;background:radial-gradient(circle,rgba(0,180,100,.13) 0%,transparent 70%);animation:sidebarPulse 5s ease-in-out infinite;pointer-events:none;z-index:0}
 .sidebar>*{position:relative;z-index:1}
 .sidebar-brand{padding:18px 12px 14px;border-bottom:1px solid rgba(255,255,255,.12);display:flex;flex-direction:column;align-items:center;gap:10px}
-.sidebar-brand-logos{display:flex;align-items:center;justify-content:space-between;width:100%;gap:8px}
+.sidebar-brand-logos{display:flex;align-items:center;justify-content:center;width:100%;gap:8px;position:relative}
+.sidebar-brand-logos .hamburger-btn{position:absolute;right:0}
 .sidebar-logo-pill{background:rgba(255,255,255,.95);border-radius:8px;padding:5px 8px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.25)}
 .sidebar-logo-pill img{height:30px;object-fit:contain;display:block}
 .sidebar-brand h2{font-size:.75rem;font-weight:700;line-height:1.45;text-align:center;margin:0;color:#e0f0ff;letter-spacing:.01em}
@@ -685,6 +686,7 @@ details.form-control[open] summary::after{content:'▴'}
   .sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap}
   .sidebar-brand{padding:10px 12px;flex-direction:row;gap:10px;width:100%}
   .sidebar-brand-logos{width:auto}
+  .sidebar-brand-logos .hamburger-btn{position:static}
   .sidebar-brand h2{font-size:.7rem;flex:1}
   .sidebar-nav{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:4px 8px;gap:0;width:100%;scrollbar-width:none}
   .sidebar-nav::-webkit-scrollbar{display:none}
@@ -1052,7 +1054,7 @@ details.form-control[open] summary::after{content:'▴'}
   <nav class="sidebar">
     <div class="sidebar-brand">
       <div class="sidebar-brand-logos">
-        <div class="sidebar-logo-pill"><img src="LogoD1.svg" alt="Daya One"></div>
+        <div class="sidebar-logo-pill"><img src="LogoD1-2.svg" alt="Daya One"></div>
         <div class="sidebar-logo-pill"><img src="Logo-SPRM.svg" alt="SPRM"></div>
         <button class="hamburger-btn" @click="mobileNavOpen=!mobileNavOpen">☰</button>
       </div>
