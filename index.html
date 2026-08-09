@@ -1463,7 +1463,7 @@ details.form-control[open] summary::after{content:'▴'}
               <span :class="['team-badge','badge-'+a.team]">{{a.team}}</span>
               <div style="flex:1;min-width:0">
                 <div style="font-size:.85rem;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{a.siteName}}</div>
-                <div style="font-size:.75rem;color:#888">{{fmtDateDash(a.date)}} &nbsp;·&nbsp; {{(a.maintType||'PM')}} {{a.project==='vir'?'VIR':'CCTV'}}</div>
+                <div style="font-size:.75rem;color:#888">{{fmtDateDash(a.date)}} &nbsp;·&nbsp; {{(a.maintType||'PM')}} {{projectLabel(a.project)}}</div>
               </div>
             </div>
           </div>
