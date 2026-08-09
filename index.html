@@ -283,7 +283,8 @@ details.form-control[open] summary::after{content:'▴'}
 /* "Site PM Lampau" + "7 Hari Akan Datang" side-by-side once there's enough
    width for two ~320px columns (tablet/desktop) — on a phone the single
    column naturally kicks in on its own, no separate breakpoint needed. */
-.dash-top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start;margin-bottom:16px}
+.dash-top-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:stretch;margin-bottom:16px}
+.dash-top-grid .overdue-alert,.dash-top-grid .card{display:flex;flex-direction:column}
 .dash-top-grid .overdue-alert,.dash-top-grid .card{margin-bottom:0}
 .overdue-alert-title{color:#dc3545;font-weight:700;font-size:.88rem;margin-bottom:10px}
 .overdue-group-label{font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin:6px 0 6px;color:#555}
@@ -1025,15 +1026,24 @@ details.form-control[open] summary::after{content:'▴'}
       <div v-if="!equipHistoryModal.rows.length" class="empty">Tiada rekod PM/CM (submitted) dijumpai untuk item ini.</div>
       <div v-else class="equip-history-timeline">
         <div v-for="(row,i) in equipHistoryModal.rows" :key="i" class="equip-history-item">
-          <div class="equip-history-dot" :class="row.status==='Baik'?'ok':(row.status==='Tidak'?'no':'')"></div>
+          <div class="equip-history-dot" :class="row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':''))"></div>
           <div class="equip-history-content">
-            <div class="flex items-center gap-8" style="flex-wrap:wrap">
-              <b>{{row.dateLabel}}</b>
-              <span class="badge" :class="row.maintType==='CM'?'badge-red':'badge-green'" style="font-size:.68rem">{{row.maintType}}</span>
-              <span v-if="row.status" :style="'font-size:.78rem;font-weight:700;color:'+(row.status==='Baik'?'#1b5e20':'#b71c1c')">{{row.status}}</span>
-              <span class="text-sm text-muted">{{row.refNo}}</span>
-            </div>
-            <div v-if="row.nota" class="text-sm text-muted" style="margin-top:2px">{{row.nota}}</div>
+            <template v-if="row.isRemoval">
+              <div class="flex items-center gap-8" style="flex-wrap:wrap">
+                <b>{{row.dateLabel}}</b>
+                <span class="badge badge-red" style="font-size:.68rem">🗑 Dibuang/Digantikan</span>
+              </div>
+              <div class="text-sm text-muted" style="margin-top:2px">{{row.reasonLabel}}<span v-if="row.reasonCustom"> — {{row.reasonCustom}}</span></div>
+            </template>
+            <template v-else>
+              <div class="flex items-center gap-8" style="flex-wrap:wrap">
+                <b>{{row.dateLabel}}</b>
+                <span class="badge" :class="row.maintType==='CM'?'badge-red':'badge-green'" style="font-size:.68rem">{{row.maintType}}</span>
+                <span v-if="row.status" :style="'font-size:.78rem;font-weight:700;color:'+(row.status==='Baik'?'#1b5e20':'#b71c1c')">{{row.status}}</span>
+                <span class="text-sm text-muted">{{row.refNo}}</span>
+              </div>
+              <div v-if="row.nota" class="text-sm text-muted" style="margin-top:2px">{{row.nota}}</div>
+            </template>
           </div>
         </div>
       </div>
@@ -3129,7 +3139,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <tr v-for="(n,i) in pm.nvr" :key="n._uid||i">
                     <td>{{i+1}}</td>
                     <td><input class="form-control" style="min-width:140px" v-model="n.name"></td>
-                    <td><select class="form-control status-sel" v-model="n.brand"><option v-for="b in BRANDS" :key="b">{{b}}</option></select></td>
+                    <td><select class="form-control status-sel" v-model="n.brand"><option v-for="b in brandOptionsFor('NVR_BRANDS')" :key="b">{{b}}</option></select></td>
                     <td><input class="form-control" style="min-width:100px" v-model="n.model"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="n.serial"></td>
                     <td><input class="form-control" style="min-width:110px" v-model="n.ip"></td>
@@ -3335,34 +3345,34 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="flex justify-between items-center mb-16">
             <div class="card-title" style="margin:0;border:none;padding:0">Semua Rekod</div>
             <div class="flex gap-8" style="flex-wrap:wrap">
-              <select class="form-control" style="width:220px" v-model="filterSite">
+              <select class="form-control" style="width:auto;min-width:220px" v-model="filterSite">
                 <option value="">Semua Site</option>
                 <option v-for="s in (currentProject==='vir'?VIR_SITES:SITES)" :key="s.id" :value="s.id">{{s.name}}</option>
               </select>
-              <select class="form-control" style="width:100px" v-model="filterYear">
+              <select class="form-control" style="width:auto;min-width:120px" v-model="filterYear">
                 <option value="">Semua Tahun</option>
                 <option v-for="y in yearList" :key="y">{{y}}</option>
               </select>
-              <select class="form-control" style="width:130px" v-model="filterMonth">
+              <select class="form-control" style="width:auto;min-width:140px" v-model="filterMonth">
                 <option value="">Semua Bulan</option>
                 <option v-for="(m,i) in MONTHS" :key="i" :value="i+1">{{m}}</option>
               </select>
-              <select class="form-control" style="width:110px" v-model="filterMaintType">
+              <select class="form-control" style="width:auto;min-width:130px" v-model="filterMaintType">
                 <option value="">Semua Jenis</option>
                 <option value="PM">PM Sahaja</option>
                 <option value="CM">CM Sahaja</option>
               </select>
-              <select class="form-control" style="width:110px" v-model="filterPmNo" title="Tapis ikut Penyelenggaraan Ke-">
+              <select class="form-control" style="width:auto;min-width:140px" v-model="filterPmNo" title="Tapis ikut Penyelenggaraan Ke-">
                 <option value="">Semua PM Ke</option>
                 <option value="1">PM 1 Sahaja</option>
                 <option value="2">PM 2 Sahaja</option>
                 <option value="3">PM 3 Sahaja</option>
               </select>
-              <select v-if="currentProject!=='vir'" class="form-control" style="width:150px" v-model="filterSystem" title="Site bersistem campuran (lebih dari 1 brand) akan muncul di bawah SEMUA brand yang ada padanya">
+              <select v-if="currentProject!=='vir'" class="form-control" style="width:auto;min-width:170px" v-model="filterSystem" title="Site bersistem campuran (lebih dari 1 brand) akan muncul di bawah SEMUA brand yang ada padanya">
                 <option value="">Semua Sistem</option>
                 <option v-for="b in filterSystemOptionsCCTV" :key="b">{{b}}</option>
               </select>
-              <select v-if="currentProject==='vir'" class="form-control" style="width:150px" v-model="filterSystem">
+              <select v-if="currentProject==='vir'" class="form-control" style="width:auto;min-width:170px" v-model="filterSystem">
                 <option value="">Semua Sistem</option>
                 <option v-for="s in VIR_SYSTEMS" :key="s" :value="s">{{s==='Optager HD4000'?'Optager HD4000 (OPT)':s}}</option>
               </select>
@@ -3373,7 +3383,7 @@ details.form-control[open] summary::after{content:'▴'}
           <!-- Bulk CM action bar -->
           <div v-if="bulkCmSelected.length" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff8e1;border:1.5px solid #ffcc80;border-radius:8px;padding:10px 14px;margin-bottom:10px">
             <span style="font-size:.83rem;font-weight:700;color:#e65100">⚡ {{bulkCmSelected.length}} rekod CM dipilih</span>
-            <select class="form-control" style="width:160px;font-size:.82rem" v-model="bulkCmStatus">
+            <select class="form-control" style="width:auto;min-width:160px;font-size:.82rem" v-model="bulkCmStatus">
               <option value="open">Terbuka</option>
               <option value="in-progress">Dalam Proses</option>
               <option value="resolved">Selesai</option>
@@ -3409,7 +3419,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')" style="display:block;margin-bottom:4px">
                         {{r.cmStatus==='resolved'?'Selesai':r.cmStatus==='in-progress'?'Dalam Proses':'Terbuka'}}
                       </span>
-                      <select class="form-control" style="width:120px;font-size:.75rem" :disabled="!canEditPmRecord(r)" @change="updateCMStatus(r.id,$event.target.value)" :value="r.cmStatus||'open'">
+                      <select class="form-control" style="width:auto;min-width:120px;font-size:.75rem" :disabled="!canEditPmRecord(r)" @change="updateCMStatus(r.id,$event.target.value)" :value="r.cmStatus||'open'">
                         <option value="open">Terbuka</option>
                         <option value="in-progress">Dalam Proses</option>
                         <option value="resolved">Selesai</option>
@@ -3539,7 +3549,7 @@ details.form-control[open] summary::after{content:'▴'}
                  cause, and a PM record has the reverse. -->
             <template v-if="viewPM?.project==='vir'">
               <div class="pm-info-cell"><b>Jenis Sistem VIR:</b> {{viewPM?.virSystem||'BCD'}}</div>
-              <div class="pm-info-cell"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>
+              <div class="pm-info-cell"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>&nbsp;
                 <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
                   <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
                 </span>
@@ -3574,18 +3584,95 @@ details.form-control[open] summary::after{content:'▴'}
                 <span class="pm-cam-total">JUMLAH KAMERA: {{viewPM?.cameras?.length||0}} unit</span>
               </div>
             </div>
+            <!-- Rumusan Peralatan VIR — Optager HD4000 only, mirrors "Rumusan
+                 Kamera" above (CCTV) so the borang shows an at-a-glance
+                 equipment count before the detail tables further down. -->
+            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000'">
+              <b>Rumusan Peralatan:</b>
+              <div class="pm-cam-summary">
+                <span class="pm-cam-chip">Appliance: <b>{{viewPM?.servers?.length||0}}</b></span>
+                <span class="pm-cam-chip">Kamera: <b>{{viewPM?.cameras?.length||0}}</b></span>
+                <span class="pm-cam-chip">Switch: <b>{{viewPM?.switches?.length||0}}</b></span>
+                <span class="pm-cam-chip">Tablet: <b>{{viewPM?.tablets?.length||0}}</b></span>
+                <span class="pm-cam-chip">Lain-Lain: <b>{{viewPM?.misc?.length||0}}</b></span>
+                <span class="pm-cam-total">JUMLAH PERALATAN: {{(viewPM?.servers?.length||0)+(viewPM?.cameras?.length||0)+(viewPM?.switches?.length||0)+(viewPM?.tablets?.length||0)+(viewPM?.misc?.length||0)}} unit</span>
+              </div>
+            </div>
           </div>
+
+          <!-- PROFIL PERALATAN — Optager HD4000 only. Split by equipment
+               category (Appliance/Kamera/POE-Switch/Tablet/Lain-lain),
+               mirroring the CCTV borang's per-category sections (#1-#7),
+               instead of the single combined "Senarai Lengkap Perkakasan"
+               table this used to be. Shown BEFORE the checklist per client's
+               reference layout. -->
+          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000'">
+            <div class="pm-section-hdr">1. &nbsp;APPLIANCE <span>({{viewPM?.servers?.length||0}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
+              <tbody>
+                <tr v-for="(s,i) in viewPM?.servers" :key="i">
+                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand||'OPTAGER'}}</td><td class="ctr">{{s.model||'HD4000'}}</td><td class="ctr">{{s.serial}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!viewPM?.servers?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Appliance</p>
+
+            <div class="pm-section-hdr">2. &nbsp;KAMERA <span>({{viewPM?.cameras?.length||0}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
+              <tbody>
+                <tr v-for="(c,i) in viewPM?.cameras" :key="i">
+                  <td class="ctr">{{i+1}}</td><td>{{c.name}}</td><td class="ctr">{{c.brand}}</td><td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!viewPM?.cameras?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Kamera</p>
+
+            <div class="pm-section-hdr">3. &nbsp;POE/NETWORK SWITCH <span>({{viewPM?.switches?.length||0}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
+              <tbody>
+                <tr v-for="(s,i) in viewPM?.switches" :key="i">
+                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand}}</td><td class="ctr">{{s.model}}</td><td class="ctr">{{s.serial}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!viewPM?.switches?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod POE/Network Switch</p>
+
+            <div class="pm-section-hdr">4. &nbsp;TABLET <span>({{viewPM?.tablets?.length||0}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
+              <tbody>
+                <tr v-for="(t,i) in viewPM?.tablets" :key="i">
+                  <td class="ctr">{{i+1}}</td><td>{{t.name}}</td><td class="ctr">{{t.brand}}</td><td class="ctr">{{t.model}}</td><td class="ctr">{{t.serial}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!viewPM?.tablets?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Tablet</p>
+
+            <div class="pm-section-hdr">5. &nbsp;LAIN-LAIN <span>({{viewPM?.misc?.length||0}} unit)</span></div>
+            <table class="pm-tbl">
+              <thead><tr><th style="width:4%">No.</th><th style="width:26%">Nama</th><th style="width:16%">Kategori</th><th style="width:18%">Brand</th><th style="width:18%">Model</th><th style="width:18%">No. Siri</th></tr></thead>
+              <tbody>
+                <tr v-for="(m,i) in viewPM?.misc" :key="i">
+                  <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td class="ctr">{{m.category}}</td><td class="ctr">{{m.brand}}</td><td class="ctr">{{m.model}}</td><td class="ctr">{{m.serial}}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-if="!viewPM?.misc?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Lain-Lain</p>
+          </template>
 
           <!-- VIR CHECKLIST VIEW — 2-column layout (mirrors the original
                paper form's half-page-per-column design, since a granular
                checklist this long would run to many extra pages as a
                single column) -->
           <template v-if="viewPM?.project==='vir'">
-            <template v-for="section in virSectionsFor(viewPM?.virSystem)" :key="section">
+            <template v-for="section in viewPMVirPrintSections" :key="section">
               <div class="pm-section-hdr pm-vir-sec">{{section}}</div>
               <div :class="virChecklistCols(section).length>1 ? 'pm-vir-2col' : ''">
                 <table class="pm-tbl" v-for="(col,ci) in virChecklistCols(section)" :key="ci">
-                  <thead><tr><th style="width:4%"></th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
+                  <thead><tr><th style="width:4%">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
                   <tbody>
                     <template v-for="(item,idx) in col.items" :key="item.key">
                       <tr v-if="item.isHeader">
@@ -3598,7 +3685,7 @@ details.form-control[open] summary::after{content:'▴'}
                         <td style="background:#F5F6F8"></td>
                       </tr>
                       <tr v-else>
-                        <td style="white-space:nowrap;text-align:center;color:#1A2332">&#8211;</td>
+                        <td style="white-space:nowrap;text-align:center;color:#1A2332">{{virChecklistNumbered(section) ? (col.offset+idx+1) : '–'}}</td>
                         <td>{{item.label}}</td>
                         <td style="text-align:center;white-space:nowrap">
                           <span class="pm-chk-box"></span>
@@ -3619,29 +3706,6 @@ details.form-control[open] summary::after{content:'▴'}
                 Petunjuk Status: <span style="color:#155724;font-weight:700">&#10003;</span> = Berfungsi &nbsp;/&nbsp; <span style="color:#721c24;font-weight:700">&#10007;</span> = Tidak Berfungsi
               </div>
             </template>
-          </template>
-
-          <!-- SENARAI LENGKAP PERKAKASAN — Optager HD4000 only. Combined
-               identity table (Brand/Model/No. Siri) across every equipment
-               type (Appliance/Kamera/Switch/Tablet/Lain-lain) — replaces
-               the 5 separate per-type snapshot tables this used to be,
-               per client's reference borang layout. IP/network settings
-               live in their own "Default Setting Perkakasan" section below
-               instead of here. -->
-          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && virEquipCombined.length">
-            <div class="pm-section-hdr">Senarai Lengkap Perkakasan <span>({{virEquipCombined.length}} unit)</span></div>
-            <table class="pm-tbl">
-              <thead><tr>
-                <th style="width:4%">No.</th>
-                <th style="width:26%">Nama</th><th style="width:18%">Kategori</th><th style="width:12%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th>
-              </tr></thead>
-              <tbody>
-                <tr v-for="(u,i) in virEquipCombined" :key="i">
-                  <td class="ctr">{{i+1}}</td>
-                  <td>{{u.name}}</td><td>{{u.category}}</td><td>{{u.brand}}</td><td>{{u.model}}</td><td>{{u.serial}}</td>
-                </tr>
-              </tbody>
-            </table>
           </template>
 
           <!-- DEFAULT SETTING PERKAKASAN — Optager HD4000 only. One small
@@ -3688,17 +3752,18 @@ details.form-control[open] summary::after{content:'▴'}
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
-                <th style="width:25%">Nama / Lokasi</th>
-                <th style="width:15%">IP Address</th>
-                <th style="width:19%">Model</th>
-                <th style="width:16%">No. Siri</th>
-                <th style="width:9%">Jenis</th>
+                <th style="width:20%">Nama / Lokasi</th>
+                <th style="width:12%">Brand</th>
+                <th style="width:13%">IP Address</th>
+                <th style="width:16%">Model</th>
+                <th style="width:15%">No. Siri</th>
+                <th style="width:8%">Jenis</th>
                 <th style="width:12%">Status</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(c,gi) in grp.items" :key="gi">
                   <td class="ctr">{{gi+1}}</td>
-                  <td>{{c.name}}</td><td class="ctr">{{c.ip}}</td>
+                  <td>{{c.name}}</td><td class="ctr">{{c.brand}}</td><td class="ctr">{{c.ip}}</td>
                   <td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
                   <td class="ctr">{{c.camType}}</td>
                   <td :class="c.display==='Baik'?'ok':'no'">{{c.display}}</td>
@@ -3710,41 +3775,44 @@ details.form-control[open] summary::after{content:'▴'}
 
           <!-- 2. NVR -->
           <div class="pm-section-block">
-          <div class="pm-section-hdr">2. &nbsp;NETWORK VIDEO RECORDER (NVR)</div>
+          <div class="pm-section-hdr">2. &nbsp;NETWORK VIDEO RECORDER (NVR) <span>({{viewPM?.nvr?.length||0}} unit)</span></div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:33%">Nama / Jenis</th><th style="width:17%">Model</th><th style="width:18%">No. Siri</th><th style="width:16%">IP Address</th><th style="width:12%">Status</th></tr></thead>
+            <thead><tr><th style="width:4%">No.</th><th style="width:24%">Nama / Jenis</th><th style="width:12%">Brand</th><th style="width:16%">Model</th><th style="width:16%">No. Siri</th><th style="width:14%">IP Address</th><th style="width:14%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(n,i) in viewPM?.nvr" :key="i">
-                <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.model}}</td>
+                <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.brand}}</td><td class="ctr">{{n.model}}</td>
                 <td class="ctr">{{n.serial}}</td>
                 <td class="ctr">{{n.ip}}</td>
                 <td :class="n.status==='Baik'?'ok':'no'">{{n.status}}</td>
               </tr>
-              <tr v-if="!viewPM?.nvr?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
+              <tr v-if="!viewPM?.nvr?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
             </tbody>
           </table>
           </div>
 
           <!-- 3. HDD -->
           <div class="pm-section-block">
-          <div class="pm-section-hdr">3. &nbsp;CAKERA KERAS (HARD DISK)</div>
-          <table class="pm-tbl">
-            <thead><tr><th style="width:4%">No.</th><th style="width:20%">Brand</th><th style="width:22%">Model</th><th style="width:24%">Saiz Storan</th><th style="width:18%">Konfigurasi Storan</th><th style="width:12%">Status</th></tr></thead>
-            <tbody>
-              <tr v-for="(h,i) in viewPM?.hdd" :key="i">
-                <td class="ctr">{{i+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td>
-                <td class="ctr">{{h.capacity||'—'}} x{{h.totalUnit||'1'}}unit</td>
-                <td class="ctr">{{h.raidType||'—'}}</td>
-                <td :class="h.status==='Baik'?'ok':'no'">{{h.status}}</td>
-              </tr>
-              <tr v-if="!viewPM?.hdd?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</td></tr>
-            </tbody>
-          </table>
+          <div class="pm-section-hdr">3. &nbsp;CAKERA KERAS (HARD DISK) <span>({{viewPMHddTotalUnits}} unit)</span></div>
+          <div v-for="grp in viewPMHddGrouped" :key="grp.name" style="margin-bottom:8px">
+            <div style="font-weight:700;font-size:9.5pt;margin:4px 0">{{grp.name==='Tiada NVR' ? 'Tiada NVR Berkaitan' : grp.name}} ({{grp.totalUnits}} unit)</div>
+            <table class="pm-tbl">
+              <thead><tr><th style="width:4%">No.</th><th style="width:20%">Brand</th><th style="width:22%">Model</th><th style="width:24%">Saiz Storan</th><th style="width:18%">Konfigurasi Storan</th><th style="width:12%">Status</th></tr></thead>
+              <tbody>
+                <tr v-for="(h,gi) in grp.items" :key="gi">
+                  <td class="ctr">{{gi+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td>
+                  <td class="ctr">{{h.capacity||'—'}} x{{h.totalUnit||'1'}}unit</td>
+                  <td class="ctr">{{h.raidType||'—'}}</td>
+                  <td :class="h.status==='Baik'?'ok':'no'">{{h.status}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-if="!viewPM?.hdd?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</p>
           </div>
 
           <!-- 4. SWITCH -->
           <div class="pm-section-block">
-          <div class="pm-section-hdr">4. &nbsp;POE/NETWORK SWITCH</div>
+          <div class="pm-section-hdr">4. &nbsp;POE/NETWORK SWITCH <span>({{viewPM?.switches?.length||0}} unit)</span></div>
           <table class="pm-tbl">
             <thead><tr><th style="width:5%">No.</th><th style="width:17%">Brand</th><th style="width:43%">Model</th><th style="width:23%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
@@ -5092,7 +5160,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="form-group" style="margin:0">
               <label style="font-size:.78rem;font-weight:600;color:#555;display:block;margin-bottom:4px">Projek</label>
-              <select class="form-control" style="width:140px" v-model="laporanProject">
+              <select class="form-control" style="width:auto;min-width:140px" v-model="laporanProject">
                 <option value="all">Semua</option>
                 <option value="cctv">SPRM - CCTV</option>
                 <option value="vir">SPRM - VIR</option>
@@ -5100,7 +5168,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="form-group" style="margin:0">
               <label style="font-size:.78rem;font-weight:600;color:#555;display:block;margin-bottom:4px">Site</label>
-              <select class="form-control" style="width:200px" v-model="laporanSite">
+              <select class="form-control" style="width:auto;min-width:200px" v-model="laporanSite">
                 <option value="all">Semua Site</option>
                 <optgroup label="CCTV"><option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option></optgroup>
                 <optgroup label="VIR"><option v-for="s in VIR_SITES" :key="s.id" :value="s.id">{{s.name}}</option></optgroup>
@@ -5172,7 +5240,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <input class="form-control" style="width:220px;font-size:.82rem" placeholder="🔎 Cari masalah, tindakan, site..." v-model="laporanNotaSearch">
-              <select class="form-control" style="width:160px;font-size:.82rem" v-model="laporanNotaStatus">
+              <select class="form-control" style="width:auto;min-width:160px;font-size:.82rem" v-model="laporanNotaStatus">
                 <option value="all">Semua Status</option>
                 <option value="selesai">Selesai</option>
                 <option value="pending">Pending</option>
@@ -5267,7 +5335,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="form-group" style="margin:0">
               <label style="font-size:.78rem;font-weight:600;color:#555;display:block;margin-bottom:4px">Projek</label>
-              <select class="form-control" style="width:150px" v-model="lbProject">
+              <select class="form-control" style="width:auto;min-width:150px" v-model="lbProject">
                 <option value="cctv">SPRM - CCTV</option>
                 <option value="vir">SPRM - VIR</option>
                 <option value="all">Semua</option>
@@ -5320,12 +5388,12 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
               <div class="card-title" style="margin:0;border:none;padding:0">Inventori Peralatan Konsolidasi ({{assetRegister.length}} item)</div>
               <div class="flex gap-8" style="flex-wrap:wrap">
-                <select class="form-control" style="width:120px" v-model="assetFilterProj">
+                <select class="form-control" style="width:auto;min-width:130px" v-model="assetFilterProj">
                   <option value="all">Semua Projek</option>
                   <option value="CCTV">CCTV</option>
                   <option value="VIR">VIR</option>
                 </select>
-                <select class="form-control" style="width:130px" v-model="assetFilterCat">
+                <select class="form-control" style="width:auto;min-width:150px" v-model="assetFilterCat">
                   <option value="all">Semua Kategori</option>
                   <option value="Kamera">Kamera</option>
                   <option value="NVR">NVR</option>
@@ -5571,12 +5639,12 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
               <div class="card-title" style="margin:0;border:none;padding:0">Sejarah Ganti/Rosak Peralatan</div>
               <div class="flex gap-8" style="flex-wrap:wrap">
-                <select class="form-control" style="width:130px" v-model="failureFilterProj">
+                <select class="form-control" style="width:auto;min-width:130px" v-model="failureFilterProj">
                   <option value="all">Semua Projek</option>
                   <option value="cctv">CCTV</option>
                   <option value="vir">VIR</option>
                 </select>
-                <select class="form-control" style="width:220px" v-model="failureFilterSite">
+                <select class="form-control" style="width:auto;min-width:220px" v-model="failureFilterSite">
                   <option value="">Semua Site</option>
                   <option v-for="s in failureFilterSiteOptions" :key="s.id" :value="s.id">{{s.name}}</option>
                 </select>
@@ -7068,7 +7136,8 @@ createApp({
     // layout and doesn't apply to Optager anyway.
     const VIR_CHECKLIST_TEMPLATE_OPTAGER = [
       {key:'opt_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan dan Perisian (Hardware & Software)'},
-      {key:'opt_monitor',   label:'Monitor/TV',                       section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_monitor',   label:'Monitor',                          section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'opt_tv',        label:'TV',                               section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'opt_ups',       label:'UPS',                              section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'opt_camera',    label:'Kamera Rakaman',                   section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'opt_mic',       label:'Mikrofon',                         section:'Perkakasan dan Perisian (Hardware & Software)'},
@@ -7199,6 +7268,15 @@ createApp({
     function virSectionsFor(system) {
       return VIR_CHECKLIST_SECTIONS[system] || VIR_CHECKLIST_SECTIONS['BCD'];
     }
+    // Client-facing printed borang only — drops the 3 "Default Konfigurasi
+    // ..." checklist sections (internal technician setup steps: Windows/
+    // Nvidia/camera stream settings) per client's request that SPRM not see
+    // them. Data entry (pmStep) still collects them as before via
+    // virSectionsFor() directly — only the print view is filtered.
+    const viewPMVirPrintSections = computed(() => {
+      const excluded = new Set([SEC_SVR_CONFIG, SEC_CAM_CONFIG, SEC_CAM3_CONFIG]);
+      return virSectionsFor(viewPM.value?.virSystem).filter(s => !excluded.has(s));
+    });
     // Groups a system's checklist by top-level equipment item (e.g. "1. BCD
     // USA", "2. Visiontec 4CH...") so a room can mark whole pieces of gear as
     // "not applicable" without touching the fixed Excel cell mapping — every
@@ -7260,6 +7338,14 @@ createApp({
     // column header. Every other section keeps "Item".
     function virChecklistItemColLabel(section) {
       return section === 'Status Operasi Sistem' ? 'Fungsi' : 'Item';
+    }
+    // Both Optager sections that are pure flat checklists (no isHeader
+    // divider rows breaking up the numbering) get a running item number on
+    // the printed borang instead of a plain dash — every other VIR section
+    // (BCD's, and Optager's dropped Default Konfigurasi ones) mixes in
+    // isHeader rows where a running number wouldn't line up meaningfully.
+    function virChecklistNumbered(section) {
+      return section === 'Status Operasi Sistem' || section === 'Perkakasan dan Perisian (Hardware & Software)';
     }
     // ---- "Senarai Lengkap Perkakasan" (combined equipment info table) ----
     // Optager HD4000's borang used to print 5 separate snapshot tables
@@ -10502,7 +10588,7 @@ createApp({
     });
 
     // ---- Dashboard: overdue widget (sorted by urgency, split per project) ----
-    const OVERDUE_DASH_LIMIT = 5;
+    const OVERDUE_DASH_LIMIT = 7;
     const overdueExpandCctv = ref(false);
     const overdueExpandVir = ref(false);
     function _overdueSorted(siteList) {
@@ -13671,7 +13757,7 @@ createApp({
     // predating _uid tracking.
     const EQUIP_HISTORY_STATUS_FIELD = { cameras:'display', nvr:'status', hdd:'status', switches:'status', alarms:'status', misc:'status' };
     const equipHistoryModal = reactive({ show:false, label:'', rows:[] });
-    function openEquipHistory(kind, item) {
+    async function openEquipHistory(kind, item) {
       const proj = currentProject.value;
       const siteId = selSite.value?.id;
       const statusField = EQUIP_HISTORY_STATUS_FIELD[kind];
@@ -13692,8 +13778,26 @@ createApp({
             nota: match.nota || '',
           };
         })
-        .filter(Boolean)
-        .sort((a,b) => (a.rawDate||'').localeCompare(b.rawDate||''));
+        .filter(Boolean);
+      // Ties in the item's eventual removal (if any) from "Sejarah Ganti/
+      // Rosak Peralatan" (equipmentRemovalLog) so this timeline tells the
+      // unit's full story — every PM/CM visit AND how/why it was finally
+      // taken out of service — instead of stopping at its last recorded
+      // visit. Reuses the existing log/collection; no new read path.
+      if(!equipmentRemovalLogs.value.length) await loadEquipmentRemovalLogs();
+      const removal = equipmentRemovalLogs.value.find(l => l.siteId === siteId && (l.project||'cctv') === proj &&
+        (item.serial ? l.serial === item.serial : (l.itemName === item.name && l.brand === item.brand && l.model === item.model)));
+      if(removal) {
+        const d = removal.removedAt?.toDate ? removal.removedAt.toDate() : null;
+        rows.push({
+          rawDate: d ? d.toISOString().slice(0,10) : '9999-99-99',
+          dateLabel: d ? fmtDateDash(d.toISOString().slice(0,10)) : '-',
+          isRemoval: true,
+          reasonLabel: REMOVAL_REASON_LABEL[removal.reason] || removal.reason,
+          reasonCustom: removal.reasonCustom || '',
+        });
+      }
+      rows.sort((a,b) => (a.rawDate||'').localeCompare(b.rawDate||''));
       equipHistoryModal.label = item.name || item.model || item.ip || '-';
       equipHistoryModal.rows = rows;
       equipHistoryModal.show = true;
@@ -14201,6 +14305,18 @@ createApp({
     }
     const pmCamerasGrouped = computed(() => _groupCamerasByNvrRef(pm.cameras));
     const viewPMCamerasGrouped = computed(() => _groupCamerasByNvrRef(viewPM.value?.cameras));
+    // Same grouping helper reused for the printed borang's HDD table (#3) —
+    // HDD already carries its own nvrRef field (set via "NVR Berkaitan" at
+    // Urus Peralatan Site, same as cameras), just wasn't grouped by it in
+    // the print view yet. Unlike cameras (1 row = 1 physical unit), a single
+    // HDD row can represent several physical drives via totalUnit (e.g.
+    // "10TB x3 unit"), so the group's unit count sums totalUnit across its
+    // rows instead of just counting rows.
+    const viewPMHddGrouped = computed(() => _groupCamerasByNvrRef(viewPM.value?.hdd).map(grp => ({
+      ...grp,
+      totalUnits: grp.items.reduce((sum, h) => sum + (parseInt(h.totalUnit, 10) || 1), 0),
+    })));
+    const viewPMHddTotalUnits = computed(() => (viewPM.value?.hdd||[]).reduce((sum, h) => sum + (parseInt(h.totalUnit, 10) || 1), 0));
 
     function loadPMEquip() {
       if(!pm.siteId){showToast('Sila pilih site','error');return;}
@@ -14382,11 +14498,15 @@ createApp({
     }
     function viewRecord(r) { viewPM.value=_sortedRecordCopy(r); currentProject.value=r.project||'cctv'; page.value='pm-view'; }
     // Nota box on the printed/view page grows with actual content instead
-    // of a fixed 15 rows — always at least 1 line so the box never
-    // collapses to nothing for an empty note.
+    // of a fixed 15 rows. Exception: when nothing was actually filled in
+    // (notaCatatan is empty, or — after _buildNotaCatatan's STATUS section
+    // is now gated on having real content — just the auto title line) it
+    // pads out to 15 lines instead of collapsing to almost nothing, so
+    // staff who prefer to handwrite notes on the printed copy have room.
     const viewPmNotaLines = computed(() => {
       const lines = (viewPM.value?.notaCatatan||'').split('\n');
-      return lines.length ? lines : [''];
+      if(lines.length <= 1) return [lines[0]||'', ...Array(14).fill('')];
+      return lines;
     });
     // Bold-heading detection for the printed Nota box — matches the fixed
     // section labels _buildNotaCatatan() emits (PREVENTIVE/CORRECTIVE
@@ -15406,9 +15526,15 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         tindakanFilled.forEach((t,i) => lines.push(`${i+1}) ${t}`));
         lines.push('');
       }
-      lines.push('STATUS');
-      lines.push((pm.notaOverallStatus||'').trim() || '-');
-      lines.push('');
+      // Only print a STATUS section when there's actually something to
+      // report — otherwise a borang submitted with the whole Nota box left
+      // untouched ended up with a stray "STATUS / -" printed anyway, even
+      // though the staff never typed anything.
+      if(masalahFilled.length || tindakanFilled.length || (pm.notaOverallStatus||'').trim()) {
+        lines.push('STATUS');
+        lines.push((pm.notaOverallStatus||'').trim() || '-');
+        lines.push('');
+      }
       if(pm.notaPendingEnabled) {
         const pendingFilled = (pm.notaPending||[]).filter(p => (p||'').trim());
         if(pendingFilled.length) {
@@ -16577,7 +16703,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting,
-      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virEquipCombined, virDefaultSettingUnits, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
@@ -16585,7 +16711,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
-      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, pmCamerasGrouped, viewPMCamerasGrouped,
+      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
       addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
