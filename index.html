@@ -1902,10 +1902,15 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="card-title" style="margin:0;border:none;padding:0">📄 Surat Serahan Peralatan — Projek CCTV</div>
           <button v-if="canAddHandoverMemo" class="btn btn-primary btn-sm" @click="openAddHandoverMemo">+ Tambah Surat Serahan</button>
         </div>
-        <p class="text-sm text-muted mb-16">Rekod memo/surat serahan bila Daya One memulangkan peralatan CCTV yang dicabut (rosak/diganti) kepada pihak SPRM, untuk pihak SPRM claim dengan vendor/distributor pemasang asal di bawah waranti sedia ada. Muat naik salinan surat (PDF/gambar) untuk rujukan semua staff.</p>
+        <p class="text-sm text-muted mb-16">Rekod memo/surat serahan peralatan CCTV antara Daya One dan SPRM — sama ada Daya One memulangkan peralatan yang dicabut (rosak/diganti) kepada SPRM untuk claim dengan vendor/distributor pemasang asal, ATAU SPRM menyerahkan peralatan kepada Daya One (cth: unit ganti/baharu untuk dipasang). Muat naik salinan surat (PDF/gambar) untuk rujukan semua staff.</p>
 
-        <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
-          <select class="form-control" style="width:auto;min-width:200px" v-model="handoverMemoFilterSite">
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
+          <div class="flex gap-8" style="flex-wrap:wrap">
+            <button class="btn btn-sm" :class="handoverMemoFilterDirection===''?'btn-primary':'btn-outline'" @click="handoverMemoFilterDirection=''">Semua</button>
+            <button class="btn btn-sm" :class="handoverMemoFilterDirection==='d2s'?'btn-primary':'btn-outline'" @click="handoverMemoFilterDirection='d2s'">🔵 Daya One → SPRM</button>
+            <button class="btn btn-sm" :class="handoverMemoFilterDirection==='s2d'?'btn-primary':'btn-outline'" @click="handoverMemoFilterDirection='s2d'">🟢 SPRM → Daya One</button>
+          </div>
+          <select class="form-control" style="width:auto;min-width:200px;margin-left:auto" v-model="handoverMemoFilterSite">
             <option value="">Semua Site</option>
             <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option>
           </select>
@@ -1914,9 +1919,10 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="!handoverMemosFiltered.length" class="empty">Tiada rekod surat serahan peralatan lagi.</div>
         <div v-else class="tbl-wrap">
           <table>
-            <thead><tr><th>Tarikh Serahan</th><th>Site</th><th>Butiran Barang</th><th>Diterima Oleh (SPRM)</th><th>Surat/Memo</th><th>Tindakan</th></tr></thead>
+            <thead><tr><th>Arah</th><th>Tarikh Serahan</th><th>Site</th><th>Butiran Barang</th><th>Diterima Oleh</th><th>Surat/Memo</th><th>Tindakan</th></tr></thead>
             <tbody>
               <tr v-for="m in handoverMemosFiltered" :key="m.id">
+                <td style="white-space:nowrap;font-size:.8rem">{{m.direction==='s2d'?'🟢 SPRM → Daya One':'🔵 Daya One → SPRM'}}</td>
                 <td style="white-space:nowrap">{{fmtDate(m.handoverDate)}}</td>
                 <td>{{m.siteName||'-'}}</td>
                 <td style="max-width:320px;white-space:pre-wrap">{{m.itemsDesc||'-'}}</td>
@@ -4853,6 +4859,17 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="modal" style="position:relative">
           <button @click="handoverMemoModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
           <h3>{{handoverMemoModal.editing?'Edit Surat Serahan Peralatan':'Tambah Surat Serahan Peralatan'}}</h3>
+          <div class="form-group">
+            <label>Jenis Serahan *</label>
+            <div class="flex gap-8" style="flex-wrap:wrap">
+              <label class="flex gap-8" style="align-items:center;font-weight:400;cursor:pointer">
+                <input type="radio" value="d2s" v-model="handoverMemoModal.data.direction"> 🔵 Daya One → SPRM
+              </label>
+              <label class="flex gap-8" style="align-items:center;font-weight:400;cursor:pointer">
+                <input type="radio" value="s2d" v-model="handoverMemoModal.data.direction"> 🟢 SPRM → Daya One
+              </label>
+            </div>
+          </div>
           <div class="form-row form-row-2">
             <div class="form-group"><label>Site *</label>
               <select class="form-control" v-model="handoverMemoModal.data.siteId" @change="onHandoverMemoSiteChange">
@@ -4861,7 +4878,7 @@ details.form-control[open] summary::after{content:'▴'}
               </select>
             </div>
             <div class="form-group"><label>Tarikh Serahan *</label><input class="form-control" type="date" v-model="handoverMemoModal.data.handoverDate"></div>
-            <div class="form-group"><label>Diterima Oleh (Pihak SPRM) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="handoverMemoModal.data.recipientName" placeholder="cth: Nama / Jawatan pegawai SPRM"></div>
+            <div class="form-group"><label>{{handoverMemoModal.data.direction==='s2d'?'Diterima Oleh (Pihak Daya One)':'Diterima Oleh (Pihak SPRM)'}} <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="handoverMemoModal.data.recipientName" :placeholder="handoverMemoModal.data.direction==='s2d'?'cth: Nama / Jawatan staff Daya One':'cth: Nama / Jawatan pegawai SPRM'"></div>
           </div>
           <div class="form-group"><label>Butiran Barang Diserahkan *</label><textarea class="form-control" rows="3" v-model="handoverMemoModal.data.itemsDesc" placeholder="cth: 2x Kamera IP Dome (rosak), 1x NVR 16CH (ganti baru)"></textarea></div>
           <div class="form-group"><label>Nota</label><textarea class="form-control" rows="2" v-model="handoverMemoModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
@@ -5453,7 +5470,12 @@ details.form-control[open] summary::after{content:'▴'}
 
         <!-- TAB: INVENTORI PERALATAN -->
         <div v-if="reportTab==='inventori'">
-          <div class="card">
+          <div class="tabs no-print" style="margin-bottom:14px">
+            <div class="tab" :class="{active:inventorySubView==='list'}" @click="inventorySubView='list'">📋 Senarai Item</div>
+            <div class="tab" :class="{active:inventorySubView==='ringkasan'}" @click="inventorySubView='ringkasan'">📊 Ringkasan Jumlah (CCTV)</div>
+          </div>
+
+          <div v-if="inventorySubView==='list'" class="card">
             <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
               <div class="card-title" style="margin:0;border:none;padding:0">Inventori Peralatan Konsolidasi ({{assetRegister.length}} item)</div>
               <div class="flex gap-8" style="flex-wrap:wrap">
@@ -5499,6 +5521,50 @@ details.form-control[open] summary::after{content:'▴'}
                 <button class="btn btn-outline btn-sm" :disabled="assetRegisterPage===assetRegisterTotalPages" @click="assetRegisterGoToPage(assetRegisterPage+1)">Seterus ›</button>
               </div>
             </div>
+          </div>
+
+          <div v-else class="card">
+            <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
+              <div>
+                <div class="card-title" style="margin:0;border:none;padding:0">Ringkasan Jumlah Inventori Peralatan CCTV</div>
+                <div class="text-sm text-muted">{{inventoryGrandTotal}} unit keseluruhan merentasi {{SITES.length}} site</div>
+              </div>
+              <div class="flex gap-8" style="flex-wrap:wrap">
+                <button class="btn btn-sm" :class="inventoryReportMode==='total'?'btn-primary':'btn-outline'" @click="inventoryReportMode='total'">Jumlah Keseluruhan</button>
+                <button class="btn btn-sm" :class="inventoryReportMode==='site'?'btn-primary':'btn-outline'" @click="inventoryReportMode='site'">Ikut Site</button>
+                <button v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-primary btn-sm" @click="exportInventorySummaryPdf">🖨 Export PDF</button>
+              </div>
+            </div>
+
+            <template v-if="inventoryReportMode==='total'">
+              <div class="tbl-wrap">
+                <table>
+                  <thead><tr><th>Jenis</th><th>Brand</th><th>Model</th><th style="text-align:right">Jumlah</th></tr></thead>
+                  <tbody>
+                    <tr v-for="r in inventoryTotalRows" :key="r._key">
+                      <td>{{r.jenis}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td style="text-align:right;font-weight:600">{{r.jumlah}}</td>
+                    </tr>
+                    <tr v-if="!inventoryTotalRows.length"><td colspan="4" class="empty">Tiada peralatan CCTV direkodkan lagi.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+            <template v-else>
+              <div v-if="!inventoryBySite.length" class="empty">Tiada peralatan CCTV direkodkan lagi.</div>
+              <div v-for="s in inventoryBySite" :key="s.siteId" class="warranty-site-group">
+                <div class="warranty-site-header">📍 {{s.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{s.total}} unit)</span></div>
+                <div class="tbl-wrap">
+                  <table>
+                    <thead><tr><th>Jenis</th><th>Brand</th><th>Model</th><th style="text-align:right">Jumlah</th></tr></thead>
+                    <tbody>
+                      <tr v-for="r in s.rows" :key="r._key">
+                        <td>{{r.jenis}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td style="text-align:right;font-weight:600">{{r.jumlah}}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
           </div>
         </div>
 
@@ -9075,10 +9141,17 @@ createApp({
     // several items) — kept as its own flat list rather than grouped, since
     // a memo isn't tied to one vendor/site the way warranty records are. ──
     const handoverMemos = ref([]);
+    // direction: 'd2s' = Daya One -> SPRM (kes asal, pemulangan barang rosak
+    // untuk claim waranti), 's2d' = SPRM -> Daya One (cth: unit ganti/baharu
+    // diserah SPRM kepada Daya One). Legacy docs written before this field
+    // existed have no `direction` — treated as 'd2s' everywhere it's read
+    // (via `m.direction==='s2d' ? ... : ...`), matching the only case that
+    // existed before this field was added.
     const handoverMemoModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
-      siteId:'', siteName:'', handoverDate:'', itemsDesc:'', recipientName:'', notes:'',
+      direction:'d2s', siteId:'', siteName:'', handoverDate:'', itemsDesc:'', recipientName:'', notes:'',
     } });
     const handoverMemoFilterSite = ref('');
+    const handoverMemoFilterDirection = ref('');
     async function loadHandoverMemos() {
       try {
         const snap = await db.collection('equipmentHandoverMemos').orderBy('handoverDate','desc').get();
@@ -9086,7 +9159,8 @@ createApp({
       } catch(e) { showToast('Gagal muat surat serahan peralatan: ' + e.message, 'error'); }
     }
     const handoverMemosFiltered = computed(() => handoverMemos.value.filter(m =>
-      !handoverMemoFilterSite.value || m.siteId === handoverMemoFilterSite.value
+      (!handoverMemoFilterSite.value || m.siteId === handoverMemoFilterSite.value) &&
+      (!handoverMemoFilterDirection.value || (m.direction||'d2s') === handoverMemoFilterDirection.value)
     ));
     function onHandoverMemoSiteChange() {
       const s = SITES.find(x => x.id === handoverMemoModal.data.siteId);
@@ -9095,14 +9169,14 @@ createApp({
     function openAddHandoverMemo() {
       if(!canAddHandoverMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       handoverMemoModal.editing = false; handoverMemoModal.err = '';
-      Object.assign(handoverMemoModal.data, { siteId:'', siteName:'', handoverDate:'', itemsDesc:'', recipientName:'', notes:'' });
+      Object.assign(handoverMemoModal.data, { direction:'d2s', siteId:'', siteName:'', handoverDate:'', itemsDesc:'', recipientName:'', notes:'' });
       handoverMemoModal.show = true;
     }
     function openEditHandoverMemo(m) {
       if(!canEditHandoverMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       handoverMemoModal.editing = true; handoverMemoModal.err = '';
       Object.assign(handoverMemoModal.data, {
-        siteId:m.siteId||'', siteName:m.siteName||'', handoverDate:m.handoverDate||'',
+        direction:m.direction||'d2s', siteId:m.siteId||'', siteName:m.siteName||'', handoverDate:m.handoverDate||'',
         itemsDesc:m.itemsDesc||'', recipientName:m.recipientName||'', notes:m.notes||'',
       });
       handoverMemoModal._editId = m.id;
@@ -16267,6 +16341,95 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       XLSX.writeFile(wb, `inventori_peralatan_${_localDateStr()}.xlsx`);
     }
 
+    // ── Ringkasan Jumlah Inventori (CCTV only) — sub-view of the Inventori
+    // Peralatan tab: aggregated UNIT COUNTS per Jenis/Brand/Model (not a
+    // flat per-item list like assetRegister above), either grand total
+    // across all CCTV sites or broken down per site. Hard Disk sums
+    // h.totalUnit (one record can represent several physical units of the
+    // same brand/model/capacity); every other kind is 1 record = 1 unit.
+    // Misc is folded into "📦 Lain-lain — <Kategori>" as the Jenis label
+    // (rather than a separate column) since the requested export format is
+    // a flat 4-column table (Jenis | Brand | Model | Jumlah).
+    const inventorySubView = ref('list'); // 'list' (existing per-item register) | 'ringkasan' (this)
+    const inventoryReportMode = ref('total'); // 'total' | 'site'
+    function _inventoryRowsFor(eq) {
+      const rows = [];
+      const push = (jenis, brand, model, qty) => {
+        const key = jenis + '|' + brand + '|' + model;
+        let row = rows.find(r => r._key === key);
+        if(!row) { row = { _key:key, jenis, brand, model, jumlah:0 }; rows.push(row); }
+        row.jumlah += qty;
+      };
+      (eq.cameras||[]).forEach(c => push('📷 Kamera', c.brand||'-', c.model||'-', 1));
+      (eq.nvr||[]).forEach(n => push('🖥️ NVR/Server', n.brand||'-', n.model||'-', 1));
+      (eq.hdd||[]).forEach(h => push('💾 Hard Disk', h.brand||'-', `${h.model||'-'}${h.capacity ? ' ('+h.capacity+')' : ''}`, Number(h.totalUnit)||1));
+      (eq.switches||[]).forEach(s => push('🔌 Switch', s.brand||'-', s.model||'-', 1));
+      (eq.alarms||[]).forEach(a => push('🔔 Alarm', a.brand||'-', a.model||'-', 1));
+      (eq.misc||[]).forEach(m => push(`📦 Lain-lain — ${m.category||'Lain-lain'}`, m.brand||'-', m.model||'-', 1));
+      return rows.sort((a,b) => a.jenis.localeCompare(b.jenis) || b.jumlah - a.jumlah);
+    }
+    const inventoryTotalRows = computed(() => {
+      const merged = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      SITES.forEach(s => {
+        const eq = siteEquip.value[s.id] || {};
+        Object.keys(merged).forEach(k => { merged[k] = merged[k].concat(eq[k]||[]); });
+      });
+      return _inventoryRowsFor(merged);
+    });
+    const inventoryGrandTotal = computed(() => inventoryTotalRows.value.reduce((s,r) => s+r.jumlah, 0));
+    const inventoryBySite = computed(() => SITES.map(s => {
+      const eq = siteEquip.value[s.id] || {};
+      const rows = _inventoryRowsFor(eq);
+      return { siteId:s.id, siteName:s.name, rows, total: rows.reduce((s2,r) => s2+r.jumlah, 0) };
+    }).filter(s => s.total > 0));
+    async function exportInventorySummaryPdf() {
+      const bySite = inventoryReportMode.value === 'site';
+      const rowsHtml = r => `<tr><td>${esc(r.jenis)}</td><td>${esc(r.brand)}</td><td>${esc(r.model)}</td><td style="text-align:right">${r.jumlah}</td></tr>`;
+      const tableHtml = rows => `<table><thead><tr><th>Jenis</th><th>Brand</th><th>Model</th><th style="text-align:right">Jumlah</th></tr></thead><tbody>${rows.map(rowsHtml).join('')}</tbody></table>`;
+      const bodyHtml = bySite
+        ? inventoryBySite.value.map(s => `<h4 style="color:#333;margin:14px 0 2px;font-size:9.5pt">📍 ${esc(s.siteName)} (${s.total} unit)</h4>${tableHtml(s.rows)}`).join('')
+        : tableHtml(inventoryTotalRows.value);
+      const w2 = window.open('','_blank','width=1000,height=750');
+      if(!w2) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Ringkasan_Inventori_Peralatan_CCTV_${_localDateStr()}</title>
+        <style>
+          @page{size:portrait;margin:12mm}
+          body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
+          h2{color:#003366;margin-bottom:2px}
+          p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
+          .header-side{flex-shrink:0;text-align:right}
+          .header-generated{font-style:italic;color:#888;font-size:7.5pt;margin:4px 0 0}
+          table{width:100%;border-collapse:collapse;margin-top:6px}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
+          td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt}
+          tr:nth-child(even) td{background:#f7f9fc}
+        </style>
+      </head><body>
+        <div class="header">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Ringkasan Jumlah Inventori Peralatan CCTV</h2>
+            <p style="font-weight:600;color:#333">${bySite ? 'Ikut Site' : 'Jumlah Keseluruhan Semua Site'} — Daya One Resources Sdn. Bhd. | Suruhanjaya Pencegahan Rasuah Malaysia</p>
+          </div>
+          <div class="header-side">
+            <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
+            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${inventoryGrandTotal.value} unit keseluruhan</p>
+          </div>
+        </div>
+        ${bodyHtml}
+      </body></html>`);
+      w2.document.close();
+      w2.focus();
+      const imgs = [...w2.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w2.print(); w2.close(); }, 200);
+      await logAudit('INVENTORY_SUMMARY_EXPORT_PDF', bySite ? 'Ikut Site' : 'Jumlah Keseluruhan');
+    }
+
     // ── 2. Trend Keterlambatan (SLA breach history) ──
     function _slaGapsForSite(site, proj) {
       const intervalDays = PM_INTERVAL[proj] * 30.44;
@@ -16909,7 +17072,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
-      handoverMemos, handoverMemoModal, handoverMemoFilterSite, handoverMemosFiltered, loadHandoverMemos,
+      handoverMemos, handoverMemoModal, handoverMemoFilterSite, handoverMemoFilterDirection, handoverMemosFiltered, loadHandoverMemos,
       onHandoverMemoSiteChange, openAddHandoverMemo, openEditHandoverMemo, submitHandoverMemo, deleteHandoverMemo,
       canEditHandoverMemo, canAddHandoverMemo,
       serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
@@ -16960,6 +17123,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       healthCountCctv, healthCountVir, siteLeaderboard, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
+      inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, exportInventorySummaryPdf,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
