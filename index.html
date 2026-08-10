@@ -1095,6 +1095,9 @@ details.form-control[open] summary::after{content:'▴'}
         <span class="icon">🛡️</span> Waranti Peralatan
         <span v-if="warrantyExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{warrantyExpiringCount}}</span>
       </div>
+      <div class="nav-item" :class="{active:page==='handover-memo'}" @click="loadHandoverMemos();page='handover-memo'" v-if="canViewCredentials">
+        <span class="icon">📄</span> Surat Serahan Peralatan
+      </div>
       <div class="nav-section-label" style="margin-top:6px">PROJEK VIR</div>
       <div class="nav-item" :class="{active:page==='sites'&&currentProject==='vir'}" @click="openSites('vir')">
         <span class="icon">🎥</span> Site
@@ -1890,6 +1893,47 @@ details.form-control[open] summary::after{content:'▴'}
               </table>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ====== SURAT SERAHAN PERALATAN (CCTV) ====== -->
+      <div v-if="page==='handover-memo'">
+        <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin:0;border:none;padding:0">📄 Surat Serahan Peralatan — Projek CCTV</div>
+          <button v-if="canAddHandoverMemo" class="btn btn-primary btn-sm" @click="openAddHandoverMemo">+ Tambah Surat Serahan</button>
+        </div>
+        <p class="text-sm text-muted mb-16">Rekod memo/surat serahan bila Daya One memulangkan peralatan CCTV yang dicabut (rosak/diganti) kepada pihak SPRM, untuk pihak SPRM claim dengan vendor/distributor pemasang asal di bawah waranti sedia ada. Muat naik salinan surat (PDF/gambar) untuk rujukan semua staff.</p>
+
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
+          <select class="form-control" style="width:auto;min-width:200px" v-model="handoverMemoFilterSite">
+            <option value="">Semua Site</option>
+            <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option>
+          </select>
+        </div>
+
+        <div v-if="!handoverMemosFiltered.length" class="empty">Tiada rekod surat serahan peralatan lagi.</div>
+        <div v-else class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tarikh Serahan</th><th>Site</th><th>Butiran Barang</th><th>Diterima Oleh (SPRM)</th><th>Surat/Memo</th><th>Tindakan</th></tr></thead>
+            <tbody>
+              <tr v-for="m in handoverMemosFiltered" :key="m.id">
+                <td style="white-space:nowrap">{{fmtDate(m.handoverDate)}}</td>
+                <td>{{m.siteName||'-'}}</td>
+                <td style="max-width:320px;white-space:pre-wrap">{{m.itemsDesc||'-'}}</td>
+                <td>{{m.recipientName||'-'}}</td>
+                <td>
+                  <button class="btn btn-sm btn-outline btn-icon" @click="openServiceReports(m,'equipmentHandoverMemos','handoverMemos')" :title="`Fail Surat Serahan (${(m.serviceReports||[]).length})`">📎<span v-if="(m.serviceReports||[]).length" style="font-size:.7rem;margin-left:2px">{{(m.serviceReports||[]).length}}</span></button>
+                </td>
+                <td class="flex gap-8">
+                  <template v-if="canEditHandoverMemo">
+                    <button class="btn btn-sm btn-outline btn-icon" @click="openEditHandoverMemo(m)" title="Edit">✏️</button>
+                    <button class="btn btn-sm btn-danger btn-icon" @click="deleteHandoverMemo(m)" title="Padam">🗑</button>
+                  </template>
+                  <span v-else class="text-muted text-sm">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -3846,7 +3890,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">6. &nbsp;PERALATAN LAIN-LAIN</div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:25%">Nama/Lokasi</th><th style="width:12%">Kategori</th><th style="width:11%">Brand</th><th style="width:19%">Model</th><th style="width:16%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
+            <thead><tr><th style="width:5%">No.</th><th style="width:22%">Nama/Lokasi</th><th style="width:11%">Kategori</th><th style="width:10%">Brand</th><th style="width:17%">Model</th><th style="width:23%">No. Siri / Kuantiti</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(m,i) in viewPM?.misc" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td class="ctr">{{m.brand}}</td>
@@ -4804,6 +4848,31 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
       </div>
 
+      <!-- ====== ADD/EDIT SURAT SERAHAN PERALATAN MODAL ====== -->
+      <div v-if="handoverMemoModal.show" class="modal-bg">
+        <div class="modal" style="position:relative">
+          <button @click="handoverMemoModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
+          <h3>{{handoverMemoModal.editing?'Edit Surat Serahan Peralatan':'Tambah Surat Serahan Peralatan'}}</h3>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Site *</label>
+              <select class="form-control" v-model="handoverMemoModal.data.siteId" @change="onHandoverMemoSiteChange">
+                <option value="">-- Pilih Site --</option>
+                <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Tarikh Serahan *</label><input class="form-control" type="date" v-model="handoverMemoModal.data.handoverDate"></div>
+            <div class="form-group"><label>Diterima Oleh (Pihak SPRM) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="handoverMemoModal.data.recipientName" placeholder="cth: Nama / Jawatan pegawai SPRM"></div>
+          </div>
+          <div class="form-group"><label>Butiran Barang Diserahkan *</label><textarea class="form-control" rows="3" v-model="handoverMemoModal.data.itemsDesc" placeholder="cth: 2x Kamera IP Dome (rosak), 1x NVR 16CH (ganti baru)"></textarea></div>
+          <div class="form-group"><label>Nota</label><textarea class="form-control" rows="2" v-model="handoverMemoModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
+          <p v-if="handoverMemoModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{handoverMemoModal.err}}</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="handoverMemoModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="submitHandoverMemo" :disabled="loading">{{loading?'Menyimpan...':handoverMemoModal.editing?'Simpan Perubahan':'Tambah Surat Serahan'}}</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== ADD/EDIT WARANTI PERALATAN VIR MODAL ====== -->
       <div v-if="virWarrantyModal.show" class="modal-bg">
         <div class="modal" style="position:relative">
@@ -4847,8 +4916,8 @@ details.form-control[open] summary::after{content:'▴'}
       <div v-if="serviceReportModal.show" class="modal-bg" @click.self="serviceReportModal.show=false">
         <div class="modal" style="position:relative;max-width:520px">
           <button @click="serviceReportModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
-          <h3>{{serviceReportModal.collection==='virEquipmentWarranty' ? '📎 Resit/Bukti Pembelian' : '📎 Fail Servis Vendor'}}</h3>
-          <p class="text-muted text-sm" style="margin-top:-6px">{{serviceReportModal.warranty?.equipmentName}} — {{serviceReportModal.warranty?.siteName}}</p>
+          <h3>{{serviceReportModal.collection==='virEquipmentWarranty' ? '📎 Resit/Bukti Pembelian' : serviceReportModal.collection==='equipmentHandoverMemos' ? '📎 Surat Serahan Peralatan' : '📎 Fail Servis Vendor'}}</h3>
+          <p class="text-muted text-sm" style="margin-top:-6px">{{serviceReportModal.collection==='equipmentHandoverMemos' ? fmtDate(serviceReportModal.warranty?.handoverDate) : serviceReportModal.warranty?.equipmentName}} — {{serviceReportModal.warranty?.siteName}}</p>
 
           <div v-if="!(serviceReportModal.warranty?.serviceReports||[]).length" class="empty" style="padding:14px 0">Tiada fail dimuat naik lagi.</div>
           <div v-else class="tbl-wrap" style="margin:10px 0">
@@ -8354,21 +8423,32 @@ createApp({
     // rule (VIR equipment stays admin+ only, unlike CCTV where staff can
     // add/edit equipment too).
     const canEditVirWarranty = computed(()=> isAdminRole() || hasPermOverride('editWarrantyVir'));
+    // Surat Serahan Peralatan (CCTV) — handover memo proving DayaOne
+    // returned removed/faulty equipment to SPRM (who then claims with the
+    // ex-installer vendor/distributor). Same permission shape as
+    // canEditWarranty/canAddWarranty above.
+    const canEditHandoverMemo = computed(()=> isAdminRole() || hasPermOverride('editHandoverMemo'));
+    const canAddHandoverMemo = computed(()=> canEditHandoverMemo.value || authProfile.value?.role==='staff');
     // The service-report modal/upload pipeline is shared between CCTV
-    // (equipmentWarranty) and VIR (virEquipmentWarranty) records, each with
-    // its own permission tier — resolve the right one from whichever
-    // collection the modal is currently pointed at.
+    // (equipmentWarranty), VIR (virEquipmentWarranty), and handover memos
+    // (equipmentHandoverMemos), each with its own permission tier — resolve
+    // the right one from whichever collection the modal is currently
+    // pointed at.
     function canAddWarrantyReportFor(collection) {
-      return collection === 'virEquipmentWarranty' ? canEditVirWarranty.value : canAddWarranty.value;
+      if(collection === 'virEquipmentWarranty') return canEditVirWarranty.value;
+      if(collection === 'equipmentHandoverMemos') return canAddHandoverMemo.value;
+      return canAddWarranty.value;
     }
     function canEditWarrantyReportFor(collection) {
-      return collection === 'virEquipmentWarranty' ? canEditVirWarranty.value : canEditWarranty.value;
+      if(collection === 'virEquipmentWarranty') return canEditVirWarranty.value;
+      if(collection === 'equipmentHandoverMemos') return canEditHandoverMemo.value;
+      return canEditWarranty.value;
     }
-    // CCTV site equipment: staff may also add/edit/delete records (only
-    // admin+ can touch the Firestore doc for other write-restricted things
-    // elsewhere in the app). VIR stays admin+ only.
+    // Site equipment (both CCTV and VIR): staff may also add/edit/delete
+    // records, same as admin+ — internship excluded (role check is strictly
+    // 'staff', not just "not internship").
     const canEditEquip = computed(()=>
-      isAdminRole() || (currentProject.value==='cctv' && authProfile.value?.role==='staff') ||
+      isAdminRole() || authProfile.value?.role==='staff' ||
       (currentProject.value==='cctv' && hasPermOverride('editEquipmentCctv')) ||
       (currentProject.value==='vir' && hasPermOverride('editEquipmentVir'))
     );
@@ -8654,6 +8734,7 @@ createApp({
       { key:'editEquipmentVir', label:'Edit/Padam Peralatan VIR' },
       { key:'editWarrantyCctv', label:'Edit/Padam Waranti Peralatan CCTV' },
       { key:'editWarrantyVir', label:'Edit/Padam Waranti Peralatan VIR' },
+      { key:'editHandoverMemo', label:'Edit/Padam Surat Serahan Peralatan CCTV' },
     ];
     function hasPermOverride(key) {
       return authProfile.value?.permissionOverrides?.[key] === true;
@@ -8984,6 +9065,83 @@ createApp({
         showToast('Rekod waranti dipadam.');
       } catch(e) { showToast('Gagal padam rekod waranti: ' + e.message, 'error'); }
     }
+    // ── Surat Serahan Peralatan (CCTV only) — memo/letter DayaOne issues
+    // when handing removed/faulty CCTV equipment physically back to SPRM,
+    // who then claims repair/replacement with the ORIGINAL installer
+    // vendor/distributor under that equipment's pre-existing installation
+    // warranty. Standalone tracking, unrelated to equipmentWarranty (which
+    // tracks the warranty period itself) or equipmentRemovalLog (which logs
+    // the removal event, often many-to-one against a single memo covering
+    // several items) — kept as its own flat list rather than grouped, since
+    // a memo isn't tied to one vendor/site the way warranty records are. ──
+    const handoverMemos = ref([]);
+    const handoverMemoModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
+      siteId:'', siteName:'', handoverDate:'', itemsDesc:'', recipientName:'', notes:'',
+    } });
+    const handoverMemoFilterSite = ref('');
+    async function loadHandoverMemos() {
+      try {
+        const snap = await db.collection('equipmentHandoverMemos').orderBy('handoverDate','desc').get();
+        handoverMemos.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      } catch(e) { showToast('Gagal muat surat serahan peralatan: ' + e.message, 'error'); }
+    }
+    const handoverMemosFiltered = computed(() => handoverMemos.value.filter(m =>
+      !handoverMemoFilterSite.value || m.siteId === handoverMemoFilterSite.value
+    ));
+    function onHandoverMemoSiteChange() {
+      const s = SITES.find(x => x.id === handoverMemoModal.data.siteId);
+      handoverMemoModal.data.siteName = s?.name || '';
+    }
+    function openAddHandoverMemo() {
+      if(!canAddHandoverMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      handoverMemoModal.editing = false; handoverMemoModal.err = '';
+      Object.assign(handoverMemoModal.data, { siteId:'', siteName:'', handoverDate:'', itemsDesc:'', recipientName:'', notes:'' });
+      handoverMemoModal.show = true;
+    }
+    function openEditHandoverMemo(m) {
+      if(!canEditHandoverMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      handoverMemoModal.editing = true; handoverMemoModal.err = '';
+      Object.assign(handoverMemoModal.data, {
+        siteId:m.siteId||'', siteName:m.siteName||'', handoverDate:m.handoverDate||'',
+        itemsDesc:m.itemsDesc||'', recipientName:m.recipientName||'', notes:m.notes||'',
+      });
+      handoverMemoModal._editId = m.id;
+      handoverMemoModal.show = true;
+    }
+    async function submitHandoverMemo() {
+      const allowed = handoverMemoModal.editing ? canEditHandoverMemo.value : canAddHandoverMemo.value;
+      if(!allowed){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      handoverMemoModal.err = '';
+      const d = handoverMemoModal.data;
+      if(!d.siteId || !d.handoverDate || !d.itemsDesc.trim()) {
+        handoverMemoModal.err = 'Site, tarikh serahan dan butiran barang wajib diisi.'; return;
+      }
+      loading.value = true;
+      try {
+        if(!handoverMemoModal.editing) {
+          await db.collection('equipmentHandoverMemos').add({ ...d, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' });
+          await logAudit('HANDOVER_MEMO_ADD', `${d.siteName} — ${d.handoverDate}`);
+          showToast('Surat serahan peralatan berjaya ditambah!');
+        } else {
+          await db.collection('equipmentHandoverMemos').doc(handoverMemoModal._editId).update(d);
+          await logAudit('HANDOVER_MEMO_EDIT', `${d.siteName} — ${d.handoverDate}`);
+          showToast('Surat serahan peralatan dikemaskini!');
+        }
+        handoverMemoModal.show = false;
+        await loadHandoverMemos();
+      } catch(e) { handoverMemoModal.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    async function deleteHandoverMemo(m) {
+      if(!canEditHandoverMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm(`Padam rekod surat serahan "${m.siteName}" (${fmtDate(m.handoverDate)})?`)) return;
+      try {
+        await db.collection('equipmentHandoverMemos').doc(m.id).delete();
+        handoverMemos.value = handoverMemos.value.filter(x => x.id !== m.id);
+        await logAudit('HANDOVER_MEMO_DELETE', `${m.siteName} — ${m.handoverDate}`);
+        showToast('Rekod surat serahan dipadam.');
+      } catch(e) { showToast('Gagal padam rekod surat serahan: ' + e.message, 'error'); }
+    }
     // ── Fail Servis Vendor (service report) — PDF/gambar/dokumen yang
     // vendor bagi lepas repair/replacement barang under warranty. Disimpan
     // dalam Firebase Storage (bukan Firestore — fail boleh besar), Firestore
@@ -9139,7 +9297,7 @@ createApp({
         });
         if(!w.serviceReports) w.serviceReports = [];
         w.serviceReports.push(entry);
-        await logAudit('WARRANTY_SERVICE_REPORT_UPLOAD', `${w.equipmentName} — ${w.siteName} — ${uploadFile.name}`);
+        await logAudit('WARRANTY_SERVICE_REPORT_UPLOAD', `${w.equipmentName || w.itemsDesc || '-'} — ${w.siteName} — ${uploadFile.name}`);
         showToast('Fail servis berjaya dimuat naik!');
       } catch(e) { serviceReportModal.err = 'Ralat muat naik: ' + e.message; }
       serviceReportModal.uploading = false;
@@ -9154,7 +9312,7 @@ createApp({
           serviceReports: firebase.firestore.FieldValue.arrayRemove(report),
         });
         w.serviceReports = (w.serviceReports||[]).filter(r => r.path !== report.path);
-        await logAudit('WARRANTY_SERVICE_REPORT_DELETE', `${w.equipmentName} — ${w.siteName} — ${report.name}`);
+        await logAudit('WARRANTY_SERVICE_REPORT_DELETE', `${w.equipmentName || w.itemsDesc || '-'} — ${w.siteName} — ${report.name}`);
         showToast('Fail servis dipadam.');
       } catch(e) { showToast('Gagal padam fail servis: ' + e.message, 'error'); }
     }
@@ -9879,7 +10037,7 @@ createApp({
     // assignments, audit logs and custom equipment options. Fetched fresh
     // from Firestore (not the local reactive refs) so it's always complete
     // regardless of what happens to be loaded in the app right now.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','equipmentHandoverMemos'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -9914,7 +10072,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','equipmentHandoverMemos'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -10173,6 +10331,7 @@ createApp({
         if(data.virEquipmentWarranty?.length) { await _batchRestoreCollection('virEquipmentWarranty', data.virEquipmentWarranty); await loadVirWarranty(); }
         if(data.equipmentRemovalLog?.length) { await _batchRestoreCollection('equipmentRemovalLog', data.equipmentRemovalLog); await loadEquipmentRemovalLogs(); }
         if(data.warrantyVendorContracts?.length) { await _batchRestoreCollection('warrantyVendorContracts', data.warrantyVendorContracts); await loadVendorContracts(); }
+        if(data.equipmentHandoverMemos?.length) { await _batchRestoreCollection('equipmentHandoverMemos', data.equipmentHandoverMemos); await loadHandoverMemos(); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
@@ -10206,7 +10365,8 @@ createApp({
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
       'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
       'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV'),
-      'kontraktor-luar': 'Senarai Kontraktor/Supplier Luar', 'warranty': 'Waranti Peralatan (CCTV)'
+      'kontraktor-luar': 'Senarai Kontraktor/Supplier Luar', 'warranty': 'Waranti Peralatan (CCTV)',
+      'handover-memo': 'Surat Serahan Peralatan (CCTV)',
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
@@ -13282,7 +13442,7 @@ createApp({
     // new-PM draft, the site-compare picker) can't be safely reconstructed
     // from just a page name, so those fall back to their parent list page
     // instead of silently landing on a broken/blank view.
-    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty'];
+    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty','handover-memo'];
     // Pages whose data is otherwise ONLY fetched by the nav item's own
     // @click handler (loadX();page='x') — landing on them via restore
     // bypasses that click entirely, so page.value flips but the underlying
@@ -13290,7 +13450,7 @@ createApp({
     // and back. Re-fire the same loader here so a refresh lands with data
     // already populated, not a blank page that "fixes itself" on next click.
     const RESTORE_PAGE_LOADERS = {
-      warranty: loadWarranty, 'vir-warranty': loadVirWarranty,
+      warranty: loadWarranty, 'vir-warranty': loadVirWarranty, 'handover-memo': loadHandoverMemos,
       contracts: loadContracts, 'audit-log': loadAuditLogs,
       'contact-person': loadContactPersons,
       profile: initProfile, 'kontraktor-luar': loadKontraktorLuar,
@@ -15081,7 +15241,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         children.push(sectionHdr('6.  PERALATAN LAIN-LAIN'));
         if (r.misc?.length) {
           children.push(makeTable(
-            ['No.','Nama/Lokasi','Kategori','Brand','Model','No. Siri','Status','Nota'],
+            ['No.','Nama/Lokasi','Kategori','Brand','Model','No. Siri / Kuantiti','Status','Nota'],
             r.misc.map((m,i)=>[i+1,m.name,m.category,m.brand,m.model,m.serial,m.status,m.nota||''])
           ));
         } else { children.push(emptyNote('Tiada rekod Peralatan Lain-lain.')); }
@@ -16749,6 +16909,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
+      handoverMemos, handoverMemoModal, handoverMemoFilterSite, handoverMemosFiltered, loadHandoverMemos,
+      onHandoverMemoSiteChange, openAddHandoverMemo, openEditHandoverMemo, submitHandoverMemo, deleteHandoverMemo,
+      canEditHandoverMemo, canAddHandoverMemo,
       serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
       showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
       filePreviewModal, previewServiceReport, printImagePreview, closeFilePreview,
