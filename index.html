@@ -5536,6 +5536,16 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
             </div>
 
+            <!-- Jenis (equipment type) filter — applies in both report modes,
+                 e.g. tick "Hard Disk" only to see just HDD counts. -->
+            <div class="flex gap-8 items-center mb-16" style="flex-wrap:wrap">
+              <span class="text-sm text-muted">Tapis Jenis:</span>
+              <button v-for="j in INVENTORY_JENIS_OPTIONS" :key="j" class="btn btn-sm"
+                :class="inventoryJenisFilter.includes(j)?'btn-primary':'btn-outline'"
+                @click="toggleInventoryJenisFilter(j)">{{j}}</button>
+              <button v-if="inventoryJenisFilter.length" class="btn btn-sm btn-outline" @click="inventoryJenisFilter=[]">✕ Kosongkan</button>
+            </div>
+
             <template v-if="inventoryReportMode==='total'">
               <div class="tbl-wrap">
                 <table>
@@ -5544,12 +5554,28 @@ details.form-control[open] summary::after{content:'▴'}
                     <tr v-for="r in inventoryTotalRows" :key="r._key">
                       <td>{{r.jenis}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td style="text-align:right;font-weight:600">{{r.jumlah}}</td>
                     </tr>
+                    <!-- Only meaningful with exactly ONE Jenis ticked — summing
+                         mixed types (e.g. Kamera + NVR together) into one
+                         number isn't a useful total, so it's skipped then. -->
+                    <tr v-if="inventoryJenisFilter.length===1 && inventoryTotalRows.length" style="background:#F4F7DC;font-weight:800;color:#5a6114">
+                      <td colspan="3">JUMLAH BESAR</td><td style="text-align:right">{{inventoryGrandTotal}}</td>
+                    </tr>
                     <tr v-if="!inventoryTotalRows.length"><td colspan="4" class="empty">Tiada peralatan CCTV direkodkan lagi.</td></tr>
                   </tbody>
                 </table>
               </div>
             </template>
             <template v-else>
+              <div class="form-group" style="margin-bottom:14px">
+                <label>Tapis Site <span class="text-muted text-sm">(kosongkan utk papar/export semua site)</span></label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:2px 12px;border:1px solid #e0e4ec;border-radius:6px;padding:8px 10px">
+                  <label v-for="s in SITES" :key="s.id" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px 0;font-size:.85rem;font-weight:400">
+                    <input type="checkbox" :checked="inventorySiteFilter.includes(s.id)" @change="toggleInventorySiteFilter(s.id)">
+                    <span>{{s.name}}</span>
+                  </label>
+                </div>
+                <button v-if="inventorySiteFilter.length" class="btn btn-sm btn-outline" style="margin-top:6px" @click="inventorySiteFilter=[]">✕ Kosongkan Pilihan ({{inventorySiteFilter.length}} dipilih)</button>
+              </div>
               <div v-if="!inventoryBySite.length" class="empty">Tiada peralatan CCTV direkodkan lagi.</div>
               <div v-for="s in inventoryBySite" :key="s.siteId" class="warranty-site-group">
                 <div class="warranty-site-header">📍 {{s.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{s.total}} unit)</span></div>
@@ -5558,6 +5584,26 @@ details.form-control[open] summary::after{content:'▴'}
                     <thead><tr><th>Jenis</th><th>Brand</th><th>Model</th><th style="text-align:right">Jumlah</th></tr></thead>
                     <tbody>
                       <tr v-for="r in s.rows" :key="r._key">
+                        <td>{{r.jenis}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td style="text-align:right;font-weight:600">{{r.jumlah}}</td>
+                      </tr>
+                      <tr style="background:#F4F7DC;font-weight:800;color:#5a6114">
+                        <td colspan="3">JUMLAH BESAR</td><td style="text-align:right">{{s.total}}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <!-- Combined total across whichever sites are currently shown
+                   above (all CCTV sites, or just the ones ticked in the site
+                   filter) — e.g. tick Pulau Pinang + Kuala Selangor + Port
+                   Dickson and this becomes the 3-site combined total. -->
+              <div v-if="inventoryBySite.length" class="warranty-site-group" style="border-left-color:#7A841A;background:#F4F7DC;padding:10px 10px 10px 12px;border-radius:0 6px 6px 0;margin-left:0">
+                <div class="warranty-site-header" style="color:#5a6114">🧮 JUMLAH BESAR — {{inventorySiteFilter.length ? inventorySiteFilter.length+' Site Dipilih' : 'Semua Site'}} <span style="font-weight:400;color:#888;font-size:.78rem">({{inventoryBySiteGrandTotal}} unit)</span></div>
+                <div class="tbl-wrap">
+                  <table>
+                    <thead><tr><th>Jenis</th><th>Brand</th><th>Model</th><th style="text-align:right">Jumlah</th></tr></thead>
+                    <tbody>
+                      <tr v-for="r in inventoryBySiteGrandRows" :key="r._key">
                         <td>{{r.jenis}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td style="text-align:right;font-weight:600">{{r.jumlah}}</td>
                       </tr>
                     </tbody>
@@ -16352,6 +16398,30 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     // a flat 4-column table (Jenis | Brand | Model | Jumlah).
     const inventorySubView = ref('list'); // 'list' (existing per-item register) | 'ringkasan' (this)
     const inventoryReportMode = ref('total'); // 'total' | 'site'
+    // "Ikut Site" mode only — empty means show/export every CCTV site (same
+    // as before this filter existed); a non-empty list restricts both the
+    // on-screen breakdown AND the PDF export to just those sites, since
+    // exportInventorySummaryPdf reads from inventoryBySite.value directly.
+    const inventorySiteFilter = ref([]);
+    function toggleInventorySiteFilter(siteId) {
+      const idx = inventorySiteFilter.value.indexOf(siteId);
+      if(idx === -1) inventorySiteFilter.value.push(siteId);
+      else inventorySiteFilter.value.splice(idx, 1);
+    }
+    // "Jenis" (equipment type) filter — applies in BOTH report modes (unlike
+    // the site filter above, which is "Ikut Site" only), since "show me
+    // just Hard Disk" is meaningful whether looking at the grand total or a
+    // per-site breakdown. Misc's many sub-categories (TV/UPS/Monitor/etc.)
+    // are grouped under one "📦 Lain-lain" filter option rather than listed
+    // individually — the export format's Jenis column already carries the
+    // specific sub-category text, this filter is just the top-level kind.
+    const INVENTORY_JENIS_OPTIONS = ['📷 Kamera','🖥️ NVR/Server','💾 Hard Disk','🔌 Switch','🔔 Alarm','📦 Lain-lain'];
+    const inventoryJenisFilter = ref([]);
+    function toggleInventoryJenisFilter(jenis) {
+      const idx = inventoryJenisFilter.value.indexOf(jenis);
+      if(idx === -1) inventoryJenisFilter.value.push(jenis);
+      else inventoryJenisFilter.value.splice(idx, 1);
+    }
     function _inventoryRowsFor(eq) {
       const rows = [];
       const push = (jenis, brand, model, qty) => {
@@ -16366,7 +16436,10 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       (eq.switches||[]).forEach(s => push('🔌 Switch', s.brand||'-', s.model||'-', 1));
       (eq.alarms||[]).forEach(a => push('🔔 Alarm', a.brand||'-', a.model||'-', 1));
       (eq.misc||[]).forEach(m => push(`📦 Lain-lain — ${m.category||'Lain-lain'}`, m.brand||'-', m.model||'-', 1));
-      return rows.sort((a,b) => a.jenis.localeCompare(b.jenis) || b.jumlah - a.jumlah);
+      const filtered = inventoryJenisFilter.value.length
+        ? rows.filter(r => inventoryJenisFilter.value.some(f => r.jenis === f || r.jenis.startsWith(f + ' —')))
+        : rows;
+      return filtered.sort((a,b) => a.jenis.localeCompare(b.jenis) || b.jumlah - a.jumlah);
     }
     const inventoryTotalRows = computed(() => {
       const merged = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
@@ -16377,18 +16450,49 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       return _inventoryRowsFor(merged);
     });
     const inventoryGrandTotal = computed(() => inventoryTotalRows.value.reduce((s,r) => s+r.jumlah, 0));
-    const inventoryBySite = computed(() => SITES.map(s => {
-      const eq = siteEquip.value[s.id] || {};
-      const rows = _inventoryRowsFor(eq);
-      return { siteId:s.id, siteName:s.name, rows, total: rows.reduce((s2,r) => s2+r.jumlah, 0) };
-    }).filter(s => s.total > 0));
+    const inventoryBySite = computed(() => SITES
+      .filter(s => !inventorySiteFilter.value.length || inventorySiteFilter.value.includes(s.id))
+      .map(s => {
+        const eq = siteEquip.value[s.id] || {};
+        const rows = _inventoryRowsFor(eq);
+        return { siteId:s.id, siteName:s.name, rows, total: rows.reduce((s2,r) => s2+r.jumlah, 0) };
+      }).filter(s => s.total > 0));
+    // "Jumlah Besar" — a combined Jenis/Brand/Model total across whichever
+    // sites are currently shown in "Ikut Site" (every site if no site
+    // filter, or just the selected ones), same shape/aggregation as
+    // inventoryTotalRows above but scoped to that subset instead of always
+    // every CCTV site. Reuses the same siteId filter as inventoryBySite so
+    // the two always agree on which sites are "currently shown".
+    const inventoryBySiteGrandRows = computed(() => {
+      const merged = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+      SITES.filter(s => !inventorySiteFilter.value.length || inventorySiteFilter.value.includes(s.id)).forEach(s => {
+        const eq = siteEquip.value[s.id] || {};
+        Object.keys(merged).forEach(k => { merged[k] = merged[k].concat(eq[k]||[]); });
+      });
+      return _inventoryRowsFor(merged);
+    });
+    const inventoryBySiteGrandTotal = computed(() => inventoryBySiteGrandRows.value.reduce((s,r) => s+r.jumlah, 0));
     async function exportInventorySummaryPdf() {
       const bySite = inventoryReportMode.value === 'site';
       const rowsHtml = r => `<tr><td>${esc(r.jenis)}</td><td>${esc(r.brand)}</td><td>${esc(r.model)}</td><td style="text-align:right">${r.jumlah}</td></tr>`;
-      const tableHtml = rows => `<table><thead><tr><th>Jenis</th><th>Brand</th><th>Model</th><th style="text-align:right">Jumlah</th></tr></thead><tbody>${rows.map(rowsHtml).join('')}</tbody></table>`;
+      const totalRowHtml = (label, total) => `<tr style="background:#F4F7DC;font-weight:800;color:#5a6114"><td colspan="3">${esc(label)}</td><td style="text-align:right">${total}</td></tr>`;
+      const tableHtml = (rows, totalRow) => `<table><thead><tr><th>Jenis</th><th>Brand</th><th>Model</th><th style="text-align:right">Jumlah</th></tr></thead><tbody>${rows.map(rowsHtml).join('')}${totalRow||''}</tbody></table>`;
+      const grandTotalHtml = bySite
+        ? `<h4 style="color:#5a6114;margin:18px 0 2px;font-size:9.5pt">🧮 JUMLAH BESAR — ${inventorySiteFilter.value.length ? inventorySiteFilter.value.length+' Site Dipilih' : 'Semua Site'} (${inventoryBySiteGrandTotal.value} unit)</h4>${tableHtml(inventoryBySiteGrandRows.value)}`
+        : '';
       const bodyHtml = bySite
-        ? inventoryBySite.value.map(s => `<h4 style="color:#333;margin:14px 0 2px;font-size:9.5pt">📍 ${esc(s.siteName)} (${s.total} unit)</h4>${tableHtml(s.rows)}`).join('')
-        : tableHtml(inventoryTotalRows.value);
+        ? inventoryBySite.value.map(s => `<h4 style="color:#333;margin:14px 0 2px;font-size:9.5pt">📍 ${esc(s.siteName)}</h4>${tableHtml(s.rows, totalRowHtml('JUMLAH BESAR', s.total))}`).join('') + grandTotalHtml
+        : tableHtml(inventoryTotalRows.value, inventoryJenisFilter.value.length===1 && inventoryTotalRows.value.length ? totalRowHtml('JUMLAH BESAR', inventoryGrandTotal.value) : '');
+      // "Ikut Site" honours inventorySiteFilter (same list shown on screen)
+      // — the exported total/subtitle must reflect the filtered subset, not
+      // the grand total, otherwise a PDF for 3 selected sites would
+      // misleadingly print the full-fleet unit count in its header.
+      const exportTotal = bySite ? inventoryBySite.value.reduce((s,r) => s+r.total, 0) : inventoryGrandTotal.value;
+      const jenisSuffix = inventoryJenisFilter.value.length ? ` — Jenis: ${inventoryJenisFilter.value.join(', ')}` : '';
+      const bySiteSubtitle = (inventorySiteFilter.value.length
+        ? `Ikut Site (${inventorySiteFilter.value.length} site dipilih)`
+        : 'Ikut Site (Semua Site)') + jenisSuffix;
+      const totalSubtitle = 'Jumlah Keseluruhan Semua Site' + jenisSuffix;
       const w2 = window.open('','_blank','width=1000,height=750');
       if(!w2) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Ringkasan_Inventori_Peralatan_CCTV_${_localDateStr()}</title>
@@ -16412,11 +16516,11 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
           <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Ringkasan Jumlah Inventori Peralatan CCTV</h2>
-            <p style="font-weight:600;color:#333">${bySite ? 'Ikut Site' : 'Jumlah Keseluruhan Semua Site'} — Daya One Resources Sdn. Bhd. | Suruhanjaya Pencegahan Rasuah Malaysia</p>
+            <p style="font-weight:600;color:#333">${bySite ? bySiteSubtitle : totalSubtitle} — Daya One Resources Sdn. Bhd. | Suruhanjaya Pencegahan Rasuah Malaysia</p>
           </div>
           <div class="header-side">
             <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
-            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${inventoryGrandTotal.value} unit keseluruhan</p>
+            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${exportTotal} unit ${bySite && inventorySiteFilter.value.length ? 'dipilih' : 'keseluruhan'}</p>
           </div>
         </div>
         ${bodyHtml}
@@ -17123,7 +17227,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       healthCountCctv, healthCountVir, siteLeaderboard, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
-      inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, exportInventorySummaryPdf,
+      inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
       slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
