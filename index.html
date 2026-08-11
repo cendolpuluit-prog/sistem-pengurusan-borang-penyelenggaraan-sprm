@@ -2208,10 +2208,23 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>NVR Berkaitan <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nCam.nvrRef">
                   <option value="">-- Pilih --</option>
-                  <option v-for="n in (selSiteEquip.nvr||[])" :key="n._uid||n.name" :value="n.name">{{n.name}}</option>
+                  <option v-for="n in (selSiteEquip.nvr||[])" :key="n._uid||n.name" :value="n.name">{{n.name}} ({{n.role||'Primary'}})</option>
                   <option value="Lain-lain">Lain-lain</option>
                 </select>
                 <input v-if="nCam.nvrRef==='Lain-lain'" class="form-control" v-model="nCam.nvrRefCustom" placeholder="Nyatakan NVR" style="margin-top:6px">
+              </div>
+              <div class="form-group">
+                <label class="flex gap-8" style="align-items:center;cursor:pointer">
+                  <input type="checkbox" v-model="nCam.hasRedundancy" @change="!nCam.hasRedundancy && (nCam.redundantNvrRef='', nCam.redundantNvrRefCustom='')"> Ada Backup ke Redundance/Replicator Server?
+                </label>
+                <template v-if="nCam.hasRedundancy">
+                  <select class="form-control" v-model="nCam.redundantNvrRef" style="margin-top:6px">
+                    <option value="">-- Pilih --</option>
+                    <option v-for="n in (selSiteEquip.nvr||[])" :key="n._uid||n.name" :value="n.name">{{n.name}} ({{n.role||'Primary'}})</option>
+                    <option value="Lain-lain">Lain-lain</option>
+                  </select>
+                  <input v-if="nCam.redundantNvrRef==='Lain-lain'" class="form-control" v-model="nCam.redundantNvrRefCustom" placeholder="Nyatakan server" style="margin-top:6px">
+                </template>
               </div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
               <template v-if="canViewCredentials">
@@ -2239,11 +2252,12 @@ details.form-control[open] summary::after{content:'▴'}
                 <span class="badge">{{grp.items.length}} Kamera</span>
               </div>
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th>Redundance</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="{'highlight-row':equipEditIdx.cameras===c._idx}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
                     <td>{{gi+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td>{{c.serial}}</td>
+                    <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
@@ -2281,6 +2295,9 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>Nama *</label><input class="form-control" v-model="nNVR.name" placeholder="cth: Network Video Recorder (NVR) 1"></div>
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nNVR.type"><option value="">-- Pilih --</option><option>NVR</option><option>NVR (Server)</option><option>Server</option><option>Extension NVR</option><option>SAN Appliance (Head Unit)</option><option>SAN Appliance (Expansion Unit)</option></select>
+              </div>
+              <div class="form-group"><label>Peranan Server</label>
+                <select class="form-control" v-model="nNVR.role"><option>Primary</option><option>Secondary</option><option>Redundant/Replicator</option></select>
               </div>
               <div class="form-group"><label>Brand <span class="text-muted text-sm">(pilihan)</span></label>
                 <select class="form-control" v-model="nNVR.brand">
@@ -2323,11 +2340,11 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Peranan</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="{'highlight-row':equipEditIdx.nvr===i}">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{n.type}}</td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -3165,7 +3182,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <table>
               <thead><tr>
-                <th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kualiti Paparan</th><th>Nota</th>
+                <th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Redundance</th><th>Kualiti Paparan</th><th>Nota</th>
               </tr></thead>
               <tbody>
                 <tr v-for="(c,gi) in grp.items" :key="c._uid||gi">
@@ -3179,6 +3196,11 @@ details.form-control[open] summary::after{content:'▴'}
                   </td>
                   <td><input class="form-control" style="min-width:100px" v-model="c.model"></td>
                   <td><input class="form-control" style="min-width:100px" v-model="c.serial"></td>
+                  <!-- Reference only (not editable here) — mirrors whatever's
+                       set at Urus Peralatan Site; SPRM's ask was to SEE which
+                       cameras have a backup, not to verify/toggle it during
+                       the PM/CM visit itself. -->
+                  <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                   <td>
                     <select class="status-sel" v-model="c.display" :class="c.display==='Baik'?'status-ok':'status-no'">
                       <option>Baik</option><option>Tidak</option>
@@ -3821,12 +3843,13 @@ details.form-control[open] summary::after{content:'▴'}
             <table class="pm-tbl">
               <thead><tr>
                 <th style="width:4%">No.</th>
-                <th style="width:20%">Nama / Lokasi</th>
-                <th style="width:12%">Brand</th>
-                <th style="width:13%">IP Address</th>
-                <th style="width:16%">Model</th>
-                <th style="width:15%">No. Siri</th>
-                <th style="width:8%">Jenis</th>
+                <th style="width:17%">Nama / Lokasi</th>
+                <th style="width:11%">Brand</th>
+                <th style="width:12%">IP Address</th>
+                <th style="width:14%">Model</th>
+                <th style="width:13%">No. Siri</th>
+                <th style="width:7%">Jenis</th>
+                <th style="width:10%">Redundance</th>
                 <th style="width:12%">Status</th>
               </tr></thead>
               <tbody>
@@ -3835,6 +3858,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>{{c.name}}</td><td class="ctr">{{c.brand}}</td><td class="ctr">{{c.ip}}</td>
                   <td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
                   <td class="ctr">{{c.camType}}</td>
+                  <td class="ctr">{{c.redundantNvrRef ? ('🔁 '+c.redundantNvrRef) : '-'}}</td>
                   <td :class="c.display==='Baik'?'ok':'no'">{{c.display}}</td>
                 </tr>
               </tbody>
@@ -5090,13 +5114,13 @@ details.form-control[open] summary::after{content:'▴'}
             <span>🗺</span> Zon {{zoneInfo.label}} <span style="font-size:.72rem;opacity:.7;font-weight:400;margin-left:4px">· {{zoneInfo.states}}</span>
           </div>
           <div class="tbl-wrap" style="border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;overflow-x:auto">
-            <table style="min-width:520px">
+            <table style="min-width:720px">
               <thead>
                 <tr>
                   <th style="width:36px;text-align:center">Bil</th>
-                  <th>Nama Premis SPRM</th>
+                  <th style="width:190px">Nama Premis SPRM</th>
                   <th style="width:60px;text-align:center">Kod</th>
-                  <th style="width:230px">Pegawai Hubungan</th>
+                  <th style="width:380px">Pegawai Hubungan</th>
                   <th v-if="canEditContact" style="width:70px;text-align:center">Tindakan</th>
                 </tr>
               </thead>
@@ -6734,8 +6758,8 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:''});
-    const nNVR = reactive({name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
+    const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:''});
+    const nNVR = reactive({name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nRoom = reactive({name:'', nameCustom:'', system:'BCD', excludedGroups:[]});
@@ -9866,8 +9890,8 @@ createApp({
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:''},
-      nNVR:  {name:'',type:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:''},
+      nNVR:  {name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
       nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
@@ -14012,6 +14036,16 @@ createApp({
           } else {
             nCam.nvrRefCustom = '';
           }
+          // Redundance/replicator server — same reconciliation, plus the
+          // checkbox (hasRedundancy) is transient/never persisted, so it's
+          // derived here from whether a saved value exists at all.
+          nCam.hasRedundancy = !!item.redundantNvrRef;
+          if(item.redundantNvrRef && !knownNvrNamesCam.includes(item.redundantNvrRef)) {
+            nCam.redundantNvrRef = 'Lain-lain';
+            nCam.redundantNvrRefCustom = item.redundantNvrRef;
+          } else {
+            nCam.redundantNvrRefCustom = '';
+          }
         }
         if(key === 'hdd') {
           // NVR Berkaitan dropdown is autopopulated from this site's current
@@ -14148,9 +14182,14 @@ createApp({
       // Same "Lain-lain + custom text" resolution as brand/model, but for
       // the accessory dropdown — _resolveBrandModel doesn't know about this
       // camera-only field, so it's handled separately here.
-      const { accessoryCustom, nvrRefCustom, ...camResolved } = resolved;
+      const { accessoryCustom, nvrRefCustom, redundantNvrRefCustom, hasRedundancy, ...camResolved } = resolved;
       camResolved.accessory = (camResolved.accessory === 'Lain-lain' && accessoryCustom && accessoryCustom.trim()) ? accessoryCustom.trim() : camResolved.accessory;
       camResolved.nvrRef = _resolveDropdownCustom(nCam.nvrRef, nvrRefCustom);
+      // Redundance/replicator server is optional (only some cameras get
+      // backed up) — hasRedundancy is a transient UI-only checkbox (never
+      // persisted), so an unchecked box always clears redundantNvrRef
+      // regardless of whatever the dropdown still shows underneath it.
+      camResolved.redundantNvrRef = hasRedundancy ? _resolveDropdownCustom(nCam.redundantNvrRef, redundantNvrRefCustom) : '';
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
       const dup = _findDupConflict('cameras', list, camResolved, equipEditIdx.cameras);
@@ -15342,8 +15381,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
               spacing: { before: 60, after: 40 },
             }));
             children.push(makeTable(
-              ['No.','Nama/Lokasi','IP Address','Brand','Model','No. Siri','Jenis','Kualiti Paparan','Nota'],
-              grp.items.map((c,i)=>[i+1,c.name,c.ip,c.brand,c.model,c.serial,c.camType,c.display,c.nota||''])
+              ['No.','Nama/Lokasi','IP Address','Brand','Model','No. Siri','Jenis','Redundance','Kualiti Paparan','Nota'],
+              grp.items.map((c,i)=>[i+1,c.name,c.ip,c.brand,c.model,c.serial,c.camType,c.redundantNvrRef?`🔁 ${c.redundantNvrRef}`:'-',c.display,c.nota||''])
             ));
           });
           const ic=r.cameras.filter(c=>c.camType==='Indoor').length, oc=r.cameras.filter(c=>c.camType==='Outdoor').length,
