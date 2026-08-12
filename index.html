@@ -4246,7 +4246,7 @@ details.form-control[open] summary::after{content:'▴'}
                 </td>
                 <td>{{t.maintType||'PM'}}</td>
                 <td>{{projectLabel(t.project)}}</td>
-                <td>{{t.siteName||'—'}}</td>
+                <td>{{t.siteName||'—'}}<span v-if="t.subProject" class="text-muted text-sm"> ({{t.subProject}})</span></td>
                 <td>{{t.members?.map(m=>m.name).join(', ')||'—'}}</td>
               </tr>
             </tbody>
@@ -4291,7 +4291,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="form-group">
               <label>Jenis Projek</label>
-              <select class="form-control" v-model="teamModal.data.project">
+              <select class="form-control" v-model="teamModal.data.project" @change="teamModal.data.siteId='';teamModal.data.siteName=''">
                 <option value="SPRM - CCTV">SPRM - CCTV</option>
                 <option value="SPRM - VIR">SPRM - VIR</option>
                 <option value="DOSM-Server">DOSM</option>
@@ -4306,23 +4306,40 @@ details.form-control[open] summary::after{content:'▴'}
               <select class="form-control" v-model="teamModal.data.maintType">
                 <option value="PM">PM — Preventive Maintenance</option>
                 <option value="CM">CM — Corrective Maintenance</option>
+                <option value="Site Visit">Site Visit — Lawatan Tapak</option>
               </select>
             </div>
             <div class="form-group" v-if="!NON_SPRM_PROJECTS.includes(teamModal.data.project)">
               <label>Site SPRM *</label>
               <select class="form-control" v-model="teamModal.data.siteId" @change="onTeamSiteChange">
                 <option value="">-- Pilih Site --</option>
-                <optgroup label="SPRM - CCTV">
+                <optgroup v-if="teamModal.data.project==='SPRM - CCTV'" label="SPRM - CCTV">
                   <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option>
                 </optgroup>
-                <optgroup label="SPRM - VIR">
+                <optgroup v-if="teamModal.data.project==='SPRM - VIR'" label="SPRM - VIR">
                   <option v-for="s in VIR_SITES" :key="s.id" :value="s.id">{{s.name}}</option>
+                </optgroup>
+              </select>
+            </div>
+            <div class="form-group" v-else-if="teamModal.data.project==='DOSM-Server'">
+              <label>Pejabat DOSM *</label>
+              <select class="form-control" v-model="teamModal.data.siteName">
+                <option value="">-- Pilih Pejabat --</option>
+                <optgroup v-for="grp in dosmOfficesByZone" :key="grp.zone" :label="grp.zone">
+                  <option v-for="o in grp.offices" :key="o" :value="o">{{o}}</option>
                 </optgroup>
               </select>
             </div>
             <div class="form-group" v-else>
               <label>Nama Server / Lokasi *</label>
-              <input class="form-control" v-model="teamModal.data.siteName" placeholder="cth: DOSM Server Room 2">
+              <input class="form-control" v-model="teamModal.data.siteName" placeholder="cth: Pejabat ICU Putrajaya">
+            </div>
+            <div class="form-group" v-if="NON_SPRM_SUBPROJECTS[teamModal.data.project]">
+              <label>Sub Projek</label>
+              <select class="form-control" v-model="teamModal.data.subProject">
+                <option value="">-- Pilih --</option>
+                <option v-for="sp in NON_SPRM_SUBPROJECTS[teamModal.data.project]" :key="sp" :value="sp">{{sp}}</option>
+              </select>
             </div>
             <div class="form-group" style="grid-column:1/-1">
               <label>Anggota Team (pilih satu atau lebih) — {{teamModal.selectedUids.length}} dipilih</label>
@@ -4390,7 +4407,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <span class="badge" style="background:#e8f5e9;color:#1b5e20;font-size:.72rem">{{t.maintType||'PM'}} · {{projectLabel(t.project)}}</span>
               </div>
               <div style="font-size:.85rem;color:#333;margin-bottom:6px">
-                📍 <b>{{t.siteName||'—'}}</b>
+                📍 <b>{{t.siteName||'—'}}</b><span v-if="t.subProject" class="text-muted text-sm"> ({{t.subProject}})</span>
               </div>
               <div style="margin-bottom:4px">
                 <span v-for="m in t.members" :key="m.uid" class="team-member-chip">
@@ -5084,7 +5101,7 @@ details.form-control[open] summary::after{content:'▴'}
               <option value="">-- Tiada NVR --</option>
               <option v-for="n in (selSiteEquip.nvr||[])" :key="n._uid||n.name" :value="n.name">{{n.name}}</option>
             </select>
-            <input v-else class="form-control" :type="bulkEditFieldOptions[bulkEditModal.field].type" v-model="bulkEditModal.value">
+            <input v-else class="form-control" :type="bulkEditFieldOptions[bulkEditModal.field].type" v-model="bulkEditModal.value" :autocomplete="bulkEditFieldOptions[bulkEditModal.field].type==='password'?'new-password':'off'">
           </div>
           <p style="font-size:.8rem;color:#888;margin-bottom:10px">Nilai ini akan menggantikan {{bulkEditFieldOptions[bulkEditModal.field].label}} sedia ada untuk kesemua rekod terpilih.</p>
           <div class="flex gap-8">
@@ -5317,8 +5334,16 @@ details.form-control[open] summary::after{content:'▴'}
         <!-- Stat cards -->
         <div class="stat-grid">
           <div class="stat-card"><div class="num" style="color:#003366">{{laporanFiltered.length}}</div><div class="lbl">Jumlah Rekod</div></div>
-          <div class="stat-card"><div class="num" style="color:#1b5e20">{{laporanFiltered.filter(r=>r.maintType!=='CM').length}}</div><div class="lbl">Rekod PM</div></div>
-          <div class="stat-card"><div class="num" style="color:#b71c1c">{{laporanFiltered.filter(r=>r.maintType==='CM').length}}</div><div class="lbl">Rekod CM</div></div>
+          <div class="stat-card">
+            <div class="num" style="color:#1b5e20">{{laporanFiltered.filter(r=>r.maintType!=='CM').length}}</div>
+            <div class="lbl">Rekod PM</div>
+            <div :style="'font-size:.72rem;font-weight:700;margin-top:4px;color:'+(yoyStats.pmDelta>=0?'#1b5e20':'#b71c1c')" :title="yoyStats.thisYear+': '+yoyStats.pmThis+' vs '+yoyStats.lastYear+': '+yoyStats.pmLast">{{yoyStats.pmDelta>=0?'▲':'▼'}} {{Math.abs(yoyStats.pmDelta)}}% berbanding {{yoyStats.lastYear}}</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" style="color:#b71c1c">{{laporanFiltered.filter(r=>r.maintType==='CM').length}}</div>
+            <div class="lbl">Rekod CM</div>
+            <div :style="'font-size:.72rem;font-weight:700;margin-top:4px;color:'+(yoyStats.cmDelta<=0?'#1b5e20':'#b71c1c')" :title="yoyStats.thisYear+': '+yoyStats.cmThis+' vs '+yoyStats.lastYear+': '+yoyStats.cmLast">{{yoyStats.cmDelta>=0?'▲':'▼'}} {{Math.abs(yoyStats.cmDelta)}}% berbanding {{yoyStats.lastYear}}</div>
+          </div>
           <div class="stat-card"><div class="num" style="color:#4a148c">{{new Set(laporanFiltered.map(r=>r.siteId)).size}}</div><div class="lbl">Site Diliputi</div></div>
         </div>
 
@@ -5357,7 +5382,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>{{i+1}}</td>
                   <td><b>{{r.refNo||'—'}}</b></td>
                   <td>{{r.siteName}}</td>
-                  <td>{{r.visitDate||((r.month?MONTHS[r.month-1]:'—')+' '+r.year)}}</td>
+                  <td>{{r.visitDate?fmtDateDash(r.visitDate):((r.month?MONTHS[r.month-1]:'—')+' '+r.year)}}</td>
                   <td><span :style="'padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700;background:'+(r.maintType==='CM'?'#ffebee':'#e8f5e9')+';color:'+(r.maintType==='CM'?'#b71c1c':'#1b5e20')">{{r.maintType||'PM'}}</span></td>
                   <td>{{(r.project||'cctv').toUpperCase()}}</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
@@ -5489,6 +5514,17 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div v-else style="margin-top:12px;font-size:.8rem;color:#aaa">Tiada rekod untuk bulan/projek yang dipilih. Laporan akan dijana dengan status kosong.</div>
         </div>
+
+        <!-- Laporan Suku Tahun Gabungan -->
+        <div class="card" style="margin-top:0;border-top:3px solid #4a148c" v-if="['superadmin','admin'].includes(authProfile?.role)">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+            <div>
+              <div style="font-weight:700;font-size:.95rem;color:#4a148c">📊 Jana Laporan Suku Tahun</div>
+              <div style="font-size:.75rem;color:#888;margin-top:2px">Gabungkan KPI + pecahan bulanan + isu berulang jadi SATU PDF untuk mesyuarat suku tahun — suku semasa sahaja</div>
+            </div>
+            <button class="btn" style="background:#4a148c;color:#fff;font-weight:700" @click="printQuarterlyReport">📋 Jana PDF Suku Tahun</button>
+          </div>
+        </div>
       </div>
 
       <!-- ====== LAPORAN LANJUTAN ====== -->
@@ -5506,6 +5542,9 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="tab" :class="{active:reportTab==='punca'}" @click="reportTab='punca'">🎯 Punca Kerosakan</div>
           <div class="tab" :class="{active:reportTab==='jangkahayat'}" @click="reportTab='jangkahayat'">📅 Jangka Hayat</div>
           <div class="tab" :class="{active:reportTab==='gantirosak'}" @click="reportTab='gantirosak'; loadEquipmentRemovalLogs()">♻️ Sejarah Ganti/Rosak</div>
+          <div class="tab" :class="{active:reportTab==='perbandingan'}" @click="reportTab='perbandingan'">⚖️ Perbandingan Site</div>
+          <div class="tab" :class="{active:reportTab==='musim'}" @click="reportTab='musim'">🌦️ Corak Musim</div>
+          <div class="tab" :class="{active:reportTab==='heatmap'}" @click="reportTab='heatmap'">🗓️ Heatmap Pematuhan</div>
         </div>
 
         <!-- Executive summary — always visible action -->
@@ -5693,12 +5732,18 @@ details.form-control[open] summary::after{content:'▴'}
             <p class="text-sm text-muted mb-12">Dikira dari rekod CM (Corrective Maintenance) — bilangan peralatan brand/model tertentu yang direkodkan rosak. Berguna untuk keputusan procurement (elak brand/model kerap gagal).</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Brand &amp; Model</th><th>Bilangan Kegagalan</th></tr></thead>
+                <thead><tr><th>#</th><th>Brand &amp; Model</th><th>Bilangan Kegagalan</th><th>Peratus Semua Kegagalan</th></tr></thead>
                 <tbody>
                   <tr v-for="(f,i) in failureByModel" :key="f.model">
                     <td>{{i+1}}</td><td><b>{{f.model}}</b></td><td><span class="badge badge-red">{{f.count}}x</span></td>
+                    <td>
+                      <div class="flex items-center gap-8">
+                        <div style="flex:1;max-width:120px;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden"><div :style="'height:100%;background:#dc3545;width:'+f.pct+'%'"></div></div>
+                        <span class="text-sm">{{f.pct}}%</span>
+                      </div>
+                    </td>
                   </tr>
-                  <tr v-if="!failureByModel.length"><td colspan="3" class="empty">Tiada kegagalan direkodkan.</td></tr>
+                  <tr v-if="!failureByModel.length"><td colspan="4" class="empty">Tiada kegagalan direkodkan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -5926,6 +5971,96 @@ details.form-control[open] summary::after{content:'▴'}
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <!-- TAB: PERBANDINGAN SITE -->
+        <div v-if="reportTab==='perbandingan'">
+          <div class="card">
+            <div class="card-title">Perbandingan Site (sehingga 3)</div>
+            <p class="text-sm text-muted mb-12">Pilih sehingga 3 site untuk bandingkan PM/CM kitaran semasa dan skor kesihatan sebelah-menyebelah.</p>
+            <div class="form-row form-row-2" style="margin-bottom:16px">
+              <div class="form-group" style="margin:0">
+                <label>Tambah Site CCTV</label>
+                <select class="form-control" @change="$event.target.value && toggleSiteCompare($event.target.value); $event.target.value=''">
+                  <option value="">-- Pilih Site --</option>
+                  <option v-for="s in SITES" :key="s.id" :value="s.id" :disabled="siteCompareSelected.includes(s.id)">{{s.name}}</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin:0">
+                <label>Tambah Site VIR</label>
+                <select class="form-control" @change="$event.target.value && toggleSiteCompare($event.target.value); $event.target.value=''">
+                  <option value="">-- Pilih Site --</option>
+                  <option v-for="s in VIR_SITES" :key="s.id" :value="s.id" :disabled="siteCompareSelected.includes(s.id)">{{s.name}}</option>
+                </select>
+              </div>
+            </div>
+            <div v-if="!siteCompareRows.length" class="empty" style="padding:20px">Belum ada site dipilih.</div>
+            <div v-else class="tbl-wrap">
+              <table>
+                <thead><tr><th>Site</th><th>Projek</th><th>PM (kitaran ini)</th><th>CM (kitaran ini)</th><th>Skor Kesihatan</th><th></th></tr></thead>
+                <tbody>
+                  <tr v-for="s in siteCompareRows" :key="s.id">
+                    <td><b>{{s.name}}</b></td>
+                    <td>{{s.project==='vir'?'VIR':'CCTV'}}</td>
+                    <td>{{s.pmCount}}</td>
+                    <td>{{s.cmCount}}</td>
+                    <td>
+                      <div class="flex items-center gap-8">
+                        <div style="flex:1;max-width:140px;height:10px;background:#f0f0f0;border-radius:5px;overflow:hidden"><div :style="'height:100%;width:'+s.score+'%;background:'+(s.level==='green'?'#198754':s.level==='yellow'?'#ffc107':'#dc3545')"></div></div>
+                        <b :style="'color:'+(s.level==='green'?'#1b5e20':s.level==='yellow'?'#e65100':'#b71c1c')">{{s.score}}</b>
+                      </div>
+                    </td>
+                    <td><button class="btn btn-outline btn-sm btn-icon" @click="toggleSiteCompare(s.id)" title="Buang">🗑</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: CORAK MUSIM -->
+        <div v-if="reportTab==='musim'">
+          <div class="card">
+            <div class="card-title">Corak Musim — Kekerapan CM Ikut Bulan</div>
+            <p class="text-sm text-muted mb-12">Jumlah rekod CM merentasi SEMUA tahun dalam data, dikumpul ikut bulan — berguna untuk kesan corak bermusim (cth: kerosakan kamera outdoor lebih kerap musim hujan) supaya PM boleh dirancang proaktif.</p>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div v-for="m in seasonalCmByMonth" :key="m.month" class="flex items-center gap-8">
+                <span style="width:90px;font-size:.82rem;flex-shrink:0">{{m.month}}</span>
+                <div style="flex:1;height:16px;background:#f0f0f0;border-radius:4px;overflow:hidden"><div :style="'height:100%;width:'+m.pct+'%;background:#e65100'"></div></div>
+                <span style="width:30px;text-align:right;font-size:.82rem;font-weight:700">{{m.count}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: HEATMAP PEMATUHAN -->
+        <div v-if="reportTab==='heatmap'">
+          <div class="card">
+            <div class="card-title">Heatmap Kalendar Pematuhan PM</div>
+            <p class="text-sm text-muted mb-12">Pilih satu site — grid tunjuk bulan mana PM disiapkan (hijau) merentasi tahun, senang nampak "gap" secara visual berbanding scroll table.</p>
+            <div class="form-group" style="max-width:320px">
+              <label>Site</label>
+              <select class="form-control" v-model="heatmapSiteId">
+                <option value="">-- Pilih Site --</option>
+                <optgroup label="CCTV"><option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option></optgroup>
+                <optgroup label="VIR"><option v-for="s in VIR_SITES" :key="s.id" :value="s.id">{{s.name}}</option></optgroup>
+              </select>
+            </div>
+            <div v-if="heatmapData" class="tbl-wrap" style="margin-top:14px">
+              <table>
+                <thead><tr><th>Tahun</th><th v-for="m in MONTHS" :key="m" style="text-align:center;font-size:.72rem">{{m.slice(0,3)}}</th></tr></thead>
+                <tbody>
+                  <tr v-for="row in heatmapData.grid" :key="row.year">
+                    <td><b>{{row.year}}</b></td>
+                    <td v-for="(done,i) in row.months" :key="i" style="text-align:center;padding:4px">
+                      <div :style="'width:18px;height:18px;border-radius:4px;margin:0 auto;background:'+(done?'#198754':'#f0f0f0')" :title="done?'PM disiapkan':'Tiada PM'"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-else-if="heatmapSiteId" class="empty" style="padding:20px">Tiada rekod PM untuk site ini.</div>
           </div>
         </div>
       </div>
@@ -8023,7 +8158,7 @@ createApp({
     const teamModal = reactive({
       show: false, editing: false, err: '', current: null,
       selectedUids: [],
-      data: { team:'A', date:'', project:'SPRM - CCTV', maintType:'PM', siteId:'', siteName:'', notes:'' }
+      data: { team:'A', date:'', project:'SPRM - CCTV', maintType:'PM', siteId:'', siteName:'', subProject:'', notes:'' }
     });
 
     // ---- Dashboard "Peta Penugasan" widget ----
@@ -8285,7 +8420,7 @@ createApp({
       teamModal.current = null;
       teamModal.err = '';
       teamModal.selectedUids = [];
-      Object.assign(teamModal.data, { team:'A', date: date||'', project:'SPRM - CCTV', maintType:'PM', siteId:'', siteName:'', notes:'' });
+      Object.assign(teamModal.data, { team:'A', date: date||'', project:'SPRM - CCTV', maintType:'PM', siteId:'', siteName:'', subProject:'', notes:'' });
       teamModal.show = true;
     }
 
@@ -8297,7 +8432,7 @@ createApp({
       Object.assign(teamModal.data, {
         team: t.team, date: t.date, project: t.project||'SPRM - CCTV',
         maintType: t.maintType||'PM',
-        siteId: t.siteId||'', siteName: t.siteName||'', notes: t.notes||''
+        siteId: t.siteId||'', siteName: t.siteName||'', subProject: t.subProject||'', notes: t.notes||''
       });
       teamModal.show = true;
     }
@@ -8348,6 +8483,7 @@ createApp({
           maintType: teamModal.data.maintType||'PM',
           siteId: teamModal.data.siteId,
           siteName: teamModal.data.siteName,
+          subProject: NON_SPRM_SUBPROJECTS[teamModal.data.project] ? teamModal.data.subProject : '',
           notes: teamModal.data.notes,
           members,
           updatedBy: authUser.value?.email || '',
@@ -8546,10 +8682,79 @@ createApp({
     // original value (existing Firestore records already use this literal)
     // even though the dropdown now labels it just "DOSM".
     const NON_SPRM_PROJECTS = ['DOSM-Server', 'JPM - ICU', 'KLN', 'UTHM'];
+    // Sub Projek options per non-SPRM project — only projects listed here
+    // get the extra "Sub Projek" dropdown at all (KLN/UTHM don't have one
+    // yet, so they fall back to just the free-text location field).
+    const NON_SPRM_SUBPROJECTS = {
+      'DOSM-Server': ['Server', 'Network', 'Lain-Lain'],
+      'JPM - ICU': ['Network', 'Server', 'Firewall', 'Lain-Lain'],
+    };
     const PROJECT_TYPES = [
       {val:'SPRM - CCTV'}, {val:'SPRM - VIR'}, {val:'DOSM-Server', label:'DOSM'},
       {val:'JPM - ICU'}, {val:'KLN'}, {val:'UTHM'},
     ];
+    // Full DOSM office directory (HQ + every state office + Pejabat
+    // Operasi), as supplied by the user directly (copied from DOSM's own
+    // published directory) — grouped by zone to match how SITES/VIR_SITES
+    // are grouped by project in the Site SPRM dropdown above. Only the
+    // office NAME is kept (not the full postal address) since that's all
+    // the dropdown/schedule needs.
+    const DOSM_OFFICES = [
+      { zone:'Ibu Pejabat (HQ) & Wilayah Persekutuan', name:'Ibu Pejabat DOSM (Putrajaya)' },
+      { zone:'Ibu Pejabat (HQ) & Wilayah Persekutuan', name:'DOSM W.P. Kuala Lumpur' },
+      { zone:'Ibu Pejabat (HQ) & Wilayah Persekutuan', name:'DOSM W.P. Putrajaya (Pejabat Operasi)' },
+      { zone:'Ibu Pejabat (HQ) & Wilayah Persekutuan', name:'DOSM W.P. Labuan (Pejabat Operasi)' },
+      { zone:'Zon Tengah', name:'Selangor - Pejabat Negeri' },
+      { zone:'Zon Tengah', name:'Selangor - PO Gombak' },
+      { zone:'Zon Tengah', name:'Selangor - PO Kajang' },
+      { zone:'Zon Utara', name:'Kedah - Pejabat Negeri' },
+      { zone:'Zon Utara', name:'Kedah - PO Langkawi' },
+      { zone:'Zon Utara', name:'Kedah - PO Sungai Petani' },
+      { zone:'Zon Utara', name:'Pulau Pinang - Pejabat Negeri' },
+      { zone:'Zon Utara', name:'Pulau Pinang - PO Seberang Perai' },
+      { zone:'Zon Utara', name:'Perak - Pejabat Negeri' },
+      { zone:'Zon Utara', name:'Perak - PO Taiping' },
+      { zone:'Zon Utara', name:'Perak - PO Teluk Intan' },
+      { zone:'Zon Utara', name:'Perak - PO Seri Manjung' },
+      { zone:'Zon Utara', name:'Perlis - Pejabat Negeri & Operasi' },
+      { zone:'Zon Selatan', name:'Johor - Pejabat Negeri' },
+      { zone:'Zon Selatan', name:'Johor - PO Batu Pahat' },
+      { zone:'Zon Selatan', name:'Johor - PO Kluang' },
+      { zone:'Zon Selatan', name:'Johor - PO Muar' },
+      { zone:'Zon Selatan', name:'Johor - PO Segamat' },
+      { zone:'Zon Selatan', name:'Negeri Sembilan - Pejabat Negeri & Operasi' },
+      { zone:'Zon Selatan', name:'Melaka - Pejabat Negeri & Operasi' },
+      { zone:'Zon Pantai Timur', name:'Pahang - Pejabat Negeri' },
+      { zone:'Zon Pantai Timur', name:'Pahang - PO Temerloh' },
+      { zone:'Zon Pantai Timur', name:'Pahang - PO Raub' },
+      { zone:'Zon Pantai Timur', name:'Kelantan - Pejabat Negeri' },
+      { zone:'Zon Pantai Timur', name:'Kelantan - PO Kuala Krai' },
+      { zone:'Zon Pantai Timur', name:'Terengganu - Pejabat Negeri' },
+      { zone:'Zon Pantai Timur', name:'Terengganu - PO Dungun' },
+      { zone:'Zon Pantai Timur', name:'Terengganu - PO Besut' },
+      { zone:'Sabah & Sarawak', name:'Sabah - Pejabat Negeri' },
+      { zone:'Sabah & Sarawak', name:'Sabah - PO Sandakan' },
+      { zone:'Sabah & Sarawak', name:'Sabah - PO Tawau' },
+      { zone:'Sabah & Sarawak', name:'Sabah - PO Keningau' },
+      { zone:'Sabah & Sarawak', name:'Sabah - PO Kota Marudu' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - Pejabat Negeri' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - PO Sibu' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - PO Miri' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - PO Sri Aman' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - PO Bintulu' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - PO Sarikei' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - PO Kapit' },
+      { zone:'Sabah & Sarawak', name:'Sarawak - PO Limbang' },
+    ];
+    const dosmOfficesByZone = computed(() => {
+      const zones = [];
+      DOSM_OFFICES.forEach(o => {
+        let grp = zones.find(z => z.zone === o.zone);
+        if(!grp) { grp = { zone:o.zone, offices:[] }; zones.push(grp); }
+        grp.offices.push(o.name);
+      });
+      return zones;
+    });
     // Existing Firestore records still store the raw value ('DOSM-Server'),
     // so any display of teamAssignments.project needs this lookup to show
     // the friendly label ('DOSM') instead of the stored literal.
@@ -8736,7 +8941,7 @@ createApp({
           <td style="text-align:center"><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${bc};color:#fff;font-weight:700;font-size:8pt;line-height:20px;text-align:center">${esc(t.team)}</span></td>
           <td>${esc(t.maintType||'PM')}</td>
           <td>${esc(projectLabel(t.project)||'—')}</td>
-          <td>${esc(t.siteName||'—')}</td>
+          <td>${esc(t.siteName||'—')}${t.subProject?' ('+esc(t.subProject)+')':''}</td>
           <td>${members}</td>
         </tr>`;
       }).join('') : '<tr><td colspan="6" style="text-align:center;color:#888;padding:12px">Tiada penugasan untuk bulan ini.</td></tr>';
@@ -13889,6 +14094,16 @@ createApp({
     function bulkEditFieldsFor(kind) {
       const fields = { installDate:{label:'Tarikh Pasang', type:'date'}, brand:{label:'Brand', type:'text'} };
       if(kind === 'cameras' || kind === 'hdd') fields.nvrRef = { label:'NVR Berkaitan', type:'select-nvr' };
+      // Username/Password akses — offered for cameras/nvr/switches only,
+      // since these 3 tabs commonly share one set of login credentials
+      // across every entry (unlike HDD/alarm/misc, which don't track
+      // access credentials at all). Same canViewCredentials gate as the
+      // per-row username/password columns, so an internship-tier account
+      // that can't already see these fields can't bulk-set them either.
+      if(['cameras','nvr','switches'].includes(kind) && canViewCredentials.value) {
+        fields.accessUser = { label:'Username Akses', type:'text' };
+        fields.accessPw = { label:'Password Akses', type:'password' };
+      }
       return fields;
     }
     const bulkEditFieldOptions = computed(() => bulkEditFieldsFor(bulkEditModal.kind));
@@ -15671,6 +15886,14 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         if(r.visitDate) d = new Date(r.visitDate);
         else if(r.year && r.month) d = new Date(r.year, r.month-1, 1);
         return d && d >= cutoff;
+      }).sort((a, b) => {
+        // Newest first (rank #1 = most recent) — pmRecords.value comes
+        // ordered by createdAt (when the record was SAVED), which drifts
+        // from visitDate (the actual maintenance date) for backdated/edited
+        // entries, making the report look scattered without this.
+        const da = a.visitDate ? new Date(a.visitDate) : (a.year && a.month ? new Date(a.year, a.month-1, 1) : null);
+        const db = b.visitDate ? new Date(b.visitDate) : (b.year && b.month ? new Date(b.year, b.month-1, 1) : null);
+        return (db?.getTime()||0) - (da?.getTime()||0);
       });
     });
 
@@ -15759,7 +15982,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       const pmCount = recs.filter(r=>(r.maintType||'PM')!=='CM').length;
       const cmCount = recs.filter(r=>r.maintType==='CM').length;
       const siteCount = new Set(recs.map(r=>r.siteId)).size;
-      const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.refNo||'—')}</td><td>${esc(r.siteName||'—')}</td><td>${esc(r.visitDate||(r.month?MONTHS[r.month-1]+' '+r.year:'—'))}</td><td>${esc(r.maintType||'PM')}</td><td>${esc((r.project||'cctv').toUpperCase())}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
+      const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.refNo||'—')}</td><td>${esc(r.siteName||'—')}</td><td>${esc(r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'))}</td><td>${esc(r.maintType||'PM')}</td><td>${esc((r.project||'cctv').toUpperCase())}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
       const notaRows = laporanNotaItems.value;
       const notaHtml = notaRows.length ? notaRows.map((row,i)=>{
         const stBg = /selesai/i.test(row.status)?'#F4F7DC':/pending/i.test(row.status)?'#fff8e1':'#e3f2fd';
@@ -15937,7 +16160,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       laporanFiltered.value.forEach(r => {
         const parsed = _getNotaItems(r);
         parsed.forEach(p => {
-          rows.push({ siteId:r.siteId, siteName:r.siteName||'—', visitDate:r.visitDate||(r.month?MONTHS[r.month-1]+' '+r.year:'—'), maintType:r.maintType||'PM', refNo:r.refNo||'—', project:r.project||'cctv', masalah:p.masalah, tindakan:p.tindakan, status:p.status });
+          rows.push({ siteId:r.siteId, siteName:r.siteName||'—', visitDate:r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'), maintType:r.maintType||'PM', refNo:r.refNo||'—', project:r.project||'cctv', masalah:p.masalah, tindakan:p.tindakan, status:p.status });
         });
       });
       return rows.filter(row => {
@@ -16697,6 +16920,76 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       setTimeout(()=>{ w.print(); }, 200);
     }
 
+    // Combines Ringkasan Eksekutif-style KPIs + a month-by-month PM/CM
+    // breakdown + top isu berulang into ONE PDF scoped to the CURRENT
+    // quarter — for a quarterly management meeting, instead of exporting
+    // Ringkasan Eksekutif/Trend/Isu Berulang as 3 separate PDFs and
+    // stitching them together manually.
+    async function printQuarterlyReport() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const now = new Date();
+      const yr = now.getFullYear();
+      const q = Math.floor(now.getMonth()/3); // 0-3
+      const qMonths = [q*3, q*3+1, q*3+2];
+      const qRecs = pmRecords.value.filter(r => { const d=_recDate(r); return d && d.getFullYear()===yr && qMonths.includes(d.getMonth()); });
+      const pmCount = qRecs.filter(r=>(r.maintType||'PM')!=='CM').length;
+      const cmCount = qRecs.filter(r=>r.maintType==='CM').length;
+      const siteCount = new Set(qRecs.map(r=>r.siteId)).size;
+      const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
+      const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
+      const topIssues = recurringIssues.value.slice(0,5);
+      const monthlyRows = qMonths.map(m => {
+        const mRecs = qRecs.filter(r => _recDate(r)?.getMonth()===m);
+        return { month: MONTHS[m], pm: mRecs.filter(r=>(r.maintType||'PM')!=='CM').length, cm: mRecs.filter(r=>r.maintType==='CM').length };
+      });
+      const qLabel = `Suku ${q+1} (${MONTHS[qMonths[0]]}–${MONTHS[qMonths[2]]}) ${yr}`;
+      const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Suku Tahun ${qLabel}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:10.5px;color:#1a1a1a;padding:26px 30px}
+.hdr{text-align:center;border-bottom:3px solid #003366;padding-bottom:12px;margin-bottom:18px}
+.hdr-logos{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.hdr-logo{height:44px;max-width:130px;object-fit:contain}
+.hdr .co{font-size:15px;font-weight:900;color:#003366}
+.hdr h1{font-size:19px;font-weight:900;color:#003366;margin:8px 0 4px}
+.hdr .sub{font-size:10px;color:#888}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+.kpi{border-radius:10px;padding:14px 8px;text-align:center;border:1.5px solid #dde4ef;background:#f8faff}
+.kpi .n{font-size:24px;font-weight:900}
+.kpi .l{font-size:8.5px;color:#666;text-transform:uppercase;margin-top:4px}
+.section-title{font-size:12px;font-weight:800;color:#003366;border-left:4px solid #003366;padding-left:8px;margin:18px 0 8px}
+table{width:100%;border-collapse:collapse;font-size:9.5px}
+thead tr{background:#003366;color:#fff}
+th{padding:6px 8px;text-align:left}
+td{padding:5px 8px;border-bottom:1px solid #eaecf2}
+.footer{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;font-size:8.5px;color:#aaa;text-align:center}
+@media print{@page{margin:12mm;size:A4}}
+</style></head><body>
+<div class="hdr"><div class="hdr-logos"><img src="LogoD1.svg" alt="Daya One" class="hdr-logo"><img src="Logo-SPRM.svg" alt="SPRM" class="hdr-logo"></div><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>LAPORAN SUKU TAHUN</h1><div class="sub">SPRM — CCTV &amp; VIR &nbsp;|&nbsp; ${qLabel} &nbsp;|&nbsp; Dijana: ${genDate}</div></div>
+<div class="kpi-grid">
+  <div class="kpi"><div class="n" style="color:#1b5e20">${pmCount}</div><div class="l">Rekod PM</div></div>
+  <div class="kpi"><div class="n" style="color:#b71c1c">${cmCount}</div><div class="l">Rekod CM</div></div>
+  <div class="kpi"><div class="n" style="color:#003366">${siteCount}</div><div class="l">Site Diliputi</div></div>
+  <div class="kpi"><div class="n" style="color:${cctvCompliance>=75?'#7A841A':cctvCompliance>=45?'#e65100':'#b71c1c'}">${cctvCompliance}/${virCompliance}</div><div class="l">Skor CCTV/VIR</div></div>
+</div>
+<div class="section-title">📅 Pecahan Bulanan (${qLabel})</div>
+<table><thead><tr><th>Bulan</th><th>Rekod PM</th><th>Rekod CM</th></tr></thead>
+<tbody>${monthlyRows.map(m=>`<tr><td>${esc(m.month)}</td><td>${m.pm}</td><td>${m.cm}</td></tr>`).join('')}</tbody></table>
+<div class="section-title">🔁 Isu Paling Kerap Berulang</div>
+<table><thead><tr><th>Isu</th><th>Kekerapan</th><th>Bil. Site Terjejas</th></tr></thead>
+<tbody>${topIssues.map(x=>`<tr><td>${esc(x.text)}</td><td>${x.count}</td><td>${x.sites.length}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:#aaa">Tiada data</td></tr>'}</tbody></table>
+<div class="footer">Dijana automatik oleh Sistem PM-CCTV-SPRM pada ${new Date().toLocaleString('ms-MY')}</div>
+</body></html>`;
+      const w = window.open('','_blank','width=850,height=900');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(html); w.document.close(); w.focus();
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); }, 200);
+    }
+
     // ── 4. Analisis Kegagalan ikut Brand/Model ──
     const failureByModel = computed(() => {
       const map = {};
@@ -16707,7 +17000,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         (r.hdd||[]).forEach(h => { if(h.status==='Tidak') bump(h.brand,h.model); });
         (r.switches||[]).forEach(s => { if(s.portStatus==='Tidak'||s.status==='Tidak') bump(s.brand,s.model); });
       });
-      return Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([model,count])=>({model,count}));
+      const entries = Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([model,count])=>({model,count}));
+      // Share of ALL fleet-wide failures this brand/model accounts for —
+      // turns the raw count into a scorecard signal ("this model alone is
+      // 35% of every failure recorded") without needing a full installed-
+      // base count (which would require scanning every site's equipment
+      // list across both CCTV and VIR/Optager's differently-shaped storage).
+      const total = entries.reduce((s,e)=>s+e.count,0);
+      return entries.map(e => ({ ...e, pct: total ? Math.round(e.count/total*100) : 0 }));
     });
 
     // ── 5. Analisis Isu Berulang ──
@@ -16724,6 +17024,79 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       });
       return Object.values(map).filter(x=>x.count>1).sort((a,b)=>b.count-a.count)
         .map(x => ({ ...x, sites:[...x.sites] }));
+    });
+
+    // ── Perbandingan Site (side-by-side, up to 3) — named siteCompare* to
+    // avoid clashing with the existing compareList/compareMode/etc, which
+    // power the unrelated "Perbandingan Borang" (PM record diff) feature. ──
+    const siteCompareSelected = reactive([]);
+    function toggleSiteCompare(id) {
+      const idx = siteCompareSelected.indexOf(id);
+      if(idx > -1) { siteCompareSelected.splice(idx, 1); return; }
+      if(siteCompareSelected.length >= 3) { showToast('Maksimum 3 site untuk perbandingan.', 'error'); return; }
+      siteCompareSelected.push(id);
+    }
+    const siteCompareRows = computed(() => {
+      const all = [...SITES.map(s=>({...s,project:'cctv'})), ...VIR_SITES.map(s=>({...s,project:'vir'}))];
+      return siteCompareSelected.map(id => {
+        const s = all.find(x => x.id === id);
+        if(!s) return null;
+        const hs = siteHealthScores.value[id];
+        return { id, name:s.name, project:s.project, pmCount:hs?.pmCount||0, cmCount:hs?.cmCount||0, score:hs?.score||0, level:hs?.level||'red' };
+      }).filter(Boolean);
+    });
+
+    // ── Corak Musim — jumlah CM ikut bulan, merentasi SEMUA tahun dalam
+    // rekod (bukan setakat beberapa bulan terkini), untuk kesan corak
+    // bermusim (cth: kerosakan kamera outdoor lebih kerap musim hujan). ──
+    const seasonalCmByMonth = computed(() => {
+      const counts = new Array(12).fill(0);
+      pmRecords.value.filter(r => r.maintType==='CM').forEach(r => {
+        const d = _recDate(r);
+        if(d) counts[d.getMonth()]++;
+      });
+      const max = Math.max(1, ...counts);
+      return MONTHS.map((m,i) => ({ month:m, count:counts[i], pct: Math.round(counts[i]/max*100) }));
+    });
+
+    // ── Heatmap Kalendar Pematuhan — satu site, grid tahun x bulan, hijau
+    // kalau ada PM bulan tu. Tahun disusun terbaru dulu. ──
+    const heatmapSiteId = ref('');
+    const heatmapData = computed(() => {
+      if(!heatmapSiteId.value) return null;
+      const all = [...SITES.map(s=>({...s,project:'cctv'})), ...VIR_SITES.map(s=>({...s,project:'vir'}))];
+      const site = all.find(s => s.id === heatmapSiteId.value);
+      if(!site) return null;
+      const recs = pmRecords.value.filter(r => r.siteId===heatmapSiteId.value && (r.maintType||'PM')!=='CM');
+      const years = new Set();
+      recs.forEach(r => { const d=_recDate(r); if(d) years.add(d.getFullYear()); });
+      const yearList = [...years].sort((a,b) => b-a);
+      const grid = yearList.map(y => {
+        const months = new Array(12).fill(false);
+        recs.forEach(r => { const d=_recDate(r); if(d && d.getFullYear()===y) months[d.getMonth()]=true; });
+        return { year:y, months };
+      });
+      return { site, grid };
+    });
+
+    // ── Peratusan Perubahan Tahun-ke-Tahun — jumlah PM/CM tahun semasa vs
+    // tahun lepas (bukan diikat kepada filter Tempoh Laporan, supaya
+    // perbandingan sentiasa tahun-penuh vs tahun-penuh). ──
+    const yoyStats = computed(() => {
+      const thisYear = new Date().getFullYear();
+      const lastYear = thisYear - 1;
+      const countFor = (yr, isCm) => pmRecords.value.filter(r => {
+        const d = _recDate(r);
+        return d && d.getFullYear()===yr && (isCm ? r.maintType==='CM' : (r.maintType||'PM')!=='CM');
+      }).length;
+      const pct = (cur, prev) => prev>0 ? Math.round(((cur-prev)/prev)*100) : (cur>0 ? 100 : 0);
+      const pmThis = countFor(thisYear,false), pmLast = countFor(lastYear,false);
+      const cmThis = countFor(thisYear,true), cmLast = countFor(lastYear,true);
+      return {
+        thisYear, lastYear,
+        pmThis, pmLast, pmDelta: pct(pmThis,pmLast),
+        cmThis, cmLast, cmDelta: pct(cmThis,cmLast),
+      };
     });
 
     // ── 6. Laporan Prestasi Team ──
@@ -17230,7 +17603,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       next7DaysItems, handleNext7Click,
       filteredPM, yearList, submittedByDisplayName,
       pmListPage, pmListTotalPages, pmListPagedList, pmListGoToPage, pmListPageNumbers,
-      PROJECT_TYPES, NON_SPRM_PROJECTS, projectLabel, calYear, calMonth, calCells, canEditSchedule,
+      PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
@@ -17309,7 +17682,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
-      slaTrend, printExecutiveSummary, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
+      slaTrend, printExecutiveSummary, printQuarterlyReport, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
+      siteCompareSelected, toggleSiteCompare, siteCompareRows, seasonalCmByMonth, heatmapSiteId, heatmapData, yoyStats,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureFilterSite, failureFilterSiteOptions, failureReport, exportFailureReportExcel, exportFailureReportPdf,
