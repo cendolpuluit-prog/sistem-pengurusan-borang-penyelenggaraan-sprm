@@ -44,6 +44,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .login-card{position:relative;z-index:10;background:rgba(255,255,255,.06);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);border:1px solid rgba(180,220,180,.18);border-top-color:rgba(255,255,255,.22);border-radius:16px;padding:36px 40px;width:100%;max-width:420px;box-shadow:0 32px 64px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(0,200,100,.1)}
 @keyframes loginCardIn{from{opacity:0;transform:translateY(36px) scale(.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes confettiFall{from{transform:translateY(0) rotate(0deg);opacity:1}to{transform:translateY(100vh) rotate(720deg);opacity:0}}
+@keyframes loginTipFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes loginBorderPulse{0%,100%{box-shadow:0 32px 64px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1),0 0 0 1px rgba(0,200,100,.12)}50%{box-shadow:0 32px 64px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.18),0 0 0 1px rgba(0,200,100,.45),0 0 55px rgba(0,200,100,.1)}}
 @keyframes loginShakeAnim{0%,100%{transform:translateX(0)}15%{transform:translateX(-10px)}30%{transform:translateX(9px)}45%{transform:translateX(-7px)}60%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
 .login-card-anim{animation:loginCardIn .6s cubic-bezier(.34,1.56,.64,1) both,loginBorderPulse 3.5s ease-in-out 1s infinite}
@@ -988,6 +989,11 @@ details.form-control[open] summary::after{content:'▴'}
       <button type="button" @click="openForgotPw" style="background:none;border:none;color:#5aaf7a;font-size:.78rem;cursor:pointer;text-align:center;padding:2px;text-decoration:underline;text-underline-offset:2px">Lupa kata laluan?</button>
     </div>
 
+    <!-- Rotating tip -->
+    <div style="margin-top:16px;background:rgba(0,180,100,.08);border:1px solid rgba(0,180,100,.15);border-radius:8px;padding:10px 12px;text-align:center">
+      <p :key="loginTipIndex" style="font-size:.74rem;color:#8ac9a0;margin:0;animation:loginTipFade .5s ease-out">{{LOGIN_TIPS[loginTipIndex]}}</p>
+    </div>
+
     <!-- Footer -->
     <div style="margin-top:20px;border-top:1px solid rgba(0,180,100,.15);padding-top:14px;text-align:center">
       <p style="font-size:.7rem;color:#3a6650;margin:0 0 2px">Sistem ini dibangunkan dan diselenggara oleh</p>
@@ -1282,6 +1288,11 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <div v-if="page==='dashboard' && !initialLoading">
+
+        <!-- FESTIVE HOLIDAY BANNER -->
+        <div v-if="todayHoliday" style="background:linear-gradient(135deg,#003366,#00805a);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;text-align:center;font-size:.9rem;font-weight:700">
+          🎉 Selamat {{todayHoliday.name}}! 🎉
+        </div>
 
         <!-- CONTRACT/SLA EXPIRY ALERT -->
         <div class="overdue-alert" v-if="contractsExpiringCount>0" style="cursor:pointer" @click="loadContracts();page='contracts'">
@@ -2090,10 +2101,12 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px">
-            <div v-for="s in (currentProject==='cctv'?SITES:VIR_SITES)" :key="s.id"
+            <div v-for="s in sitesForHealthGrid" :key="s.id"
               :style="'border-radius:10px;padding:12px 14px;border:1.5px solid '+(siteHealthScores[s.id]?.level==='green'?'#a5d6a7':siteHealthScores[s.id]?.level==='yellow'?'#ffcc80':'#ef9a9a')+';background:'+(siteHealthScores[s.id]?.level==='green'?'#f1fff4':siteHealthScores[s.id]?.level==='yellow'?'#fffde7':'#fff5f5')">
               <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:8px">
-                <div style="font-size:.82rem;font-weight:700;color:#222;flex:1;min-width:0;overflow-wrap:break-word;line-height:1.3">{{s.name}}</div>
+                <div style="font-size:.82rem;font-weight:700;color:#222;flex:1;min-width:0;overflow-wrap:break-word;line-height:1.3">
+                  <button @click.stop="toggleFavoriteSite(s.id)" :style="'background:none;border:none;cursor:pointer;font-size:.95rem;padding:0 4px 0 0;vertical-align:middle;color:'+(favoriteSiteIds.has(s.id)?'#f57c00':'#ccc')" title="Site Tersayang">⭐</button>{{s.name}}
+                </div>
                 <div :style="'margin-left:8px;flex-shrink:0;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;color:#fff;background:'+(siteHealthScores[s.id]?.level==='green'?'#2e7d32':siteHealthScores[s.id]?.level==='yellow'?'#f57c00':'#c62828')">
                   {{siteHealthScores[s.id]?.score||0}}
                 </div>
@@ -2102,14 +2115,19 @@ details.form-control[open] summary::after{content:'▴'}
               <div style="background:#e0e0e0;border-radius:4px;height:6px;margin-bottom:8px;overflow:hidden">
                 <div :style="'height:6px;border-radius:4px;width:'+Math.min(siteHealthScores[s.id]?.score||0,100)+'%;background:'+(siteHealthScores[s.id]?.level==='green'?'#2e7d32':siteHealthScores[s.id]?.level==='yellow'?'#f57c00':'#c62828')+';transition:width .4s'"></div>
               </div>
+              <!-- PM completion bar -->
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+                <span style="font-size:.72rem;color:#555;white-space:nowrap">PM {{siteHealthScores[s.id]?.pmCount||0}}/{{siteHealthScores[s.id]?.expectedPM||0}}</span>
+                <div style="flex:1;height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden"><div :style="'height:100%;border-radius:2px;background:#1976d2;width:'+Math.min(100,Math.round((siteHealthScores[s.id]?.pmCount||0)/(siteHealthScores[s.id]?.expectedPM||1)*100))+'%;transition:width .4s'"></div></div>
+              </div>
               <!-- Stats row -->
-              <div style="display:flex;gap:10px;font-size:.75rem;color:#555">
-                <span>PM: <b>{{siteHealthScores[s.id]?.pmCount||0}}/{{siteHealthScores[s.id]?.expectedPM||0}}</b></span>
+              <div style="display:flex;gap:10px;font-size:.75rem;color:#555;flex-wrap:wrap">
                 <span>CM: <b>{{siteHealthScores[s.id]?.cmCount||0}}</b></span>
                 <span v-if="siteNextPmMap[s.id]?.nextDue" :style="'color:'+(siteNextPmMap[s.id]?.overdue?'#c62828':siteNextPmMap[s.id]?.approaching?'#e65100':'#555')">
                   Next: <b>{{siteNextPmMap[s.id]?.overdue?'LAMPAU':siteNextPmMap[s.id]?.daysUntilDue+'h'}}</b>
                 </span>
                 <span v-else style="color:#bbb">Next: tiada rekod</span>
+                <span v-if="siteNextPmMap[s.id]?.daysSince!=null" style="color:#999">· {{siteNextPmMap[s.id].daysSince}} hari lepas PM</span>
               </div>
             </div>
           </div>
@@ -6236,6 +6254,21 @@ details.form-control[open] summary::after{content:'▴'}
     </div>
   </div>
 
+  <!-- WHAT'S NEW -->
+  <div v-if="whatsNewModal.show" class="modal-bg" @click.self="closeWhatsNew">
+    <div class="modal" style="max-width:440px;position:relative">
+      <button @click="closeWhatsNew" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
+      <div style="text-align:center;margin-bottom:14px">
+        <div style="font-size:2.2rem;margin-bottom:6px">🆕</div>
+        <h3 style="text-align:center;margin:0">Apa Yang Baharu</h3>
+      </div>
+      <ul style="font-size:.85rem;color:#333;line-height:1.7;padding-left:20px;margin-bottom:18px">
+        <li v-for="(item,i) in WHATS_NEW_ITEMS" :key="i">{{item}}</li>
+      </ul>
+      <button class="btn btn-primary" style="width:100%" @click="closeWhatsNew">Faham, Terima Kasih!</button>
+    </div>
+  </div>
+
 </div><!-- /app-wrap -->
 
 <!-- BATCH PRINT AREA (hidden on screen, shown only when printing) -->
@@ -6858,6 +6891,20 @@ createApp({
     }
     _tickLoginClock();
     setInterval(_tickLoginClock, 1000);
+    // Rotating tips on the login screen — deliberately STATIC copy, not
+    // live data. Real stats (site health, PM counts) live behind Firestore
+    // rules requiring auth (isSignedIn()), so nothing real can be fetched
+    // before login; these are just feature-discovery hints instead.
+    const LOGIN_TIPS = [
+      '💡 Guna carian global di bahagian atas untuk cari site/rekod dengan pantas.',
+      '📊 Laporan Lanjutan ada pelbagai analisis — dari Trend Keterlambatan sampai Heatmap Pematuhan.',
+      '🔥 Streak PM tanpa CM susulan boleh dilihat dalam Beban Kerja Staff.',
+      '🕐 Klik butang Sejarah pada mana-mana peralatan untuk lihat timeline PM/CM penuh.',
+      '⭐ Pin site kegemaran anda supaya senang dicapai dalam Skor Kesihatan Site.',
+      '📷 Kamera & Hard Disk kini boleh dikumpulkan ikut NVR untuk site yang besar.',
+    ];
+    const loginTipIndex = ref(0);
+    setInterval(() => { loginTipIndex.value = (loginTipIndex.value + 1) % LOGIN_TIPS.length; }, 6000);
     const page = ref('dashboard');
     const authUser = ref(null);
     const authProfile = ref(null);
@@ -8123,6 +8170,11 @@ createApp({
       const year = parseInt(dateStr.slice(0,4));
       return (MY_PUBLIC_HOLIDAYS[year] || []).filter(h => h.date === dateStr);
     }
+
+    // Today's public holiday (if any) — drives the festive Dashboard
+    // banner. Re-derived fresh on every access rather than cached in a
+    // ref, since "today" only ever changes once a day and this is cheap.
+    const todayHoliday = computed(() => publicHolidaysForDay(_localDateStr())[0] || null);
 
     function schoolHolidaysForDay(dateStr) {
       const d = new Date(dateStr);
@@ -11115,6 +11167,23 @@ createApp({
       return scores;
     });
 
+    // "Site Tersayang" — pin frequently-visited sites to the top of the
+    // Site Health Score grid. Per-browser (localStorage), not per-account —
+    // simplest useful scope, matches how dashboardCompact/darkMode are
+    // already stored in this file.
+    const favoriteSiteIds = reactive(new Set(JSON.parse(localStorage.getItem('pm_favorite_sites') || '[]')));
+    function toggleFavoriteSite(id) {
+      if(favoriteSiteIds.has(id)) favoriteSiteIds.delete(id);
+      else favoriteSiteIds.add(id);
+      localStorage.setItem('pm_favorite_sites', JSON.stringify([...favoriteSiteIds]));
+    }
+    const sitesForHealthGrid = computed(() => {
+      const list = currentProject.value === 'cctv' ? SITES : VIR_SITES;
+      // Array.sort is stable in every modern JS engine, so non-favorites
+      // keep their original relative order — only favorites get pulled up.
+      return [...list].sort((a,b) => (favoriteSiteIds.has(b.id)?1:0) - (favoriteSiteIds.has(a.id)?1:0));
+    });
+
     // Ranks every site (CCTV + VIR together) by health score, best first —
     // friendly cross-zone/cross-team comparison beyond just per-site
     // viewing. Reuses siteHealthScores as-is, just sorts + ranks it.
@@ -11922,8 +11991,39 @@ createApp({
         forcePwModal.show = true;
       } else {
         showWelcomePopup();
-        setTimeout(maybeShowTutorial, 10500); // after the 10s welcome popup auto-dismisses
+        // Returning users (tutorial already seen) get the What's New
+        // changelog instead — first-time users get the tutorial, which
+        // already covers everything a changelog would repeat.
+        setTimeout(() => {
+          if(localStorage.getItem('pm_tutorial_seen_v1')) maybeShowWhatsNew();
+          else maybeShowTutorial();
+        }, 10500); // after the 10s welcome popup auto-dismisses
       }
+    }
+
+    // ── "APA YANG BAHARU" (What's New) ── shown to RETURNING users only
+    // (first-time users get the onboarding tutorial below instead, which
+    // already covers everything — a changelog would be noise for someone
+    // who's never seen the "old" version). Bump WHATS_NEW_VERSION whenever
+    // WHATS_NEW_ITEMS changes so everyone sees the new list once; the
+    // localStorage flag just remembers the last version each browser saw.
+    const WHATS_NEW_VERSION = '2026-08-13';
+    const WHATS_NEW_ITEMS = [
+      'Senarai Kamera & Hard Disk kini dikumpulkan ikut NVR — berguna untuk site dengan banyak NVR (cth: lokap lelaki/wanita berasingan)',
+      'Butang "🕐 Sejarah" pada setiap peralatan — papar timeline PM/CM lengkap untuk item tersebut',
+      'Leaderboard Skor Kesihatan Site & lencana 🔥 Streak untuk staff di Dashboard/Laporan Lanjutan',
+      'Laporan Lanjutan: tab baru Perbandingan Site, Corak Musim, dan Heatmap Pematuhan',
+      'Jana Laporan Suku Tahun — gabungkan KPI + isu berulang jadi satu PDF',
+      'Nama Panggilan peribadi boleh ditetapkan di Profil Saya',
+    ];
+    const whatsNewModal = reactive({ show:false });
+    function maybeShowWhatsNew() {
+      if(localStorage.getItem('pm_whatsnew_seen') === WHATS_NEW_VERSION) return;
+      whatsNewModal.show = true;
+    }
+    function closeWhatsNew() {
+      whatsNewModal.show = false;
+      localStorage.setItem('pm_whatsnew_seen', WHATS_NEW_VERSION);
     }
 
     // ── ONBOARDING TUTORIAL ──
@@ -17581,7 +17681,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
-      loginClock, loginDateStr, loginGreeting,
+      loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
@@ -17612,11 +17712,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
-      publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth,
+      publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday,
       fmtDate, fmtDateDash, cctvSystemBrands,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
+      WHATS_NEW_ITEMS, whatsNewModal, closeWhatsNew,
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS, PERMISSION_OVERRIDE_CAPABILITIES,
       userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
       contracts, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
@@ -17677,7 +17778,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
       yirYear, printYearInReview,
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
-      healthCountCctv, healthCountVir, siteLeaderboard, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
+      healthCountCctv, healthCountVir, siteLeaderboard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
