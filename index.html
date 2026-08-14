@@ -4333,11 +4333,13 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">-- Pilih Site --</option>
                 <optgroup v-if="teamModal.data.project==='SPRM - CCTV'" label="SPRM - CCTV">
                   <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option>
+                  <option value="__lain__">Lain-Lain</option>
                 </optgroup>
                 <optgroup v-if="teamModal.data.project==='SPRM - VIR'" label="SPRM - VIR">
                   <option v-for="s in VIR_SITES" :key="s.id" :value="s.id">{{s.name}}</option>
                 </optgroup>
               </select>
+              <input v-if="teamModal.data.siteId==='__lain__'" class="form-control" v-model="teamModal.data.siteName" placeholder="Nyatakan site SPRM (bukan di bawah kontrak)" style="margin-top:6px">
             </div>
             <div class="form-group" v-else-if="teamModal.data.project==='DOSM-Server'">
               <label>Pejabat DOSM *</label>
@@ -5772,7 +5774,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="reportTab==='isu'">
           <div class="card">
             <div class="card-title">Analisis Isu Berulang</div>
-            <p class="text-sm text-muted mb-12">Diekstrak dari medan Nota/Catatan (format MASALAH/TINDAKAN/STATUS), dikumpul ikut teks masalah yang serupa. Hanya isu yang muncul &gt;1 kali dipaparkan.</p>
+            <p class="text-sm text-muted mb-12">Diekstrak dari medan Nota/Catatan rekod CM sahaja, dikumpul ikut teks masalah yang serupa. Hanya isu yang muncul &gt;1 kali dipaparkan; teks "tiada masalah" (Tiada, N/A, -, dll.) tidak dikira.</p>
             <div class="tbl-wrap">
               <table>
                 <thead><tr><th>#</th><th>Isu</th><th>Kekerapan</th><th>Site Terjejas</th></tr></thead>
@@ -5814,22 +5816,23 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="reportTab==='beban'">
           <div class="card">
             <div class="card-title">Beban Kerja Individu Staff</div>
-            <p class="text-sm text-muted mb-12">Kiraan penugasan PM/CM setiap staff (dari Jadual Penyelenggaraan), berasingan dari kadar siap Team. Berguna untuk agihan kerja yang lebih adil.</p>
+            <p class="text-sm text-muted mb-12">Kiraan penugasan PM/CM setiap staff (dari Jadual Penyelenggaraan), termasuk kadar siap individu — lebih tepat berbanding kadar siap Team, sebab ahli dalam satu label Team (A/B/C) berubah-ubah ikut penugasan.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Staff</th><th>Jumlah Penugasan</th><th>PM</th><th>CM</th><th>Bil. Site Berbeza</th><th>Streak</th></tr></thead>
+                <thead><tr><th>#</th><th>Staff</th><th>Jumlah Penugasan</th><th>PM</th><th>CM</th><th>Kadar Siap</th><th>Bil. Site Berbeza</th><th>Streak</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in staffWorkload" :key="s.uid">
                     <td>{{i+1}}</td><td><b>{{s.name}}</b></td><td>{{s.total}}</td>
                     <td><span class="badge badge-blue">{{s.pm}}</span></td>
                     <td><span class="badge badge-red">{{s.cm}}</span></td>
+                    <td><span :class="'badge badge-'+(s.rate>=80?'green':s.rate>=50?'gray':'red')">{{s.completed}}/{{s.total}} ({{s.rate}}%)</span></td>
                     <td>{{s.siteCount}}</td>
                     <td>
                       <span v-if="staffStreaks[s.name]>=3" class="badge badge-green" title="Bilangan PM berturut-turut tanpa CM susulan">🔥 {{staffStreaks[s.name]}}</span>
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
                   </tr>
-                  <tr v-if="!staffWorkload.length"><td colspan="7" class="empty">Tiada penugasan direkodkan.</td></tr>
+                  <tr v-if="!staffWorkload.length"><td colspan="8" class="empty">Tiada penugasan direkodkan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -8490,6 +8493,10 @@ createApp({
     }
 
     function onTeamSiteChange() {
+      // '__lain__' (CCTV "Lain-Lain") isn't a real site — leave siteName
+      // blank so the manual-entry box that appears next to the dropdown
+      // starts empty, ready for the user to type the actual site.
+      if(teamModal.data.siteId === '__lain__') { teamModal.data.siteName = ''; return; }
       const found = [...SITES, ...VIR_SITES].find(s => s.id === teamModal.data.siteId);
       teamModal.data.siteName = found?.name || '';
     }
@@ -8503,6 +8510,8 @@ createApp({
         if(!teamModal.data.siteName?.trim()) { teamModal.err = 'Sila isi nama server/lokasi.'; return; }
       } else if(!teamModal.data.siteId) {
         teamModal.err = 'Sila pilih site.'; return;
+      } else if(teamModal.data.siteId === '__lain__' && !teamModal.data.siteName?.trim()) {
+        teamModal.err = 'Sila nyatakan site SPRM (Lain-Lain).'; return;
       }
       teamModal.err = '';
 
@@ -17111,12 +17120,20 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     // ── 5. Analisis Isu Berulang ──
+    // "No issue found" phrases staff commonly type in the Masalah box —
+    // these mean the opposite of an issue, so they must never count as one
+    // no matter how often they repeat across records.
+    const NO_ISSUE_PHRASES = ['tiada','tiada masalah','tiada isu','xda','x ada','tak ada','tiada apa-apa','nil','n/a','na','-','none'];
     const recurringIssues = computed(() => {
       const map = {};
-      pmRecords.value.forEach(r => {
+      // Scoped to CM (Corrective Maintenance) only — "isu" logically means
+      // something that broke and needed fixing; routine PM visits finding
+      // nothing wrong (the vast majority) would otherwise flood this report
+      // with non-issues.
+      pmRecords.value.filter(r => r.maintType === 'CM').forEach(r => {
         _getNotaItems(r).forEach(item => {
           const key = (item.masalah||'').trim().toLowerCase();
-          if(!key || key.length < 4) return;
+          if(!key || key.length < 4 || NO_ISSUE_PHRASES.includes(key)) return;
           if(!map[key]) map[key] = { text: item.masalah.trim(), count:0, sites:new Set() };
           map[key].count++;
           if(r.siteName) map[key].sites.add(r.siteName);
@@ -17220,25 +17237,33 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     // ── 6b. Beban Kerja per Staff (bukan setakat Team) — kiraan penugasan
-    // PM/CM individu, untuk agihan kerja lebih adil selain rotation tracking ──
+    // PM/CM individu, untuk agihan kerja lebih adil selain rotation tracking.
+    // Also carries a completion rate per individual (same "was there a
+    // pmRecord near this assignment's date/site" check teamPerformance
+    // uses above) — team labels (A/B/C) rotate different people through
+    // them assignment-to-assignment, so a rate attributed to a team label
+    // isn't really about any one person; this is the per-person equivalent. ──
     const staffWorkload = computed(() => {
       const per = {};
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project)).forEach(t => {
         const isCm = t.maintType === 'CM';
+        const tDate = t.date ? new Date(t.date) : null;
+        const hasRecord = tDate && pmRecords.value.some(r => r.siteId===t.siteId && r.visitDate && Math.abs(new Date(r.visitDate) - tDate) <= 7*86400000);
         // Dedup by uid within this one assignment first — a malformed/
         // duplicate member entry on a single doc would otherwise inflate
         // that staff member's count for what is really one assignment.
         const seenInThisAssignment = new Map();
         (t.members||[]).forEach(m => { if(m.uid && !seenInThisAssignment.has(m.uid)) seenInThisAssignment.set(m.uid, m); });
         seenInThisAssignment.forEach(m => {
-          if(!per[m.uid]) per[m.uid] = { uid:m.uid, name:m.name||'?', total:0, pm:0, cm:0, sites:new Set() };
+          if(!per[m.uid]) per[m.uid] = { uid:m.uid, name:m.name||'?', total:0, pm:0, cm:0, completed:0, sites:new Set() };
           per[m.uid].total++;
           if(isCm) per[m.uid].cm++; else per[m.uid].pm++;
+          if(hasRecord) per[m.uid].completed++;
           if(t.siteId) per[m.uid].sites.add(t.siteId);
         });
       });
       return Object.values(per)
-        .map(x => ({ ...x, siteCount: x.sites.size }))
+        .map(x => ({ ...x, siteCount: x.sites.size, rate: x.total ? Math.round(x.completed/x.total*100) : 0 }))
         .sort((a,b) => b.total - a.total);
     });
 
