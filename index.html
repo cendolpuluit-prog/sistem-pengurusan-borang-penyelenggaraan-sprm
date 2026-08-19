@@ -10,6 +10,17 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- XLSX_TEMPLATE keeps a reference to the plain SheetJS Community build
+     BEFORE xlsx-js-style below overwrites window.XLSX — exportExcel()/
+     exportExcelVIR() (which fill the official CCTV/VIR .xlsx templates)
+     deliberately keep using this untouched original, since xlsx-js-style's
+     style-read path has shown gaps (font.bold doesn't survive its own
+     read-back round-trip in testing, only fill-color does) and the
+     official templates must not risk any behaviour change. Every other
+     Excel export (built fresh via json_to_sheet, no template) uses the
+     styled XLSX global instead, for the header fill-color highlight. -->
+<script>window.XLSX_TEMPLATE = window.XLSX;</script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
@@ -1323,7 +1334,7 @@ details.form-control[open] summary::after{content:'▴'}
             </template>
 
             <template v-if="overdueSortedVir.length">
-              <div class="overdue-group-label">🖥️ VIR — lebih {{PM_INTERVAL.vir}} bulan tiada PM</div>
+              <div class="overdue-group-label">🖥️ VIR — Jadual PM Tertunggak</div>
               <div v-for="s in (overdueExpandVir?overdueSortedVir:overdueSortedVir.slice(0,OVERDUE_DASH_LIMIT))" :key="s.id"
                 :class="['overdue-item','lvl-'+s.level]" @click="startNewPMForSite(s.id)">
                 <span class="oi-name">⚠ {{s.name}}</span>
@@ -5728,7 +5739,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="reportTab==='sla'">
           <div class="card">
             <div class="card-title">Trend Keterlambatan PM Ikut Site</div>
-            <p class="text-sm text-muted mb-12">Dikira dari selang hari antara setiap PM berturutan berbanding interval kontrak (CCTV {{PM_INTERVAL.cctv}} bulan / VIR {{PM_INTERVAL.vir}} bulan). "Bil. Lewat" = bilangan kitaran PM yang melebihi interval tersebut.</p>
+            <p class="text-sm text-muted mb-12">Dikira dari selang hari antara setiap PM berturutan berbanding interval kontrak (CCTV {{PM_INTERVAL.cctv}} bulan / VIR ikut jadual kontrak semasa — lihat VIR_PM_WINDOWS). "Bil. Lewat" = bilangan kitaran PM yang melebihi interval tersebut.</p>
             <div class="tbl-wrap">
               <table>
                 <thead><tr><th>Site</th><th>Projek</th><th>Jumlah PM</th><th>Bil. Lewat</th><th>Purata Selang (hari)</th><th>Selang Terburuk (hari)</th></tr></thead>
@@ -8951,6 +8962,42 @@ createApp({
       }[ch]));
     }
 
+    // Auto-fits column widths + fills the header row on a json_to_sheet-
+    // built worksheet, based on the longest value (or header) in each
+    // column. The plain SheetJS Community build (xlsx.full.min.js) can't
+    // write cell styles to .xlsx at all (Pro-only feature) — this app also
+    // loads xlsx-js-style (a free community fork that adds style-write
+    // support) as the main `XLSX` global specifically so this function can
+    // work, while exportExcel()/exportExcelVIR() keep using the untouched
+    // original library via `XLSX_TEMPLATE` (see the <script> tags) since
+    // they fill an already-formatted official template and must not risk
+    // any behaviour change.
+    //
+    // Only fill-color is applied here, not bold — testing showed
+    // xlsx-js-style's own style-read path drops `font.bold` on read-back
+    // (while `fill` survives a full write→read round-trip reliably), which
+    // isn't a strong enough signal that bold is actually embedded correctly
+    // in the file bytes. Fill-color header highlighting was verified to
+    // round-trip correctly, so that's the one used.
+    function _autoFitExcelCols(ws, rows) {
+      if(!rows || !rows.length) return;
+      const keys = Object.keys(rows[0]);
+      ws['!cols'] = keys.map(k => {
+        const maxLen = Math.max(k.length, ...rows.map(r => String(r[k] ?? '').length));
+        return { wch: Math.min(Math.max(maxLen + 2, 8), 50) };
+      });
+      // Light fill only (no font-color override) — only `fill` was verified
+      // to round-trip correctly in testing; `font.color` wasn't tested, so
+      // a dark fill + white-text combo risked unreadable black-on-navy if
+      // font.color silently didn't apply. A light fill keeps the default
+      // black text readable regardless.
+      const range = XLSX.utils.decode_range(ws['!ref']);
+      for(let c = range.s.c; c <= range.e.c; c++) {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c });
+        if(ws[cellRef]) ws[cellRef].s = { fill: { fgColor: { rgb: 'D9E2F3' } } };
+      }
+    }
+
     // ---- Lightweight format validation (IP / email / phone) ----
     // Fields stay free-text (some legitimate entries don't fit a strict
     // pattern), but obviously malformed input is rejected before save.
@@ -9263,6 +9310,7 @@ createApp({
         'Status': CONTRACT_STATUS_LABEL[contractStatus(c)], 'Reminder (hari)': c.reminderDays||60, 'Nota': c.notes||'-',
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
+      _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Kontrak & SLA');
       XLSX.writeFile(wb, `kontrak_sla_${currentProject.value}_${_localDateStr()}.xlsx`);
@@ -9943,6 +9991,7 @@ createApp({
         'Status': WARRANTY_STATUS_LABEL[warrantyStatus(w)], 'Nota': w.notes||'-',
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
+      _autoFitExcelCols(ws, rows);
       ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1 };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Waranti Peralatan CCTV');
@@ -11039,8 +11088,51 @@ createApp({
     }
 
     // ---- Overdue Map (CCTV=4 bulan, VIR=6 bulan, PM only) ----
-    const PM_INTERVAL = { cctv: 4, vir: 6 }; // months
-    const PM_PER_YEAR = { cctv: 3, vir: 2 };
+    const PM_INTERVAL = { cctv: 4, vir: 6 }; // months — CCTV only now; kept for VIR's recency-score component and other legacy references, but VIR's actual due/overdue logic below uses VIR_PM_WINDOWS instead.
+    const PM_PER_YEAR = { cctv: 3, vir: 2 }; // CCTV only now — VIR's real per-year split (1/2/1) isn't flat, see VIR_PM_WINDOWS.
+    // VIR's current 2-year contract (1 Aug 2026 – 31 Jul 2028) only calls for
+    // 4 total PM visits, unevenly spread across the 3 calendar years it
+    // spans (2026:1, 2027:2, 2028:1) — NOT a fixed recurring interval like
+    // CCTV's 3x/year, so it can't reuse PM_INTERVAL/PM_PER_YEAR's flat
+    // every-N-months math. Update this list whenever the next VIR contract
+    // is signed with a different visit count/spacing.
+    const VIR_PM_WINDOWS = [
+      { start:'2026-08-01', end:'2026-12-31' }, // PM #1 (2026)
+      { start:'2027-03-01', end:'2027-04-30' }, // PM #2 (2027)
+      { start:'2027-07-01', end:'2027-08-31' }, // PM #3 (2027)
+      { start:'2028-03-01', end:'2028-04-30' }, // PM #4 (2028)
+    ];
+    // Matches a VIR site's PM visits (chronological) to windows in order —
+    // the Nth PM visit fulfils the Nth window, regardless of whether its
+    // exact date falls inside that window's date range (a technician
+    // running a little early/late against the target window still counts).
+    // A window counts as breached only once its END date has passed while
+    // still unfulfilled — that's what drives "overdue".
+    function _virWindowStatus(siteId) {
+      const now = new Date();
+      const pmDates = pmRecords.value
+        .filter(r => r.siteId === siteId && (r.maintType||'PM') !== 'CM' && _recDate(r))
+        .map(r => _recDate(r))
+        .sort((a,b) => a - b);
+      const windows = VIR_PM_WINDOWS.map((w,i) => ({ start:new Date(w.start), end:new Date(w.end), fulfilled: !!pmDates[i] }));
+      const fulfilledCount = windows.filter(w => w.fulfilled).length;
+      const overdue = windows.some(w => w.end < now && !w.fulfilled);
+      const currentWindow = windows.find(w => !w.fulfilled) || null;
+      const daysUntilDue = currentWindow ? Math.floor((currentWindow.end - now) / 86400000) : null;
+      const approaching = currentWindow ? (daysUntilDue >= 0 && daysUntilDue <= 28) : false;
+      return { windows, fulfilledCount, overdue, currentWindow, daysUntilDue, approaching, totalWindows: windows.length };
+    }
+    // Worst-case legitimate gap between consecutive VIR PM visits under the
+    // lumpy 1/2/1 schedule (e.g. the ~8-month stretch between the 2027 and
+    // 2028 windows) — used as the SLA-breach threshold for VIR instead of a
+    // flat PM_INTERVAL.vir*30 days, which would falsely flag normal
+    // schedule-driven gaps as breaches.
+    const VIR_MAX_EXPECTED_GAP_DAYS = (() => {
+      const ends = VIR_PM_WINDOWS.map(w => new Date(w.end));
+      let max = (ends[0] - new Date('2026-08-01')) / 86400000;
+      for(let i=1;i<ends.length;i++){ max = Math.max(max, (ends[i]-ends[i-1])/86400000); }
+      return Math.ceil(max);
+    })();
 
     function _lastPmDate(siteId) {
       const recs = pmRecords.value.filter(r => r.siteId === siteId && (r.maintType||'PM') !== 'CM');
@@ -11078,9 +11170,7 @@ createApp({
         }
       });
       VIR_SITES.forEach(s => {
-        const threshold = new Date(now); threshold.setMonth(threshold.getMonth() - PM_INTERVAL.vir);
-        const latest = _lastPmDate(s.id);
-        result[s.id] = !latest || latest < threshold;
+        result[s.id] = _virWindowStatus(s.id).overdue;
       });
       return result;
     });
@@ -11090,6 +11180,13 @@ createApp({
       const now = new Date();
       const result = {};
       const buildEntry = (s, project) => {
+        if(project === 'vir') {
+          const vw = _virWindowStatus(s.id);
+          const latest = _lastPmDate(s.id);
+          const daysSince = latest ? Math.floor((now - latest) / 86400000) : null;
+          result[s.id] = { nextDue: vw.currentWindow?.end || null, daysSince, daysUntilDue: vw.daysUntilDue, approaching: vw.approaching, overdue: vw.overdue, project };
+          return;
+        }
         const intervalMonths = PM_INTERVAL[project];
         const latest = _lastPmDate(s.id);
         if(!latest) {
@@ -11128,6 +11225,33 @@ createApp({
       const now = new Date();
       const scores = {};
       const calc = (s, project) => {
+        // VIR: the contract's 4 total visits aren't a flat per-year quota
+        // (1/2/1 across 2026-2028), so it scores against VIR_PM_WINDOWS
+        // directly instead of the CCTV-style prorated-12-month-cycle math
+        // below (which assumes an even annual quota and would misjudge a
+        // lumpy schedule like VIR's).
+        if(project === 'vir') {
+          const allRecs = pmRecords.value.filter(r => r.siteId === s.id);
+          const vw = _virWindowStatus(s.id);
+          const closedCount = vw.windows.filter(w => w.end < now).length;
+          const proratedExpected = Math.max(1, closedCount);
+          const compliance = Math.min(vw.fulfilledCount / proratedExpected, 1) * 50;
+
+          const lastPM = _lastPmDate(s.id);
+          const monthsSincePM = lastPM ? (now - lastPM) / (1000*60*60*24*30.44) : 999;
+          const recencyRatio = Math.max(0, 1 - Math.max(0, monthsSincePM - PM_INTERVAL.vir) / PM_INTERVAL.vir);
+          const recency = recencyRatio * 30;
+
+          const cStart = _projectContractStart('vir');
+          const cmCount = allRecs.filter(r => r.maintType==='CM' && _recDate(r) && (!cStart || _recDate(r) >= cStart) && _recDate(r) <= now).length;
+          const cmPenalty = Math.max(0, 20 - cmCount * 4);
+
+          const score = Math.round(compliance + recency + cmPenalty);
+          const level = score >= 75 ? 'green' : score >= 45 ? 'yellow' : 'red';
+          const label = score >= 75 ? 'Baik' : score >= 45 ? 'Sederhana' : 'Kritikal';
+          scores[s.id] = { score, level, label, pmCount: vw.fulfilledCount, cmCount, expectedPM: proratedExpected, lastPM, project, hasContract: !!cStart, totalWindows: vw.totalWindows };
+          return;
+        }
         const intervalMonths = PM_INTERVAL[project];
         const expectedPM = PM_PER_YEAR[project];
         const allRecs = pmRecords.value.filter(r => r.siteId === s.id);
@@ -11256,6 +11380,7 @@ createApp({
         Kamera: r.cameras?.length||0,
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
+      _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Rekod PM');
       XLSX.writeFile(wb, `rekod_pm_batch_${_localDateStr()}.xlsx`);
@@ -11511,6 +11636,7 @@ createApp({
       const rows = [['Tarikh/Masa','Pengguna','Tindakan','Butiran'], ..._auditLogRows()];
       const ws = XLSX.utils.aoa_to_sheet(rows);
       ws['!cols'] = [{wch:20},{wch:20},{wch:20},{wch:40}];
+      ['A1','B1','C1','D1'].forEach(ref => { if(ws[ref]) ws[ref].s = { fill: { fgColor: { rgb: 'D9E2F3' } } }; });
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Log Audit');
       XLSX.writeFile(wb, 'Log_Audit_'+_localDateStr()+'.xlsx');
@@ -15142,12 +15268,16 @@ createApp({
         showToast(pm._isEdit ? 'Perubahan borang berjaya disimpan!' : (status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!'));
         clearPmDraftLocal(); // Firestore now holds the authoritative copy — local recovery draft no longer needed
         await loadAll();
-        // Celebrate the moment a site's annual PM quota is hit exactly —
-        // pmCount only crosses PM_PER_YEAR once per cycle, so this fires
+        // Celebrate the moment a site's PM quota is hit exactly — CCTV's is
+        // the flat annual PM_PER_YEAR quota; VIR's is the whole contract's
+        // 4-window schedule (its quota isn't annual/flat, see
+        // VIR_PM_WINDOWS), so it celebrates hitting totalWindows instead.
+        // Either way pmCount only crosses the target once, so this fires
         // once per completion rather than on every submit after.
         if(status==='submitted' && data.maintType!=='CM') {
           const hs = siteHealthScores.value[data.siteId];
-          if(hs && hs.pmCount === PM_PER_YEAR[data.project]) {
+          const targetCount = data.project === 'vir' ? hs?.totalWindows : PM_PER_YEAR[data.project];
+          if(hs && targetCount && hs.pmCount === targetCount) {
             fireConfetti();
             showToast(`🎉 Tahniah! Site "${data.siteName}" capai 100% pematuhan PM tahun ini!`);
           }
@@ -15417,7 +15547,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       if(!viewPM.value) return;
       const r = viewPM.value;
       const tick = '√';
-      const wb = XLSX.read(TEMPLATE_B64, { type: 'base64' });
+      const wb = XLSX_TEMPLATE.read(TEMPLATE_B64, { type: 'base64' });
       const ws = wb.Sheets[wb.SheetNames[0]];
 
       const setCell = (ref, val) => {
@@ -15528,7 +15658,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       setCell('AF202', r.clientTarikh||'');
       setCell('AF203', r.clientJawatan||'');
 
-      XLSX.writeFile(wb, 'PM-'+r.siteName.replace(/\s+/g,'-')+'-'+(r.month?MONTHS[r.month-1]:'NA')+'-'+r.year+'.xlsx');
+      XLSX_TEMPLATE.writeFile(wb, 'PM-'+r.siteName.replace(/\s+/g,'-')+'-'+(r.month?MONTHS[r.month-1]:'NA')+'-'+r.year+'.xlsx');
       await logAudit('EXPORT_EXCEL', `${r.refNo||'-'} — ${r.siteName}`);
       showToast('Excel berjaya dieksport!');
     }
@@ -15537,7 +15667,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
     async function exportExcelVIR() {
       if(!viewPM.value) return;
       const r = viewPM.value;
-      const wb = XLSX.read(VIR_TEMPLATE_B64, {type:'base64'});
+      const wb = XLSX_TEMPLATE.read(VIR_TEMPLATE_B64, {type:'base64'});
       // Fill all 3 sheets with same header data
       wb.SheetNames.forEach(sheetName => {
         const ws = wb.Sheets[sheetName];
@@ -15576,7 +15706,7 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
         set('B532', r.contractorJawatan||'');
         set('B533', r.contractorTarikh||'');
       });
-      XLSX.writeFile(wb, 'PM-VIR-'+r.siteName.replace(/\s+/g,'-')+'-'+r.visitDate+'.xlsx');
+      XLSX_TEMPLATE.writeFile(wb, 'PM-VIR-'+r.siteName.replace(/\s+/g,'-')+'-'+r.visitDate+'.xlsx');
       await logAudit('EXPORT_EXCEL_VIR', `${r.refNo||'-'} — ${r.siteName}`);
       showToast('Excel VIR berjaya dieksport!');
     }
@@ -15898,8 +16028,8 @@ const VIR_TEMPLATE_B64 = 'UEsDBBQABgAIAAAAIQDECNpNrQEAACsIAAATAAgCW0NvbnRlbnRfVH
       // Overdue sites (no PM within their project's interval)
       overdueList.value.forEach(s => {
         const isVir = VIR_SITES.some(v => v.id === s.id);
-        const months = isVir ? PM_INTERVAL.vir : PM_INTERVAL.cctv;
-        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body:`Lebih ${months} bulan tiada penyelenggaraan — klik untuk mula PM`, time: now, read:false, action:'sites', siteId: s.id });
+        const body = isVir ? 'Jadual PM kontrak tertunggak — klik untuk mula PM' : `Lebih ${PM_INTERVAL.cctv} bulan tiada penyelenggaraan — klik untuk mula PM`;
+        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body, time: now, read:false, action:'sites', siteId: s.id });
       });
       // CM records open >14 days
       pmRecords.value.forEach(r => {
@@ -16793,6 +16923,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         Brand: r.brand, Model: r.model, 'No. Siri': r.serial, 'Maklumat Tambahan': r.extra,
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
+      _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Inventori Peralatan');
       XLSX.writeFile(wb, `inventori_peralatan_${_localDateStr()}.xlsx`);
@@ -16947,7 +17078,10 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
 
     // ── 2. Trend Keterlambatan (SLA breach history) ──
     function _slaGapsForSite(site, proj) {
-      const intervalDays = PM_INTERVAL[proj] * 30.44;
+      // VIR's schedule is lumpy (1/2/1 across 3 years, see VIR_PM_WINDOWS),
+      // not a flat recurring interval — a flat PM_INTERVAL.vir*30 threshold
+      // would falsely flag its normal ~8-month 2027→2028 gap as a breach.
+      const intervalDays = proj === 'vir' ? VIR_MAX_EXPECTED_GAP_DAYS : PM_INTERVAL[proj] * 30.44;
       const recs = pmRecords.value.filter(r => r.siteId===site.id && (r.maintType||'PM')!=='CM')
         .map(r => ({ ...r, _d: r.visitDate ? new Date(r.visitDate) : (r.year&&r.month ? new Date(r.year, r.month-1, 1) : null) }))
         .filter(r => r._d).sort((a,b) => a._d - b._d);
@@ -17528,6 +17662,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Lain-lain': r.lain, 'Jumlah': r.total,
       }));
       const ws = XLSX.utils.json_to_sheet(rows);
+      _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Ganti-Rosak Peralatan');
       XLSX.writeFile(wb, `sejarah_ganti_rosak_peralatan_${new Date().toISOString().slice(0,10)}.xlsx`);
