@@ -24,7 +24,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://unpkg.com/docx@8/build/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
@@ -220,6 +220,12 @@ details.form-control[open] summary::after{content:'▴'}
 .equip-history-dot{position:absolute;left:-7px;top:2px;width:12px;height:12px;border-radius:50%;background:#bbb;border:2px solid #fff;box-shadow:0 0 0 1px #ddd}
 .equip-history-dot.ok{background:#198754;box-shadow:0 0 0 1px #198754}
 .equip-history-dot.no{background:#dc3545;box-shadow:0 0 0 1px #dc3545}
+@keyframes historyReveal{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.bar-grow{transform-origin:left;animation:barGrow 1s cubic-bezier(.22,1,.36,1) both}
+.equip-history-item.timelapse-reveal{animation:historyReveal .35s ease-out both}
+.equip-history-item.timelapse-current .equip-history-dot{box-shadow:0 0 0 5px rgba(25,135,84,.25)}
+.equip-history-item.timelapse-current.no .equip-history-dot{box-shadow:0 0 0 5px rgba(220,53,69,.25)}
 
 /* STATUS SELECT */
 .status-sel{padding:5px 10px;border-radius:5px;border:1px solid #ccc;font-size:.82rem;background:#fff}
@@ -1052,13 +1058,19 @@ details.form-control[open] summary::after{content:'▴'}
 <div v-else class="app-wrap">
 
   <!-- EQUIPMENT HISTORY TIMELINE MODAL -->
-  <div v-if="equipHistoryModal.show" class="modal-bg" @click.self="equipHistoryModal.show=false">
+  <div v-if="equipHistoryModal.show" class="modal-bg" @click.self="closeEquipHistory">
     <div class="modal" style="max-width:480px;position:relative">
-      <button @click="equipHistoryModal.show=false" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
-      <div class="card-title" style="margin:0 0 14px">🕐 Sejarah — {{equipHistoryModal.label}}</div>
+      <button @click="closeEquipHistory" title="Tutup" style="position:absolute;top:10px;right:10px;background:none;border:none;font-size:1.3rem;line-height:1;cursor:pointer;color:#888;padding:4px">✕</button>
+      <div class="flex items-center justify-between" style="margin:0 0 14px;gap:8px">
+        <div class="card-title" style="margin:0">🕐 Sejarah — {{equipHistoryModal.label}}</div>
+        <button v-if="equipHistoryModal.rows.length>1" class="btn btn-outline btn-sm" @click="playEquipHistoryTimelapse">
+          {{equipHistoryModal.playing?'⏸ Jeda':'▶ Main Time-lapse'}}
+        </button>
+      </div>
       <div v-if="!equipHistoryModal.rows.length" class="empty">Tiada rekod PM/CM (submitted) dijumpai untuk item ini.</div>
       <div v-else class="equip-history-timeline">
-        <div v-for="(row,i) in equipHistoryModal.rows" :key="i" class="equip-history-item">
+        <div v-for="(row,i) in equipHistoryModal.rows" v-show="equipHistoryModal.playIdx<0 || i<=equipHistoryModal.playIdx" :key="i"
+          class="equip-history-item" :class="{'timelapse-reveal':equipHistoryModal.playIdx>=0 && i===equipHistoryModal.playIdx,'timelapse-current':equipHistoryModal.playing && i===equipHistoryModal.playIdx, no:row.isRemoval||row.status==='Tidak'}">
           <div class="equip-history-dot" :class="row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':''))"></div>
           <div class="equip-history-content">
             <template v-if="row.isRemoval">
@@ -1313,6 +1325,25 @@ details.form-control[open] summary::after{content:'▴'}
           🎉 Selamat {{todayHoliday.name}}! 🎉
         </div>
 
+        <!-- PERLU PERHATIAN HARI INI -->
+        <div class="card" v-if="todayAttentionRows.length" style="margin-bottom:16px">
+          <div class="card-title">📌 Perlu Perhatian Hari Ini</div>
+          <div v-for="row in todayAttentionRows" :key="row.action" class="flex items-center gap-8"
+            style="padding:8px 4px;border-bottom:1px solid #f0f0f0;cursor:pointer" @click="handleTodayAttentionClick(row)">
+            <span style="font-size:1.05rem">{{row.icon}}</span>
+            <span style="flex:1;font-size:.85rem;font-weight:600;color:#333">{{row.label}}</span>
+            <span class="text-muted" style="font-size:.8rem">→</span>
+          </div>
+        </div>
+
+        <!-- SMART INSIGHT -->
+        <div v-if="smartInsights.length" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+          <div v-for="tip in smartInsights" :key="tip.text" style="background:linear-gradient(135deg,#eef4ff,#f5eefe);border:1px solid #d8e0f5;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px">
+            <span style="font-size:1.1rem">{{tip.icon}}</span>
+            <span style="font-size:.82rem;color:#333"><b style="color:#4a3f8f">🧠 Smart Insight:</b> {{tip.text}}</span>
+          </div>
+        </div>
+
         <!-- CONTRACT/SLA EXPIRY ALERT -->
         <div class="overdue-alert" v-if="contractsExpiringCount>0" style="cursor:pointer" @click="loadContracts();page='contracts'">
           <div class="overdue-alert-title">📜 {{contractsExpiringCount}} Kontrak Hampir/Telah Tamat Tempoh (CCTV + VIR) — klik untuk lihat Kontrak &amp; SLA</div>
@@ -1482,7 +1513,10 @@ details.form-control[open] summary::after{content:'▴'}
           <div v-else style="display:flex;flex-direction:column;gap:6px">
             <div v-for="s in siteLeaderboard.slice(0,5)" :key="s.id" class="flex items-center gap-8" style="padding:6px 0;border-bottom:1px solid #f0f0f0">
               <span style="width:22px;text-align:center;font-weight:800;color:#888">{{s.rank}}</span>
-              <span style="flex:1;min-width:0;font-size:.85rem;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{s.name}} <span class="text-muted text-sm">({{s.project==='vir'?'VIR':'CCTV'}})</span></span>
+              <span style="flex:1;min-width:0;font-size:.85rem;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+                {{s.name}} <span class="text-muted text-sm">({{s.project==='vir'?'VIR':'CCTV'}})</span>
+                <span v-for="b in siteBadges(s.id)" :key="b.label" :title="b.label" style="font-size:.85rem;margin-left:2px">{{b.icon}}</span>
+              </span>
               <span :style="'font-weight:800;font-size:.9rem;color:'+(s.hs.level==='green'?'#1b5e20':s.hs.level==='yellow'?'#f57c00':'#b71c1c')">{{s.hs.score}}</span>
             </div>
             <div v-if="siteLeaderboard.length>5" class="flex items-center gap-8" style="padding:6px 0">
@@ -2127,8 +2161,19 @@ details.form-control[open] summary::after{content:'▴'}
                 <div style="font-size:.82rem;font-weight:700;color:#222;flex:1;min-width:0;overflow-wrap:break-word;line-height:1.3">
                   <button @click.stop="toggleFavoriteSite(s.id)" :style="'background:none;border:none;cursor:pointer;font-size:.95rem;padding:0 4px 0 0;vertical-align:middle;color:'+(favoriteSiteIds.has(s.id)?'#f57c00':'#ccc')" title="Site Tersayang">⭐</button>{{s.name}}
                 </div>
-                <div :style="'margin-left:8px;flex-shrink:0;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:800;color:#fff;background:'+(siteHealthScores[s.id]?.level==='green'?'#2e7d32':siteHealthScores[s.id]?.level==='yellow'?'#f57c00':'#c62828')">
-                  {{siteHealthScores[s.id]?.score||0}}
+                <div style="margin-left:8px;flex-shrink:0;width:44px;height:44px;position:relative">
+                  <svg width="44" height="44" viewBox="0 0 44 44" style="transform:rotate(-90deg)">
+                    <circle cx="22" cy="22" r="18" fill="none" stroke="#e6e6e6" stroke-width="4"></circle>
+                    <circle cx="22" cy="22" r="18" fill="none"
+                      :stroke="siteHealthScores[s.id]?.level==='green'?'#2e7d32':siteHealthScores[s.id]?.level==='yellow'?'#f57c00':'#c62828'"
+                      stroke-width="4" stroke-linecap="round"
+                      :stroke-dasharray="2*Math.PI*18"
+                      :stroke-dashoffset="2*Math.PI*18*(1-Math.min(siteHealthScores[s.id]?.score||0,100)/100)"
+                      style="transition:stroke-dashoffset 1s cubic-bezier(.22,1,.36,1)"></circle>
+                  </svg>
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:800;color:#333">
+                    {{siteHealthScores[s.id]?.score||0}}
+                  </div>
                 </div>
               </div>
               <!-- Score bar -->
@@ -2149,6 +2194,11 @@ details.form-control[open] summary::after{content:'▴'}
                 <span v-else style="color:#bbb">Next: tiada rekod</span>
                 <span v-if="siteNextPmMap[s.id]?.daysSince!=null" style="color:#999">· {{siteNextPmMap[s.id].daysSince}} hari lepas PM</span>
               </div>
+              <!-- Achievement badges -->
+              <div v-if="siteBadges(s.id).length" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                <span v-for="b in siteBadges(s.id)" :key="b.label" class="badge" style="background:#fff;border:1px solid #ddd;font-size:.68rem;padding:3px 8px">{{b.icon}} {{b.label}}</span>
+              </div>
+              <button class="btn btn-outline btn-sm" style="margin-top:10px;font-size:.72rem;padding:4px 10px" @click.stop="generateSiteReportCard(s.id)">🖼️ Jana Kad Laporan</button>
             </div>
           </div>
         </div>
@@ -5787,7 +5837,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td>{{i+1}}</td><td><b>{{f.model}}</b></td><td><span class="badge badge-red">{{f.count}}x</span></td>
                     <td>
                       <div class="flex items-center gap-8">
-                        <div style="flex:1;max-width:120px;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden"><div :style="'height:100%;background:#dc3545;width:'+f.pct+'%'"></div></div>
+                        <div style="flex:1;max-width:120px;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden"><div class="bar-grow" :style="'height:100%;background:#dc3545;width:'+f.pct+'%'"></div></div>
                         <span class="text-sm">{{f.pct}}%</span>
                       </div>
                     </td>
@@ -6077,7 +6127,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div style="display:flex;flex-direction:column;gap:8px">
               <div v-for="m in seasonalCmByMonth" :key="m.month" class="flex items-center gap-8">
                 <span style="width:90px;font-size:.82rem;flex-shrink:0">{{m.month}}</span>
-                <div style="flex:1;height:16px;background:#f0f0f0;border-radius:4px;overflow:hidden"><div :style="'height:100%;width:'+m.pct+'%;background:#e65100'"></div></div>
+                <div style="flex:1;height:16px;background:#f0f0f0;border-radius:4px;overflow:hidden"><div class="bar-grow" :style="'height:100%;width:'+m.pct+'%;background:#e65100'"></div></div>
                 <span style="width:30px;text-align:right;font-size:.82rem;font-weight:700">{{m.count}}</span>
               </div>
             </div>
@@ -8638,6 +8688,59 @@ createApp({
       if(item.action === 'sites') { openSites(item.sub==='VIR'?'vir':'cctv'); return; }
       if(item.action === 'contracts') { loadContracts(); page.value = 'contracts'; return; }
       if(item.action === 'jadual') { openJadual(); return; }
+    }
+
+    // ── "Perlu Perhatian Hari Ini" — Dashboard action-list widget ──
+    // Merges the 4 things most likely to need action TODAY (overdue PM
+    // sites, open CM records, warranty items expiring/expired, and today's
+    // scheduled visits) into one glance, instead of scattered across 4
+    // separate pages/badges the user has to remember to check individually.
+    const openCmRecords = computed(() => pmRecords.value.filter(r => r.maintType==='CM' && (r.cmStatus==='open'||!r.cmStatus)));
+    const todayScheduleItems = computed(() => {
+      const todayStr = _localDateStr();
+      return teamAssignments.value.filter(a => a.date === todayStr);
+    });
+    const todayAttentionRows = computed(() => {
+      const rows = [];
+      const overdueCount = overdueSortedCctv.value.length + overdueSortedVir.value.length;
+      if(overdueCount) rows.push({ icon:'⚠️', label:`${overdueCount} site PM lampau tempoh`, action:'overdue' });
+      if(openCmRecords.value.length) rows.push({ icon:'🛠️', label:`${openCmRecords.value.length} rekod CM belum selesai`, action:'cm' });
+      if(warrantyExpiringCount.value) rows.push({ icon:'📋', label:`${warrantyExpiringCount.value} waranti akan/telah tamat tempoh`, action:'warranty' });
+      if(todayScheduleItems.value.length) rows.push({ icon:'📅', label:`${todayScheduleItems.value.length} jadual penyelenggaraan hari ini`, action:'jadual' });
+      return rows;
+    });
+    // ── Smart Insight chips ── rule-based (not real AI) pattern detection
+    // over data already computed elsewhere (failureByModel/yoyStats/
+    // seasonalCmByMonth) — surfaces the 1-2 most notable patterns as a
+    // plain-language tip instead of the user having to dig through
+    // Laporan Lanjutan tabs to spot them manually.
+    const smartInsights = computed(() => {
+      const tips = [];
+      const topFail = failureByModel.value[0];
+      if(topFail && topFail.pct >= 25 && topFail.count >= 3) {
+        tips.push({ icon:'⚠️', text:`Peralatan "${topFail.model}" menyumbang ${topFail.pct}% drpd semua kegagalan CM direkodkan — mungkin patut disemak/naik taraf.` });
+      }
+      const yoy = yoyStats.value;
+      if(yoy.cmLast > 0 && yoy.cmDelta >= 20) {
+        tips.push({ icon:'📈', text:`Bilangan CM tahun ${yoy.thisYear} meningkat ${yoy.cmDelta}% berbanding tahun lepas.` });
+      } else if(yoy.cmLast > 0 && yoy.cmDelta <= -20) {
+        tips.push({ icon:'📉', text:`Bilangan CM tahun ${yoy.thisYear} berkurang ${Math.abs(yoy.cmDelta)}% berbanding tahun lepas — prestasi bertambah baik!` });
+      }
+      const topMonth = [...seasonalCmByMonth.value].sort((a,b)=>b.count-a.count)[0];
+      if(topMonth && topMonth.count >= 3 && topMonth.pct === 100) {
+        tips.push({ icon:'🌦️', text:`Bulan ${topMonth.month} secara historikal catat CM paling tinggi — pertimbangkan lawatan tambahan sekitar bulan tersebut.` });
+      }
+      return tips.slice(0, 2);
+    });
+
+    function handleTodayAttentionClick(row) {
+      if(row.action === 'overdue') {
+        document.querySelector('.overdue-alert')?.scrollIntoView({ behavior:'smooth', block:'center' });
+        return;
+      }
+      if(row.action === 'cm') { filterMaintType.value = 'CM'; page.value = 'pm-list'; return; }
+      if(row.action === 'warranty') { loadWarranty(); page.value = 'warranty'; return; }
+      if(row.action === 'jadual') { openJadual(); return; }
     }
 
     // ── Dashboard: site count per zone (CCTV vs VIR) ──
@@ -11423,6 +11526,113 @@ createApp({
       VIR_SITES.forEach(s => calc(s, 'vir'));
       return scores;
     });
+
+    // Achievement badges — small, real milestones derived straight from
+    // siteHealthScores/siteNextPmMap (no new tracking needed), shown on the
+    // Site Health Score grid and the Leaderboard so good performance is
+    // visible at a glance, not just buried in a numeric score.
+    function siteBadges(siteId) {
+      const hs = siteHealthScores.value[siteId];
+      if(!hs || !hs.pmCount) return [];
+      const badges = [];
+      // Full annual/contract quota — NOT hs.expectedPM, which is prorated to
+      // months-elapsed-so-far and would falsely satisfy this after just 1
+      // PM done in January (same distinction savePM()'s confetti trigger
+      // already makes against PM_PER_YEAR for this exact reason).
+      const target = hs.project === 'vir' ? hs.totalWindows : PM_PER_YEAR[hs.project];
+      if(target && hs.pmCount >= target) badges.push({ icon:'🎖️', label:'100% Pematuhan' });
+      if(hs.cmCount === 0) badges.push({ icon:'⚡', label:'Tiada CM' });
+      if(hs.score >= 90) badges.push({ icon:'🏆', label:'Skor Cemerlang' });
+      const nx = siteNextPmMap.value[siteId];
+      if(nx && !nx.overdue && nx.daysSince != null && nx.daysSince <= 30) badges.push({ icon:'✨', label:'Baru Diservis' });
+      return badges;
+    }
+
+    // Renders a shareable "report card" PNG for one site (score ring,
+    // PM/CM stats, badges) via Canvas — no server/library needed, just
+    // draws straight onto an offscreen <canvas> and downloads the result.
+    function generateSiteReportCard(siteId) {
+      const all = [...SITES.map(s=>({...s,project:'cctv'})), ...VIR_SITES.map(s=>({...s,project:'vir'}))];
+      const site = all.find(s => s.id === siteId);
+      if(!site) return;
+      const hs = siteHealthScores.value[siteId] || {};
+      const nx = siteNextPmMap.value[siteId] || {};
+      const badges = siteBadges(siteId);
+      const levelColor = hs.level==='green' ? '#2e7d32' : hs.level==='yellow' ? '#f57c00' : '#c62828';
+
+      const canvas = document.createElement('canvas');
+      canvas.width = 800; canvas.height = 500;
+      const ctx = canvas.getContext('2d');
+
+      const grad = ctx.createLinearGradient(0,0,800,500);
+      grad.addColorStop(0,'#003366'); grad.addColorStop(1,'#00203f');
+      ctx.fillStyle = grad; ctx.fillRect(0,0,800,500);
+
+      ctx.fillStyle = '#fff';
+      ctx.font = '700 16px Arial';
+      ctx.fillText('DAYA ONE RESOURCES — KAD LAPORAN SITE', 40, 50);
+      ctx.strokeStyle = 'rgba(255,255,255,.25)';
+      ctx.beginPath(); ctx.moveTo(40,64); ctx.lineTo(760,64); ctx.stroke();
+
+      ctx.font = '700 30px Arial';
+      ctx.fillText(site.name, 40, 115);
+      ctx.font = '600 14px Arial';
+      ctx.fillStyle = 'rgba(255,255,255,.7)';
+      ctx.fillText((site.project==='vir'?'VIR':'CCTV') + ' — Dijana pada ' + new Date().toLocaleDateString('ms-MY'), 40, 138);
+
+      const cx=650, cy=140, r=70;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,.15)'; ctx.lineWidth=14; ctx.stroke();
+      const scorePct = Math.min((hs.score||0)/100,1);
+      ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2, -Math.PI/2 + Math.PI*2*scorePct);
+      ctx.strokeStyle=levelColor; ctx.lineWidth=14; ctx.lineCap='round'; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font='700 40px Arial'; ctx.textAlign='center';
+      ctx.fillText(String(hs.score||0), cx, cy+15);
+      ctx.font='600 13px Arial'; ctx.fillStyle=levelColor;
+      ctx.fillText(hs.label||'-', cx, cy+40);
+      ctx.textAlign='left';
+
+      const statY = 210;
+      const stats = [
+        { label:'PM Selesai', value:`${hs.pmCount||0}/${hs.project==='vir'?(hs.totalWindows||'-'):(hs.expectedPM||'-')}` },
+        { label:'CM Direkod', value:String(hs.cmCount||0) },
+        { label:'Hari Sejak PM Lepas', value: nx.daysSince!=null ? nx.daysSince+' hari' : '-' },
+      ];
+      let sx = 40;
+      stats.forEach(st => {
+        ctx.fillStyle = 'rgba(255,255,255,.08)';
+        ctx.fillRect(sx, statY, 230, 80);
+        ctx.fillStyle = '#fff'; ctx.font='700 26px Arial';
+        ctx.fillText(st.value, sx+16, statY+45);
+        ctx.font='500 12px Arial'; ctx.fillStyle='rgba(255,255,255,.65)';
+        ctx.fillText(st.label, sx+16, statY+66);
+        sx += 250;
+      });
+
+      ctx.font='600 14px Arial'; ctx.fillStyle='#fff';
+      ctx.fillText('Pencapaian:', 40, 335);
+      if(badges.length) {
+        ctx.font='500 14px Arial'; ctx.fillStyle='rgba(255,255,255,.85)';
+        ctx.fillText(badges.map(b=>b.icon+' '+b.label).join('    '), 40, 360);
+      } else {
+        ctx.font='italic 13px Arial'; ctx.fillStyle='rgba(255,255,255,.5)';
+        ctx.fillText('Tiada lagi pencapaian direkodkan.', 40, 360);
+      }
+
+      ctx.font='500 11px Arial'; ctx.fillStyle='rgba(255,255,255,.4)';
+      ctx.fillText('Sistem Pengurusan Borang Penyelenggaraan — Daya One Resources Sdn. Bhd.', 40, 470);
+
+      canvas.toBlob(blob => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `KadLaporan_${site.name.replace(/[^a-z0-9]/gi,'_')}_${_localDateStr()}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Kad Laporan berjaya dijana!');
+      }, 'image/png');
+      logAudit('SITE_REPORT_CARD', site.name);
+    }
 
     // "Site Tersayang" — pin frequently-visited sites to the top of the
     // Site Health Score grid. Per-browser (localStorage), not per-account —
@@ -14684,7 +14894,32 @@ createApp({
     // (stable across renames), falling back to ip/serial for older records
     // predating _uid tracking.
     const EQUIP_HISTORY_STATUS_FIELD = { cameras:'display', nvr:'status', hdd:'status', switches:'status', alarms:'status', misc:'status' };
-    const equipHistoryModal = reactive({ show:false, label:'', rows:[] });
+    const equipHistoryModal = reactive({ show:false, label:'', rows:[], playing:false, playIdx:-1 });
+    let _equipHistoryTimer = null;
+    // Time-lapse playback — steps playIdx forward one row at a time so the
+    // timeline reveals itself chronologically (v-show in the template gates
+    // on playIdx) instead of dumping the whole history at once; gives a
+    // sense of "watching the equipment's condition change over time".
+    function playEquipHistoryTimelapse() {
+      if(equipHistoryModal.playing) { clearInterval(_equipHistoryTimer); equipHistoryModal.playing = false; return; }
+      clearInterval(_equipHistoryTimer);
+      equipHistoryModal.playing = true;
+      equipHistoryModal.playIdx = 0;
+      _equipHistoryTimer = setInterval(() => {
+        if(equipHistoryModal.playIdx >= equipHistoryModal.rows.length - 1) {
+          clearInterval(_equipHistoryTimer);
+          equipHistoryModal.playing = false;
+          return;
+        }
+        equipHistoryModal.playIdx++;
+      }, 900);
+    }
+    function closeEquipHistory() {
+      clearInterval(_equipHistoryTimer);
+      equipHistoryModal.show = false;
+      equipHistoryModal.playing = false;
+      equipHistoryModal.playIdx = -1;
+    }
     async function openEquipHistory(kind, item) {
       const proj = currentProject.value;
       const siteId = selSite.value?.id;
@@ -14728,6 +14963,8 @@ createApp({
       rows.sort((a,b) => (a.rawDate||'').localeCompare(b.rawDate||''));
       equipHistoryModal.label = item.name || item.model || item.ip || '-';
       equipHistoryModal.rows = rows;
+      equipHistoryModal.playing = false;
+      equipHistoryModal.playIdx = -1;
       equipHistoryModal.show = true;
     }
     function _dupErrMsg(dup) {
@@ -15305,6 +15542,40 @@ createApp({
       showNotifPanel.value = false;
     }
 
+    // Equipment tables that have BOTH a Baik/Tidak-style status column and a
+    // Nota column an inspector can actually fill in (hdd/alarms only show
+    // Status, no Nota field in the borang, so they're not checked here —
+    // nothing for the nudge to ask the user to fill).
+    const PM_NUDGE_EQUIP = [
+      { list:'cameras', statusFields:['display'], nameField:'name' },
+      { list:'nvr', statusFields:['asmOp','status'], nameField:'name' },
+      { list:'switches', statusFields:['portStatus','status'], nameField:'brand' },
+      { list:'misc', statusFields:['status'], nameField:'name' },
+      { list:'support', statusFields:['status'], nameField:'label' },
+    ];
+    // Soft nudge (not a hard block) before a final submit — flags equipment
+    // marked "Tidak Baik" (or VIR's "nok") with an empty Nota, since a
+    // record like that later shows up in Laporan/Analisis Kegagalan with no
+    // explanation of what was actually wrong. Returns a list of short
+    // labels for the confirm() prompt in savePM(); an empty list means
+    // nothing to nudge about.
+    function _pmNudgeIssues() {
+      const issues = [];
+      if(currentProject.value === 'vir') {
+        (pm.virItems||[]).forEach(item => {
+          if(!item.isHeader && item.status==='nok' && !(item.nota||'').trim()) issues.push(item.label || item.key);
+        });
+        return issues;
+      }
+      PM_NUDGE_EQUIP.forEach(({list, statusFields, nameField}) => {
+        (pm[list]||[]).forEach(it => {
+          const bad = statusFields.some(f => it[f]==='Tidak');
+          if(bad && !(it.nota||'').trim()) issues.push(it[nameField] || it.brand || it.model || '(tiada nama)');
+        });
+      });
+      return issues;
+    }
+
     async function savePM(status) {
       if(refNoDuplicate.value) {
         showToast(`No. rujukan "${pm.refNo}" sudah wujud. Sila guna nombor lain.`, 'error');
@@ -15321,6 +15592,11 @@ createApp({
         if(!pm.month || !pm.year) { showToast('Sila pilih Bulan dan Tahun Penyelenggaraan.', 'error'); return; }
         if(!pm.visitDate) { showToast('Sila isi Tarikh Penyelenggaraan.', 'error'); return; }
         if(pm.maintType === 'CM' && !pm.rootCause) { showToast('Sila isi Punca Masalah (Root Cause) untuk CM.', 'error'); return; }
+        const nudgeIssues = _pmNudgeIssues();
+        if(nudgeIssues.length) {
+          const preview = nudgeIssues.slice(0,5).join(', ') + (nudgeIssues.length>5 ? `, dan ${nudgeIssues.length-5} lagi` : '');
+          if(!confirm(`${nudgeIssues.length} item ditanda "Tidak Baik" tanpa nota:\n${preview}\n\nTeruskan submit tanpa nota?`)) return;
+        }
       }
       loading.value=true;
       try {
@@ -17575,7 +17851,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           { label:'PM', data:pmByYear, backgroundColor:'rgba(122,132,26,0.85)', borderRadius:4 },
           { label:'CM', data:cmByYear, backgroundColor:'rgba(183,28,28,0.75)', borderRadius:4 },
         ]
-      }, options:{ responsive:true, interaction:{mode:'index',intersect:false}, plugins:{ legend:{position:'top'}, tooltip:{enabled:true} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }});
+      }, options:{ responsive:true, interaction:{mode:'index',intersect:false}, animation:{duration:1100,easing:'easeOutQuart'}, plugins:{ legend:{position:'top'}, tooltip:{enabled:true} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }});
     }
 
     // ── 8. Analisis Jenis Tindakan (keyword classifier on TINDAKAN text) ──
@@ -17950,6 +18226,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             checkPmDraftRecovery();
             checkEquipDraftRecovery();
             restoreLastPage();
+            // Eager (not just on nav-click) — warrantyExpiringCount's nav
+            // badge and the "Perlu Perhatian Hari Ini" dashboard widget both
+            // need this on every login/refresh, not only after the user
+            // happens to visit the Warranty page first.
+            loadWarranty();
           } else {
             authProfile.value = null;
           }
@@ -17985,6 +18266,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       cctvYearTarget, virYearTarget, cctvTargetPct, virTargetPct,
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
+      todayAttentionRows, handleTodayAttentionClick, smartInsights,
       filteredPM, yearList, submittedByDisplayName,
       pmListPage, pmListTotalPages, pmListPagedList, pmListGoToPage, pmListPageNumbers,
       PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule,
@@ -18036,7 +18318,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isEquipGroupAllSelected, toggleEquipGroupSelectAll, bulkDeleteEquip,
-      equipHistoryModal, openEquipHistory,
+      equipHistoryModal, openEquipHistory, playEquipHistoryTimelapse, closeEquipHistory,
       revealedPw, togglePwReveal,
       bulkEditModal, bulkEditFieldOptions, openBulkEdit, applyBulkEdit,
       infoModal, showInfo,
@@ -18063,7 +18345,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
       yirYear, printYearInReview,
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
-      healthCountCctv, healthCountVir, siteLeaderboard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
+      healthCountCctv, healthCountVir, siteLeaderboard, siteBadges, generateSiteReportCard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
