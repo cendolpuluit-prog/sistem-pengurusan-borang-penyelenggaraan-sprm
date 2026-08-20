@@ -1196,6 +1196,9 @@ details.form-control[open] summary::after{content:'▴'}
       <div class="nav-item" :class="{active:page==='backup'}" @click="openBackup" v-if="authProfile?.role==='superadmin'">
         <span class="icon">💾</span> Backup & Restore
       </div>
+      <div class="nav-item" :class="{active:page==='trash'}" @click="openTrash" v-if="authProfile?.role==='superadmin'">
+        <span class="icon">🗑️</span> Tong Sampah
+      </div>
     </div>
     <div class="sidebar-footer">
       <div style="display:flex;align-items:center;gap:8px">
@@ -5206,6 +5209,37 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="bulkEditModal.show=false">Batal</button>
             <button class="btn btn-primary" @click="applyBulkEdit">✔ Terapkan</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== TONG SAMPAH (soft-deleted PM/CM records) ====== -->
+      <div v-if="page==='trash' && authProfile?.role==='superadmin'">
+        <div class="card">
+          <div class="card-title">🗑️ Tong Sampah — Rekod PM/CM Dipadam</div>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">
+            Rekod yang dipadam dari Senarai Rekod PM dipindah ke sini dahulu (bukan terus hilang) — kekal selama <b>{{TRASH_RETENTION_DAYS}} hari</b> sebelum dipadam kekal secara automatik. Hanya superadmin boleh melihat dan memulihkan rekod di sini.
+          </p>
+          <div v-if="trashLoading" class="empty">⏳ Memuatkan...</div>
+          <div v-else-if="!trashedPmRecords.length" class="empty">Tong sampah kosong.</div>
+          <div v-else class="tbl-wrap">
+            <table>
+              <thead><tr><th>No. Rujukan</th><th>Site</th><th>Jenis</th><th>Dipadam Pada</th><th>Oleh</th><th>Baki Hari</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="r in trashedPmRecords" :key="r.id">
+                  <td>{{r.refNo||'-'}}</td>
+                  <td>{{r.siteName||'-'}}</td>
+                  <td><span class="badge" :class="r.maintType==='CM'?'badge-red':'badge-green'">{{r.maintType||'PM'}}</span></td>
+                  <td>{{trashDeletedAtLabel(r)}}</td>
+                  <td>{{r.deletedBy||'-'}}</td>
+                  <td>{{trashDaysLeft(r)}}</td>
+                  <td>
+                    <button class="btn btn-sm btn-success" @click="restoreDeletedRecord(r.id)">♻️ Pulihkan</button>
+                    <button class="btn btn-sm btn-danger" @click="permanentlyDeleteRecord(r.id)">🗑️ Padam Kekal</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -14400,7 +14434,7 @@ createApp({
     // new-PM draft, the site-compare picker) can't be safely reconstructed
     // from just a page name, so those fall back to their parent list page
     // instead of silently landing on a broken/blank view.
-    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty','surat-memo'];
+    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','trash','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty','surat-memo'];
     // Pages whose data is otherwise ONLY fetched by the nav item's own
     // @click handler (loadX();page='x') — landing on them via restore
     // bypasses that click entirely, so page.value flips but the underlying
@@ -14412,6 +14446,7 @@ createApp({
       contracts: loadContracts, 'audit-log': loadAuditLogs,
       'contact-person': loadContactPersons,
       profile: initProfile, 'kontraktor-luar': loadKontraktorLuar,
+      trash: loadTrash,
     };
     const LAST_PAGE_KEY = 'pmapp_lastPage';
     watch([page, currentProject, selSite], () => {
@@ -15925,17 +15960,101 @@ createApp({
       else pmReadMode.value = false; // reset when leaving the preview page
     });
 
+    // "Delete" moves the record to deletedPmRecords instead of a real
+    // Firestore delete — firestore.rules restricts read/permanent-delete on
+    // that collection to superadmin only, so this is an actual soft-delete
+    // (recoverable), not just a UI-hidden one. Auto-purged after
+    // TRASH_RETENTION_DAYS by _purgeOldTrash() (see openTrash()).
     async function deleteRecord(id) {
       const rec = pmRecords.value.find(r=>r.id===id);
       if(rec && !canEditPmRecord(rec)){ showToast('Anda tiada kebenaran untuk memadam rekod ini.','error'); return; }
-      if(!confirm('Padam rekod PM ini?')) return;
+      if(!confirm(`Padam rekod PM ini? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
+        const snap = await db.collection('pmRecords').doc(id).get();
+        if(snap.exists) {
+          await _fw(db.collection('deletedPmRecords').doc(id).set({
+            ...snap.data(),
+            deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            deletedBy: authUser.value?.email || '',
+          }));
+        }
         await _fw(db.collection('pmRecords').doc(id).delete());
         pmRecords.value = pmRecords.value.filter(r=>r.id!==id);
         await logAudit('BORANG_DELETE', rec?.refNo||id);
-        showToast('Rekod dipadam.');
+        showToast('Rekod dipindah ke Tong Sampah.');
         if(page.value==='pm-view') page.value='pm-list';
       } catch(e) { showToast('Gagal padam rekod: ' + e.message, 'error'); }
+    }
+
+    // ── Tong Sampah (soft-delete trash for pmRecords) ──
+    const TRASH_RETENTION_DAYS = 3;
+    const trashedPmRecords = ref([]);
+    const trashLoading = ref(false);
+    function _trashMs(r) {
+      return r.deletedAt?.toDate ? r.deletedAt.toDate().getTime() : (r.deletedAt?.seconds ? r.deletedAt.seconds*1000 : null);
+    }
+    function trashDeletedAtLabel(r) {
+      const ms = _trashMs(r);
+      return ms ? new Date(ms).toLocaleString('ms-MY') : '-';
+    }
+    function trashDaysLeft(r) {
+      const ms = _trashMs(r);
+      if(!ms) return '-';
+      const daysLeft = Math.ceil(TRASH_RETENTION_DAYS - (Date.now()-ms)/86400000);
+      return daysLeft > 0 ? `${daysLeft} hari` : 'Akan dipadam';
+    }
+    async function openTrash() {
+      page.value = 'trash';
+      await loadTrash();
+    }
+    async function loadTrash() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      trashLoading.value = true;
+      try {
+        const snap = await db.collection('deletedPmRecords').orderBy('deletedAt','desc').get();
+        trashedPmRecords.value = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        await _purgeOldTrash();
+      } catch(e) { showToast('Gagal muat Tong Sampah: ' + e.message, 'error'); }
+      trashLoading.value = false;
+    }
+    // Client-only app, no server cron — this fires whenever a superadmin
+    // opens Tong Sampah (mirrors doAutoBackup()'s "checks in when someone
+    // happens to be logged in" pattern, an accepted limitation elsewhere in
+    // this codebase already).
+    async function _purgeOldTrash() {
+      const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
+      const expired = trashedPmRecords.value.filter(r => { const ms = _trashMs(r); return ms && ms < cutoff; });
+      if(!expired.length) return;
+      const batch = db.batch();
+      expired.forEach(r => batch.delete(db.collection('deletedPmRecords').doc(r.id)));
+      await batch.commit();
+      trashedPmRecords.value = trashedPmRecords.value.filter(r => !expired.some(e=>e.id===r.id));
+    }
+    async function restoreDeletedRecord(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan rekod.', 'error'); return; }
+      const rec = trashedPmRecords.value.find(r=>r.id===id);
+      if(!rec) return;
+      if(!confirm(`Pulihkan rekod "${rec.refNo||id}"?`)) return;
+      try {
+        const { deletedAt, deletedBy, id:_id, ...data } = rec;
+        await _fw(db.collection('pmRecords').doc(id).set(data));
+        await _fw(db.collection('deletedPmRecords').doc(id).delete());
+        trashedPmRecords.value = trashedPmRecords.value.filter(r=>r.id!==id);
+        await loadAll();
+        await logAudit('BORANG_RESTORE', rec.refNo||id);
+        showToast('Rekod berjaya dipulihkan!');
+      } catch(e) { showToast('Gagal memulihkan rekod: ' + e.message, 'error'); }
+    }
+    async function permanentlyDeleteRecord(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
+      const rec = trashedPmRecords.value.find(r=>r.id===id);
+      if(!confirm(`Padam KEKAL rekod "${rec?.refNo||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      try {
+        await _fw(db.collection('deletedPmRecords').doc(id).delete());
+        trashedPmRecords.value = trashedPmRecords.value.filter(r=>r.id!==id);
+        await logAudit('BORANG_PURGE', rec?.refNo||id);
+        showToast('Rekod dipadam kekal.');
+      } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
     }
 
     // ---- TEMPLATE BASE64 ----
@@ -18328,6 +18447,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       migrateHanwhaModal, migrateHanwhaBrandName,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
       startNewPM, loadPMEquip, savePM, viewRecord, editRecord, cancelPmForm, deleteRecord,
+      TRASH_RETENTION_DAYS, trashedPmRecords, trashLoading, trashDeletedAtLabel, trashDaysLeft, openTrash, loadTrash, restoreDeletedRecord, permanentlyDeleteRecord,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF, exportUnderMaintenance,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
