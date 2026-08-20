@@ -137,7 +137,15 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .stat-card .lbl{font-size:.8rem;color:#888;margin-top:4px}
 
 /* TABLE */
-.tbl-wrap{overflow-x:auto}
+/* Capped height (instead of growing forever with the table) turns the
+   horizontal scrollbar into part of a self-contained scroll "frame" that's
+   always on-screen — without this, a 20+ row table only has ITS scrollbar
+   at the very bottom of the fully-rendered table, meaning a user looking at
+   row 5 has to scroll the whole page down past every remaining row just to
+   reach it. Sticky thead keeps column headers visible while scrolling
+   inside that frame, same reasoning. */
+.tbl-wrap{overflow:auto;max-height:65vh}
+.tbl-wrap th{position:sticky;top:0;z-index:1}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th{background:#003366;color:#fff;padding:10px 12px;text-align:left;white-space:nowrap}
 td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
@@ -5039,8 +5047,8 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== FAIL SERVIS VENDOR (service report) MODAL ====== -->
-      <div v-if="serviceReportModal.show" class="modal-bg" @click.self="serviceReportModal.show=false">
-        <div class="modal" style="position:relative;max-width:520px">
+      <div v-if="serviceReportModal.show" class="modal-bg">
+        <div class="modal" style="position:relative;max-width:820px">
           <button @click="serviceReportModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
           <h3>{{serviceReportModal.collection==='virEquipmentWarranty' ? '📎 Resit/Bukti Pembelian' : serviceReportModal.collection==='suratMemo' ? '📎 Lampiran Surat/Memo' : '📎 Fail Servis Vendor'}}</h3>
           <p class="text-muted text-sm" style="margin-top:-6px">{{serviceReportModal.collection==='suratMemo' ? fmtDate(serviceReportModal.warranty?.letterDate) : serviceReportModal.warranty?.equipmentName}} — {{serviceReportModal.collection==='suratMemo' ? (serviceReportModal.warranty?.siteName||serviceReportModal.warranty?.perihal||'') : serviceReportModal.warranty?.siteName}}</p>
