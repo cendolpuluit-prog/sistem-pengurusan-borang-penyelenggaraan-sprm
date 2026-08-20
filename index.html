@@ -1938,6 +1938,7 @@ details.form-control[open] summary::after{content:'▴'}
           <select class="form-control" style="width:auto;min-width:200px" v-model="letterMemoFilterCategory">
             <option value="">Semua Kategori</option>
             <option v-for="c in LETTER_MEMO_CATEGORIES" :key="c.value" :value="c.value">{{c.label}}</option>
+            <option v-for="c in letterMemoCustomCategories" :key="c" :value="c">{{c}}</option>
           </select>
           <select class="form-control" style="width:auto;min-width:160px" v-model="letterMemoFilterProject">
             <option value="">Semua Projek</option>
@@ -4685,6 +4686,15 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <div class="card">
+          <div class="card-title">🔧 Kemaskini Data — Nama Brand "Hanwha (Samsung)"</div>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Dropdown brand kamera/NVR dah dipendekkan kepada "Hanwha" sahaja, tapi rekod <b>sedia ada</b> (siteEquipment, equipmentWarranty, sejarah PM/CM) masih simpan nama panjang asal "Hanwha (Samsung)" sehingga dikemaskini. Klik untuk tulis semula SEMUA rekod CCTV sedia ada sekali gus. <b>Pastikan backup terkini wujud dahulu</b> — tindakan ini tidak boleh dibatalkan.</p>
+          <button class="btn btn-outline btn-sm" @click="migrateHanwhaBrandName" :disabled="migrateHanwhaModal.running">
+            {{migrateHanwhaModal.running?'⏳ Sedang kemaskini...':'🔧 Kemaskini Semua Rekod Sekarang'}}
+          </button>
+          <p v-if="migrateHanwhaModal.done" style="color:#198754;font-size:.82rem;margin-top:10px">✅ Selesai — {{migrateHanwhaModal.changedDocs}} dokumen ({{migrateHanwhaModal.changedItems}} item) dikemaskini.</p>
+        </div>
+
+        <div class="card">
           <div class="card-title">💾 Backup Manual</div>
           <p style="color:#555;font-size:.88rem;margin-bottom:14px">Muat turun <b>SEMUA</b> data sistem (peralatan, rekod PM, pengguna, kontrak & SLA, contact person, jadual, log audit, senarai custom) sebagai fail JSON untuk simpanan luar.</p>
           <button class="btn btn-primary" @click="doManualBackup" :disabled="loading">
@@ -6463,11 +6473,11 @@ const LAST_BACKUP_KEY = 'pm_sprm_last_backup'; // local hint only (avoid redunda
 const MAX_AUTO_BACKUPS = 3;
 
 const MONTHS = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
-const BRANDS = ['Panasonic','Hanwha (Samsung)','Bosch','Hikvision','Dahua','Axis','Uniview','Vivotek','Lain-lain'];
+const BRANDS = ['Panasonic','Hanwha','Bosch','Hikvision','Dahua','Axis','Uniview','Vivotek','Lain-lain'];
 // NVR/Server tab uses its own brand list (not the shared camera BRANDS)
 // since it now also covers rack-server hardware (e.g. Dell) that isn't a
 // CCTV camera brand and shouldn't leak into the Kamera tab's dropdown.
-const NVR_BRANDS = ['Panasonic','Hanwha (Samsung)','Bosch','Hikvision','Dahua','Axis','Uniview','Vivotek','Dell','Promise Technology','Lain-lain'];
+const NVR_BRANDS = ['Panasonic','Hanwha','Bosch','Hikvision','Dahua','Axis','Uniview','Vivotek','Dell','Promise Technology','Lain-lain'];
 
 const CAMERA_MODELS = {
   'Panasonic': [
@@ -6487,7 +6497,7 @@ const CAMERA_MODELS = {
     'WV-NS202A','WV-NW484S','WV-NW964',
     'Lain-lain',
   ],
-  'Hanwha (Samsung)': [
+  'Hanwha': [
     'QND-6012R','QND-6022R','QND-6032R','QND-6072R','QND-6082R','QND-7010R','QND-7080R',
     'QND-8010R','QND-8020R','QND-8030R','QND-8080R',
     'QNV-6012R','QNV-6022R','QNV-6023R','QNV-6032R','QNV-6072R','QNV-6080R','QNV-6082R',
@@ -6619,7 +6629,7 @@ const NVR_MODELS = {
     'WJ-NU300','WJ-NU301K','WJ-NU301KG',
     'Lain-lain',
   ],
-  'Hanwha (Samsung)': [
+  'Hanwha': [
     'QRN-410S','QRN-430S','QRN-810S','QRN-830S','QRN-1610S','QRN-1620S','QRN-1630S',
     'XRN-420S','XRN-810S','XRN-820S','XRN-1620S','XRN-1620SB1',
     'XRN-2010','XRN-2010A','XRN-2011A','XRN-3010A','XRN-3210B2','XRN-3220B4','XRN-3210RB2','XRN-6410B2','XRN-6410RB2',
@@ -9562,6 +9572,13 @@ createApp({
       return LETTER_MEMO_CATEGORIES.find(c => c.value === cat)?.label || cat || '-';
     }
     const letterMemos = ref([]);
+    // Custom "Lain-lain" category names (free-typed, see submitLetterMemo)
+    // so the category filter dropdown can actually select them — otherwise
+    // those records were only reachable through "Semua Kategori". Same
+    // pattern as warrantyCustomVendors above.
+    const letterMemoCustomCategories = computed(() => [...new Set(
+      letterMemos.value.map(m => m.category).filter(c => c && !LETTER_MEMO_CATEGORIES.some(lc => lc.value === c))
+    )]);
     const letterMemoModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
       category:'', categoryCustom:'', project:'', siteId:'', siteName:'', letterDate:'',
       fromParty:'', toParty:'', perihal:'', notes:'',
@@ -9597,8 +9614,17 @@ createApp({
     function openEditLetterMemo(m) {
       if(!canEditLetterMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       letterMemoModal.editing = true; letterMemoModal.err = '';
+      // Same "Lain-lain + custom text" reconciliation as vendor/brand/model
+      // dropdowns elsewhere (e.g. openEditWarranty) — submitLetterMemo saves
+      // a custom category as the free-typed text itself (not the literal
+      // 'lain'), so re-selecting 'Lain-lain' and restoring that text into
+      // categoryCustom is needed for the dropdown/custom-input to prefill;
+      // without this the dropdown just shows blank/unselected on re-open.
+      const isKnownCategory = LETTER_MEMO_CATEGORIES.some(c => c.value === m.category);
       Object.assign(letterMemoModal.data, {
-        category:m.category||'', categoryCustom:m.categoryCustom||'', project:m.project||'', siteId:m.siteId||'', siteName:m.siteName||'',
+        category: isKnownCategory ? (m.category||'') : 'lain',
+        categoryCustom: isKnownCategory ? '' : (m.category||''),
+        project:m.project||'', siteId:m.siteId||'', siteName:m.siteName||'',
         letterDate:m.letterDate||'', fromParty:m.fromParty||'', toParty:m.toParty||'', perihal:m.perihal||'', notes:m.notes||'',
       });
       letterMemoModal._editId = m.id;
@@ -10618,6 +10644,96 @@ createApp({
       if(n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
       if(n < 1024*1024*1024) return (n/1024/1024).toFixed(2) + ' MB';
       return (n/1024/1024/1024).toFixed(2) + ' GB';
+    }
+    // ── One-off data migration: "Hanwha (Samsung)" -> "Hanwha" ── The brand
+    // dropdown option itself was already renamed (BRANDS/NVR_BRANDS), but
+    // that only affects NEW entries — existing docs still literally store
+    // the old string as-is (it's a plain field value, not derived from the
+    // dropdown list), so this backfills every already-saved CCTV record.
+    // Scoped to CCTV only per the request; VIR's siteEquipment (BCD/Optager
+    // nested shape) is intentionally left untouched — Hanwha isn't a
+    // BCD/Optager equipment brand, and that nested shape is materially
+    // different (rooms/byRoom) so blindly reusing this same fixArr logic
+    // against it would risk mis-writing VIR's data structure.
+    const migrateHanwhaModal = reactive({ show:false, running:false, done:false, changedDocs:0, changedItems:0 });
+    function _fixHanwhaBrandArray(arr) {
+      if(!Array.isArray(arr) || !arr.length) return null;
+      let count = 0;
+      const out = arr.map(it => {
+        if(it && it.brand === 'Hanwha (Samsung)') { count++; return { ...it, brand: 'Hanwha' }; }
+        return it;
+      });
+      return count ? { arr: out, count } : null;
+    }
+    async function migrateHanwhaBrandName() {
+      if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm('Kemaskini SEMUA rekod CCTV sedia ada yang guna brand "Hanwha (Samsung)" kepada "Hanwha"?\n\nIni akan tulis semula dokumen dalam siteEquipment, equipmentWarranty, dan pmRecords (sejarah lawatan). Tindakan ini TIDAK boleh dibatalkan — pastikan backup terkini wujud sebelum teruskan.')) return;
+      migrateHanwhaModal.running = true; migrateHanwhaModal.done = false;
+      let changedDocs = 0, changedItems = 0;
+      try {
+        // 1) siteEquipment (CCTV) — cameras[] and nvr[] arrays per site doc.
+        {
+          const snap = await db.collection('siteEquipment').get();
+          let batch = db.batch(), batchCount = 0;
+          for(const doc of snap.docs) {
+            const data = doc.data();
+            const updates = {};
+            const camFix = _fixHanwhaBrandArray(data.cameras);
+            const nvrFix = _fixHanwhaBrandArray(data.nvr);
+            if(camFix) { updates.cameras = camFix.arr; changedItems += camFix.count; }
+            if(nvrFix) { updates.nvr = nvrFix.arr; changedItems += nvrFix.count; }
+            if(Object.keys(updates).length) {
+              batch.update(doc.ref, updates); changedDocs++; batchCount++;
+              if(batchCount >= 400) { await batch.commit(); batch = db.batch(); batchCount = 0; }
+            }
+          }
+          if(batchCount) await batch.commit();
+        }
+        // 2) equipmentWarranty — single `brand` field per doc (not an array).
+        {
+          const snap = await db.collection('equipmentWarranty').where('brand','==','Hanwha (Samsung)').get();
+          let batch = db.batch(), batchCount = 0;
+          for(const doc of snap.docs) {
+            batch.update(doc.ref, { brand: 'Hanwha' }); changedDocs++; changedItems++; batchCount++;
+            if(batchCount >= 400) { await batch.commit(); batch = db.batch(); batchCount = 0; }
+          }
+          if(batchCount) await batch.commit();
+        }
+        // 3) pmRecords — historical PM/CM visit snapshots also embed each
+        // camera/NVR's brand at time of visit, shown in report/print/export
+        // views, so those need the same backfill (not just live equipment).
+        {
+          const snap = await db.collection('pmRecords').get();
+          let batch = db.batch(), batchCount = 0;
+          for(const doc of snap.docs) {
+            const data = doc.data();
+            const updates = {};
+            const camFix = _fixHanwhaBrandArray(data.cameras);
+            const nvrFix = _fixHanwhaBrandArray(data.nvr);
+            if(camFix) { updates.cameras = camFix.arr; changedItems += camFix.count; }
+            if(nvrFix) { updates.nvr = nvrFix.arr; changedItems += nvrFix.count; }
+            if(Object.keys(updates).length) {
+              batch.update(doc.ref, updates); changedDocs++; batchCount++;
+              if(batchCount >= 400) { await batch.commit(); batch = db.batch(); batchCount = 0; }
+            }
+          }
+          if(batchCount) await batch.commit();
+        }
+        migrateHanwhaModal.changedDocs = changedDocs;
+        migrateHanwhaModal.changedItems = changedItems;
+        migrateHanwhaModal.done = true;
+        await logAudit('MIGRATE_HANWHA_BRAND', `${changedDocs} dokumen, ${changedItems} item dikemaskini`);
+        showToast(`Selesai! ${changedDocs} dokumen (${changedItems} item) dikemaskini.`);
+        // The batch writes above went straight to Firestore — siteEquip/
+        // pmRecords in local memory are unaffected by that (this app caches
+        // everything in reactive refs at login, it doesn't re-fetch per
+        // page visit), so without this the UI would keep showing the old
+        // "Hanwha (Samsung)" text until the next full login/refresh.
+        // openSiteEquip() would NOT do this — it only switches the
+        // currently-selected site against the SAME stale local cache.
+        await loadAll();
+      } catch(e) { showToast('Ralat migration: ' + e.message, 'error'); }
+      migrateHanwhaModal.running = false;
     }
     async function doManualBackup() {
       loading.value = true;
@@ -12445,7 +12561,7 @@ createApp({
       { re: /\bIPC-(HFW|HDW|HDBW)/i, brand: 'Dahua' },
       { re: /\bWV-[SUXB]/i, brand: 'Panasonic' },
       { re: /\bWJ-/i, brand: 'Panasonic' },
-      { re: /\b[QXPA]N[VOD]-/i, brand: 'Hanwha (Samsung)' },
+      { re: /\b[QXPA]N[VOD]-/i, brand: 'Hanwha' },
       { re: /\bIPC\d{3,4}/i, brand: 'Uniview' },
       { re: /\bWD\d{2,3}PU[RZP]/i, brand: 'Western Digital' },
       { re: /\bST\d{3,5}(VX|VE)/i, brand: 'Seagate' },
@@ -17889,7 +18005,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       CCTV_WARRANTY_VENDORS, warranty, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
-      LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel,
+      LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCustomCategories,
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
       onLetterMemoSiteChange, onLetterMemoProjectChange, openAddLetterMemo, openEditLetterMemo, submitLetterMemo, deleteLetterMemo,
       canEditLetterMemo, canAddLetterMemo,
@@ -17919,6 +18035,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openSites, openPMList, openBackup,
       autoBackups, backupProgress, doManualBackup, doAutoBackup,
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
+      migrateHanwhaModal, migrateHanwhaBrandName,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
       startNewPM, loadPMEquip, savePM, viewRecord, editRecord, cancelPmForm, deleteRecord,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
