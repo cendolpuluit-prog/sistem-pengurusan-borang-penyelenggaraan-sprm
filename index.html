@@ -34,7 +34,13 @@
 *{box-sizing:border-box;margin:0;padding:0}
 @keyframes sidebarPulse{0%,100%{opacity:.4}50%{opacity:.7}}
 html,body{overflow-x:hidden;max-width:100%}
-body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;background-image:radial-gradient(#c3cfe0 1px,transparent 1px);background-size:22px 22px;color:#1a2333;overflow-x:hidden;max-width:100vw}
+/* Two soft corner "glows" (echoing .login-glow-l/.login-glow-r on the login
+   screen — same navy/green brand hues) layered under the existing dot-grid,
+   so the post-login app doesn't feel like a completely different product
+   from the themed login screen. Kept very low-opacity (4-5%) and fixed in
+   place (doesn't scroll/tile) specifically so it stays a background hint,
+   never competing with card content sitting on top. */
+body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;background-image:radial-gradient(circle at 6% 4%,rgba(0,51,102,.05) 0%,transparent 40%),radial-gradient(circle at 96% 96%,rgba(0,140,80,.045) 0%,transparent 40%),radial-gradient(#c3cfe0 1px,transparent 1px);background-size:auto,auto,22px 22px;background-repeat:no-repeat,no-repeat,repeat;background-attachment:fixed,fixed,scroll;color:#1a2333;overflow-x:hidden;max-width:100vw}
 
 /* SPLASH — brief screen shown while Firebase resolves whether a session is
    already persisted, so the login form doesn't flash for logged-in users */
@@ -133,8 +139,21 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .stat-card-clickable{cursor:pointer}
 .stat-card-clickable:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,40,100,.14)}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,40,100,.12)}
-.stat-card .num{font-size:2rem;font-weight:800;color:#003366}
+.stat-card .num{font-size:2rem;font-weight:800;color:#003366;font-variant-numeric:tabular-nums}
 .stat-card .lbl{font-size:.8rem;color:#888;margin-top:4px}
+
+/* DASHBOARD SKELETON LOADER — the Dashboard template already renders these
+   classes (.skel/.skel-stat/.skel-line/.skel-block) while initialLoading is
+   true, but no CSS for them existed at all, so that loading state was
+   rendering as blank/invisible boxes rather than an actual skeleton screen.
+   This fills in the shimmer + shapes it was always meant to have. */
+@keyframes skelShimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
+.skel{background:linear-gradient(90deg,#e8edf5 25%,#f3f6fb 37%,#e8edf5 63%);background-size:400% 100%;animation:skelShimmer 1.4s ease infinite;border-radius:8px}
+.skel-stat{height:84px}
+.skel-line{height:14px;width:100%;margin-bottom:10px;border-radius:5px}
+.skel-line:last-child{margin-bottom:0}
+.skel-block{width:100%;border-radius:10px}
+.dark-mode .skel{background:linear-gradient(90deg,#1c2333 25%,#242c40 37%,#1c2333 63%);background-size:400% 100%}
 
 /* TABLE */
 /* Capped height (instead of growing forever with the table) turns the
@@ -148,7 +167,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .tbl-wrap th{position:sticky;top:0;z-index:1}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th{background:#003366;color:#fff;padding:10px 12px;text-align:left;white-space:nowrap}
-td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-variant-numeric:tabular-nums}
 tr:hover td{background:#f9fbff}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
 .badge-green{background:#e6f4ea;color:#1e7e34}
@@ -450,6 +469,10 @@ details.form-control[open] summary::after{content:'▴'}
 
 /* Misc */
 .empty{text-align:center;color:#aaa;padding:40px;font-size:.9rem}
+/* Icon prefix for genuine "no data" messages — scoped away from
+   .cal-cell.empty/.cal-cell-print.empty, which reuse the .empty class name
+   purely for an empty-calendar-day background color, not as a message. */
+.empty:not(.cal-cell):not(.cal-cell-print)::before{content:'📭';display:block;font-size:2rem;margin-bottom:8px;opacity:.55}
 .search-bar{padding:8px 14px;border:1px solid #d0d0d0;border-radius:6px;font-size:.87rem;width:260px}
 .flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-8{gap:8px}.gap-12{gap:12px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.mb-20{margin-bottom:20px}
 .text-sm{font-size:.82rem}.text-muted{color:#888}.fw-600{font-weight:600}
@@ -985,7 +1008,7 @@ details.form-control[open] summary::after{content:'▴'}
 .warranty-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
 .warranty-stat-card{background:#f7f9fc;border-radius:10px;padding:14px 16px}
 .warranty-stat-card .wsc-label{font-size:.75rem;color:#666}
-.warranty-stat-card .wsc-value{font-size:1.5rem;font-weight:700;margin-top:4px}
+.warranty-stat-card .wsc-value{font-size:1.5rem;font-weight:700;margin-top:4px;font-variant-numeric:tabular-nums}
 .warranty-stat-card.expired{background:#fdecea}
 .warranty-stat-card.expired .wsc-value{color:#c62828}
 .warranty-stat-card.expiring{background:#fff8e1}
