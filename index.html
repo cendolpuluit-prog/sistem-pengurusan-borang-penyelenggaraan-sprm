@@ -5395,8 +5395,18 @@ details.form-control[open] summary::after{content:'▴'}
           <div style="background:linear-gradient(90deg,#002855,#003a80);color:#fff;border-radius:8px 8px 0 0;padding:9px 16px;font-size:.83rem;font-weight:700;letter-spacing:.04em;display:flex;align-items:center;gap:8px">
             <span>🗺</span> Zon {{zoneInfo.label}} <span style="font-size:.72rem;opacity:.7;font-weight:400;margin-left:4px">· {{zoneInfo.states}}</span>
           </div>
+          <!-- table-layout:fixed forces every zone's table to use the EXACT
+               same column widths as every other zone's table — each zone
+               loop iteration renders its own separate <table>, and without
+               this, the browser's default auto layout sizes each table's
+               columns independently based on that table's own content, so
+               column edges silently drift out of alignment between zones
+               (e.g. a zone with a longer site name pushes that table's
+               "Nama Premis" column wider than the next zone's). Cell text
+               gets word-break so long names/numbers wrap instead of
+               overflowing now that columns can't grow past their width. -->
           <div class="tbl-wrap" style="border:1px solid #e0e0e0;border-top:none;border-radius:0 0 8px 8px;overflow-x:auto">
-            <table style="min-width:720px">
+            <table style="min-width:720px;table-layout:fixed">
               <thead>
                 <tr>
                   <th style="width:36px;text-align:center">Bil</th>
@@ -5410,17 +5420,17 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="(site, idx) in cpSites.filter(s=>s.zone===zoneKey)" :key="site.id" :class="(contactPersons[site.id]||[]).length ? '' : 'cp-empty-row'">
                   <td style="text-align:center;color:#888;font-size:.8rem">{{idx+1}}</td>
                   <td>
-                    <div style="font-weight:600;font-size:.85rem;color:#002244">{{site.name}}</div>
+                    <div style="font-weight:600;font-size:.85rem;color:#002244;word-break:break-word">{{site.name}}</div>
                   </td>
                   <td style="text-align:center">
                     <span :class="['proj-badge', currentProject==='vir'?'proj-vir':'proj-cctv']" style="font-size:.72rem;padding:2px 8px">{{site.code}}</span>
                   </td>
                   <td>
                     <div v-if="(contactPersons[site.id]||[]).length">
-                      <div v-for="c in contactPersons[site.id]" :key="c.id" style="margin-bottom:3px;font-size:.82rem">
+                      <div v-for="c in contactPersons[site.id]" :key="c.id" style="margin-bottom:3px;font-size:.82rem;word-break:break-word">
                         <span style="font-weight:600;color:#222">{{c.name}}</span>
                         <span v-if="c.label" class="badge badge-blue" style="font-size:.65rem;margin-left:4px">{{c.label}}</span>
-                        <span v-if="c.phone">&nbsp;·&nbsp;<a :href="'tel:'+c.phone" style="color:#005599;text-decoration:none;font-weight:600">📱 {{c.phone}}</a></span>
+                        <span v-if="c.phone">&nbsp;·&nbsp;<a :href="'tel:'+c.phone" style="color:#005599;text-decoration:none;font-weight:600;white-space:nowrap">📱 {{c.phone}}</a></span>
                       </div>
                     </div>
                     <span v-else style="font-size:.78rem;color:#bbb;font-style:italic">— belum diisi —</span>
@@ -5682,6 +5692,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr>
                   <th>#</th>
                   <th>Site</th>
+                  <th style="width:60px;text-align:center">Projek</th>
                   <th>Tarikh</th>
                   <th>Jenis</th>
                   <th style="min-width:180px">Masalah</th>
@@ -5693,6 +5704,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="(row,i) in laporanNotaItems" :key="i">
                   <td style="color:#999;font-size:.8rem">{{i+1}}</td>
                   <td style="font-size:.82rem">{{row.siteName}}</td>
+                  <td style="text-align:center"><span :class="['proj-badge', row.project==='vir'?'proj-vir':'proj-cctv']" style="font-size:.68rem;padding:2px 7px">{{row.project==='vir'?'VIR':'CCTV'}}</span></td>
                   <td style="font-size:.82rem;white-space:nowrap">{{row.visitDate}}</td>
                   <td><span :style="'padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;background:'+(row.maintType==='CM'?'#ffebee':'#e8f5e9')+';color:'+(row.maintType==='CM'?'#b71c1c':'#1b5e20')">{{row.maintType}}</span></td>
                   <td style="font-size:.82rem;color:#333">{{row.masalah||'—'}}</td>
