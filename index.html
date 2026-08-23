@@ -446,11 +446,15 @@ details.form-control[open] summary::after{content:'▴'}
 .health-summary-card:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,40,100,.1)}
 
 .zone-map-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px}
-.zone-map-card{background:linear-gradient(160deg,#f0f6ff,#f7faff);border:1px solid rgba(0,51,102,.1);border-radius:12px;padding:16px 14px;text-align:center;cursor:pointer;transition:.15s}
-.zone-map-card:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(0,40,100,.12);border-color:#003366}
+.zone-map-card{background:linear-gradient(160deg,#f0f6ff,#f7faff);border:1px solid rgba(0,51,102,.1);border-radius:12px;padding:16px 14px;text-align:center;transition:.15s}
 .zone-map-pin{font-size:1.5rem;margin-bottom:4px}
 .zone-map-name{font-weight:700;color:#003366;font-size:.9rem}
 .zone-map-states{font-size:.7rem;color:#888;margin-top:2px}
+/* CCTV/VIR badges (not the whole card) are the click targets — a zone can
+   have very different CCTV vs VIR overdue counts, so one card-wide click
+   routing to a hardcoded project silently sent users to the wrong list. */
+.zone-map-badge-link{cursor:pointer;transition:.15s}
+.zone-map-badge-link:hover{filter:brightness(.93);transform:translateY(-1px)}
 
 /* PM RECORDS — MOBILE CARD LIST (shown instead of the wide table on phones) */
 .pm-mobile-cards{display:none}
@@ -1579,6 +1583,10 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="num">{{cctvThisYearCount}}</div>
             <div class="lbl">PM CCTV {{dashboardYear}}</div>
           </div>
+          <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('cctv')">
+            <div class="num" style="color:#b71c1c">{{cctvThisYearCMCount}}</div>
+            <div class="lbl">CM CCTV {{dashboardYear}}</div>
+          </div>
         </div>
 
         <!-- VIR STATS -->
@@ -1595,6 +1603,10 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('vir')">
             <div class="num">{{virThisYearCount}}</div>
             <div class="lbl">PM VIR {{dashboardYear}}</div>
+          </div>
+          <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('vir')">
+            <div class="num" style="color:#b71c1c">{{virThisYearCMCount}}</div>
+            <div class="lbl">CM VIR {{dashboardYear}}</div>
           </div>
         </div>
 
@@ -1698,13 +1710,13 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="card">
           <div class="card-title">🗺️ Tinjauan Ikut Zon</div>
           <div class="zone-map-grid">
-            <div v-for="(zoneInfo, zoneKey) in ZONES" :key="zoneKey" class="zone-map-card" :style="{background:zoneHeatColor(zoneKey)}" @click="openSites('cctv')">
+            <div v-for="(zoneInfo, zoneKey) in ZONES" :key="zoneKey" class="zone-map-card" :style="{background:zoneHeatColor(zoneKey)}">
               <div class="zone-map-pin">📍</div>
               <div class="zone-map-name">{{zoneInfo.label}}</div>
               <div class="zone-map-states">{{zoneInfo.states}}</div>
               <div class="flex gap-8" style="margin-top:8px;font-size:.72rem;justify-content:center;flex-wrap:wrap">
-                <span class="badge badge-blue">{{zoneSiteCounts[zoneKey]?.cctv||0}} CCTV</span>
-                <span class="badge badge-gray" style="background:#fff3e0;color:#7a2e00">{{zoneSiteCounts[zoneKey]?.vir||0}} VIR</span>
+                <span class="badge badge-blue zone-map-badge-link" title="Lihat site CCTV zon ini" aria-label="Lihat site CCTV zon ini" @click="openSites('cctv')">{{zoneSiteCounts[zoneKey]?.cctv||0}} CCTV</span>
+                <span class="badge badge-gray zone-map-badge-link" style="background:#fff3e0;color:#7a2e00" title="Lihat site VIR zon ini" aria-label="Lihat site VIR zon ini" @click="openSites('vir')">{{zoneSiteCounts[zoneKey]?.vir||0}} VIR</span>
                 <span v-if="zoneOverdueCounts[zoneKey]?.overdue" class="badge badge-red">⚠ {{zoneOverdueCounts[zoneKey].overdue}} Overdue</span>
               </div>
             </div>
@@ -1717,7 +1729,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="card-title">📊 Carta Penyelenggaraan</div>
           <div class="chart-grid">
             <div>
-              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">PM Rekod Per Site ({{dashboardYear}})</div>
+              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">PM vs CM Per Site ({{dashboardYear}})</div>
               <div class="chart-wrap"><canvas id="chartPMSite"></canvas></div>
             </div>
             <div>
@@ -6737,7 +6749,11 @@ const SITE_STATE_MAP = {
   s06:'Negeri Sembilan', s07:'Melaka', s08:'Johor', s09:'Johor', s10:'Johor',
   s11:'Johor', s12:'Pahang', s13:'Pahang', s14:'Pahang', s15:'Terengganu',
   s16:'Kelantan', s17:'Kelantan',
-  v00:'Putrajaya', v36:'Selangor', v01:'Perlis', v02:'Kedah', v37:'Kedah',
+  // v36 (MACA — Akademi Pencegahan Rasuah Malaysia) is physically in Taman
+  // Duta, off Jalan Tuanku Abdul Halim, Kuala Lumpur — was previously
+  // mismapped to Selangor, which fed the wrong state into both the "Peta
+  // Penugasan" and Time-lapse map widgets for any v36 PM/CM record.
+  v00:'Putrajaya', v36:'Kuala Lumpur', v01:'Perlis', v02:'Kedah', v37:'Kedah',
   v03:'Kedah', v04:'Penang', v06:'Perak', v07:'Perak', v08:'Perak',
   v09:'Selangor', v10:'Selangor', v11:'Kuala Lumpur', v13:'Labuan',
   v14:'Negeri Sembilan', v15:'Negeri Sembilan', v16:'Melaka', v17:'Johor',
@@ -11528,8 +11544,16 @@ createApp({
       years.add(new Date().getFullYear());
       return [...years].sort((a,b)=>b-a);
     });
-    const pmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===dashboardYear.value).length);
-    const pmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===dashboardYear.value).length);
+    // PM-only (excludes CM) — matches siteHealthScores' own compliance
+    // filter ((r.maintType||'PM')!=='CM'), so a site with several CM visits
+    // but zero actual PM visits this year can't show as "100% PM
+    // pematuhan" here or in cctvTargetPct/virTargetPct below. CM has its
+    // own separate cmThisYearCCTV/VIR count (see below) instead of being
+    // silently folded into the PM number.
+    const pmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===dashboardYear.value && (r.maintType||'PM')!=='CM').length);
+    const pmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===dashboardYear.value && (r.maintType||'PM')!=='CM').length);
+    const cmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===dashboardYear.value && r.maintType==='CM').length);
+    const cmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===dashboardYear.value && r.maintType==='CM').length);
 
     // ── Dashboard stat-card count-up animation ──
     function countUpFrom(source) {
@@ -11551,9 +11575,11 @@ createApp({
     const cctvSitesCount    = countUpFrom(computed(() => SITES.length));
     const cctvRecordsCount  = countUpFrom(computed(() => pmCCTV.value.length));
     const cctvThisYearCount = countUpFrom(pmThisYearCCTV);
+    const cctvThisYearCMCount = countUpFrom(cmThisYearCCTV);
     const virSitesCount     = countUpFrom(computed(() => VIR_SITES.length));
     const virRecordsCount   = countUpFrom(computed(() => pmVIR.value.length));
     const virThisYearCount  = countUpFrom(pmThisYearVIR);
+    const virThisYearCMCount = countUpFrom(cmThisYearVIR);
 
     // ── Monthly/annual target progress ──
     // CCTV PM runs 3x/year per site (4-month interval), VIR runs 2x/year (6-month).
@@ -12446,13 +12472,28 @@ createApp({
 
     function initCharts() {
       const yr = dashboardYear.value;
-      // Bar chart: PM records per site for the selected dashboard year (top 8)
+      // Stacked bar chart: PM vs CM per site for the selected dashboard
+      // year (top 8 by total). PM count is fixed by contract schedule and
+      // won't vary site-to-site in any meaningful way, but CM count is
+      // driven entirely by how often SPRM reports a breakdown at that
+      // site — so splitting the two (instead of one merged "Rekod PM" bar)
+      // is what actually surfaces which sites are needing extra attention.
+      // Keyed by siteId (unique), NOT by `code` — CCTV and VIR sites reuse
+      // the same short codes for shared physical locations (e.g. 'KSL',
+      // 'PNG', 'PRK' each appear in both SITES and VIR_SITES), so grouping
+      // by code alone silently merged two different sites/projects into
+      // one bar. Label always carries a CCTV/VIR tag so two same-coded
+      // sites still render as visibly distinct bars.
       const siteCount = {};
       pmRecords.value.filter(r => r.year === yr).forEach(r => {
-        const code = [...SITES, ...VIR_SITES].find(s => s.id === r.siteId)?.code || r.siteName || r.siteId;
-        siteCount[code] = (siteCount[code] || 0) + 1;
+        const proj = r.project || 'cctv';
+        const site = (proj === 'vir' ? VIR_SITES : SITES).find(s => s.id === r.siteId);
+        const label = (site?.code || r.siteName || r.siteId) + (proj === 'vir' ? ' (VIR)' : ' (CCTV)');
+        const key = r.siteId || label;
+        if(!siteCount[key]) siteCount[key] = { label, pm:0, cm:0 };
+        if((r.maintType||'PM') === 'CM') siteCount[key].cm++; else siteCount[key].pm++;
       });
-      const topSites = Object.entries(siteCount).sort((a,b) => b[1]-a[1]).slice(0,8);
+      const topSites = Object.values(siteCount).sort((a,b) => (b.pm+b.cm)-(a.pm+a.cm)).slice(0,8);
 
       const barCanvas = document.getElementById('chartPMSite');
       if(barCanvas) {
@@ -12460,10 +12501,13 @@ createApp({
         chartSiteInst = new Chart(barCanvas, {
           type: 'bar',
           data: {
-            labels: topSites.map(x=>x[0]),
-            datasets: [{ label: 'Rekod PM', data: topSites.map(x=>x[1]), backgroundColor: '#006633', borderRadius: 4 }]
+            labels: topSites.map(x=>x.label),
+            datasets: [
+              { label: 'PM', data: topSites.map(x=>x.pm), backgroundColor: '#006633', borderRadius: 4, stack: 'total' },
+              { label: 'CM', data: topSites.map(x=>x.cm), backgroundColor: '#dc3545', borderRadius: 4, stack: 'total' },
+            ]
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } } }
         });
       }
 
@@ -19009,7 +19053,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       pageTitle, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
       dashboardCompact, toggleDashboardCompact,
-      cctvSitesCount, cctvRecordsCount, cctvThisYearCount, virSitesCount, virRecordsCount, virThisYearCount,
+      cctvSitesCount, cctvRecordsCount, cctvThisYearCount, cctvThisYearCMCount, virSitesCount, virRecordsCount, virThisYearCount, virThisYearCMCount,
       cctvYearTarget, virYearTarget, cctvTargetPct, virTargetPct,
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
