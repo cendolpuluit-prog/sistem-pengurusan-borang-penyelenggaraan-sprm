@@ -1579,11 +1579,11 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="num">{{cctvRecordsCount}}</div>
             <div class="lbl">Rekod Borang CCTV</div>
           </div>
-          <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('cctv')">
+          <div class="stat-card stat-card-clickable" @click="openPMList('cctv', {year: dashboardYear, maintType: 'PM'})">
             <div class="num">{{cctvThisYearCount}}</div>
             <div class="lbl">PM CCTV {{dashboardYear}}</div>
           </div>
-          <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('cctv')">
+          <div class="stat-card stat-card-clickable" @click="openPMList('cctv', {year: dashboardYear, maintType: 'CM'})">
             <div class="num" style="color:#b71c1c">{{cctvThisYearCMCount}}</div>
             <div class="lbl">CM CCTV {{dashboardYear}}</div>
           </div>
@@ -1600,11 +1600,11 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="num">{{virRecordsCount}}</div>
             <div class="lbl">Rekod Borang VIR</div>
           </div>
-          <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('vir')">
+          <div class="stat-card stat-card-clickable" @click="openPMList('vir', {year: dashboardYear, maintType: 'PM'})">
             <div class="num">{{virThisYearCount}}</div>
             <div class="lbl">PM VIR {{dashboardYear}}</div>
           </div>
-          <div class="stat-card stat-card-clickable" @click="filterYear=dashboardYear; openPMList('vir')">
+          <div class="stat-card stat-card-clickable" @click="openPMList('vir', {year: dashboardYear, maintType: 'CM'})">
             <div class="num" style="color:#b71c1c">{{virThisYearCMCount}}</div>
             <div class="lbl">CM VIR {{dashboardYear}}</div>
           </div>
@@ -1729,7 +1729,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="card-title">📊 Carta Penyelenggaraan</div>
           <div class="chart-grid">
             <div>
-              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">PM vs CM Per Site ({{dashboardYear}})</div>
+              <div style="font-size:.8rem;font-weight:600;color:#555;margin-bottom:8px">PM vs CM Per Site ({{dashboardYear}}) <span style="font-weight:400;color:#aaa;font-size:.72rem">— klik bar untuk lihat rekod</span></div>
               <div class="chart-wrap"><canvas id="chartPMSite"></canvas></div>
             </div>
             <div>
@@ -5367,7 +5367,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="card">
           <div class="card-title">🗑️ Tong Sampah — Rekod PM/CM Dipadam</div>
           <p style="color:#555;font-size:.88rem;margin-bottom:14px">
-            Rekod yang dipadam dari Senarai Rekod PM dipindah ke sini dahulu (bukan terus hilang) — kekal selama <b>{{TRASH_RETENTION_DAYS}} hari</b> sebelum dipadam kekal secara automatik. Hanya superadmin boleh melihat dan memulihkan rekod di sini.
+            Rekod yang dipadam (dari Rekod PM, Kontrak, Waranti CCTV/VIR, dan Surat &amp; Memo) dipindah ke sini dahulu (bukan terus hilang) — kekal selama <b>{{TRASH_RETENTION_DAYS}} hari</b> sebelum dipadam kekal secara automatik. Hanya superadmin boleh melihat dan memulihkan rekod di sini.
           </p>
           <div v-if="trashLoading" class="empty">⏳ Memuatkan...</div>
           <div v-else-if="!trashedPmRecords.length" class="empty">Tong sampah kosong.</div>
@@ -5385,6 +5385,98 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>
                     <button :disabled="loading" class="btn btn-sm btn-success" @click="restoreDeletedRecord(r.id)">♻️ Pulihkan</button>
                     <button :disabled="loading" class="btn btn-sm btn-danger" @click="permanentlyDeleteRecord(r.id)">🗑️ Padam Kekal</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗑️ Tong Sampah — Kontrak Dipadam</div>
+          <div v-if="!trashedContracts.length" class="empty">Tong sampah kosong.</div>
+          <div v-else class="tbl-wrap">
+            <table>
+              <thead><tr><th>Tajuk Kontrak</th><th>No. Kontrak</th><th>Dipadam Pada</th><th>Oleh</th><th>Baki Hari</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="r in trashedContracts" :key="r.id">
+                  <td>{{r.title||'-'}}</td>
+                  <td>{{r.contractNo||'-'}}</td>
+                  <td>{{trashDeletedAtLabel(r)}}</td>
+                  <td>{{r.deletedBy||'-'}}</td>
+                  <td>{{trashDaysLeft(r)}}</td>
+                  <td>
+                    <button :disabled="loading" class="btn btn-sm btn-success" @click="restoreTrashContract(r.id)">♻️ Pulihkan</button>
+                    <button :disabled="loading" class="btn btn-sm btn-danger" @click="purgeTrashContract(r.id)">🗑️ Padam Kekal</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗑️ Tong Sampah — Waranti Peralatan (CCTV) Dipadam</div>
+          <div v-if="!trashedWarranty.length" class="empty">Tong sampah kosong.</div>
+          <div v-else class="tbl-wrap">
+            <table>
+              <thead><tr><th>Peralatan</th><th>Site</th><th>Dipadam Pada</th><th>Oleh</th><th>Baki Hari</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="r in trashedWarranty" :key="r.id">
+                  <td>{{r.equipmentName||'-'}}</td>
+                  <td>{{r.siteName||'-'}}</td>
+                  <td>{{trashDeletedAtLabel(r)}}</td>
+                  <td>{{r.deletedBy||'-'}}</td>
+                  <td>{{trashDaysLeft(r)}}</td>
+                  <td>
+                    <button :disabled="loading" class="btn btn-sm btn-success" @click="restoreTrashWarranty(r.id)">♻️ Pulihkan</button>
+                    <button :disabled="loading" class="btn btn-sm btn-danger" @click="purgeTrashWarranty(r.id)">🗑️ Padam Kekal</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗑️ Tong Sampah — Waranti Peralatan (VIR) Dipadam</div>
+          <div v-if="!trashedVirWarranty.length" class="empty">Tong sampah kosong.</div>
+          <div v-else class="tbl-wrap">
+            <table>
+              <thead><tr><th>Peralatan</th><th>Site</th><th>Dipadam Pada</th><th>Oleh</th><th>Baki Hari</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="r in trashedVirWarranty" :key="r.id">
+                  <td>{{r.equipmentName||'-'}}</td>
+                  <td>{{r.siteName||'-'}}</td>
+                  <td>{{trashDeletedAtLabel(r)}}</td>
+                  <td>{{r.deletedBy||'-'}}</td>
+                  <td>{{trashDaysLeft(r)}}</td>
+                  <td>
+                    <button :disabled="loading" class="btn btn-sm btn-success" @click="restoreTrashVirWarranty(r.id)">♻️ Pulihkan</button>
+                    <button :disabled="loading" class="btn btn-sm btn-danger" @click="purgeTrashVirWarranty(r.id)">🗑️ Padam Kekal</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗑️ Tong Sampah — Surat & Memo Dipadam</div>
+          <div v-if="!trashedSuratMemo.length" class="empty">Tong sampah kosong.</div>
+          <div v-else class="tbl-wrap">
+            <table>
+              <thead><tr><th>Kategori</th><th>Tarikh Surat</th><th>Dipadam Pada</th><th>Oleh</th><th>Baki Hari</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="r in trashedSuratMemo" :key="r.id">
+                  <td>{{letterMemoCategoryLabel(r.category)}}</td>
+                  <td>{{fmtDate(r.letterDate)}}</td>
+                  <td>{{trashDeletedAtLabel(r)}}</td>
+                  <td>{{r.deletedBy||'-'}}</td>
+                  <td>{{trashDaysLeft(r)}}</td>
+                  <td>
+                    <button :disabled="loading" class="btn btn-sm btn-success" @click="restoreTrashSuratMemo(r.id)">♻️ Pulihkan</button>
+                    <button :disabled="loading" class="btn btn-sm btn-danger" @click="purgeTrashSuratMemo(r.id)">🗑️ Padam Kekal</button>
                   </td>
                 </tr>
               </tbody>
@@ -5876,6 +5968,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="tab" :class="{active:reportTab==='perbandingan'}" @click="reportTab='perbandingan'">⚖️ Perbandingan Site</div>
           <div class="tab" :class="{active:reportTab==='musim'}" @click="reportTab='musim'">🌦️ Corak Musim</div>
           <div class="tab" :class="{active:reportTab==='heatmap'}" @click="reportTab='heatmap'">🗓️ Heatmap Pematuhan</div>
+          <div class="tab" :class="{active:reportTab==='tempohcustom'}" @click="reportTab='tempohcustom'">📆 Tempoh Custom</div>
         </div>
 
         <!-- Executive summary — always visible action -->
@@ -6393,6 +6486,53 @@ details.form-control[open] summary::after{content:'▴'}
               </table>
             </div>
             <div v-else-if="heatmapSiteId" class="empty" style="padding:20px">Tiada rekod PM untuk site ini.</div>
+          </div>
+        </div>
+
+        <!-- ====== TEMPOH CUSTOM ====== -->
+        <div v-if="reportTab==='tempohcustom'">
+          <div class="card">
+            <div class="card-title">📆 Tempoh Custom</div>
+            <p class="text-sm text-muted mb-12">Pilih sebarang julat tarikh untuk analisis ad-hoc — tidak terikat kepada tahun/suku/bulan tetap seperti laporan lain.</p>
+            <div class="flex gap-8" style="flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+              <div class="form-group" style="margin:0">
+                <label>Dari</label>
+                <input type="date" class="form-control" style="width:160px" v-model="customRangeStart">
+              </div>
+              <div class="form-group" style="margin:0">
+                <label>Hingga</label>
+                <input type="date" class="form-control" style="width:160px" v-model="customRangeEnd">
+              </div>
+              <div class="flex gap-6">
+                <button class="btn btn-outline btn-sm" @click="customRangeSetPreset(7)">7 Hari</button>
+                <button class="btn btn-outline btn-sm" @click="customRangeSetPreset(30)">30 Hari</button>
+                <button class="btn btn-outline btn-sm" @click="customRangeSetPreset(90)">90 Hari</button>
+              </div>
+            </div>
+            <div v-if="customRangeStart && customRangeEnd && customRangeStart > customRangeEnd" style="color:#b71c1c;font-size:.82rem;margin-bottom:10px">⚠ Tarikh "Dari" mesti sebelum atau sama dengan "Hingga".</div>
+            <div class="warranty-stats">
+              <div class="warranty-stat-card"><div class="wsc-label">Jumlah Rekod</div><div class="wsc-value" style="color:#003366">{{customRangeStats.total}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">PM</div><div class="wsc-value" style="color:#7A841A">{{customRangeStats.pm}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">CM</div><div class="wsc-value" style="color:#b71c1c">{{customRangeStats.cm}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">CCTV</div><div class="wsc-value" style="color:#005599">{{customRangeStats.cctv}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">VIR</div><div class="wsc-value" style="color:#7a2e00">{{customRangeStats.vir}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">Site Diliputi</div><div class="wsc-value" style="color:#4a148c">{{customRangeStats.siteCount}}</div></div>
+            </div>
+            <div v-if="customRangeStats.siteRows.length" class="tbl-wrap" style="margin-top:14px">
+              <table>
+                <thead><tr><th>Site</th><th>Projek</th><th style="text-align:center">PM</th><th style="text-align:center">CM</th><th style="text-align:center">Jumlah</th></tr></thead>
+                <tbody>
+                  <tr v-for="row in customRangeStats.siteRows" :key="row.siteId" style="cursor:pointer" @click="openCustomRangeSite(row)" title="Klik untuk lihat rekod site ini">
+                    <td><b>{{row.siteName}}</b></td>
+                    <td><span class="badge" :style="row.project==='vir'?'background:#fff3e0;color:#7a2e00':'background:#e3f0ff;color:#0056b3'">{{row.project==='vir'?'VIR':'CCTV'}}</span></td>
+                    <td style="text-align:center;color:#7A841A;font-weight:700">{{row.pm}}</td>
+                    <td style="text-align:center;color:#b71c1c;font-weight:700">{{row.cm}}</td>
+                    <td style="text-align:center;font-weight:700">{{row.pm+row.cm}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-else class="empty" style="padding:20px">Tiada rekod dalam julat tarikh ini.</div>
           </div>
         </div>
       </div>
@@ -9826,12 +9966,12 @@ createApp({
 
     async function deleteContract(c) {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam kontrak "${c.title}"?`)) return;
+      if(!confirm(`Padam kontrak "${c.title}"? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await db.collection('contracts').doc(c.id).delete();
+        await _softDeleteToTrash('contracts', 'deletedContracts', c.id);
         contracts.value = contracts.value.filter(x => x.id !== c.id);
         await logAudit('CONTRACT_DELETE', c.title);
-        showToast('Kontrak dipadam.');
+        showToast('Kontrak dipindah ke Tong Sampah.');
       } catch(e) { showToast('Gagal padam kontrak: ' + e.message, 'error'); }
     }
 
@@ -10068,12 +10208,12 @@ createApp({
     }
     async function deleteWarranty(w) {
       if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})?`)) return;
+      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await db.collection('equipmentWarranty').doc(w.id).delete();
+        await _softDeleteToTrash('equipmentWarranty', 'deletedEquipmentWarranty', w.id);
         warranty.value = warranty.value.filter(x => x.id !== w.id);
         await logAudit('WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
-        showToast('Rekod waranti dipadam.');
+        showToast('Rekod waranti dipindah ke Tong Sampah.');
       } catch(e) { showToast('Gagal padam rekod waranti: ' + e.message, 'error'); }
     }
     // ── Surat & Memo — general correspondence repository, NOT scoped to one
@@ -10184,12 +10324,12 @@ createApp({
     }
     async function deleteLetterMemo(m) {
       if(!canEditLetterMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam rekod surat/memo "${letterMemoCategoryLabel(m.category)}" (${fmtDate(m.letterDate)})?`)) return;
+      if(!confirm(`Padam rekod surat/memo "${letterMemoCategoryLabel(m.category)}" (${fmtDate(m.letterDate)})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await db.collection('suratMemo').doc(m.id).delete();
+        await _softDeleteToTrash('suratMemo', 'deletedSuratMemo', m.id);
         letterMemos.value = letterMemos.value.filter(x => x.id !== m.id);
         await logAudit('LETTER_MEMO_DELETE', `${letterMemoCategoryLabel(m.category)} — ${m.letterDate}`);
-        showToast('Rekod surat/memo dipadam.');
+        showToast('Rekod surat/memo dipindah ke Tong Sampah.');
       } catch(e) { showToast('Gagal padam rekod surat/memo: ' + e.message, 'error'); }
     }
     // ── Fail Servis Vendor (service report) — PDF/gambar/dokumen yang
@@ -10518,12 +10658,12 @@ createApp({
     }
     async function deleteVirWarranty(w) {
       if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})?`)) return;
+      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await db.collection('virEquipmentWarranty').doc(w.id).delete();
+        await _softDeleteToTrash('virEquipmentWarranty', 'deletedVirEquipmentWarranty', w.id);
         virWarranty.value = virWarranty.value.filter(x => x.id !== w.id);
         await logAudit('VIR_WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
-        showToast('Rekod waranti VIR dipadam.');
+        showToast('Rekod waranti VIR dipindah ke Tong Sampah.');
       } catch(e) { showToast('Gagal padam rekod waranti VIR: ' + e.message, 'error'); }
     }
     // Waranti Peralatan's Excel/Word export temporarily disabled (both CCTV
@@ -11055,11 +11195,19 @@ createApp({
       currentProject.value = proj;
       page.value = 'sites';
     }
-    function openPMList(proj) {
+    // `opts` pre-sets filters atomically as part of navigation, instead of
+    // the caller setting a filter ref right before calling this — that
+    // pattern (e.g. `filterYear=dashboardYear; openPMList('cctv')`) looked
+    // like it worked but didn't: this function's own filterYear.value=''
+    // reset ran immediately after and silently clobbered it back to empty,
+    // so year-scoped dashboard stat cards never actually filtered PM List
+    // by year despite the click intent.
+    function openPMList(proj, opts) {
       currentProject.value = proj;
-      filterSite.value = '';
-      filterYear.value = '';
-      filterMonth.value = '';
+      filterSite.value = opts?.site || '';
+      filterYear.value = opts?.year || '';
+      filterMonth.value = opts?.month || '';
+      filterMaintType.value = opts?.maintType || '';
       filterPmNo.value = '';
       filterSystem.value = '';
       page.value = 'pm-list';
@@ -12490,7 +12638,7 @@ createApp({
         const site = (proj === 'vir' ? VIR_SITES : SITES).find(s => s.id === r.siteId);
         const label = (site?.code || r.siteName || r.siteId) + (proj === 'vir' ? ' (VIR)' : ' (CCTV)');
         const key = r.siteId || label;
-        if(!siteCount[key]) siteCount[key] = { label, pm:0, cm:0 };
+        if(!siteCount[key]) siteCount[key] = { label, siteId: r.siteId, project: proj, pm:0, cm:0 };
         if((r.maintType||'PM') === 'CM') siteCount[key].cm++; else siteCount[key].pm++;
       });
       const topSites = Object.values(siteCount).sort((a,b) => (b.pm+b.cm)-(a.pm+a.cm)).slice(0,8);
@@ -12507,7 +12655,24 @@ createApp({
               { label: 'CM', data: topSites.map(x=>x.cm), backgroundColor: '#dc3545', borderRadius: 4, stack: 'total' },
             ]
           },
-          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom' } }, scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } } }
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: true, position: 'bottom' } },
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } },
+            // Drill-down: clicking a bar segment jumps straight to that
+            // site's PM List, pre-filtered to this year and to PM or CM
+            // depending on which stacked segment (dataset) was clicked —
+            // uses openPMList's `opts` (not a set-then-reset race) so the
+            // filters actually stick.
+            onClick: (evt, elements) => {
+              if(!elements.length) return;
+              const site = topSites[elements[0].index];
+              if(!site?.siteId) return;
+              const maintType = elements[0].datasetIndex === 1 ? 'CM' : 'PM';
+              openPMList(site.project, { year: yr, site: site.siteId, maintType });
+            },
+            onHover: (evt, elements) => { if(evt.native) evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; },
+          }
         });
       }
 
@@ -16470,7 +16635,7 @@ createApp({
     }
     async function openTrash() {
       page.value = 'trash';
-      await loadTrash();
+      await Promise.all([loadTrash(), loadTrashContracts(), loadTrashWarranty(), loadTrashVirWarranty(), loadTrashSuratMemo()]);
     }
     async function loadTrash() {
       if(authProfile.value?.role !== 'superadmin') return;
@@ -16522,7 +16687,176 @@ createApp({
       } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
     }
 
-    // ---- TEMPLATE BASE64 ----
+    // ── Tong Sampah — generic helpers for contracts/warranty(CCTV+VIR)/
+    // suratMemo. pmRecords above keeps its own bespoke deleteRecord/
+    // restoreDeletedRecord/permanentlyDeleteRecord (predates this
+    // generalization, already working/audited, left untouched) — these
+    // generic versions exist so 4 more near-identical soft-delete blocks
+    // don't get hand-copied 4 times (real copy-paste-bug risk in a file
+    // this size). Reuses TRASH_RETENTION_DAYS/_trashMs defined above.
+    async function _softDeleteToTrash(collection, deletedCollection, id) {
+      const snap = await db.collection(collection).doc(id).get();
+      if(snap.exists) {
+        await _fw(db.collection(deletedCollection).doc(id).set({
+          ...snap.data(),
+          deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          deletedBy: authUser.value?.email || '',
+        }));
+      }
+      await _fw(db.collection(collection).doc(id).delete());
+    }
+    async function _restoreFromTrash(deletedCollection, collection, id, list) {
+      const rec = list.value.find(r=>r.id===id);
+      if(!rec) return null;
+      const { deletedAt, deletedBy, id:_id, ...data } = rec;
+      await _fw(db.collection(collection).doc(id).set(data));
+      await _fw(db.collection(deletedCollection).doc(id).delete());
+      list.value = list.value.filter(r=>r.id!==id);
+      return rec;
+    }
+    async function _permanentlyDeleteFromTrash(deletedCollection, id, list) {
+      await _fw(db.collection(deletedCollection).doc(id).delete());
+      list.value = list.value.filter(r=>r.id!==id);
+    }
+    async function _purgeOldTrashGeneric(deletedCollection, list) {
+      const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
+      const expired = list.value.filter(r => { const ms = _trashMs(r); return ms && ms < cutoff; });
+      if(!expired.length) return;
+      const batch = db.batch();
+      expired.forEach(r => batch.delete(db.collection(deletedCollection).doc(r.id)));
+      await batch.commit();
+      list.value = list.value.filter(r => !expired.some(e=>e.id===r.id));
+    }
+
+    // Kontrak
+    const trashedContracts = ref([]);
+    async function loadTrashContracts() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      try {
+        const snap = await db.collection('deletedContracts').orderBy('deletedAt','desc').get();
+        trashedContracts.value = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        await _purgeOldTrashGeneric('deletedContracts', trashedContracts);
+      } catch(e) { showToast('Gagal muat Tong Sampah Kontrak: ' + e.message, 'error'); }
+    }
+    async function restoreTrashContract(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
+      const rec = trashedContracts.value.find(r=>r.id===id);
+      if(!rec || !confirm(`Pulihkan kontrak "${rec.title||id}"?`)) return;
+      try {
+        await _restoreFromTrash('deletedContracts', 'contracts', id, trashedContracts);
+        await loadContracts();
+        await logAudit('CONTRACT_RESTORE', rec.title||id);
+        showToast('Kontrak berjaya dipulihkan!');
+      } catch(e) { showToast('Gagal memulihkan kontrak: ' + e.message, 'error'); }
+    }
+    async function purgeTrashContract(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
+      const rec = trashedContracts.value.find(r=>r.id===id);
+      if(!confirm(`Padam KEKAL kontrak "${rec?.title||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      try {
+        await _permanentlyDeleteFromTrash('deletedContracts', id, trashedContracts);
+        await logAudit('CONTRACT_PURGE', rec?.title||id);
+        showToast('Dipadam kekal.');
+      } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
+    }
+
+    // Waranti Peralatan (CCTV)
+    const trashedWarranty = ref([]);
+    async function loadTrashWarranty() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      try {
+        const snap = await db.collection('deletedEquipmentWarranty').orderBy('deletedAt','desc').get();
+        trashedWarranty.value = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        await _purgeOldTrashGeneric('deletedEquipmentWarranty', trashedWarranty);
+      } catch(e) { showToast('Gagal muat Tong Sampah Waranti: ' + e.message, 'error'); }
+    }
+    async function restoreTrashWarranty(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
+      const rec = trashedWarranty.value.find(r=>r.id===id);
+      if(!rec || !confirm(`Pulihkan waranti "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
+      try {
+        await _restoreFromTrash('deletedEquipmentWarranty', 'equipmentWarranty', id, trashedWarranty);
+        await loadWarranty();
+        await logAudit('WARRANTY_RESTORE', `${rec.equipmentName||id} — ${rec.siteName||'-'}`);
+        showToast('Waranti berjaya dipulihkan!');
+      } catch(e) { showToast('Gagal memulihkan waranti: ' + e.message, 'error'); }
+    }
+    async function purgeTrashWarranty(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
+      const rec = trashedWarranty.value.find(r=>r.id===id);
+      if(!confirm(`Padam KEKAL waranti "${rec?.equipmentName||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      try {
+        await _permanentlyDeleteFromTrash('deletedEquipmentWarranty', id, trashedWarranty);
+        await logAudit('WARRANTY_PURGE', rec?.equipmentName||id);
+        showToast('Dipadam kekal.');
+      } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
+    }
+
+    // Waranti Peralatan (VIR)
+    const trashedVirWarranty = ref([]);
+    async function loadTrashVirWarranty() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      try {
+        const snap = await db.collection('deletedVirEquipmentWarranty').orderBy('deletedAt','desc').get();
+        trashedVirWarranty.value = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        await _purgeOldTrashGeneric('deletedVirEquipmentWarranty', trashedVirWarranty);
+      } catch(e) { showToast('Gagal muat Tong Sampah Waranti VIR: ' + e.message, 'error'); }
+    }
+    async function restoreTrashVirWarranty(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
+      const rec = trashedVirWarranty.value.find(r=>r.id===id);
+      if(!rec || !confirm(`Pulihkan waranti VIR "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
+      try {
+        await _restoreFromTrash('deletedVirEquipmentWarranty', 'virEquipmentWarranty', id, trashedVirWarranty);
+        await loadVirWarranty();
+        await logAudit('VIR_WARRANTY_RESTORE', `${rec.equipmentName||id} — ${rec.siteName||'-'}`);
+        showToast('Waranti VIR berjaya dipulihkan!');
+      } catch(e) { showToast('Gagal memulihkan waranti VIR: ' + e.message, 'error'); }
+    }
+    async function purgeTrashVirWarranty(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
+      const rec = trashedVirWarranty.value.find(r=>r.id===id);
+      if(!confirm(`Padam KEKAL waranti VIR "${rec?.equipmentName||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      try {
+        await _permanentlyDeleteFromTrash('deletedVirEquipmentWarranty', id, trashedVirWarranty);
+        await logAudit('VIR_WARRANTY_PURGE', rec?.equipmentName||id);
+        showToast('Dipadam kekal.');
+      } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
+    }
+
+    // Surat & Memo
+    const trashedSuratMemo = ref([]);
+    async function loadTrashSuratMemo() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      try {
+        const snap = await db.collection('deletedSuratMemo').orderBy('deletedAt','desc').get();
+        trashedSuratMemo.value = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        await _purgeOldTrashGeneric('deletedSuratMemo', trashedSuratMemo);
+      } catch(e) { showToast('Gagal muat Tong Sampah Surat & Memo: ' + e.message, 'error'); }
+    }
+    async function restoreTrashSuratMemo(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
+      const rec = trashedSuratMemo.value.find(r=>r.id===id);
+      if(!rec || !confirm(`Pulihkan surat/memo "${letterMemoCategoryLabel(rec.category)}" (${fmtDate(rec.letterDate)})?`)) return;
+      try {
+        await _restoreFromTrash('deletedSuratMemo', 'suratMemo', id, trashedSuratMemo);
+        await loadLetterMemos();
+        await logAudit('LETTER_MEMO_RESTORE', `${letterMemoCategoryLabel(rec.category)} — ${rec.letterDate}`);
+        showToast('Surat/memo berjaya dipulihkan!');
+      } catch(e) { showToast('Gagal memulihkan surat/memo: ' + e.message, 'error'); }
+    }
+    async function purgeTrashSuratMemo(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
+      const rec = trashedSuratMemo.value.find(r=>r.id===id);
+      const recLabel = rec ? letterMemoCategoryLabel(rec.category) : id;
+      if(!confirm(`Padam KEKAL surat/memo "${recLabel}"? Tindakan ini tidak boleh diundur.`)) return;
+      try {
+        await _permanentlyDeleteFromTrash('deletedSuratMemo', id, trashedSuratMemo);
+        await logAudit('LETTER_MEMO_PURGE', recLabel);
+        showToast('Dipadam kekal.');
+      } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
+    }
+
     // ---- TEMPLATE BASE64 (lazy-loaded) ----
     // The official CCTV/VIR Excel templates are ~460KB of base64 text
     // combined (previously embedded here as string literals) — now kept in
@@ -18116,6 +18450,49 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       }
       return { count: recs.length, gaps };
     }
+    // ── Laporan Lanjutan: Tempoh Custom (ad-hoc date-range analytics) ──
+    // Unlike every other Laporan/Laporan Lanjutan report (locked to a
+    // calendar year, quarter, or a relative "last N months" window), this
+    // accepts any exact start/end date — e.g. "1 Mac – 15 Jun" — for
+    // one-off analysis that doesn't line up with a fixed reporting period.
+    const customRangeStart = ref(_localDateStr(new Date(Date.now() - 29*86400000))); // default: last 30 days
+    const customRangeEnd = ref(_localDateStr());
+    function customRangeSetPreset(days) {
+      customRangeEnd.value = _localDateStr();
+      customRangeStart.value = _localDateStr(new Date(Date.now() - (days-1)*86400000));
+    }
+    const customRangeRecords = computed(() => {
+      if(!customRangeStart.value || !customRangeEnd.value || customRangeStart.value > customRangeEnd.value) return [];
+      const start = new Date(customRangeStart.value);
+      const end = new Date(customRangeEnd.value);
+      end.setHours(23,59,59,999); // inclusive of the whole end day
+      return pmRecords.value.filter(r => {
+        const d = _recDate(r);
+        return d && d >= start && d <= end;
+      });
+    });
+    const customRangeStats = computed(() => {
+      const recs = customRangeRecords.value;
+      const pm = recs.filter(r => (r.maintType||'PM')!=='CM').length;
+      const cm = recs.filter(r => r.maintType==='CM').length;
+      const cctv = recs.filter(r => (r.project||'cctv')==='cctv').length;
+      const vir = recs.filter(r => r.project==='vir').length;
+      const bySite = {};
+      recs.forEach(r => {
+        if(!r.siteId) return;
+        if(!bySite[r.siteId]) bySite[r.siteId] = { siteId:r.siteId, siteName: r.siteName||r.siteId, project: r.project||'cctv', pm:0, cm:0 };
+        if((r.maintType||'PM')==='CM') bySite[r.siteId].cm++; else bySite[r.siteId].pm++;
+      });
+      const siteRows = Object.values(bySite).sort((a,b)=>(b.pm+b.cm)-(a.pm+a.cm));
+      return { total: recs.length, pm, cm, cctv, vir, siteCount: siteRows.length, siteRows };
+    });
+    // Not maintType-scoped (a site row can carry both PM and CM within the
+    // range) — jumps to that site's full PM List, same drill-down
+    // affordance as the dashboard stat cards/charts above.
+    function openCustomRangeSite(row) {
+      openPMList(row.project, { site: row.siteId });
+    }
+
     const slaTrend = computed(() => {
       const build = (list, proj) => list.map(s => {
         const { count, gaps } = _slaGapsForSite(s, proj);
@@ -19121,6 +19498,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
       startNewPM, loadPMEquip, savePM, viewRecord, editRecord, cancelPmForm, deleteRecord,
       TRASH_RETENTION_DAYS, trashedPmRecords, trashLoading, trashDeletedAtLabel, trashDaysLeft, openTrash, loadTrash, restoreDeletedRecord, permanentlyDeleteRecord,
+      trashedContracts, loadTrashContracts, restoreTrashContract, purgeTrashContract,
+      trashedWarranty, loadTrashWarranty, restoreTrashWarranty, purgeTrashWarranty,
+      trashedVirWarranty, loadTrashVirWarranty, restoreTrashVirWarranty, purgeTrashVirWarranty,
+      trashedSuratMemo, loadTrashSuratMemo, restoreTrashSuratMemo, purgeTrashSuratMemo,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF, exportUnderMaintenance,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
@@ -19145,6 +19526,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
       slaTrend, printExecutiveSummary, printQuarterlyReport, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
+      customRangeStart, customRangeEnd, customRangeSetPreset, customRangeStats, openCustomRangeSite,
       siteCompareSelected, toggleSiteCompare, siteCompareRows, seasonalCmByMonth, heatmapSiteId, heatmapData, yoyStats,
       yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
