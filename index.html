@@ -41,7 +41,7 @@ html,body{overflow-x:hidden;max-width:100%}
    from the themed login screen. Kept very low-opacity (4-5%) and fixed in
    place (doesn't scroll/tile) specifically so it stays a background hint,
    never competing with card content sitting on top. */
-body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;background-image:radial-gradient(circle at 6% 4%,rgba(0,51,102,.05) 0%,transparent 40%),radial-gradient(circle at 96% 96%,rgba(0,140,80,.045) 0%,transparent 40%),radial-gradient(#c3cfe0 1px,transparent 1px);background-size:auto,auto,22px 22px;background-repeat:no-repeat,no-repeat,repeat;background-attachment:fixed,fixed,scroll;color:#1a2333;overflow-x:hidden;max-width:100vw}
+body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;background-image:radial-gradient(circle at 6% 4%,rgba(0,51,102,.05) 0%,transparent 40%),radial-gradient(circle at 96% 96%,rgba(0,140,80,.045) 0%,transparent 40%),radial-gradient(#c3cfe0 1px,transparent 1px);background-size:auto,auto,22px 22px;background-repeat:no-repeat,no-repeat,repeat;background-attachment:fixed,fixed,scroll;color:#1a2333;overflow-x:hidden;max-width:100vw;transition:background-color .3s ease,color .3s ease}
 
 /* SPLASH — brief screen shown while Firebase resolves whether a session is
    already persisted, so the login form doesn't flash for logged-in users */
@@ -119,7 +119,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    flex+space-between it visibly shifted left/right as pageTitle changed
    length between pages. The outer 1fr columns absorb that variance instead
    of the centered search column. */
-.topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05);transition:border-bottom-color .3s ease,border-bottom-width .3s ease}
+.topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05);transition:border-bottom-color .3s ease,border-bottom-width .3s ease,background-color .3s ease,color .3s ease}
 .topbar-actions{justify-self:end}
 .topbar h3{font-size:1rem;color:#002244;font-weight:700}
 /* Uniform sizing for the topbar action row (online/notif/dark-mode/help/
@@ -146,12 +146,12 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .app-footer b{color:#5a6a85}
 
 /* CARDS */
-.card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s,transform .2s}
+.card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s,transform .2s,background-color .3s ease,border-color .3s ease,color .3s ease}
 .card:hover{box-shadow:0 10px 32px rgba(0,40,100,.12);transform:translateY(-1px)}
 .card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px;padding-left:10px;border-left:3px solid #003366;position:relative}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
 .laporan-chart-row{display:grid;gap:16px;margin-bottom:16px}
-.stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);transition:transform .15s,box-shadow .15s}
+.stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);transition:transform .15s,box-shadow .15s,background-color .3s ease,color .3s ease}
 .stat-card-clickable{cursor:pointer}
 .stat-card-clickable:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,40,100,.14)}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,40,100,.12)}
@@ -182,10 +182,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .tbl-wrap{overflow:auto;max-height:65vh}
 .tbl-wrap th{position:sticky;top:0;z-index:1}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
-th{background:#003366;color:#fff;padding:10px 12px;text-align:left;white-space:nowrap}
-td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-variant-numeric:tabular-nums}
+th{background:#003366;color:#fff;padding:10px 12px;text-align:left;white-space:nowrap;transition:background-color .3s ease,color .3s ease}
+td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-variant-numeric:tabular-nums;transition:background-color .3s ease,color .3s ease,border-color .3s ease}
 tr:hover td{background:#f9fbff}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
+.badge-green,.badge-red,.badge-blue,.badge-gray{transition:background-color .3s ease,color .3s ease}
 .badge-green{background:#e6f4ea;color:#1e7e34}
 .badge-red{background:#fdecea;color:#c62828}
 .badge-blue{background:#e3f0ff;color:#0056b3}
@@ -246,8 +247,18 @@ details.form-control[open] summary::after{content:'▴'}
 /* MODAL */
 @keyframes modalBgIn{from{opacity:0}to{opacity:1}}
 @keyframes modalPopIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+/* Topbar dropdowns (search results / online users / notifications) — same
+   idea as the modal pop-in above but smaller travel distance since these
+   are compact panels anchored right under a button, not centered overlays. */
+@keyframes dropdownPanelIn{from{opacity:0;transform:translateY(-6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.dropdown-panel{transform-origin:top center;animation:dropdownPanelIn .16s cubic-bezier(.22,1,.36,1) both;transition:background-color .3s ease,border-color .3s ease}
+/* Notification bell pulses only while there's something unread — stops the
+   moment unreadCount hits 0 (v-if removes the class), so it doesn't nag
+   forever once the user has actually seen it in the panel. */
+@keyframes bellPulse{0%,100%{transform:rotate(0)}10%{transform:rotate(-12deg)}20%{transform:rotate(10deg)}30%{transform:rotate(-8deg)}40%{transform:rotate(6deg)}50%{transform:rotate(0)}}
+.notif-bell-unread{display:inline-block;animation:bellPulse 2.2s ease-in-out infinite}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;display:flex;align-items:center;justify-content:center;animation:modalBgIn .18s ease-out both}
-.modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both}
+.modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both;transition:background-color .3s ease,color .3s ease}
 .modal h3{font-size:1rem;color:#003366;margin-bottom:20px}
 .equip-history-timeline{position:relative;padding-left:6px}
 .equip-history-item{position:relative;padding:0 0 18px 22px;border-left:2px solid #e0e0e0}
@@ -488,7 +499,13 @@ details.form-control[open] summary::after{content:'▴'}
 }
 
 /* Misc */
-.empty{text-align:center;color:#aaa;padding:40px;font-size:.9rem}
+.empty{text-align:center;color:#aaa;padding:40px;font-size:.9rem;animation:emptyFadeIn .35s ease-out both}
+@keyframes emptyFadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes scrollTopIn{from{opacity:0;transform:translateY(10px) scale(.85)}to{opacity:1;transform:translateY(0) scale(1)}}
+.scroll-top-btn{position:fixed;right:24px;bottom:24px;width:44px;height:44px;border-radius:50%;background:#003366;color:#fff;border:none;font-size:1.1rem;cursor:pointer;box-shadow:0 4px 16px rgba(0,51,102,.35);z-index:50;animation:scrollTopIn .2s ease-out both;transition:transform .15s,box-shadow .15s,background-color .3s ease}
+.scroll-top-btn:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,51,102,.45)}
+.scroll-top-btn:active{transform:scale(.92)}
+.dark-mode .scroll-top-btn{background:#1f6feb}
 /* Icon prefix for genuine "no data" messages — scoped away from
    .cal-cell.empty/.cal-cell-print.empty, which reuse the .empty class name
    purely for an empty-calendar-day background color, not as a message. */
@@ -523,6 +540,14 @@ details.form-control[open] summary::after{content:'▴'}
 .profile-avatar .avatar-overlay{position:absolute;inset:0;background:rgba(0,0,0,.45);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:.2s;font-size:.75rem;color:#fff;text-align:center;line-height:1.2}
 .profile-avatar:hover .avatar-overlay{opacity:1}
 .user-avatar-sm{width:38px;height:38px;border-radius:50%;object-fit:cover;background:#e0e0e0;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:700;color:#003366;overflow:hidden;flex-shrink:0}
+/* Role-tinted gradient background for the initials fallback (only shows
+   through when there's no photoURL — the <img> covers it otherwise) — gives
+   the user list a scannable color cue per role without needing to read the
+   text badge next to it. */
+.user-avatar-sm.avatar-role-superadmin{background:linear-gradient(135deg,#ffd76a,#ff8c42);color:#5c2d00}
+.user-avatar-sm.avatar-role-admin{background:linear-gradient(135deg,#6fb1fc,#1a56db);color:#fff}
+.user-avatar-sm.avatar-role-staff{background:linear-gradient(135deg,#6ee7a0,#1e9e5a);color:#fff}
+.user-avatar-sm.avatar-role-internship{background:linear-gradient(135deg,#ffcf86,#f0932b);color:#5c3600}
 .user-avatar-sm img{width:100%;height:100%;object-fit:cover}
 .profile-name{font-size:1.2rem;font-weight:700}
 .profile-role{font-size:.85rem;opacity:.8;margin-top:4px}
@@ -860,9 +885,9 @@ details.form-control[open] summary::after{content:'▴'}
   .sidebar-brand-logos{width:auto}
   .sidebar-brand-logos .hamburger-btn{position:static}
   .sidebar-brand h2{font-size:.7rem;flex:1}
-  .sidebar-nav{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:4px 8px;gap:0;width:100%;scrollbar-width:none}
+  .sidebar-nav{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;padding:4px 8px;gap:0;width:100%;scrollbar-width:none;max-height:60px;opacity:1;transition:max-height .25s ease,opacity .2s ease,padding .25s ease}
   .sidebar-nav::-webkit-scrollbar{display:none}
-  .sidebar-nav.mobile-hidden{display:none}
+  .sidebar-nav.mobile-hidden{max-height:0;opacity:0;padding-top:0;padding-bottom:0;overflow:hidden}
   .nav-item{padding:10px 12px;font-size:.75rem;white-space:nowrap;border-left:none;border-bottom:3px solid transparent;min-height:44px;display:flex;align-items:center}
   .nav-item.active{border-bottom-color:#4dff99;border-left-color:transparent}
   .sidebar-footer{display:none}
@@ -1372,6 +1397,7 @@ details.form-control[open] summary::after{content:'▴'}
       <span v-if="ptrState.refreshing" class="ptr-spinner">⏳</span>
       <span v-else>{{ptrState.distance>60 ? '↑ Lepas untuk refresh' : '↓ Tarik untuk refresh'}}</span>
     </div>
+    <button v-if="showScrollTop" class="scroll-top-btn no-print" @click="scrollToTop" title="Ke atas" aria-label="Scroll ke atas">⬆</button>
     <div class="topbar no-print" :style="topbarAccentColor ? {borderBottomColor: topbarAccentColor, borderBottomWidth: '3px'} : {}">
       <h3>{{pageTitle}}</h3>
       <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
@@ -1427,7 +1453,7 @@ details.form-control[open] summary::after{content:'▴'}
         <!-- Bell notifications -->
         <div class="notif-panel-wrap" style="position:relative">
           <button class="btn btn-outline btn-sm topbar-icon-btn" @click.stop="showNotifPanel=!showNotifPanel" style="position:relative" aria-label="Notifikasi">
-            🔔
+            <span :class="{'notif-bell-unread':unreadCount>0}">🔔</span>
             <span v-if="unreadCount>0" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{unreadCount>9?'9+':unreadCount}}</span>
           </button>
           <div v-if="showNotifPanel" class="dropdown-panel" style="position:absolute;right:0;top:calc(100% + 8px);width:340px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
@@ -1683,7 +1709,18 @@ details.form-control[open] summary::after{content:'▴'}
                 {{s.name}} <span class="text-muted text-sm">({{s.project==='vir'?'VIR':'CCTV'}})</span>
                 <span v-for="b in siteBadges(s.id)" :key="b.label" :title="b.label" style="font-size:.85rem;margin-left:2px">{{b.icon}}</span>
               </span>
-              <span :style="'font-weight:800;font-size:.9rem;color:'+(s.hs.level==='green'?'#1b5e20':s.hs.level==='yellow'?'#f57c00':'#b71c1c')">{{s.hs.score}}</span>
+              <div style="width:30px;height:30px;position:relative;flex-shrink:0">
+                <svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)">
+                  <circle class="gauge-track" cx="15" cy="15" r="12" fill="none" stroke="#e6e6e6" stroke-width="3"></circle>
+                  <circle cx="15" cy="15" r="12" fill="none"
+                    :stroke="s.hs.level==='green'?'#2e7d32':s.hs.level==='yellow'?'#f57c00':'#c62828'"
+                    stroke-width="3" stroke-linecap="round"
+                    :stroke-dasharray="2*Math.PI*12"
+                    :stroke-dashoffset="2*Math.PI*12*(1-Math.min(s.hs.score||0,100)/100)"
+                    style="transition:stroke-dashoffset 1s cubic-bezier(.22,1,.36,1)"></circle>
+                </svg>
+                <div class="gauge-score-text" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.62rem;font-weight:800">{{s.hs.score}}</div>
+              </div>
             </div>
             <div v-if="siteLeaderboard.length>5" class="flex items-center gap-8" style="padding:6px 0">
               <span style="width:22px"></span>
@@ -2061,19 +2098,19 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="warranty-stats">
           <div class="warranty-stat-card">
             <div class="wsc-label">Jumlah Peralatan</div>
-            <div class="wsc-value">{{warrantyFiltered.length}}</div>
+            <div class="wsc-value">{{warrantyStatTotalCount}}</div>
           </div>
           <div class="warranty-stat-card active">
             <div class="wsc-label">🟢 Aktif</div>
-            <div class="wsc-value">{{warrantyFiltered.filter(w=>warrantyStatus(w)==='active').length}}</div>
+            <div class="wsc-value">{{warrantyStatActiveCount}}</div>
           </div>
           <div class="warranty-stat-card expiring">
             <div class="wsc-label">🟡 Hampir Tamat</div>
-            <div class="wsc-value">{{warrantyFiltered.filter(w=>warrantyStatus(w)==='expiring').length}}</div>
+            <div class="wsc-value">{{warrantyStatExpiringCount}}</div>
           </div>
           <div class="warranty-stat-card expired">
             <div class="wsc-label">🔴 Tamat Tempoh</div>
-            <div class="wsc-value">{{warrantyFiltered.filter(w=>warrantyStatus(w)==='expired').length}}</div>
+            <div class="wsc-value">{{warrantyStatExpiredCount}}</div>
           </div>
         </div>
 
@@ -2121,7 +2158,16 @@ details.form-control[open] summary::after{content:'▴'}
                     <td>{{w.serial||'-'}}</td>
                     <td style="font-size:.8rem">{{w.warrantyType||'-'}}</td>
                     <td style="font-size:.8rem">{{fmtDate(w.startDate)}} — {{fmtDate(w.endDate)}}</td>
-                    <td>
+                    <td style="display:flex;align-items:center;gap:6px">
+                      <svg width="18" height="18" viewBox="0 0 18 18" style="transform:rotate(-90deg);flex-shrink:0">
+                        <circle class="gauge-track" cx="9" cy="9" r="7" fill="none" stroke="#e6e6e6" stroke-width="2.5"></circle>
+                        <circle cx="9" cy="9" r="7" fill="none"
+                          :stroke="warrantyStatus(w)==='active'?'#2e7d32':warrantyStatus(w)==='expiring'?'#f57c00':'#c62828'"
+                          stroke-width="2.5" stroke-linecap="round"
+                          :stroke-dasharray="2*Math.PI*7"
+                          :stroke-dashoffset="2*Math.PI*7*(1-expiryRingPct(w)/100)"
+                          style="transition:stroke-dashoffset .6s ease"></circle>
+                      </svg>
                       <span :class="['expiry-badge', warrantyStatus(w)]">
                         <template v-if="warrantyStatus(w)==='expired'">🔴 Tamat</template>
                         <template v-else-if="warrantyStatus(w)==='expiring'">🟡 Hampir Tamat</template>
@@ -2247,7 +2293,16 @@ details.form-control[open] summary::after{content:'▴'}
                   <td style="font-size:.8rem">{{fmtDate(w.purchaseDate)}}</td>
                   <td style="font-size:.8rem">{{fmtDate(w.endDate)}}</td>
                   <td style="font-size:.8rem">{{w.cost ? Number(w.cost).toFixed(2) : '-'}}</td>
-                  <td>
+                  <td style="display:flex;align-items:center;gap:6px">
+                    <svg width="18" height="18" viewBox="0 0 18 18" style="transform:rotate(-90deg);flex-shrink:0">
+                      <circle class="gauge-track" cx="9" cy="9" r="7" fill="none" stroke="#e6e6e6" stroke-width="2.5"></circle>
+                      <circle cx="9" cy="9" r="7" fill="none"
+                        :stroke="virWarrantyStatus(w)==='active'?'#2e7d32':virWarrantyStatus(w)==='expiring'?'#f57c00':'#c62828'"
+                        stroke-width="2.5" stroke-linecap="round"
+                        :stroke-dasharray="2*Math.PI*7"
+                        :stroke-dashoffset="2*Math.PI*7*(1-expiryRingPct(w)/100)"
+                        style="transition:stroke-dashoffset .6s ease"></circle>
+                    </svg>
                     <span :class="['expiry-badge', virWarrantyStatus(w)]">
                       <template v-if="virWarrantyStatus(w)==='expired'">🔴 Tamat</template>
                       <template v-else-if="virWarrantyStatus(w)==='expiring'">🟡 Hampir Tamat</template>
@@ -3700,7 +3755,14 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== PM LIST ====== -->
-      <div v-if="page==='pm-list'" class="page-view">
+      <div v-if="page==='pm-list' && initialLoading" class="page-view skeleton-wrap">
+        <div class="card">
+          <div class="skel skel-line" style="width:35%;margin-bottom:14px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:16px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:8px" v-for="i in 6" :key="i"></div>
+        </div>
+      </div>
+      <div v-if="page==='pm-list' && !initialLoading" class="page-view">
         <div class="card">
           <div class="flex justify-between items-center mb-16">
             <div class="card-title" style="margin:0;border:none;padding:0">Semua Rekod</div>
@@ -4729,13 +4791,13 @@ details.form-control[open] summary::after{content:'▴'}
                principle as the disabled Edit button above — so this avatar
                isn't clickable for that row (plain div, no file input). -->
           <label v-if="u.role!=='superadmin'" style="cursor:pointer;flex-shrink:0" title="Klik untuk tukar gambar profil pengguna (wajib pilih gambar baharu — tidak boleh buang tanpa gantikan)">
-            <div class="user-avatar-sm">
+            <div class="user-avatar-sm" :class="'avatar-role-'+u.role">
               <img v-if="u.photoURL" :src="u.photoURL" alt="">
               <span v-else>{{u.name?.charAt(0)||u.username?.charAt(0)||'?'}}</span>
             </div>
             <input type="file" accept="image/*" style="display:none" @change="uploadPhoto($event, u.id)">
           </label>
-          <div v-else class="user-avatar-sm" style="flex-shrink:0" title="Superadmin tukar gambar sendiri di tab Profil Saya">
+          <div v-else class="user-avatar-sm" :class="'avatar-role-'+u.role" style="flex-shrink:0" title="Superadmin tukar gambar sendiri di tab Profil Saya">
             <img v-if="u.photoURL" :src="u.photoURL" alt="">
             <span v-else>{{u.name?.charAt(0)||u.username?.charAt(0)||'?'}}</span>
           </div>
@@ -5998,7 +6060,16 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== LAPORAN LANJUTAN ====== -->
-      <div v-if="page==='laporan-lanjutan' && canViewCredentials" class="page-view">
+      <div v-if="page==='laporan-lanjutan' && canViewCredentials && initialLoading" class="page-view skeleton-wrap">
+        <div class="tabs no-print" style="border-bottom:none">
+          <div class="skel" style="width:110px;height:30px;border-radius:6px;margin-right:8px" v-for="i in 6" :key="i"></div>
+        </div>
+        <div class="stat-grid" style="margin-bottom:24px">
+          <div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div>
+        </div>
+        <div class="card"><div class="skel skel-line" style="width:30%"></div><div class="skel skel-block" style="height:220px;margin-top:12px"></div></div>
+      </div>
+      <div v-if="page==='laporan-lanjutan' && canViewCredentials && !initialLoading" class="page-view">
         <div class="tabs no-print">
           <div class="tab" :class="{active:reportTab==='inventori'}" @click="reportTab='inventori'">📦 Inventori Peralatan</div>
           <div class="tab" :class="{active:reportTab==='sla'}" @click="reportTab='sla'">⏱ Trend Keterlambatan</div>
@@ -6326,7 +6397,7 @@ details.form-control[open] summary::after{content:'▴'}
             <p class="text-sm text-muted mb-12">Dikira dari tarikh rekod CM dibuka sehingga status ditukar ke "Selesai". Hanya rekod yang dah ditandakan selesai LEPAS ciri ini ditambah akan ada data (rekod lama tiada timestamp "selesai").</p>
             <div class="stat-grid" style="margin-bottom:16px">
               <div class="stat-card"><div class="num">{{resolutionTimeData.overallAvg??'—'}}</div><div class="lbl">Purata Hari (Keseluruhan)</div></div>
-              <div class="stat-card"><div class="num">{{resolutionTimeData.resolvedCount}}</div><div class="lbl">Rekod Dianalisis</div></div>
+              <div class="stat-card"><div class="num">{{resolutionResolvedCount}}</div><div class="lbl">Rekod Dianalisis</div></div>
             </div>
             <div class="chart-wrap" style="height:280px" v-if="resolutionTimeData.rows.length"><canvas id="chart-resolution"></canvas></div>
             <div class="tbl-wrap" style="margin-top:12px">
@@ -6558,12 +6629,12 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div v-if="customRangeStart && customRangeEnd && customRangeStart > customRangeEnd" style="color:#b71c1c;font-size:.82rem;margin-bottom:10px">⚠ Tarikh "Dari" mesti sebelum atau sama dengan "Hingga".</div>
             <div class="warranty-stats">
-              <div class="warranty-stat-card"><div class="wsc-label">Jumlah Rekod</div><div class="wsc-value" style="color:#003366">{{customRangeStats.total}}</div></div>
-              <div class="warranty-stat-card"><div class="wsc-label">PM</div><div class="wsc-value" style="color:#7A841A">{{customRangeStats.pm}}</div></div>
-              <div class="warranty-stat-card"><div class="wsc-label">CM</div><div class="wsc-value" style="color:#b71c1c">{{customRangeStats.cm}}</div></div>
-              <div class="warranty-stat-card"><div class="wsc-label">CCTV</div><div class="wsc-value" style="color:#005599">{{customRangeStats.cctv}}</div></div>
-              <div class="warranty-stat-card"><div class="wsc-label">VIR</div><div class="wsc-value" style="color:#7a2e00">{{customRangeStats.vir}}</div></div>
-              <div class="warranty-stat-card"><div class="wsc-label">Site Diliputi</div><div class="wsc-value" style="color:#4a148c">{{customRangeStats.siteCount}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">Jumlah Rekod</div><div class="wsc-value" style="color:#003366">{{customRangeCountTotal}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">PM</div><div class="wsc-value" style="color:#7A841A">{{customRangeCountPm}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">CM</div><div class="wsc-value" style="color:#b71c1c">{{customRangeCountCm}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">CCTV</div><div class="wsc-value" style="color:#005599">{{customRangeCountCctv}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">VIR</div><div class="wsc-value" style="color:#7a2e00">{{customRangeCountVir}}</div></div>
+              <div class="warranty-stat-card"><div class="wsc-label">Site Diliputi</div><div class="wsc-value" style="color:#4a148c">{{customRangeCountSites}}</div></div>
             </div>
             <div v-if="customRangeStats.siteRows.length" class="tbl-wrap" style="margin-top:14px">
               <table>
@@ -10150,6 +10221,21 @@ createApp({
       if(w.endDate <= _localDateStr(warn)) return 'expiring';
       return 'active';
     }
+    // Ring fill % for the mini countdown gauge next to warranty status
+    // badges — 100% while comfortably active (outside the reminder
+    // window), draining down to 0% as endDate approaches, empty once
+    // expired. Generic over any {endDate, reminderDays} shape, so it works
+    // for both CCTV (warrantyStatus) and VIR (virWarrantyStatus) records
+    // without duplicating this math per project.
+    function expiryRingPct(w) {
+      if(!w.endDate) return 100;
+      const today = _localDateStr();
+      if(w.endDate < today) return 0;
+      const windowDays = w.reminderDays || 60;
+      const daysLeft = Math.round((new Date(w.endDate) - new Date(today)) / 86400000);
+      if(daysLeft >= windowDays) return 100;
+      return Math.max(0, Math.round((daysLeft / windowDays) * 100));
+    }
     const warrantyExpiringCount = computed(() =>
       warranty.value.filter(w => warrantyStatus(w) !== 'active').length
     );
@@ -10157,6 +10243,12 @@ createApp({
       (!warrantyFilterVendor.value || w.vendor === warrantyFilterVendor.value) &&
       (!warrantyFilterStatus.value || warrantyStatus(w) === warrantyFilterStatus.value)
     ));
+    // Count-up animation for the 4 stat cards above the warranty table —
+    // same countUpFrom() composable the Dashboard/Laporan cards already use.
+    const warrantyStatTotalCount = countUpFrom(computed(() => warrantyFiltered.value.length));
+    const warrantyStatActiveCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyStatus(w)==='active').length));
+    const warrantyStatExpiringCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyStatus(w)==='expiring').length));
+    const warrantyStatExpiredCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyStatus(w)==='expired').length));
     // Nested Vendor > Site grouping — a site under the same vendor commonly
     // has many equipment items (e.g. 10 items all at "Kompleks SPRM Negeri
     // Pulau Pinang"), so flattening straight to one row per item repeated
@@ -18560,6 +18652,13 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const siteRows = Object.values(bySite).sort((a,b)=>(b.pm+b.cm)-(a.pm+a.cm));
       return { total: recs.length, pm, cm, cctv, vir, siteCount: siteRows.length, siteRows };
     });
+    // Count-up animation for the 6 "Tempoh Custom" stat cards.
+    const customRangeCountTotal = countUpFrom(computed(() => customRangeStats.value.total));
+    const customRangeCountPm = countUpFrom(computed(() => customRangeStats.value.pm));
+    const customRangeCountCm = countUpFrom(computed(() => customRangeStats.value.cm));
+    const customRangeCountCctv = countUpFrom(computed(() => customRangeStats.value.cctv));
+    const customRangeCountVir = countUpFrom(computed(() => customRangeStats.value.vir));
+    const customRangeCountSites = countUpFrom(computed(() => customRangeStats.value.siteCount));
     // Not maintType-scoped (a site row can carry both PM and CM within the
     // range) — jumps to that site's full PM List, same drill-down
     // affordance as the dashboard stat cards/charts above.
@@ -19039,6 +19138,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const overallAvg = allDays.length ? Math.round((allDays.reduce((a,b)=>a+b,0)/allDays.length)*10)/10 : null;
       return { rows, overallAvg, resolvedCount: resolved.length };
     });
+    // Count-up only for the integer "Rekod Dianalisis" card — NOT
+    // overallAvg, since countUpFrom() rounds to whole numbers mid-animation
+    // and would clobber overallAvg's 1-decimal precision (e.g. 3.5 days).
+    const resolutionResolvedCount = countUpFrom(computed(() => resolutionTimeData.value.resolvedCount));
     let _chartResolution = null;
     function _initResolutionChart() {
       if(_chartResolution) { _chartResolution.destroy(); _chartResolution = null; }
@@ -19384,6 +19487,19 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       }, { passive:true });
     }
 
+    // Floating "scroll to top" button — shows once the user has scrolled
+    // meaningfully down .main (same scrollable element PTR/page-transition
+    // above already target), fades out again near the top.
+    const showScrollTop = ref(false);
+    function setupScrollToTop() {
+      const el = document.querySelector('.main');
+      if(!el) return;
+      el.addEventListener('scroll', () => { showScrollTop.value = el.scrollTop > 400; }, { passive:true });
+    }
+    function scrollToTop() {
+      document.querySelector('.main')?.scrollTo({ top:0, behavior:'smooth' });
+    }
+
     // Login page cursor-follow spotlight — cheap CSS-var update, no-op once
     // .login-wrap is gone (post-login) since the element just won't be found.
     function setupLoginSpotlight() {
@@ -19481,7 +19597,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           // splash screen forever instead of at least reaching the app
           // (which has its own error toasts/retry paths for missing data).
           authChecking.value = false;
-          if(user) { updateSidebarIndicator(); nextTick(() => { updateTabIndicators(); setupPullToRefresh(); }); }
+          if(user) { updateSidebarIndicator(); nextTick(() => { updateTabIndicators(); setupPullToRefresh(); setupScrollToTop(); }); }
         }
       });
     });
@@ -19535,7 +19651,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       exportContractsExcel, exportContractsPdf,
       contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
       openAddContract, openEditContract, submitContract, deleteContract,
-      CCTV_WARRANTY_VENDORS, warranty, warrantyLoading, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors,
+      CCTV_WARRANTY_VENDORS, warranty, warrantyLoading, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors, expiryRingPct,
+      warrantyStatTotalCount, warrantyStatActiveCount, warrantyStatExpiringCount, warrantyStatExpiredCount,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCustomCategories,
@@ -19601,15 +19718,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
       slaTrend, printExecutiveSummary, printQuarterlyReport, failureByModel, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
       customRangeStart, customRangeEnd, customRangeSetPreset, customRangeStats, openCustomRangeSite,
+      customRangeCountTotal, customRangeCountPm, customRangeCountCm, customRangeCountCctv, customRangeCountVir, customRangeCountSites,
       siteCompareSelected, toggleSiteCompare, siteCompareRows, seasonalCmByMonth, heatmapSiteId, heatmapData, yoyStats,
-      yearTrendData, tindakanBreakdown, resolutionTimeData, rootCauseBreakdown, equipmentLifespan,
+      yearTrendData, tindakanBreakdown, resolutionTimeData, resolutionResolvedCount, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureFilterSite, failureFilterSiteOptions, failureReport, exportFailureReportExcel, exportFailureReportPdf,
       showRawFailureLog, failureLogRaw, deleteEquipmentRemovalLog, REMOVAL_REASON_LABEL,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
       kontraktorLuar, kontraktorLuarLoading, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
-      mobileNavOpen, sidebarIndicatorStyle, savedCheckmark, ptrState,
+      mobileNavOpen, sidebarIndicatorStyle, savedCheckmark, ptrState, showScrollTop, scrollToTop,
       darkMode,
       setTimeout
     };
