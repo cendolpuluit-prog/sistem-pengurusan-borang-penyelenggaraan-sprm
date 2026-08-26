@@ -33,6 +33,15 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
+/* CUSTOM SCROLLBAR — thin, brand-navy/green instead of the default OS
+   scrollbar, applied globally so every scroll area in the app (sidebar
+   nav, tables, modals, dropdown panels) picks it up consistently. */
+*{scrollbar-width:thin;scrollbar-color:#0056b3 transparent}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#0056b3,#006633);border-radius:8px;border:2px solid transparent;background-clip:padding-box}
+::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#003d82,#00542a);background-clip:padding-box}
+.dark-mode ::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#3a7bd5,#2a9d5c);background-clip:padding-box}
 @keyframes sidebarPulse{0%,100%{opacity:.4}50%{opacity:.7}}
 html,body{overflow-x:hidden;max-width:100%}
 /* Two soft corner "glows" (echoing .login-glow-l/.login-glow-r on the login
@@ -153,6 +162,21 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .laporan-chart-row{display:grid;gap:16px;margin-bottom:16px}
 .stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);transition:transform .15s,box-shadow .15s,background-color .3s ease,color .3s ease}
 .stat-card-clickable{cursor:pointer}
+/* STAGGERED CARD ENTRANCE — stat-card/zone-map-card/warranty-stat-card
+   fade+rise in one after another (instead of all snapping in at once) —
+   nth-child delays cover up to 8 items, more than any of these grids
+   actually render (stat-grid:4, warranty-stats:6, zone-map-grid:5 zones),
+   so this stays purely CSS with no JS/index-binding needed per card. */
+@keyframes cardStaggerIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.stat-card,.zone-map-card,.warranty-stat-card{animation:cardStaggerIn .35s ease both}
+.stat-card:nth-child(1),.zone-map-card:nth-child(1),.warranty-stat-card:nth-child(1){animation-delay:.02s}
+.stat-card:nth-child(2),.zone-map-card:nth-child(2),.warranty-stat-card:nth-child(2){animation-delay:.07s}
+.stat-card:nth-child(3),.zone-map-card:nth-child(3),.warranty-stat-card:nth-child(3){animation-delay:.12s}
+.stat-card:nth-child(4),.zone-map-card:nth-child(4),.warranty-stat-card:nth-child(4){animation-delay:.17s}
+.stat-card:nth-child(5),.zone-map-card:nth-child(5),.warranty-stat-card:nth-child(5){animation-delay:.22s}
+.stat-card:nth-child(6),.zone-map-card:nth-child(6),.warranty-stat-card:nth-child(6){animation-delay:.27s}
+.stat-card:nth-child(7),.zone-map-card:nth-child(7),.warranty-stat-card:nth-child(7){animation-delay:.32s}
+.stat-card:nth-child(8),.zone-map-card:nth-child(8),.warranty-stat-card:nth-child(8){animation-delay:.37s}
 .stat-card-clickable:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,40,100,.14)}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,40,100,.12)}
 .stat-card .num{font-size:2rem;font-weight:800;color:#003366;font-variant-numeric:tabular-nums}
@@ -189,6 +213,13 @@ tr:hover td{background:#f9fbff}
 .badge-green,.badge-red,.badge-blue,.badge-gray{transition:background-color .3s ease,color .3s ease}
 .badge-green{background:#e6f4ea;color:#1e7e34}
 .badge-red{background:#fdecea;color:#c62828}
+/* Reserved for genuinely urgent/actionable badges (PM overdue) — NOT
+   applied to every .badge-red, since that class is also used for plain
+   informational states (e.g. CM status "Terbuka") where a constant pulse
+   would just be visual noise instead of drawing attention to something
+   that actually needs action. */
+@keyframes badgeOverduePulse{0%,100%{box-shadow:0 0 0 0 rgba(198,40,40,.35)}50%{box-shadow:0 0 0 5px rgba(198,40,40,0)}}
+.badge-overdue-pulse{animation:badgeOverduePulse 1.8s ease-in-out infinite}
 .badge-blue{background:#e3f0ff;color:#0056b3}
 .badge-gray{background:#f0f0f0;color:#555}
 
@@ -1086,7 +1117,7 @@ details.form-control[open] summary::after{content:'▴'}
 
 <!-- TOAST -->
 <div class="toast-stack" aria-live="polite" role="status">
-  <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]">{{t.msg}}</div>
+  <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]"><span aria-hidden="true">{{t.type==='error'?'❌':'✅'}}</span> {{t.msg}}</div>
 </div>
 
 <!-- SESSION TIMEOUT WARNING -->
@@ -1773,7 +1804,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="flex gap-8" style="margin-top:8px;font-size:.72rem;justify-content:center;flex-wrap:wrap">
                 <span class="badge badge-blue zone-map-badge-link" title="Lihat site CCTV zon ini" aria-label="Lihat site CCTV zon ini" @click="openSites('cctv')">{{zoneSiteCounts[zoneKey]?.cctv||0}} CCTV</span>
                 <span class="badge badge-gray zone-map-badge-link" style="background:#fff3e0;color:#7a2e00" title="Lihat site VIR zon ini" aria-label="Lihat site VIR zon ini" @click="openSites('vir')">{{zoneSiteCounts[zoneKey]?.vir||0}} VIR</span>
-                <span v-if="zoneOverdueCounts[zoneKey]?.overdue" class="badge badge-red">⚠ {{zoneOverdueCounts[zoneKey].overdue}} Overdue</span>
+                <span v-if="zoneOverdueCounts[zoneKey]?.overdue" class="badge badge-red badge-overdue-pulse">⚠ {{zoneOverdueCounts[zoneKey].overdue}} Overdue</span>
               </div>
             </div>
           </div>
@@ -2337,7 +2368,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="(s,i) in SITES" :key="s.id">
                   <td>{{i+1}}</td>
-                  <td>{{s.name}} <span v-if="overdueMap[s.id]" class="badge badge-red" style="font-size:.7rem">⚠ Overdue</span></td>
+                  <td>{{s.name}} <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
                   <td>{{(siteEquip[s.id]?.cameras||[]).length}} unit</td>
                   <td>{{(siteEquip[s.id]?.nvr||[]).length}} unit</td>
@@ -2359,7 +2390,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="(s,i) in VIR_SITES" :key="s.id">
                   <td>{{i+1}}</td>
-                  <td>{{s.name}} <span v-if="overdueMap[s.id]" class="badge badge-red" style="font-size:.7rem">⚠ Overdue</span></td>
+                  <td>{{s.name}} <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
                   <td class="flex gap-8">
                     <button class="btn btn-sm btn-outline" @click="openSiteEquip(s,'rooms')" title="Urus senarai bilik & tag sistem">🚪 Bilik &amp; Sistem</button>
