@@ -5721,33 +5721,38 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
         </div>
 
-        <div class="flex gap-8" style="margin-bottom:16px">
+        <div class="flex gap-8" style="margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn btn-sm" :style="kontraktorLuarProject==='all' ? 'background:#4a148c;color:#fff' : ''" :class="kontraktorLuarProject!=='all' ? 'btn-outline' : ''" @click="kontraktorLuarProject='all'">🔀 Semua</button>
           <button class="btn btn-sm" :style="kontraktorLuarProject==='cctv' ? 'background:#005599;color:#fff' : ''" :class="kontraktorLuarProject!=='cctv' ? 'btn-outline' : ''" @click="kontraktorLuarProject='cctv'">📹 Sistem CCTV</button>
           <button class="btn btn-sm" :style="kontraktorLuarProject==='vir' ? 'background:#7a2e00;color:#fff' : ''" :class="kontraktorLuarProject!=='vir' ? 'btn-outline' : ''" @click="kontraktorLuarProject='vir'">🖥️ Sistem VIR</button>
+          <span v-if="kontraktorLuarProject==='all'" class="text-sm text-muted" style="align-self:center;margin-left:4px">💡 Tapisan CCTV/VIR berguna bila senarai jadi panjang</span>
         </div>
 
         <div class="card">
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th style="width:40px">#</th><th>Nama Kontraktor/Kedai</th><th>Skop Kerja/Barang Dijual</th><th>Area Service</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
+              <thead><tr><th style="width:40px">#</th><th v-if="kontraktorLuarProject==='all'" style="width:70px">Sistem</th><th>Nama Kontraktor/Kedai</th><th>Skop Kerja/Barang Dijual</th><th>Area Service</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
               <tbody>
                 <tr v-for="(c,i) in kontraktorLuarPagedList" :key="c.id">
                   <td style="text-align:center;color:#888;font-size:.8rem">{{(kontraktorLuarPage-1)*20+i+1}}</td>
+                  <td v-if="kontraktorLuarProject==='all'">
+                    <span class="badge" :style="c._kProj==='vir' ? 'background:#fff0e0;color:#7a2e00' : 'background:#e3f0ff;color:#005599'">{{c._kProj==='vir'?'VIR':'CCTV'}}</span>
+                  </td>
                   <td style="font-weight:600;color:#002244">{{c.name}}</td>
                   <td>{{c.bidangKerja}}</td>
                   <td>{{c.areaService}}</td>
                   <td><a v-if="c.phone" :href="'tel:'+c.phone" style="color:#005599;text-decoration:none;font-weight:600">📱 {{c.phone}}</a></td>
                   <td v-if="canEditKontraktor" class="flex gap-8" style="justify-content:center">
                     <button class="btn btn-outline btn-sm btn-icon" @click="openKModal(c)" title="Edit">✏️</button>
-                    <button :disabled="loading" class="btn btn-danger btn-sm btn-icon" @click="deleteKontraktor(c.id)" title="Padam">🗑</button>
+                    <button :disabled="loading" class="btn btn-danger btn-sm btn-icon" @click="deleteKontraktor(c.id, c._kProj)" title="Padam">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="kontraktorLuarLoading"><td :colspan="canEditKontraktor?6:5" style="padding:14px 20px">
+                <tr v-if="kontraktorLuarLoading"><td :colspan="(kontraktorLuarProject==='all'?1:0)+(canEditKontraktor?6:5)" style="padding:14px 20px">
                   <div class="skel skel-line" style="width:95%"></div>
                   <div class="skel skel-line" style="width:80%"></div>
                   <div class="skel skel-line" style="width:88%;margin-bottom:0"></div>
                 </td></tr>
-                <tr v-else-if="!kontraktorLuarList.length"><td :colspan="canEditKontraktor?6:5" style="text-align:center;color:#bbb;font-style:italic;padding:20px">Tiada kontraktor lagi. Tambah di atas.</td></tr>
+                <tr v-else-if="!kontraktorLuarList.length"><td :colspan="(kontraktorLuarProject==='all'?1:0)+(canEditKontraktor?6:5)" style="text-align:center;color:#bbb;font-style:italic;padding:20px">Tiada kontraktor lagi. Tambah di atas.</td></tr>
               </tbody>
             </table>
           </div>
@@ -5765,7 +5770,13 @@ details.form-control[open] summary::after{content:'▴'}
       <!-- Kontraktor Luar add/edit modal -->
       <div v-if="kModal.show" class="modal-bg" @click.self="kModal.show=false">
         <div class="modal">
-          <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor/Kedai — {{kontraktorLuarProject==='vir'?'VIR':'CCTV'}}</h3>
+          <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor/Kedai{{kModal.editId ? ' — '+(kModal.proj==='vir'?'VIR':'CCTV') : ''}}</h3>
+          <div v-if="!kModal.editId" class="form-group"><label>Sistem</label>
+            <select class="form-control" v-model="kModal.proj">
+              <option value="cctv">📹 Sistem CCTV</option>
+              <option value="vir">🖥️ Sistem VIR</option>
+            </select>
+          </div>
           <div class="form-group"><label>Nama Kontraktor/Kedai</label><input class="form-control" v-model="kModal.name" placeholder="cth: ABC Aircond Services"></div>
           <div class="form-group"><label>Skop Kerja/Barang Dijual</label><input class="form-control" v-model="kModal.bidangKerja" placeholder="cth: Servis & Baiki Aircond"></div>
           <div class="form-group"><label>Area Service — Negeri <button type="button" class="btn btn-outline btn-sm btn-icon" style="padding:1px 6px;font-size:.72rem;vertical-align:middle" @click="showInfo('kontraktorArea')" title="Tentang Area Service">ℹ️</button></label>
@@ -8743,15 +8754,16 @@ createApp({
         {date:'2026-01-01', name:'Tahun Baru'},
         {date:'2026-02-17', name:'Tahun Baru Cina (Hari Pertama)'},
         {date:'2026-02-18', name:'Tahun Baru Cina (Hari Kedua)'},
-        {date:'2026-03-17', name:'Nuzul Al-Quran'},
-        {date:'2026-03-20', name:'Hari Raya Aidilfitri (Hari Pertama)'},
-        {date:'2026-03-21', name:'Hari Raya Aidilfitri (Hari Kedua)'},
+        {date:'2026-03-07', name:'Nuzul Al-Quran'},
+        {date:'2026-03-21', name:'Hari Raya Aidilfitri (Hari Pertama)'},
+        {date:'2026-03-22', name:'Hari Raya Aidilfitri (Hari Kedua)'},
+        {date:'2026-03-23', name:'Cuti Tambahan Hari Raya Aidilfitri'},
         {date:'2026-05-01', name:'Hari Pekerja'},
         {date:'2026-05-27', name:'Hari Raya Aidiladha'},
         {date:'2026-05-31', name:'Hari Wesak'},
         {date:'2026-06-01', name:'Hari Keputeraan YDPA'},
-        {date:'2026-06-16', name:'Awal Muharram'},
-        {date:'2026-08-26', name:'Maulidur Rasul'},
+        {date:'2026-06-17', name:'Awal Muharram'},
+        {date:'2026-08-25', name:'Maulidur Rasul'},
         {date:'2026-08-31', name:'Hari Kebangsaan'},
         {date:'2026-09-16', name:'Hari Malaysia'},
         {date:'2026-11-09', name:'Deepavali'},
@@ -14618,14 +14630,30 @@ createApp({
     );
     const kontraktorLuar = ref({ cctv:[], vir:[] });
     const kontraktorLuarLoading = ref(false);
-    const kontraktorLuarProject = ref('cctv'); // internal CCTV/VIR toggle within the one shared page
+    // 'all' | 'cctv' | 'vir' — defaults to the combined view since the
+    // CCTV/VIR split is only actually useful once the list gets long
+    // (per-project filtering is a convenience for narrowing a long list,
+    // not the primary way most users want to browse it).
+    const kontraktorLuarProject = ref('all');
     // Paginated view — same fix as Log Audit/Rekod Borang above, in case this
     // list grows long over time. 20 rows per page, reset to page 1 whenever
     // the CCTV/VIR toggle changes.
     const KONTRAKTOR_LUAR_PAGE_SIZE = 20;
     const kontraktorLuarPage = ref(1);
     watch(kontraktorLuarProject, () => { kontraktorLuarPage.value = 1; });
-    const kontraktorLuarList = computed(() => kontraktorLuar.value[kontraktorLuarProject.value] || []);
+    // Combined view tags each record with its own origin (_kProj) — needed
+    // so the table can show a CCTV/VIR badge per row, and so Edit/Delete on
+    // a row still target the record's real project (see openKModal/
+    // deleteKontraktor above), not whatever tab happens to be active.
+    const kontraktorLuarList = computed(() => {
+      if(kontraktorLuarProject.value === 'all') {
+        return [
+          ...(kontraktorLuar.value.cctv||[]).map(c => ({ ...c, _kProj:'cctv' })),
+          ...(kontraktorLuar.value.vir||[]).map(c => ({ ...c, _kProj:'vir' })),
+        ];
+      }
+      return kontraktorLuar.value[kontraktorLuarProject.value] || [];
+    });
     const kontraktorLuarTotalPages = computed(() => Math.max(1, Math.ceil(kontraktorLuarList.value.length / KONTRAKTOR_LUAR_PAGE_SIZE)));
     const kontraktorLuarPagedList = computed(() => {
       const start = (kontraktorLuarPage.value - 1) * KONTRAKTOR_LUAR_PAGE_SIZE;
@@ -14818,7 +14846,7 @@ createApp({
         'Mukah': ['Mukah', 'Dalat', 'Balingian', 'Oya', 'Matu', 'Daro'],
       },
     };
-    const kModal = reactive({ show:false, editId:null, name:'', bidangKerja:'', negeri:'', kawasan:'', subKawasan:'', phone:'', err:'' });
+    const kModal = reactive({ show:false, editId:null, proj:'cctv', name:'', bidangKerja:'', negeri:'', kawasan:'', subKawasan:'', phone:'', err:'' });
     const kModalKawasanOptions = computed(() => MALAYSIA_KAWASAN[kModal.negeri] || []);
     const kModalSubKawasanOptions = computed(() => (MALAYSIA_SUBKAWASAN[kModal.negeri] || {})[kModal.kawasan] || []);
     // Guard so openKModal() can populate negeri/kawasan/subKawasan together
@@ -14848,6 +14876,15 @@ createApp({
     function openKModal(existing) {
       kModal.err = '';
       _kModalLoading = true;
+      // Remember which project (CCTV/VIR) this specific record actually
+      // belongs to — separate from kontraktorLuarProject (the currently
+      // VIEWED tab), since a record opened from the combined "Semua" view
+      // carries its own origin (_kProj) that must stay correct regardless
+      // of which tab happens to be active when Simpan is clicked. For a
+      // NEW record added while viewing "Semua" (no active tab to infer
+      // from), default to 'cctv' — the modal shows an explicit Sistem
+      // dropdown in that case so the user picks the real target anyway.
+      kModal.proj = existing?._kProj || (kontraktorLuarProject.value === 'all' ? 'cctv' : kontraktorLuarProject.value);
       if(existing) {
         kModal.editId = existing.id;
         kModal.name = existing.name;
@@ -14888,7 +14925,7 @@ createApp({
       kModal.err = '';
       if(!kModal.name.trim()) { kModal.err = 'Sila masukkan nama kontraktor.'; return; }
       if(!isValidPhone(kModal.phone)) { kModal.err = 'Format no. telefon tidak sah.'; return; }
-      const proj = kontraktorLuarProject.value;
+      const proj = kModal.proj;
       const list = [...(kontraktorLuar.value[proj] || [])];
       const areaParts = [kModal.subKawasan, kModal.kawasan, kModal.negeri].filter(Boolean);
       const areaService = areaParts.join(', ');
@@ -14904,10 +14941,13 @@ createApp({
       } catch(e) { kModal.err = 'Gagal simpan: ' + e.message; }
     }
 
-    async function deleteKontraktor(id) {
+    async function deleteKontraktor(id, itemProj) {
       if(!canEditKontraktor.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!confirm('Padam kontraktor ini?')) return;
-      const proj = kontraktorLuarProject.value;
+      // itemProj comes from the row's own tag (_kProj) when deleting from
+      // the combined "Semua" view — falls back to the active tab otherwise,
+      // same reasoning as openKModal()/kModal.proj above.
+      const proj = itemProj || kontraktorLuarProject.value;
       const list = (kontraktorLuar.value[proj] || []).filter(c => c.id !== id);
       try {
         await _fw(db.collection('kontraktorLuar').doc(proj).set({ list }, { merge: false }));
@@ -14922,15 +14962,19 @@ createApp({
     // exports.
     async function exportKontraktorPdf() {
       const proj = kontraktorLuarProject.value;
-      const projLabel = proj === 'vir' ? 'VIR' : 'CCTV';
-      const list = kontraktorLuar.value[proj] || [];
+      const projLabel = proj === 'vir' ? 'VIR' : proj === 'cctv' ? 'CCTV' : 'CCTV & VIR';
+      // kontraktorLuarList already returns the combined, _kProj-tagged list
+      // when proj==='all' — reuse it instead of re-deriving here.
+      const list = kontraktorLuarList.value;
+      const sysCol = proj === 'all' ? '<th style="width:10%">Sistem</th>' : '';
       const rows = list.length ? list.map((c,i) => `<tr>
           <td style="text-align:center">${i+1}</td>
+          ${proj === 'all' ? `<td>${c._kProj==='vir'?'VIR':'CCTV'}</td>` : ''}
           <td>${esc(c.name)}</td>
           <td>${esc(c.bidangKerja)}</td>
           <td>${esc(c.areaService)}</td>
           <td>${esc(c.phone)}</td>
-        </tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:#888;padding:12px">Tiada kontraktor direkodkan.</td></tr>';
+        </tr>`).join('') : `<tr><td colspan="${proj==='all'?6:5}" style="text-align:center;color:#888;padding:12px">Tiada kontraktor direkodkan.</td></tr>`;
 
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8">
         <title>Senarai Kontraktor/Supplier Luar ${projLabel}</title>
@@ -14958,7 +15002,7 @@ createApp({
           <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
         </div>
         <table><thead><tr>
-          <th style="width:6%">#</th><th style="width:26%">Nama Kontraktor/Kedai</th><th style="width:26%">Skop Kerja/Barang Dijual</th><th style="width:26%">Area Service</th><th style="width:16%">No. Telefon</th>
+          <th style="width:6%">#</th>${sysCol}<th style="width:${proj==='all'?24:26}%">Nama Kontraktor/Kedai</th><th style="width:${proj==='all'?24:26}%">Skop Kerja/Barang Dijual</th><th style="width:${proj==='all'?22:26}%">Area Service</th><th style="width:14%">No. Telefon</th>
         </tr></thead><tbody>${rows}</tbody></table>
         <div class="footer"><span>Sistem Pengurusan Borang PM — SPRM</span><span>Senarai Kontraktor/Supplier Luar ${projLabel}</span></div>
       </body></html>`;
