@@ -642,6 +642,20 @@ details.form-control[open] summary::after{content:'▴'}
 
 /* TEAM BADGES */
 .team-pill{border-radius:4px;padding:2px 5px;font-size:.68rem;margin-bottom:2px;line-height:1.35;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Project badge on each team-pill — the team-* colors above only say WHO
+   (which team), this says WHAT (CCTV/VIR/both), fixing the calendar's
+   previous "Team A shown twice with no way to tell CCTV from VIR apart"
+   gap. Same 2 colors the (until now unused-here) .ev-cctv/.ev-vir legend
+   already promised. */
+.team-pill-proj{flex-shrink:0;font-size:.55rem;font-weight:800;letter-spacing:.02em;padding:0 4px;border-radius:3px;color:#fff}
+.team-pill-proj.proj-cctv{background:#185FA5}
+.team-pill-proj.proj-vir{background:#BA7517}
+.team-pill-proj.proj-both{background:linear-gradient(90deg,#185FA5 50%,#BA7517 50%)}
+/* "×N" hint when a team has multiple DIFFERENT-premise stops the same day
+   (not merged like .team-pill-proj's same-premise case — these really are
+   separate visits) — color:inherit so it matches whichever .team-* text
+   color the pill already has, works regardless of light/dark mode. */
+.team-pill-multi{flex-shrink:0;font-size:.6rem;font-weight:800;padding:0 3px;border-radius:3px;background:rgba(0,0,0,.1);color:inherit}
 .team-A{background:#fde8e8;color:#b71c1c;border-left:3px solid #e53935}
 .team-B{background:#e8f0fe;color:#1a237e;border-left:3px solid #3949ab}
 .team-C{background:#e8f5e9;color:#1b5e20;border-left:3px solid #43a047}
@@ -1842,14 +1856,17 @@ details.form-control[open] summary::after{content:'▴'}
                  below the map — mapPopupPos is set from the pin's centroid
                  in mapPinClick(). -->
             <div v-if="mapDetailState" class="map-pin-popup"
-              :style="'position:absolute;left:'+mapPopupPos.left+';top:'+mapPopupPos.top+';transform:translate(-50%,-100%);margin-top:-12px;background:#fff;border:1px solid #dfe6ef;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.18);padding:10px 12px;min-width:190px;max-width:260px;z-index:50'">
+              :style="'position:absolute;left:'+mapPopupPos.left+';top:'+mapPopupPos.top+';transform:'+(mapPopupAlign==='left'?'translate(0,-100%)':mapPopupAlign==='right'?'translate(-100%,-100%)':'translate(-50%,-100%)')+';margin-top:-12px;background:#fff;border:1px solid #dfe6ef;border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.18);padding:10px 12px;min-width:190px;max-width:260px;z-index:50'">
               <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px">
                 <span style="font-weight:700;color:#003366;font-size:.85rem">{{mapDetailState}}</span>
                 <button aria-label="Tutup" @click="mapDetailState=null" style="border:none;background:none;cursor:pointer;font-size:.9rem;color:#888;line-height:1;padding:0">✕</button>
               </div>
               <template v-if="mapDetailList">
                 <div v-for="(a,i) in mapDetailList" :key="i" :style="i>0?'margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0':''">
-                  <div style="font-size:.8rem;font-weight:600;color:#222">{{a.siteName}}</div>
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:.8rem;font-weight:600;color:#222">{{a.siteName}}</span>
+                    <span v-if="_projShortLabel(a.project)" :class="['team-pill-proj', _projShortLabel(a.project)==='VIR'?'proj-vir':'proj-cctv']">{{_projShortLabel(a.project)}}</span>
+                  </div>
                   <div style="font-size:.7rem;color:#999;margin-bottom:5px">{{a.team}}</div>
                   <div style="display:flex;gap:6px;flex-wrap:wrap">
                     <div v-for="m in a.membersList" :key="m.uid" style="display:flex;align-items:center;gap:5px;background:#f4f7fb;border-radius:12px;padding:2px 8px 2px 2px">
@@ -4439,12 +4456,15 @@ details.form-control[open] summary::after{content:'▴'}
                   <template v-if="!isPublicHoliday(calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(cell).padStart(2,'0'))&&isSchoolHoliday(calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(cell).padStart(2,'0'))">
                     <div class="holiday-chip h-school" title="Cuti Sekolah">🟠 Cuti Sekolah</div>
                   </template>
-                  <template v-for="t in teamsForDay(cell)" :key="'t'+t.id">
-                    <div :class="['team-pill','team-'+t.team]" @click.stop="canEditSchedule?openEditTeam(t):null"
-                      :title="'Team '+t.team+': '+t.members.map(m=>m.name).join(', ')+(rotationDueMembers(t).length?' | ⚠ Perlu rotasi: '+rotationDueMembers(t).join(', '):'')">
-                      <span :class="['team-badge','badge-'+t.team]">{{t.team}}</span>
-                      {{shortSite(t.siteName)}}
-                      <span v-if="rotationDueMembers(t).length" style="margin-left:3px;font-size:.65rem" title="Ada staff perlu rotasi">⚠</span>
+                  <template v-for="g in teamsForDayGrouped(cell)" :key="'g'+g.entries.map(e=>e.id).join('-')">
+                    <div :class="['team-pill','team-'+g.team]"
+                      @click.stop="canEditSchedule?(g.entries.length>1?openDayDetail(dateStr(cell)):openEditTeam(g.entries[0])):null"
+                      :title="'Team '+g.team+': '+g.entries[0].members.map(m=>m.name).join(', ')+(rotationDueMembers(g.entries[0]).length?' | ⚠ Perlu rotasi: '+rotationDueMembers(g.entries[0]).join(', '):'')+(g.entries.length>1?' | '+g.entries.length+' penugasan (klik untuk lihat semua)':'')+(g.stopCount>1?' | Team '+g.team+' ada '+g.stopCount+' lawatan berlainan site hari ini':'')">
+                      <span :class="['team-badge','badge-'+g.team]">{{g.team}}</span>
+                      {{shortSite(g.siteName)}}
+                      <span v-if="g.projLabel" :class="['team-pill-proj', g.projLabel==='CCTV+VIR'?'proj-both':(g.projLabel==='VIR'?'proj-vir':'proj-cctv')]">{{g.projLabel}}</span>
+                      <span v-if="g.stopCount>1" class="team-pill-multi">×{{g.stopCount}}</span>
+                      <span v-if="rotationDueMembers(g.entries[0]).length" style="margin-left:3px;font-size:.65rem" title="Ada staff perlu rotasi">⚠</span>
                     </div>
                   </template>
                   <button v-if="canEditSchedule" class="cal-add-btn" @click.stop="openAddTeam(dateStr(cell))" title="Tambah penugasan">+</button>
@@ -8933,11 +8953,32 @@ createApp({
     // any container width — matches the SVG's 560x340 viewBox, which scales
     // responsively via width:100%/height:auto.
     const mapPopupPos = reactive({ left: '50%', top: '50%' });
+    // Horizontal alignment strategy for the popup relative to its anchor —
+    // 'center' (default) horizontally centers it on the pin, matching the
+    // old fixed transform:translate(-50%,...). Pins near the map's left/
+    // right edge (Perlis/Kedah/Penang sit right against the sidebar) need
+    // 'left'/'right' instead, or half the popup's ~260px width overflows
+    // past the map container and can render under/behind the sidebar —
+    // worse at higher browser zoom, since the map container's actual pixel
+    // width shrinks while the popup's width stays fixed. Computed from the
+    // real container width via mapContainerEl (not just the pin's raw SVG
+    // coordinate) so it's correct at any zoom level/container size.
+    const mapPopupAlign = ref('center');
     function mapPinClick(stateName, cx, cy) {
       mapDetailState.value = stateName;
       if (cx != null && cy != null) {
         mapPopupPos.left = (cx / 560 * 100) + '%';
         mapPopupPos.top = (cy / 340 * 100) + '%';
+        nextTick(() => {
+          const container = mapContainerEl.value;
+          if(!container) { mapPopupAlign.value = 'center'; return; }
+          const containerWidth = container.getBoundingClientRect().width;
+          const anchorPx = containerWidth * (cx / 560);
+          const halfPopup = 140; // ~half of the popup's max-width:260px, plus a small buffer
+          if(anchorPx < halfPopup) mapPopupAlign.value = 'left';
+          else if(containerWidth - anchorPx < halfPopup) mapPopupAlign.value = 'right';
+          else mapPopupAlign.value = 'center';
+        });
       }
     }
 
@@ -9255,6 +9296,53 @@ createApp({
       // cell. Feeds both the on-screen calendar and the printed PDF grid
       // (printJadual), since both call this same function.
       return teamAssignments.value.filter(t => t.date === dateStr).sort((a,b) => a.team.localeCompare(b.team));
+    }
+
+    // SITES and VIR_SITES share a `code` per physical premise (e.g. both
+    // Pulau Pinang entries — one CCTV, one VIR — use code:'PNG') — that's
+    // the link used to detect "same team, same day, same premise, just a
+    // separate CCTV/VIR assignment record" instead of treating them as two
+    // unrelated visits. Returns null for NON_SPRM_PROJECTS (DOSM/etc — no
+    // shared SITES/VIR_SITES entry to match against, so those just never
+    // group, same as today).
+    function _teamAssignmentSiteCode(t) {
+      if(t.project === 'SPRM - VIR') return VIR_SITES.find(s => s.id === t.siteId)?.code || null;
+      if(t.project === 'SPRM - CCTV') return SITES.find(s => s.id === t.siteId)?.code || null;
+      return null;
+    }
+    function _projShortLabel(project) {
+      return project === 'SPRM - VIR' ? 'VIR' : project === 'SPRM - CCTV' ? 'CCTV' : '';
+    }
+    // Same list as teamsForDay(), but assignments for the same team+premise
+    // (matched via the shared `code` above) are folded into one group —
+    // this is what actually fixes "Team A muncul 2x tanpa dibezakan" on the
+    // calendar: it's still 2 real Firestore docs (CCTV + VIR each need
+    // their own PM-quota/rotation tracking), just shown as one pill.
+    function teamsForDayGrouped(day) {
+      const raw = teamsForDay(day);
+      const groups = [];
+      const seen = new Map();
+      raw.forEach(t => {
+        const code = _teamAssignmentSiteCode(t);
+        const key = code ? (t.team + '|' + code) : null;
+        if(key && seen.has(key)) { groups[seen.get(key)].entries.push(t); return; }
+        const idx = groups.length;
+        groups.push({ team: t.team, siteName: t.siteName, entries: [t] });
+        if(key) seen.set(key, idx);
+      });
+      const withLabels = groups.map(g => {
+        const projLabel = [...new Set(g.entries.map(e => _projShortLabel(e.project)))].filter(Boolean).join('+');
+        return { ...g, projLabel };
+      });
+      // How many DISTINCT stops (groups, not raw docs) this team has today —
+      // e.g. Team A at SPRM P.Pinang (CCTV) AND DOSM Seberang Perai, same
+      // day: genuinely 2 different premises, so they stay as 2 separate
+      // pills (not merged like the same-premise case above) — this just
+      // adds a small "×2" hint on both so the workload is visible at a
+      // glance, without implying they're duplicates of each other.
+      const stopCounts = {};
+      withLabels.forEach(g => { stopCounts[g.team] = (stopCounts[g.team]||0) + 1; });
+      return withLabels.map(g => ({ ...g, stopCount: stopCounts[g.team] }));
     }
 
     // computed (not a plain function) so repeated template reads in the
@@ -11920,9 +12008,17 @@ createApp({
       if(!confirm(`Restore data peralatan untuk "${site?.name}" SAHAJA dari fail backup ini?\n\nSite lain langsung tidak disentuh. Data semasa site ini akan digantikan.`)) return;
       loading.value = true;
       try {
-        // Checkpoint current state first — same safety-net pattern as the
-        // full Restore above, in case the wrong site/file was picked.
-        await doAutoBackup();
+        // Deliberately NOT calling doAutoBackup() here (unlike the full
+        // Restore above) — that checkpoint serializes EVERY site + all
+        // pmRecords into one Firestore document capped at ~880KB, and this
+        // project's data now regularly exceeds that, so the checkpoint
+        // fails every time and only produces a confusing "backup gagal —
+        // saiz terlalu besar" toast without actually blocking anything
+        // (doAutoBackup() fails soft, not by throwing). Skipping it outright
+        // is more honest than showing an alarming error for a checkpoint
+        // that can't succeed — and the blast radius here is inherently
+        // smaller than the full Restore anyway (one site, not everything),
+        // so the safety net matters less to begin with.
         if(isVir) {
           const EQUIP_SHAPE_VIR = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
           const rooms = singleSiteRestore.data.virSiteEquip?.[id]?.rooms || [];
@@ -15460,7 +15556,14 @@ createApp({
       contracts: loadContracts, 'audit-log': loadAuditLogs,
       'contact-person': loadContactPersons,
       profile: initProfile, 'kontraktor-luar': loadKontraktorLuar,
-      trash: loadTrash,
+      // openTrash() (not loadTrash alone) — it Promise.all's all 5 trash
+      // sources (pmRecords/contracts/warranty CCTV+VIR/suratMemo); using
+      // just loadTrash() here left 4 of those 5 lists stuck empty after a
+      // browser refresh on this page (same "loader missing from this map"
+      // bug class as the profile/kontraktor-luar fix earlier), which for a
+      // Tong Sampah page specifically risks a superadmin seeing "kosong"
+      // and assuming nothing needs recovering when it actually does.
+      trash: openTrash,
     };
     const LAST_PAGE_KEY = 'pmapp_lastPage';
     watch([page, currentProject, selSite], () => {
@@ -19865,8 +19968,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
-      teamAssignments, teamModal, allStaff, teamsForDay, teamsForMonth,
-      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos, mapLoading, mapNearestUpcomingDate, mapTodayRawCount, mapUnmappedToday,
+      teamAssignments, teamModal, allStaff, teamsForDay, teamsForDayGrouped, _projShortLabel, teamsForMonth,
+      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos, mapPopupAlign, mapLoading, mapNearestUpcomingDate, mapTodayRawCount, mapUnmappedToday,
       timelapseModal, timelapseMapEl, timelapseYearOptions, timelapseMonthCount, timelapseYearVisitedSites, timelapseYearTotalSites, openTimelapse, closeTimelapse, timelapseTogglePlay,
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
