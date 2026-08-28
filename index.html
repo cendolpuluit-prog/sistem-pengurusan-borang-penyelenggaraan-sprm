@@ -86,7 +86,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .login-btn-main:hover:not(:disabled){background:linear-gradient(135deg,#008040,#005c30);box-shadow:0 6px 22px rgba(0,180,80,.45);transform:translateY(-1px)}
 .login-btn-main:disabled{opacity:.7;cursor:not-allowed}
 @keyframes spin{to{transform:rotate(360deg)}}
-.login-spin{animation:spin .7s linear infinite;display:inline-block}
+.login-spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#7A841A;border-radius:50%;display:inline-block;animation:spin .7s linear infinite}
 .pw-wrap{position:relative}
 .pw-wrap .login-input{padding-right:44px}
 .pw-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#3a5040;padding:2px;line-height:1;transition:.15s}
@@ -156,11 +156,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 
 /* CARDS */
 .card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s,transform .2s,background-color .3s ease,border-color .3s ease,color .3s ease}
-.card:hover{box-shadow:0 10px 32px rgba(0,40,100,.12);transform:translateY(-1px)}
 .card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px;padding-left:10px;border-left:3px solid #003366;position:relative}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
 .laporan-chart-row{display:grid;gap:16px;margin-bottom:16px}
-.stat-card{background:#fff;border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);transition:transform .15s,box-shadow .15s,background-color .3s ease,color .3s ease}
+.stat-card{background:linear-gradient(160deg,rgba(255,255,255,.98),rgba(244,248,255,.9));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s,background-color .3s ease,color .3s ease}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#003366,#7A841A);opacity:.7}
 .stat-card-clickable{cursor:pointer}
 /* STAGGERED CARD ENTRANCE — stat-card/zone-map-card/warranty-stat-card
    fade+rise in one after another (instead of all snapping in at once) —
@@ -182,18 +182,6 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .stat-card .num{font-size:2rem;font-weight:800;color:#003366;font-variant-numeric:tabular-nums}
 .stat-card .lbl{font-size:.8rem;color:#888;margin-top:4px}
 
-/* DASHBOARD SKELETON LOADER — the Dashboard template already renders these
-   classes (.skel/.skel-stat/.skel-line/.skel-block) while initialLoading is
-   true, but no CSS for them existed at all, so that loading state was
-   rendering as blank/invisible boxes rather than an actual skeleton screen.
-   This fills in the shimmer + shapes it was always meant to have. */
-@keyframes skelShimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
-.skel{background:linear-gradient(90deg,#e8edf5 25%,#f3f6fb 37%,#e8edf5 63%);background-size:400% 100%;animation:skelShimmer 1.4s ease infinite;border-radius:8px}
-.skel-stat{height:84px}
-.skel-line{height:14px;width:100%;margin-bottom:10px;border-radius:5px}
-.skel-line:last-child{margin-bottom:0}
-.skel-block{width:100%;border-radius:10px}
-.dark-mode .skel{background:linear-gradient(90deg,#1c2333 25%,#242c40 37%,#1c2333 63%);background-size:400% 100%}
 
 /* TABLE */
 /* Capped height (instead of growing forever with the table) turns the
@@ -326,7 +314,6 @@ details.form-control[open] summary::after{content:'▴'}
    individually — same "CSS animation replays on class re-add" trick used
    by .bar-grow/.timelapse-reveal elsewhere in this file, just applied to
    one stable element instead of many. */
-@keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .page-transition-active{animation:pageFadeIn .32s cubic-bezier(.22,1,.36,1) both}
 
 /* SIDEBAR ACTIVE INDICATOR — a thin bar that slides (via top/height
@@ -409,14 +396,19 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes skelPulse{0%,100%{opacity:.55}50%{opacity:1}}
 .skel{background:linear-gradient(90deg,#e8edf5 25%,#f2f5fa 37%,#e8edf5 63%);background-size:400% 100%;border-radius:8px;animation:skelPulse 1.4s ease-in-out infinite}
 .skel-stat{height:76px;border-radius:10px}
-.skel-line{height:14px;border-radius:4px;margin-bottom:10px}
-.skel-block{border-radius:10px}
+.skel-line{height:14px;width:100%;border-radius:4px;margin-bottom:10px}
+.skel-line:last-child{margin-bottom:0}
+.skel-block{width:100%;border-radius:10px}
 .dark-mode .skel{background:linear-gradient(90deg,#21262d 25%,#2a3038 37%,#21262d 63%);background-size:400% 100%}
 
 /* TOAST — stacked queue so rapid successive actions don't clobber each
    other's message before it's readable */
 .toast-stack{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:calc(24px + env(safe-area-inset-right));z-index:999;display:flex;flex-direction:column-reverse;gap:10px;max-width:calc(100vw - 32px)}
-.toast{padding:12px 20px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:600;animation:slideIn .3s ease}
+.toast{padding:12px 20px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:600;animation:slideIn .3s ease;position:relative;overflow:hidden}
+/* Matches showToast()'s 3000ms setTimeout exactly — purely visual, the
+   actual dismiss is still driven by that timer, this just previews it. */
+@keyframes toastProgressShrink{from{width:100%}to{width:0%}}
+.toast-progress{position:absolute;left:0;bottom:0;height:3px;background:rgba(255,255,255,.7);animation:toastProgressShrink 3s linear forwards}
 .toast-success{background:#198754}
 .toast-error{background:#dc3545}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
@@ -617,8 +609,9 @@ details.form-control[open] summary::after{content:'▴'}
 .cal-cell{min-height:88px;padding:6px;border-right:1px solid #eee;border-bottom:1px solid #eee;background:#fff;vertical-align:top;position:relative;cursor:default}
 .cal-cell:nth-child(7n){border-right:none}
 .cal-cell.empty{background:#fafafa}
-.cal-cell.today{background:#f0f6ff}
-.cal-cell.today .cal-dn{background:#003366;color:#fff;border-radius:50%}
+.cal-cell.today{background:#f0f6ff;box-shadow:inset 0 0 0 2px #003366}
+.cal-cell.today .cal-dn{background:#003366;color:#fff;border-radius:50%;animation:calTodayPulse 2.2s ease-in-out infinite}
+@keyframes calTodayPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,51,102,.45)}50%{box-shadow:0 0 0 5px rgba(0,51,102,0)}}
 .cal-cell.weekend{background:#fefeff}
 .cal-cell.can-edit{cursor:pointer}
 .cal-cell.can-edit:hover{background:#f0f4ff}
@@ -863,7 +856,7 @@ details.form-control[open] summary::after{content:'▴'}
 .dark-mode .progress-bar{background:#30363d}
 .dark-mode .btn-outline{background:rgba(255,255,255,.05);color:#90caf9;border-color:#30363d}
 .dark-mode .btn-outline:hover{background:rgba(88,166,255,.1)}
-.dark-mode .stat-card{background:rgba(22,27,34,.85)!important;color:#e0e0e0}
+.dark-mode .stat-card{background:linear-gradient(160deg,rgba(22,27,34,.92),rgba(30,37,46,.85))!important;color:#e0e0e0}
 .dark-mode .stat-card .num{color:#90caf9}
 .dark-mode .tabs{border-bottom-color:#21262d}
 .dark-mode .tab{color:#8b949e}
@@ -1117,7 +1110,7 @@ details.form-control[open] summary::after{content:'▴'}
 
 <!-- TOAST -->
 <div class="toast-stack" aria-live="polite" role="status">
-  <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]"><span aria-hidden="true">{{t.type==='error'?'❌':'✅'}}</span> {{t.msg}}</div>
+  <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]"><span aria-hidden="true">{{t.type==='error'?'❌':'✅'}}</span> {{t.msg}}<div class="toast-progress"></div></div>
 </div>
 
 <!-- SESSION TIMEOUT WARNING -->
@@ -1206,7 +1199,7 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
       <p v-if="loginErr" style="color:#f87171;font-size:.8rem;margin:0">⚠ {{loginErr}}</p>
       <button class="login-btn-main" @click="doLogin" :disabled="loading">
-        <span v-if="loading" class="login-spin">⟳</span>
+        <span v-if="loading" class="login-spin"></span>
         <span v-else>LOG MASUK</span>
       </button>
       <button type="button" @click="openForgotPw" style="background:none;border:none;color:#5aaf7a;font-size:.78rem;cursor:pointer;text-align:center;padding:2px;text-decoration:underline;text-underline-offset:2px">Lupa kata laluan?</button>
@@ -2005,9 +1998,11 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="l in auditLogPagedList" :key="l.id">
                   <td v-if="authProfile?.role==='superadmin'"><input type="checkbox" :checked="auditLogSelected.has(l.id)" @change="toggleAuditLogRow(l.id)"></td>
-                  <td style="white-space:nowrap;font-size:.8rem">{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}</td>
+                  <td :style="{whiteSpace:'nowrap',fontSize:'.8rem',borderLeft:'3px solid '+auditActionColor(l.action)}">
+                    <span :style="{display:'inline-block',width:'7px',height:'7px',borderRadius:'50%',marginRight:'6px',background:auditActionColor(l.action)}"></span>{{l.timestamp?.toDate ? l.timestamp.toDate().toLocaleString('ms-MY') : '-'}}
+                  </td>
                   <td>{{logActorDisplayName(l)}}</td>
-                  <td><span class="badge badge-blue" style="font-size:.72rem">{{l.action}}</span></td>
+                  <td><span class="badge" :style="{fontSize:'.72rem',background:auditActionColor(l.action)+'22',color:auditActionColor(l.action)}">{{l.action}}</span></td>
                   <td>{{l.detail||'-'}}</td>
                   <td v-if="authProfile?.role==='superadmin'" style="text-align:center">
                     <button :disabled="loading" class="btn btn-danger btn-sm btn-icon" @click="deleteAuditLog(l)" title="Padam">🗑</button>
@@ -9830,7 +9825,7 @@ createApp({
     // pattern), but obviously malformed input is rejected before save.
     const IP_RE = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/;
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const PHONE_RE = /^[0-9+\-\s()]{7,15}$/;
+    const PHONE_RE = /^(?=.*[0-9])[0-9+\-\s()]{7,15}$/;
     function isValidIp(v){ return !v || IP_RE.test(String(v).trim()); }
     function isValidEmail(v){ return !v || EMAIL_RE.test(String(v).trim()); }
     function isValidPhone(v){ return !v || PHONE_RE.test(String(v).trim()); }
@@ -12600,6 +12595,20 @@ createApp({
     // so old rows show the right name today even if it was wrong when
     // written, and only fall back to whatever was stored if the user
     // record can no longer be found (e.g. account since deleted).
+    // Keyword-based color per action, purely visual — turns the audit log
+    // table into a scannable "timeline rail" (colored dot + left border per
+    // row) instead of uniform plain rows, without changing the underlying
+    // <table> structure (keeps bulk-select checkboxes/pagination untouched).
+    function auditActionColor(action) {
+      const a = (action||'').toUpperCase();
+      if(a.includes('DELETE') || a.includes('PADAM')) return '#c62828';
+      if(a.includes('LOGIN')) return '#2e7d32';
+      if(a.includes('LOGOUT')) return '#757575';
+      if(a.includes('CREATE') || a.includes('ADD')) return '#0056b3';
+      if(a.includes('EDIT') || a.includes('UPDATE')) return '#e65100';
+      if(a.includes('EXPORT')) return '#6a1b9a';
+      return '#888';
+    }
     function logActorDisplayName(log) {
       if(log.userId && log.userId === authUser.value?.uid) {
         return authProfile.value?.name || authProfile.value?.username || log.userName || log.userId || '-';
@@ -14655,6 +14664,11 @@ createApp({
       return kontraktorLuar.value[kontraktorLuarProject.value] || [];
     });
     const kontraktorLuarTotalPages = computed(() => Math.max(1, Math.ceil(kontraktorLuarList.value.length / KONTRAKTOR_LUAR_PAGE_SIZE)));
+    // Clamp back into range if the list shrinks below the current page (e.g.
+    // deleting the last record on the last page) — without this the pager
+    // controls can disappear (totalPages===1) while page stays stuck at 2+,
+    // leaving the table permanently empty with no way back.
+    watch(kontraktorLuarTotalPages, (tp) => { if(kontraktorLuarPage.value > tp) kontraktorLuarPage.value = tp; });
     const kontraktorLuarPagedList = computed(() => {
       const start = (kontraktorLuarPage.value - 1) * KONTRAKTOR_LUAR_PAGE_SIZE;
       return kontraktorLuarList.value.slice(start, start + KONTRAKTOR_LUAR_PAGE_SIZE);
@@ -19773,7 +19787,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
-      auditLogs, auditLogsLoading, visibleAuditLogs, logActorDisplayName, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
+      auditLogs, auditLogsLoading, visibleAuditLogs, logActorDisplayName, auditActionColor, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       auditLogFilter, resetAuditLogFilter, auditLogUserOptions, auditLogActionOptions, auditLogFilteredList,
       auditLogPage, auditLogTotalPages, auditLogPagedList, auditLogGoToPage, auditLogPageNumbers,
       auditLogSelected, toggleAuditLogRow, isAuditLogAllSelected, toggleAuditLogSelectAll, bulkDeleteAuditLogs,
