@@ -1745,7 +1745,7 @@ details.form-control[open] summary::after{content:'▴'}
               <span style="width:22px;text-align:center;font-weight:800;color:#888">{{s.rank}}</span>
               <span style="flex:1;min-width:0;font-size:.85rem;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
                 {{s.name}} <span class="text-muted text-sm">({{s.project==='vir'?'VIR':'CCTV'}})</span>
-                <span v-for="b in siteBadges(s.id)" :key="b.label" :title="b.label" style="font-size:.85rem;margin-left:2px">{{b.icon}}</span>
+                <span v-for="b in (siteBadgesMap[s.id]||[])" :key="b.label" :title="b.label" style="font-size:.85rem;margin-left:2px">{{b.icon}}</span>
               </span>
               <div style="width:30px;height:30px;position:relative;flex-shrink:0">
                 <svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)">
@@ -2474,8 +2474,8 @@ details.form-control[open] summary::after{content:'▴'}
                 <span v-if="siteNextPmMap[s.id]?.daysSince!=null" style="color:#999">· {{siteNextPmMap[s.id].daysSince}} hari lepas PM</span>
               </div>
               <!-- Achievement badges -->
-              <div v-if="siteBadges(s.id).length" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-                <span v-for="b in siteBadges(s.id)" :key="b.label" class="badge achievement-badge" style="font-size:.68rem;padding:3px 8px">{{b.icon}} {{b.label}}</span>
+              <div v-if="(siteBadgesMap[s.id]||[]).length" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                <span v-for="b in (siteBadgesMap[s.id]||[])" :key="b.label" class="badge achievement-badge" style="font-size:.68rem;padding:3px 8px">{{b.icon}} {{b.label}}</span>
               </div>
               <button class="btn btn-outline btn-sm" style="margin-top:10px;font-size:.72rem;padding:4px 10px" @click.stop="generateSiteReportCard(s.id)">🖼️ Jana Kad Laporan</button>
             </div>
@@ -7568,7 +7568,7 @@ createApp({
       loginGreeting.value = h < 12 ? 'Selamat Pagi ☀️' : h < 18 ? 'Selamat Petang 🌤️' : 'Selamat Malam 🌙';
     }
     _tickLoginClock();
-    setInterval(_tickLoginClock, 1000);
+    let _loginClockTimer = setInterval(_tickLoginClock, 1000);
     // Rotating tips on the login screen — deliberately STATIC copy, not
     // live data. Real stats (site health, PM counts) live behind Firestore
     // rules requiring auth (isSignedIn()), so nothing real can be fetched
@@ -7582,7 +7582,7 @@ createApp({
       '📷 Kamera & Hard Disk kini boleh dikumpulkan ikut NVR untuk site yang besar.',
     ];
     const loginTipIndex = ref(0);
-    setInterval(() => { loginTipIndex.value = (loginTipIndex.value + 1) % LOGIN_TIPS.length; }, 6000);
+    let _loginTipTimer = setInterval(() => { loginTipIndex.value = (loginTipIndex.value + 1) % LOGIN_TIPS.length; }, 6000);
     const page = ref('dashboard');
     const authUser = ref(null);
     const authProfile = ref(null);
@@ -11546,7 +11546,12 @@ createApp({
     // assignments, audit logs and custom equipment options. Fetched fresh
     // from Firestore (not the local reactive refs) so it's always complete
     // regardless of what happens to be loaded in the app right now.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo'];
+    // The 5 deletedXxx (Tong Sampah) collections are included so a manual
+    // backup taken while something is still sitting in the trash retention
+    // window (before auto-purge or a manual restore) doesn't lose that copy
+    // — the backup itself is the last safety net if the trash entry expires
+    // with no other record of it.
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -12592,6 +12597,19 @@ createApp({
       if(nx && !nx.overdue && nx.daysSince != null && nx.daysSince <= 30) badges.push({ icon:'✨', label:'Baru Diservis' });
       return badges;
     }
+    // Precomputed once per siteHealthScores/siteNextPmMap change — the Site
+    // Health Score grid and Leaderboard templates were each calling
+    // siteBadges(s.id) TWICE per row (once for a v-if length check, once
+    // for the v-for itself), re-running the whole lookup+push chain both
+    // times on every re-render instead of once. siteBadges() itself stays
+    // as a plain function (generateSiteReportCard() still calls it
+    // directly, one-off) — this map is purely for the per-row template
+    // lookups to become a cheap property access instead.
+    const siteBadgesMap = computed(() => {
+      const map = {};
+      [...SITES, ...VIR_SITES].forEach(s => { map[s.id] = siteBadges(s.id); });
+      return map;
+    });
 
     // Renders a shareable "report card" PNG for one site (score ring,
     // PM/CM stats, badges) via Canvas — no server/library needed, just
@@ -19819,9 +19837,20 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // loadAll() with a visual affordance, doesn't fight native scrolling.
     const ptrState = reactive({ pulling:false, distance:0, refreshing:false });
     let _ptrStartY = 0, _ptrActive = false;
+    // Guards against re-attaching — this is called from onAuthStateChanged
+    // on EVERY auth transition (fresh login, AND Firebase re-firing on
+    // page-refresh session-restore/token-refresh/reconnect), not just once
+    // per tab. `.main` is a permanent element (no v-if), so without this
+    // guard each re-fire stacked one more full set of touchstart/touchmove/
+    // touchend listeners on top of the previous ones — after N logins in
+    // one tab, a single touch gesture would run pull-to-refresh logic N
+    // times (including N redundant loadAll() calls).
+    let _pullToRefreshSetup = false;
     function setupPullToRefresh() {
+      if(_pullToRefreshSetup) return;
       const el = document.querySelector('.main');
       if(!el) return;
+      _pullToRefreshSetup = true;
       el.addEventListener('touchstart', (e) => {
         if(el.scrollTop > 0) { _ptrActive = false; return; }
         _ptrStartY = e.touches[0].clientY;
@@ -19848,9 +19877,18 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // meaningfully down .main (same scrollable element PTR/page-transition
     // above already target), fades out again near the top.
     const showScrollTop = ref(false);
+    // Same re-attachment guard as setupPullToRefresh above, and for the
+    // same reason (called on every onAuthStateChanged transition, .main is
+    // permanent) — without it, every re-login added another 'scroll'
+    // listener, so showScrollTop.value got reassigned N times per scroll
+    // event after N logins (same end result, just wasted redundant work
+    // rather than visibly broken).
+    let _scrollToTopSetup = false;
     function setupScrollToTop() {
+      if(_scrollToTopSetup) return;
       const el = document.querySelector('.main');
       if(!el) return;
+      _scrollToTopSetup = true;
       el.addEventListener('scroll', () => { showScrollTop.value = el.scrollTop > 400; }, { passive:true });
     }
     function scrollToTop() {
@@ -19934,6 +19972,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         authUser.value = user;
         try {
           if(user) {
+            // Login screen (clock tick + rotating tips) is gone for good
+            // once authenticated — these two 1s/6s intervals were never
+            // cleared anywhere before, so they kept firing in the
+            // background for the rest of the session (however many hours
+            // that is) updating refs nothing ever displays again. Cheap
+            // per-tick, but it's wasted reactive work compounding for as
+            // long as the tab stays open — exactly the kind of thing that
+            // makes a long-running session feel gradually more sluggish.
+            clearInterval(_loginClockTimer);
+            clearInterval(_loginTipTimer);
             // Load profile on every session (login OR page refresh)
             try {
               const profileDoc = await db.collection('users').doc(user.uid).get();
@@ -20079,7 +20127,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
       yirYear, printYearInReview,
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
-      healthCountCctv, healthCountVir, siteLeaderboard, siteBadges, generateSiteReportCard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
+      healthCountCctv, healthCountVir, siteLeaderboard, siteBadges, siteBadgesMap, generateSiteReportCard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
