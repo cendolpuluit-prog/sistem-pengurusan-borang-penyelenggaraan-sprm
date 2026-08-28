@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Sistem PM CCTV - SPRM</title>
 <link rel="icon" type="image/svg+xml" href="LogoD1-2.svg">
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://unpkg.com/vue@3.5.42/dist/vue.global.prod.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
@@ -22,11 +22,11 @@
      styled XLSX global instead, for the header fill-color highlight. -->
 <script>window.XLSX_TEMPLATE = window.XLSX;</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
@@ -12237,6 +12237,21 @@ createApp({
 
     // ---- Global Search (sites + PM records + equipment + kontraktor, mixed results) ----
     const globalSearch = ref('');
+    // searchResults below does a full scan across pmRecords + every site's
+    // equipment (cameras/nvr/hdd/switches/alarms/misc/servers/tablets,
+    // CCTV+VIR) — expensive enough on an installation with years of PM
+    // records and dozens of sites' worth of equipment that re-running it on
+    // every single keystroke (globalSearch updates immediately via v-model)
+    // was a real contributor to the app feeling laggy while typing. This
+    // debounced copy is what searchResults actually reads from — the input
+    // itself still updates globalSearch instantly for responsive typing
+    // feedback, only the expensive scan is delayed until typing pauses.
+    const globalSearchDebounced = ref('');
+    let _searchDebounceTimer = null;
+    watch(globalSearch, (v) => {
+      clearTimeout(_searchDebounceTimer);
+      _searchDebounceTimer = setTimeout(() => { globalSearchDebounced.value = v; }, 220);
+    });
     const showSearchResults = ref(false);
     // Data-key (siteEquip.cameras/nvr/.../tablets) -> the eqTab id the UI
     // actually uses to select that tab — a few don't match 1:1 ('switches'
@@ -12245,7 +12260,7 @@ createApp({
     // meaningful there (see openSiteEquip's mode routing).
     const EQUIP_KIND_TO_TAB = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switches:'switch', alarms:'alarm', misc:'misc', servers:'servers', tablets:'tablets' };
     const searchResults = computed(() => {
-      const q = globalSearch.value.trim().toLowerCase();
+      const q = globalSearchDebounced.value.trim().toLowerCase();
       if(q.length < 2) return [];
       const siteMatches = [
         ...SITES.map(s => ({ ...s, _proj:'cctv' })),
@@ -12262,27 +12277,31 @@ createApp({
       // Equipment — scan every site's cameras/nvr/hdd/switches/alarms/misc/
       // servers/tablets for a matching name/IP/serial/model/brand, across
       // both CCTV and VIR sites.
+      // Plain for-of loops with real `break`s (not .forEach, which has no
+      // way to short-circuit — the old `if(equipMatches.length>=8) return`
+      // only skipped to the next callback invocation, so it kept iterating
+      // every remaining site/kind/item even after the cap was already hit).
       const equipMatches = [];
-      [['cctv', siteEquip.value, SITES], ['vir', virSiteEquip.value, VIR_SITES]].forEach(([proj, store, sites]) => {
-        Object.keys(store||{}).forEach(siteId => {
-          if(equipMatches.length >= 8) return;
+      outer:
+      for(const [proj, store, sites] of [['cctv', siteEquip.value, SITES], ['vir', virSiteEquip.value, VIR_SITES]]) {
+        for(const siteId of Object.keys(store||{})) {
           const site = sites.find(s => s.id === siteId);
-          if(!site) return;
-          Object.keys(EQUIP_KIND_TO_TAB).forEach(kind => {
-            (store[siteId]?.[kind]||[]).forEach(item => {
-              if(equipMatches.length >= 8) return;
+          if(!site) continue;
+          for(const kind of Object.keys(EQUIP_KIND_TO_TAB)) {
+            for(const item of (store[siteId]?.[kind]||[])) {
               const hay = [item.name, item.ip, item.serial, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
-              if(!hay.includes(q)) return;
+              if(!hay.includes(q)) continue;
               equipMatches.push({
                 _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
                 siteId, proj, kind, siteName:site.name,
                 label: item.name || item.model || item.serial || item.ip || '(tiada nama)',
                 detail: [item.brand, item.model, item.serial, item.ip].filter(Boolean).join(' · '),
               });
-            });
-          });
-        });
-      });
+              if(equipMatches.length >= 8) break outer;
+            }
+          }
+        }
+      }
 
       // Kontraktor/Supplier luar
       const kontraktorMatches = [];
@@ -19842,6 +19861,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // .login-wrap is gone (post-login) since the element just won't be found.
     function setupLoginSpotlight() {
       document.addEventListener('mousemove', (e) => {
+        // This listener lives for the whole session (attached once in
+        // onMounted, and needs to stay attached in case of logout — the
+        // login page can reappear), so it MUST stay cheap once
+        // authenticated. Without this early-return, every single mouse
+        // pixel moved anywhere in the app — not just the login page — was
+        // paying for a querySelector('.login-wrap') (always null post-
+        // login) plus a getBoundingClientRect() (forces a synchronous
+        // layout reflow) on every call, for the rest of the session. A
+        // plain ref read is essentially free by comparison.
+        if(authUser.value) return;
         const el = document.querySelector('.login-wrap');
         if(!el) return;
         const rect = el.getBoundingClientRect();
