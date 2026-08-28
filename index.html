@@ -5071,6 +5071,51 @@ details.form-control[open] summary::after{content:'▴'}
           </label>
           <p style="margin-top:12px;font-size:.78rem;color:#e74c3c;font-weight:600">⚠️ Amaran: Restore akan menggantikan semua data semasa. Pastikan backup terkini sebelum restore.</p>
         </div>
+
+        <div class="card">
+          <div class="card-title">🎯 Restore Site Tunggal</div>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Pulihkan peralatan untuk <b>SATU site sahaja</b> dari fail backup — site lain langsung tidak disentuh. Guna ini bila data satu site sahaja tersalah padam/overwrite, supaya tak perlu rollback site lain yang mungkin sudah dikemaskini lebih baru.</p>
+          <label class="btn btn-warning" style="cursor:pointer;display:inline-block">
+            📂 Pilih Fail Backup (.json)
+            <input type="file" accept=".json" style="display:none" @change="singleSiteRestoreFile">
+          </label>
+          <div v-if="singleSiteRestore.data" style="margin-top:16px">
+            <p style="font-size:.8rem;color:#888;margin-bottom:12px">Fail dibaca — backup diambil pada {{singleSiteRestore.data.exportedAt ? new Date(singleSiteRestore.data.exportedAt).toLocaleString('ms-MY') : '-'}}.</p>
+            <div class="form-row form-row-2">
+              <div class="form-group">
+                <label>Projek</label>
+                <select class="form-control" v-model="singleSiteRestore.project" @change="singleSiteRestore.siteId=''">
+                  <option value="cctv">CCTV</option>
+                  <option value="vir">VIR</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Site</label>
+                <select class="form-control" v-model="singleSiteRestore.siteId">
+                  <option value="">-- Pilih Site --</option>
+                  <option v-for="s in singleSiteRestoreOptions" :key="s.id" :value="s.id">{{s.name}}</option>
+                </select>
+                <small v-if="singleSiteRestore.data && !singleSiteRestoreOptions.length" style="color:#e74c3c">Tiada site {{singleSiteRestore.project==='vir'?'VIR':'CCTV'}} dijumpai dalam fail backup ini.</small>
+              </div>
+            </div>
+            <div v-if="singleSiteRestorePreview" style="background:#fff8e1;border-radius:8px;padding:12px 16px;margin:12px 0">
+              <div style="font-weight:700;font-size:.82rem;color:#7a2e00;margin-bottom:6px">Pratonton kandungan backup untuk site ini:</div>
+              <div class="flex gap-8" style="flex-wrap:wrap;font-size:.8rem;color:#555">
+                <span>📷 {{singleSiteRestorePreview.cameras}} kamera</span>
+                <span>🖥️ {{singleSiteRestorePreview.nvr}} NVR</span>
+                <span>💾 {{singleSiteRestorePreview.hdd}} HDD</span>
+                <span>🔌 {{singleSiteRestorePreview.switches}} switch</span>
+                <span>🔔 {{singleSiteRestorePreview.alarms}} alarm</span>
+                <span>📦 {{singleSiteRestorePreview.misc}} lain-lain</span>
+                <template v-if="singleSiteRestore.project==='vir'">
+                  <span>🚪 {{singleSiteRestorePreview.rooms}} bilik</span>
+                  <span>🖥️ {{singleSiteRestorePreview.optagerItems}} item Optager</span>
+                </template>
+              </div>
+            </div>
+            <button :disabled="loading || !singleSiteRestore.siteId" class="btn btn-danger" @click="restoreSingleSite">♻️ Restore Site Ini Sahaja</button>
+          </div>
+        </div>
       </div>
 
       <!-- ====== IMPORT EQUIPMENT FILE MODAL ====== -->
@@ -11802,6 +11847,107 @@ createApp({
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
       loading.value=false;
+    }
+
+    // ── Restore Site Tunggal ── recovers ONE site's equipment from an
+    // uploaded backup file without touching any other site — unlike
+    // applyRestore() above, which replaces the ENTIRE siteEquipment/
+    // virSiteEquipment collection from the backup snapshot (rolling back
+    // every OTHER site to that backup's point-in-time too, even ones that
+    // have since been legitimately updated). For recovering a single site
+    // whose live data got accidentally overwritten empty (e.g. a save that
+    // raced ahead of loadAll() finishing) while every other site's current
+    // data must stay untouched.
+    const singleSiteRestore = reactive({ data:null, project:'cctv', siteId:'' });
+    function singleSiteRestoreFile(evt) {
+      const file = evt.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        try {
+          singleSiteRestore.data = JSON.parse(e.target.result);
+          singleSiteRestore.siteId = '';
+          showToast('Fail backup berjaya dibaca. Sila pilih projek dan site.');
+        } catch(ex) { singleSiteRestore.data = null; showToast('Fail tidak sah!', 'error'); }
+      };
+      reader.readAsText(file);
+      evt.target.value='';
+    }
+    // Only offers sites that actually appear in the uploaded backup — a
+    // full dropdown of every SITES/VIR_SITES entry would let someone "pick"
+    // a site the backup never covered, silently restoring nothing.
+    const singleSiteRestoreOptions = computed(() => {
+      if(!singleSiteRestore.data) return [];
+      if(singleSiteRestore.project === 'vir') {
+        const ids = new Set([
+          ...Object.keys(singleSiteRestore.data.virSiteEquip||{}),
+          ...Object.keys(singleSiteRestore.data.virSiteEquipBCD||{}),
+          ...Object.keys(singleSiteRestore.data.virSiteEquipOptager||{}),
+        ]);
+        return VIR_SITES.filter(s => ids.has(s.id));
+      }
+      const ids = Object.keys(singleSiteRestore.data.siteEquip||{});
+      return SITES.filter(s => ids.includes(s.id));
+    });
+    const singleSiteRestorePreview = computed(() => {
+      if(!singleSiteRestore.data || !singleSiteRestore.siteId) return null;
+      const id = singleSiteRestore.siteId;
+      if(singleSiteRestore.project === 'vir') {
+        const bcd = singleSiteRestore.data.virSiteEquipBCD?.[id] || {};
+        const rooms = singleSiteRestore.data.virSiteEquip?.[id]?.rooms || [];
+        const optagerRaw = singleSiteRestore.data.virSiteEquipOptager?.[id];
+        const optagerByRoom = optagerRaw ? _normalizeOptagerRec(optagerRaw).byRoom : {};
+        const optagerItems = Object.values(optagerByRoom||{}).reduce((sum,r) =>
+          sum + (r.cameras?.length||0) + (r.servers?.length||0) + (r.tablets?.length||0) + (r.misc?.length||0), 0);
+        return {
+          cameras:(bcd.cameras||[]).length, nvr:(bcd.nvr||[]).length, hdd:(bcd.hdd||[]).length,
+          switches:(bcd.switches||[]).length, alarms:(bcd.alarms||[]).length, misc:(bcd.misc||[]).length,
+          rooms: rooms.length, optagerItems,
+        };
+      }
+      const eq = singleSiteRestore.data.siteEquip?.[id] || {};
+      return {
+        cameras:(eq.cameras||[]).length, nvr:(eq.nvr||[]).length, hdd:(eq.hdd||[]).length,
+        switches:(eq.switches||[]).length, alarms:(eq.alarms||[]).length, misc:(eq.misc||[]).length,
+      };
+    });
+    async function restoreSingleSite() {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh restore.', 'error'); return; }
+      if(!singleSiteRestore.data || !singleSiteRestore.siteId) return;
+      const id = singleSiteRestore.siteId;
+      const isVir = singleSiteRestore.project === 'vir';
+      const site = (isVir ? VIR_SITES : SITES).find(s=>s.id===id);
+      if(!confirm(`Restore data peralatan untuk "${site?.name}" SAHAJA dari fail backup ini?\n\nSite lain langsung tidak disentuh. Data semasa site ini akan digantikan.`)) return;
+      loading.value = true;
+      try {
+        // Checkpoint current state first — same safety-net pattern as the
+        // full Restore above, in case the wrong site/file was picked.
+        await doAutoBackup();
+        if(isVir) {
+          const EQUIP_SHAPE_VIR = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
+          const rooms = singleSiteRestore.data.virSiteEquip?.[id]?.rooms || [];
+          const bcd = {...EQUIP_SHAPE_VIR, ...(singleSiteRestore.data.virSiteEquipBCD?.[id] || {})};
+          const optager = _normalizeOptagerRec(singleSiteRestore.data.virSiteEquipOptager?.[id]);
+          const bcdSplit = _splitCredentials(bcd);
+          const optagerSplit = _splitOptagerByRoom(optager);
+          await _fw(db.collection('virSiteEquipment').doc(id).set({ rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped }, { merge: true }));
+          await _fw(db.collection('virSiteEquipmentCredentials').doc(id).set({ BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds }, { merge: true }));
+          virSiteEquip.value = { ...virSiteEquip.value, [id]: { rooms } };
+          virSiteEquipBCD.value = { ...virSiteEquipBCD.value, [id]: bcd };
+          virSiteEquipOptager.value = { ...virSiteEquipOptager.value, [id]: optager };
+        } else {
+          const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+          const merged = {...EQUIP_SHAPE_CCTV, ...(singleSiteRestore.data.siteEquip?.[id] || {})};
+          const { stripped, creds } = _splitCredentials(merged);
+          await _fw(db.collection('siteEquipment').doc(id).set(stripped));
+          await _fw(db.collection('siteEquipmentCredentials').doc(id).set(creds));
+          siteEquip.value = { ...siteEquip.value, [id]: merged };
+        }
+        await logAudit('SINGLE_SITE_RESTORE', `${site?.name||id} (${isVir?'VIR':'CCTV'})`);
+        showToast(`Peralatan untuk "${site?.name}" berjaya dipulihkan!`);
+        singleSiteRestore.data = null; singleSiteRestore.siteId = '';
+      } catch(e) { showToast('Gagal restore: ' + e.message, 'error'); }
+      loading.value = false;
     }
 
     // ---- Records ----
@@ -19776,6 +19922,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
       migrateHanwhaModal, migrateHanwhaBrandName,
       loadLocalBackup, deleteLocalBackup, restoreFromFile,
+      singleSiteRestore, singleSiteRestoreFile, singleSiteRestoreOptions, singleSiteRestorePreview, restoreSingleSite,
       startNewPM, loadPMEquip, savePM, viewRecord, editRecord, cancelPmForm, deleteRecord,
       TRASH_RETENTION_DAYS, trashedPmRecords, trashLoading, trashDeletedAtLabel, trashDaysLeft, openTrash, loadTrash, restoreDeletedRecord, permanentlyDeleteRecord,
       trashedContracts, loadTrashContracts, restoreTrashContract, purgeTrashContract,
