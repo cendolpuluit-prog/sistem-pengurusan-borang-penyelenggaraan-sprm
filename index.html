@@ -11595,7 +11595,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -12216,6 +12216,16 @@ createApp({
         else { if(!(r.cameras||[]).some(c => c.brand === filterSystem.value)) return false; }
       }
       return true;
+    }).sort((a,b) => {
+      // Rekod Borang reads by TARIKH PENYELENGGARAAN (visit date), newest
+      // first — not the underlying pmRecords query's createdAt/submission-
+      // time order, which doesn't match when a record for an earlier visit
+      // gets submitted/edited later than one for a more recent visit.
+      const da = _recDate(a), db = _recDate(b);
+      if(!da && !db) return 0;
+      if(!da) return 1;
+      if(!db) return -1;
+      return db - da;
     }));
 
     // Paginated view of filteredPM — same fix as Log Audit (AUDIT_LOG_PAGE_SIZE
