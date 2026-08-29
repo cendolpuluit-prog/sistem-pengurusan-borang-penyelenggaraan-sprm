@@ -13099,6 +13099,15 @@ createApp({
     // ---- Charts ----
     let chartSiteInst = null;
     let chartTypeInst = null;
+    // initCharts() below already destroys+recreates these on every re-run
+    // (e.g. dashboardYear changing while still on the page), but nothing
+    // destroyed them on navigating AWAY from Dashboard entirely — same leak
+    // class as _destroyReportLanjutanCharts() above, just for Dashboard's
+    // own 2 charts instead of Laporan Lanjutan's 4.
+    function _destroyDashboardCharts() {
+      if(chartSiteInst) { chartSiteInst.destroy(); chartSiteInst = null; }
+      if(chartTypeInst) { chartTypeInst.destroy(); chartTypeInst = null; }
+    }
 
     function initCharts() {
       const yr = dashboardYear.value;
@@ -13181,6 +13190,17 @@ createApp({
       if(v === 'dashboard') { await nextTick(); initCharts(); }
       if(v === 'laporan') { await nextTick(); initLaporanCharts(); }
       if(v !== 'laporan') { _destroyCharts(); }
+      // Laporan Lanjutan's charts were only ever destroyed by the reportTab
+      // watcher below (switching tabs WITHIN that page) — navigating away
+      // from the page entirely left whichever Chart.js instance was active
+      // (Trend Tahunan/Jenis Tindakan/Masa Selesai/Punca Kerosakan) still
+      // holding its canvas/listeners/animation loop in memory, since
+      // _destroyReportLanjutanCharts() is declared further down in the file
+      // and was never called from here. One more of these leaks per visit
+      // to that page compounds over a long session.
+      if(v !== 'laporan-lanjutan') { _destroyReportLanjutanCharts(); }
+      // Same reasoning as above, for Dashboard's chartSiteInst/chartTypeInst.
+      if(v !== 'dashboard') { _destroyDashboardCharts(); }
     });
 
     watch(pmRecords, async () => {
@@ -18288,9 +18308,13 @@ createApp({
     function addNotaPending() { pm.notaPending.push(''); }
     function removeNotaPending(i) { if(pm.notaPending.length > 1) pm.notaPending.splice(i,1); }
 
-    const laporanNotaItems = computed(() => {
-      const kw = laporanNotaSearch.value.toLowerCase().trim();
-      const stFil = laporanNotaStatus.value.toLowerCase();
+    // Builds every masalah/tindakan row across the filtered records —
+    // deliberately does NOT depend on laporanNotaSearch/laporanNotaStatus
+    // (see laporanNotaItems below), same split-cache reasoning as
+    // assetRegisterRaw: without this split, every keystroke in "Cari
+    // masalah, tindakan, site..." was re-parsing _getNotaItems() for every
+    // record in laporanFiltered from scratch, not just re-filtering.
+    const laporanNotaItemsRaw = computed(() => {
       const rows = [];
       laporanFiltered.value.forEach(r => {
         const parsed = _getNotaItems(r);
@@ -18298,7 +18322,12 @@ createApp({
           rows.push({ siteId:r.siteId, siteName:r.siteName||'—', visitDate:r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'), maintType:r.maintType||'PM', refNo:r.refNo||'—', project:r.project||'cctv', masalah:p.masalah, tindakan:p.tindakan, status:p.status });
         });
       });
-      return rows.filter(row => {
+      return rows;
+    });
+    const laporanNotaItems = computed(() => {
+      const kw = laporanNotaSearch.value.toLowerCase().trim();
+      const stFil = laporanNotaStatus.value.toLowerCase();
+      return laporanNotaItemsRaw.value.filter(row => {
         if(stFil !== 'all' && !row.status.toLowerCase().includes(stFil)) return false;
         if(kw) {
           const hay = (row.masalah+' '+row.tindakan+' '+row.status+' '+row.siteName).toLowerCase();
@@ -18718,7 +18747,10 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     const assetFilterProj = ref('all');
     const assetFilterCat = ref('all');
     const assetSearch = ref('');
-    const assetRegister = computed(() => {
+    // Builds every equipment row across all sites — deliberately does NOT
+    // depend on assetFilterProj/assetFilterCat/assetSearch (see assetRegister
+    // below, which layers cheap filtering on top of this cached result).
+    const assetRegisterRaw = computed(() => {
       const rows = [];
       const pushSite = (site, proj, eqSrc) => {
         const eq = eqSrc[site.id] || {};
@@ -18742,7 +18774,18 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
           pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
         });
       });
-      return rows.filter(r => {
+      return rows;
+    });
+    // Split from the row-BUILDING step above (assetRegisterRaw) so typing in
+    // the search box only re-runs this cheap filter, not the full
+    // cameras/nvr/hdd/switches/alarms/misc scan across every CCTV+VIR site
+    // (+ per-room Optager breakdown) — that scan was previously inlined
+    // into the same computed as this filter, so it re-ran on every single
+    // keystroke in assetSearch (Vue computeds only cache based on their OWN
+    // dependencies; mixing an expensive build with a fast-changing filter
+    // in one computed defeats that caching for both).
+    const assetRegister = computed(() => {
+      return assetRegisterRaw.value.filter(r => {
         if(assetFilterProj.value!=='all' && r.proj!==assetFilterProj.value) return false;
         if(assetFilterCat.value!=='all' && r.cat!==assetFilterCat.value) return false;
         const q = assetSearch.value.trim().toLowerCase();
