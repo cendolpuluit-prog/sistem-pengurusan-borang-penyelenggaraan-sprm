@@ -1865,7 +1865,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <div v-for="(a,i) in mapDetailList" :key="i" :style="i>0?'margin-top:8px;padding-top:8px;border-top:1px solid #f0f0f0':''">
                   <div style="display:flex;align-items:center;gap:6px">
                     <span style="font-size:.8rem;font-weight:600;color:#222">{{a.siteName}}</span>
-                    <span v-if="_projShortLabel(a.project)" :class="['team-pill-proj', _projShortLabel(a.project)==='VIR'?'proj-vir':'proj-cctv']">{{_projShortLabel(a.project)}}</span>
+                    <span v-if="projShortLabel(a.project)" :class="['team-pill-proj', projShortLabel(a.project)==='VIR'?'proj-vir':'proj-cctv']">{{projShortLabel(a.project)}}</span>
                   </div>
                   <div style="font-size:.7rem;color:#999;margin-bottom:5px">{{a.team}}</div>
                   <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -9310,7 +9310,16 @@ createApp({
       if(t.project === 'SPRM - CCTV') return SITES.find(s => s.id === t.siteId)?.code || null;
       return null;
     }
-    function _projShortLabel(project) {
+    // NOT underscore-prefixed on purpose, unlike this file's other internal
+    // helpers — this one is called directly from a template expression
+    // (the map popup), and Vue's runtime template compiler treats a
+    // leading `_`/`$` as reserved for its OWN generated internals (_ctx,
+    // _toDisplayString, etc.), not a setup()-returned binding. A `_`-
+    // prefixed name works fine when only called from other JS functions,
+    // but throws "ReferenceError: ... is not defined" the moment a
+    // template expression tries to call it directly — which is exactly
+    // what broke the Peta Penugasan popup (blank page on pin click).
+    function projShortLabel(project) {
       return project === 'SPRM - VIR' ? 'VIR' : project === 'SPRM - CCTV' ? 'CCTV' : '';
     }
     // Same list as teamsForDay(), but assignments for the same team+premise
@@ -9331,7 +9340,7 @@ createApp({
         if(key) seen.set(key, idx);
       });
       const withLabels = groups.map(g => {
-        const projLabel = [...new Set(g.entries.map(e => _projShortLabel(e.project)))].filter(Boolean).join('+');
+        const projLabel = [...new Set(g.entries.map(e => projShortLabel(e.project)))].filter(Boolean).join('+');
         return { ...g, projLabel };
       });
       // How many DISTINCT stops (groups, not raw docs) this team has today —
@@ -20088,7 +20097,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
-      teamAssignments, teamModal, allStaff, teamsForDay, teamsForDayGrouped, _projShortLabel, teamsForMonth,
+      teamAssignments, teamModal, allStaff, teamsForDay, teamsForDayGrouped, projShortLabel, teamsForMonth,
       mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos, mapPopupAlign, mapLoading, mapNearestUpcomingDate, mapTodayRawCount, mapUnmappedToday,
       timelapseModal, timelapseMapEl, timelapseYearOptions, timelapseMonthCount, timelapseYearVisitedSites, timelapseYearTotalSites, openTimelapse, closeTimelapse, timelapseTogglePlay,
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
