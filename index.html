@@ -9891,6 +9891,12 @@ createApp({
     // comparisons (contract/user expiry, schedule filters) misclassifies
     // things as not-yet-expired for that 8-hour window every day.
     function _localDateStr(d){ const dt=d||new Date(); const y=dt.getFullYear(); const m=String(dt.getMonth()+1).padStart(2,'0'); const day=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+    // Inverse of _localDateStr — parses a "YYYY-MM-DD" string as a LOCAL
+    // midnight Date, not `new Date(str)`'s UTC-midnight parse (which lags a
+    // calendar day behind MYT for the first 8 hours of every day and can
+    // flip overdue/health-score results depending on what time they're
+    // viewed, for no data reason).
+    function _parseLocalDate(dateStr){ if(!dateStr) return null; const [y,m,d]=dateStr.split('-').map(Number); return new Date(y, m-1, d); }
     function fmtDate(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}/${m}/${y}`; }
     // Dash-separated variant (dd-mm-yyyy) — used specifically for
     // "Tarikh Penyelenggaraan" in the main borang info block, per client
@@ -10500,6 +10506,7 @@ createApp({
       if(!allowed){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       warrantyModal.err = '';
       const d = warrantyModal.data;
+      d.equipmentName = (d.equipmentName||'').trim();
       if(!d.vendor || !d.siteId || !d.equipmentName || !d.startDate || !d.endDate) {
         warrantyModal.err = 'Vendor, site, nama peralatan, tarikh mula dan tarikh tamat wajib diisi.'; return;
       }
@@ -10668,6 +10675,23 @@ createApp({
     // compress berjalan, bukan had akhir yang user akan nampak.
     const SERVICE_REPORT_PREPROCESS_MAX_MB = 15;
     const SERVICE_REPORT_EXT = ['pdf','jpg','jpeg','png','doc','docx'];
+    // File.name extension is just a string the user typed — a .html/.exe
+    // renamed to .docx passes the allowlist above unchanged. Sniff the
+    // actual leading bytes instead, since every allowed type has a fixed
+    // binary signature (docx/xlsx/pptx are all zip containers, so this only
+    // confirms "genuinely a zip", not specifically Office XML — still far
+    // stronger than trusting the filename).
+    const SERVICE_REPORT_SIGNATURES = { pdf:['pdf'], jpg:['jpg'], jpeg:['jpg'], png:['png'], docx:['zip'], doc:['ole'] };
+    async function _sniffFileSignature(file) {
+      const buf = await file.slice(0, 8).arrayBuffer();
+      const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2,'0')).join('');
+      if(hex.startsWith('25504446')) return 'pdf';       // %PDF
+      if(hex.startsWith('89504e47')) return 'png';
+      if(hex.startsWith('ffd8ff')) return 'jpg';
+      if(hex.startsWith('504b0304')) return 'zip';        // docx/xlsx/pptx
+      if(hex.startsWith('d0cf11e0')) return 'ole';        // legacy .doc/.xls
+      return null;
+    }
     // collection/storagePrefix let this one modal+upload pipeline be reused
     // for both CCTV service reports (equipmentWarranty) and VIR purchase
     // receipts (virEquipmentWarranty) — see openServiceReports().
@@ -10773,6 +10797,10 @@ createApp({
       const ext = file.name.split('.').pop().toLowerCase();
       if(!SERVICE_REPORT_EXT.includes(ext)) {
         serviceReportModal.err = `Jenis fail tidak disokong. Guna: ${SERVICE_REPORT_EXT.join(', ')}`; return;
+      }
+      const sig = await _sniffFileSignature(file);
+      if(!SERVICE_REPORT_SIGNATURES[ext].includes(sig)) {
+        serviceReportModal.err = 'Kandungan fail tidak sepadan dengan sambungan (.'+ext+'). Fail mungkin rosak atau nama fail telah ditukar.'; return;
       }
       // Had "pra-proses" digenerus (elak fail gergasi buat browser hang
       // semasa render/compress) — had AKHIR (2MB, sama semua jenis fail)
@@ -11830,6 +11858,11 @@ createApp({
     }
 
     async function deleteLocalBackup(idx) {
+      // Firestore rules already restrict systemBackups delete to superadmin —
+      // this mirrors that client-side (matches deleteUser/deleteAuditLog
+      // pattern) so a non-superadmin gets a clean toast instead of a raw
+      // Firestore permission-denied error.
+      if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!confirm('Padam backup ini?')) return;
       const b = autoBackups.value[idx];
       if(!b) return;
@@ -12403,7 +12436,7 @@ createApp({
         .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
         .map(r => _recDate(r))
         .sort((a,b) => a - b);
-      const windows = VIR_PM_WINDOWS.map((w,i) => ({ start:new Date(w.start), end:new Date(w.end), fulfilled: !!pmDates[i] }));
+      const windows = VIR_PM_WINDOWS.map((w,i) => ({ start:_parseLocalDate(w.start), end:_parseLocalDate(w.end), fulfilled: !!pmDates[i] }));
       const fulfilledCount = windows.filter(w => w.fulfilled).length;
       const overdue = windows.some(w => w.end < now && !w.fulfilled);
       const currentWindow = windows.find(w => !w.fulfilled) || null;
@@ -12417,8 +12450,8 @@ createApp({
     // flat PM_INTERVAL.vir*30 days, which would falsely flag normal
     // schedule-driven gaps as breaches.
     const VIR_MAX_EXPECTED_GAP_DAYS = (() => {
-      const ends = VIR_PM_WINDOWS.map(w => new Date(w.end));
-      let max = (ends[0] - new Date('2026-08-01')) / 86400000;
+      const ends = VIR_PM_WINDOWS.map(w => _parseLocalDate(w.end));
+      let max = (ends[0] - _parseLocalDate('2026-08-01')) / 86400000;
       for(let i=1;i<ends.length;i++){ max = Math.max(max, (ends[i]-ends[i-1])/86400000); }
       return Math.ceil(max);
     })();
@@ -12427,14 +12460,14 @@ createApp({
     // count for year Y", since VIR's real per-year split isn't the flat
     // PM_PER_YEAR.vir=2 used for CCTV.
     function _virExpectedForYear(year) {
-      return VIR_PM_WINDOWS.filter(w => new Date(w.end).getFullYear() === year).length;
+      return VIR_PM_WINDOWS.filter(w => _parseLocalDate(w.end).getFullYear() === year).length;
     }
 
     function _lastPmDate(siteId) {
       const recs = (pmRecordsBySite.value[siteId] || []).filter(r => (r.maintType||'PM') !== 'CM');
       if(!recs.length) return null;
       return recs.reduce((best, r) => {
-        const d = r.visitDate ? new Date(r.visitDate) : (r.year && r.month ? new Date(r.year, r.month-1, 1) : null);
+        const d = r.visitDate ? _parseLocalDate(r.visitDate) : (r.year && r.month ? new Date(r.year, r.month-1, 1) : null);
         return d && (!best || d > best) ? d : best;
       }, null);
     }
@@ -12966,7 +12999,7 @@ createApp({
         if(dateFrom || dateTo) {
           const d = l.timestamp?.toDate ? l.timestamp.toDate() : null;
           if(!d) return false;
-          const dayStr = d.toISOString().slice(0,10);
+          const dayStr = _localDateStr(d);
           if(dateFrom && dayStr < dateFrom) return false;
           if(dateTo && dayStr > dateTo) return false;
         }
@@ -14729,6 +14762,7 @@ createApp({
       // Firestore username query returns empty and the new account can never
       // log in even with the correct password.
       userModal.data.username = (userModal.data.username||'').trim().toLowerCase();
+      userModal.data.name = (userModal.data.name||'').trim();
       if(!userModal.data.username||!userModal.data.name){ userModal.err='Username dan Nama wajib diisi.'; return; }
       // Username uniqueness was previously only enforced indirectly via
       // Firebase Auth's email-uniqueness check — since login is looked up
@@ -14748,6 +14782,19 @@ createApp({
       const resolvedJabatan = (userModal.data.jabatan==='Lain-lain' && userModal.data.jabatanCustom.trim()) ? userModal.data.jabatanCustom.trim() : userModal.data.jabatan;
       loading.value=true;
       try {
+        // Re-check against Firestore itself (not the cached allUsers list)
+        // right before writing — closes most of the window where two admins
+        // in separate tabs both pass the earlier cache-based check and both
+        // create the same username (login looks it up, so the loser becomes
+        // an inaccessible orphan account).
+        if(!userModal.editing) {
+          const dupeSnap = await db.collection('users').where('username','==',userModal.data.username).limit(1).get();
+          if(!dupeSnap.empty) {
+            userModal.err = `Username "${userModal.data.username}" sudah digunakan. Sila pilih username lain.`;
+            loading.value = false;
+            return;
+          }
+        }
         if(!userModal.editing) {
           // Create Firebase Auth user via secondary app instance
           const sec = firebase.initializeApp(FIREBASE_CONFIG, 'secondary_'+Date.now());
@@ -16230,7 +16277,7 @@ createApp({
     }
 
     function addCamera() {
-      if(!nCam.name){showToast('Sila masukkan nama kamera','error');return;}
+      if(!nCam.name?.trim()){showToast('Sila masukkan nama kamera','error');return;}
       if(!nCam.camType){showToast('Sila pilih Jenis kamera','error');return;}
       if(!isValidIp(nCam.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _resolveBrandModel(nCam);
@@ -16256,7 +16303,7 @@ createApp({
       resetForm('nCam');
     }
     function addNVR() {
-      if(!nNVR.name){showToast('Sila masukkan nama NVR','error');return;}
+      if(!nNVR.name?.trim()){showToast('Sila masukkan nama NVR','error');return;}
       if(!nNVR.type){showToast('Sila pilih Jenis','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _resolveBrandModel(nNVR);
@@ -16272,8 +16319,8 @@ createApp({
       resetForm('nNVR');
     }
     function addHDD() {
-      if(!nHDD.brand){showToast('Sila masukkan brand HDD','error');return;}
-      if(!nHDD.model){showToast('Sila masukkan model HDD','error');return;}
+      if(!nHDD.brand?.trim()){showToast('Sila masukkan brand HDD','error');return;}
+      if(!nHDD.model?.trim()){showToast('Sila masukkan model HDD','error');return;}
       if(!nHDD.config){showToast('Sila pilih Konfigurasi','error');return;}
       const resolved = _resolveBrandModel(nHDD);
       resolved.nvrRef = _resolveDropdownCustom(nHDD.nvrRef, nHDD.nvrRefCustom);
@@ -16291,8 +16338,8 @@ createApp({
       resetForm('nHDD');
     }
     function addSwitch() {
-      if(!nSW.brand){showToast('Sila masukkan brand switch','error');return;}
-      if(!nSW.model){showToast('Sila masukkan model switch','error');return;}
+      if(!nSW.brand?.trim()){showToast('Sila masukkan brand switch','error');return;}
+      if(!nSW.model?.trim()){showToast('Sila masukkan model switch','error');return;}
       if(!isValidIp(nSW.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _resolveBrandModel(nSW);
       ensureSite(selSite.value.id);
@@ -16347,8 +16394,8 @@ createApp({
       else nRoom.excludedGroups.splice(idx, 1);
     }
     function addAlarm() {
-      if(!nALM.name){showToast('Sila masukkan nama alarm','error');return;}
-      if(!nALM.model){showToast('Sila masukkan model alarm','error');return;}
+      if(!nALM.name?.trim()){showToast('Sila masukkan nama alarm','error');return;}
+      if(!nALM.model?.trim()){showToast('Sila masukkan model alarm','error');return;}
       if(!nALM.type){showToast('Sila pilih Jenis','error');return;}
       if(!isValidIp(nALM.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
@@ -16372,7 +16419,7 @@ createApp({
       nMISC.brandCustom = '';
     }
     function addMisc() {
-      if(!nMISC.name){showToast('Sila masukkan nama/jenis peralatan','error');return;}
+      if(!nMISC.name?.trim()){showToast('Sila masukkan nama/jenis peralatan','error');return;}
       if(!nMISC.category){showToast('Sila pilih Kategori','error');return;}
       if(!isValidIp(nMISC.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       ensureSite(selSite.value.id);
@@ -17181,14 +17228,20 @@ createApp({
       if(!confirm(`Padam rekod PM ini? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
         const snap = await db.collection('pmRecords').doc(id).get();
+        // Batched so the move-to-trash write and the live-record delete
+        // either both land or neither does — sequential awaits here would
+        // risk the record existing in BOTH pmRecords and deletedPmRecords if
+        // the first succeeded and the second failed mid-operation.
+        const batch = db.batch();
         if(snap.exists) {
-          await _fw(db.collection('deletedPmRecords').doc(id).set({
+          batch.set(db.collection('deletedPmRecords').doc(id), {
             ...snap.data(),
             deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
             deletedBy: authUser.value?.email || '',
-          }));
+          });
         }
-        await _fw(db.collection('pmRecords').doc(id).delete());
+        batch.delete(db.collection('pmRecords').doc(id));
+        await _fw(batch.commit());
         pmRecords.value = pmRecords.value.filter(r=>r.id!==id);
         await logAudit('BORANG_DELETE', rec?.refNo||id);
         showToast('Rekod dipindah ke Tong Sampah.');
@@ -17247,8 +17300,10 @@ createApp({
       if(!confirm(`Pulihkan rekod "${rec.refNo||id}"?`)) return;
       try {
         const { deletedAt, deletedBy, id:_id, ...data } = rec;
-        await _fw(db.collection('pmRecords').doc(id).set(data));
-        await _fw(db.collection('deletedPmRecords').doc(id).delete());
+        const batch = db.batch();
+        batch.set(db.collection('pmRecords').doc(id), data);
+        batch.delete(db.collection('deletedPmRecords').doc(id));
+        await _fw(batch.commit());
         trashedPmRecords.value = trashedPmRecords.value.filter(r=>r.id!==id);
         await loadAll();
         await logAudit('BORANG_RESTORE', rec.refNo||id);
@@ -17276,21 +17331,27 @@ createApp({
     // this size). Reuses TRASH_RETENTION_DAYS/_trashMs defined above.
     async function _softDeleteToTrash(collection, deletedCollection, id) {
       const snap = await db.collection(collection).doc(id).get();
+      // Batched — see deleteRecord() above for why (avoids a record existing
+      // in both the live and trash collections if one write fails).
+      const batch = db.batch();
       if(snap.exists) {
-        await _fw(db.collection(deletedCollection).doc(id).set({
+        batch.set(db.collection(deletedCollection).doc(id), {
           ...snap.data(),
           deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
           deletedBy: authUser.value?.email || '',
-        }));
+        });
       }
-      await _fw(db.collection(collection).doc(id).delete());
+      batch.delete(db.collection(collection).doc(id));
+      await _fw(batch.commit());
     }
     async function _restoreFromTrash(deletedCollection, collection, id, list) {
       const rec = list.value.find(r=>r.id===id);
       if(!rec) return null;
       const { deletedAt, deletedBy, id:_id, ...data } = rec;
-      await _fw(db.collection(collection).doc(id).set(data));
-      await _fw(db.collection(deletedCollection).doc(id).delete());
+      const batch = db.batch();
+      batch.set(db.collection(collection).doc(id), data);
+      batch.delete(db.collection(deletedCollection).doc(id));
+      await _fw(batch.commit());
       list.value = list.value.filter(r=>r.id!==id);
       return rec;
     }
@@ -17484,6 +17545,7 @@ createApp({
       const indoor = (r.cameras||[]).filter(c => c.camType==='Indoor' || c.camType==='IR Cam' || (!c.camType));
       const outdoor = (r.cameras||[]).filter(c => c.camType==='Outdoor' || c.camType==='PTZ');
       indoor.forEach((c, i) => {
+        if(i >= 10) return;
         const row = 25 + (i * 2);
         setCell('C'+row, i+1); setCell('D'+row, c.name);
         setCell('N'+row, c.ip); setCell('AN'+row, c.serial);
@@ -17498,6 +17560,7 @@ createApp({
 
       // Outdoor cameras (rows 49,51,53...)
       outdoor.forEach((c, i) => {
+        if(i >= 14) return;
         const row = 49 + (i * 2);
         setCell('C'+row, i+1); setCell('D'+row, c.name);
         setCell('N'+row, c.ip); setCell('AN'+row, c.serial);
@@ -18593,7 +18656,7 @@ ${allIssues.length > 0 ? `
         const issues = cmRecs.flatMap(r => _getNotaItems(r));
         // Get PM months
         const pmMonths = pmRecs.map(r => {
-          const d = r.visitDate ? new Date(r.visitDate) : (r.month ? new Date(yr, r.month-1, 1) : null);
+          const d = r.visitDate ? _parseLocalDate(r.visitDate) : (r.month ? new Date(yr, r.month-1, 1) : null);
           return d ? MONTHS[d.getMonth()].slice(0,3) : '—';
         }).join(', ') || '—';
         const scoreData = siteHealthScores.value[s.id];
@@ -19484,7 +19547,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     // ── 7. Trend Tahunan PM vs CM (multi-year, bukan setakat beberapa bulan) ──
     function _recDate(r) {
-      return r.visitDate ? new Date(r.visitDate) : (r.year ? new Date(r.year, (r.month||1)-1, 1) : null);
+      return r.visitDate ? _parseLocalDate(r.visitDate) : (r.year ? new Date(r.year, (r.month||1)-1, 1) : null);
     }
     const yearTrendData = computed(() => {
       const years = [...new Set(pmRecords.value.map(r => { const d = _recDate(r); return d ? d.getFullYear() : null; }).filter(Boolean))].sort((a,b) => a-b);
