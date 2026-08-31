@@ -443,6 +443,12 @@ details.form-control[open] summary::after{content:'▴'}
   #jadual-print-area{display:block!important}
   /* hide everything except jadual print when in jadual-print mode */
   body.printing-jadual > *:not(#jadual-print-area){display:none!important}
+  /* printBatch() calls window.print() directly on the live page (unlike
+     every other export, which prints from a separate popup document) — so
+     without this, the sidebar/topbar/any open modal print alongside the
+     intended batch content. #app's real direct children (not body's — #app
+     itself sits under body) need hiding, not just .no-print-classed ones. */
+  body.printing-batch #app > *:not(#batch-print-area){display:none!important}
 }
 .print-area{display:none}
 #jadual-print-area{display:none}
@@ -2182,7 +2188,7 @@ details.form-control[open] summary::after{content:'▴'}
             <button class="btn btn-primary btn-sm" @click="saveVendorContract">💾 Simpan</button>
           </div>
           <div v-if="Object.keys(vendorContracts).length" style="margin-top:10px;font-size:.8rem;color:#666">
-            <div v-for="v in CCTV_WARRANTY_VENDORS.filter(x=>vendorContracts[x])" :key="v">{{v}}: <b>{{fmtDate(vendorContracts[v])}}</b></div>
+            <div v-for="v in CCTV_WARRANTY_VENDORS.filter(x=>vendorContracts[x])" :key="v">{{v}}: <b :style="{color: vendorContractStatus(vendorContracts[v])==='expired'?'#c62828':vendorContractStatus(vendorContracts[v])==='expiring'?'#f57c00':'#2e7d32'}">{{fmtDate(vendorContracts[v])}}</b><span v-if="vendorContractStatus(vendorContracts[v])==='expired'" style="color:#c62828"> (Tamat Tempoh)</span><span v-else-if="vendorContractStatus(vendorContracts[v])==='expiring'" style="color:#f57c00"> (Hampir Tamat)</span></div>
           </div>
         </div>
 
@@ -2195,7 +2201,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-for="grp in warrantyByVendor" :key="grp.vendor" class="warranty-vendor-group">
           <div class="warranty-vendor-header">🏢 {{grp.vendor}}
             <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} peralatan · {{grp.sites.length}} site)</span>
-            <span v-if="vendorContracts[grp.vendor]" style="font-weight:400;color:#888;font-size:.8rem">· Tempoh Jaminan Kontrak: {{fmtDate(vendorContracts[grp.vendor])}}</span>
+            <span v-if="vendorContracts[grp.vendor]" style="font-weight:400;font-size:.8rem" :style="{color: vendorContractStatus(vendorContracts[grp.vendor])==='expired'?'#c62828':vendorContractStatus(vendorContracts[grp.vendor])==='expiring'?'#f57c00':'#888'}">· Tempoh Jaminan Kontrak: {{fmtDate(vendorContracts[grp.vendor])}}<template v-if="vendorContractStatus(vendorContracts[grp.vendor])==='expired'"> ⚠️ TAMAT TEMPOH</template><template v-else-if="vendorContractStatus(vendorContracts[grp.vendor])==='expiring'"> ⚠️ Hampir Tamat</template></span>
           </div>
           <div v-for="site in grp.sites" :key="site.siteId" class="warranty-site-group">
             <div class="warranty-site-header">📍 {{site.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{site.items.length}} peralatan)</span></div>
@@ -10287,6 +10293,21 @@ createApp({
       } catch(e) { showToast('Gagal padam kontrak: ' + e.message, 'error'); }
     }
 
+    // Excel/CSV formula injection guard — free-text fields (equipment name/
+    // brand/model, notes, imported data, etc.) can contain a leading
+    // =/+/-/@, which Excel/LibreOffice treats as a formula/DDE trigger when
+    // the exported file is opened. Same mitigation as exportContactCsv's
+    // local csvSafe(), hoisted here so every XLSX export can reuse it.
+    function _xlsxSafeRows(rows) {
+      return rows.map(row => {
+        const safe = {};
+        for(const k in row) {
+          const v = row[k];
+          safe[k] = (typeof v === 'string' && /^[=+\-@]/.test(v)) ? "'"+v : v;
+        }
+        return safe;
+      });
+    }
     const CONTRACT_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
     async function exportContractsExcel() {
       const rows = contractsFiltered.value.map((c,i) => ({
@@ -10294,7 +10315,7 @@ createApp({
         'Tarikh Mula': fmtDate(c.startDate), 'Tarikh Tamat': fmtDate(c.endDate),
         'Status': CONTRACT_STATUS_LABEL[contractStatus(c)], 'Reminder (hari)': c.reminderDays||60, 'Nota': c.notes||'-',
       }));
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Kontrak & SLA');
@@ -10413,6 +10434,21 @@ createApp({
       const warn = new Date();
       warn.setDate(warn.getDate() + (w.reminderDays || 60));
       if(w.endDate <= _localDateStr(warn)) return 'expiring';
+      return 'active';
+    }
+    // Vendor's overall contract end date (warrantyVendorContracts) was
+    // previously shown as a plain, unstyled date label with no expired/
+    // expiring indicator — unlike every individual equipment warranty
+    // (warrantyStatus above), so an expired umbrella contract gave no visual
+    // warning even while individual items under that vendor still showed a
+    // green "Aktif" badge. Reuses the same 60-day reminder window.
+    function vendorContractStatus(dateStr) {
+      if(!dateStr) return 'active';
+      const today = _localDateStr();
+      if(dateStr < today) return 'expired';
+      const warn = new Date();
+      warn.setDate(warn.getDate() + 60);
+      if(dateStr <= _localDateStr(warn)) return 'expiring';
       return 'active';
     }
     // Ring fill % for the mini countdown gauge next to warranty status
@@ -11037,7 +11073,7 @@ createApp({
         'Tempoh Waranti': `${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}`,
         'Status': WARRANTY_STATUS_LABEL[warrantyStatus(w)], 'Nota': w.notes||'-',
       }));
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
       ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1 };
       const wb = XLSX.utils.book_new();
@@ -11361,10 +11397,21 @@ createApp({
     }
     async function _maybeAddCustomModel(equipType, brand, model) {
       if(!EQUIP_MODEL_DICTS[equipType] || !brand || !model || model === 'Lain-lain') return;
+      const proj = currentProject.value === 'vir' ? 'vir' : 'cctv';
+      // Canonicalize brand casing before using it as an object key — brand is
+      // free-typed text (via the "Lain-lain" custom path), so "Hikvision" and
+      // "hikvision" are both valid legitimate input for the SAME brand. Without
+      // this, a second entry typed with different casing would silently store
+      // its model under a separate case-sensitive key, making it permanently
+      // invisible to modelOptionsFor() for the brand's canonical casing. Prefer
+      // a built-in dict's casing first, then whatever casing was used before.
+      const brandLower = brand.trim().toLowerCase();
+      const builtInMatch = Object.keys(EQUIP_MODEL_DICTS[equipType]).find(b => b.toLowerCase() === brandLower);
+      const customMatch = Object.keys(customModels[proj][equipType]).find(b => b.toLowerCase() === brandLower);
+      brand = builtInMatch || customMatch || brand.trim();
       const known = modelOptionsFor(equipType, brand).map(m => m.trim().toLowerCase());
       const val = model.trim();
       if(known.includes(val.toLowerCase())) return;
-      const proj = currentProject.value === 'vir' ? 'vir' : 'cctv';
       if(!customModels[proj][equipType][brand]) customModels[proj][equipType][brand] = [];
       customModels[proj][equipType][brand].push(val);
       try {
@@ -11953,6 +12000,16 @@ createApp({
           });
         }
         await _fw(batch.commit());
+        // Any equipment edit-in-place in progress (equipEditIdx holds an
+        // array INDEX into siteEquip/virSiteEquip) is about to be replaced
+        // wholesale by the restored data below — unlike a re-sort, where the
+        // same item still exists elsewhere in the array (safe to re-sync by
+        // _uid), a restore can legitimately not contain that item at all
+        // (different backup snapshot). Clearing here avoids "Kemaskini"
+        // silently overwriting whatever now sits at that stale index.
+        if(data.siteEquip || data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager) {
+          Object.keys(equipEditIdx).forEach(k => { if(equipEditIdx[k] !== null) cancelEditEquip(k); });
+        }
         // Only mutate local state after Firestore write confirmed
         if(data.siteEquip) siteEquip.value = restoredSiteEquip;
         if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager) {
@@ -12816,9 +12873,10 @@ createApp({
     async function printBatch() {
       if(!batchSelected.value.length) return;
       batchPrintMode.value = true;
+      document.body.classList.add('printing-batch');
       await nextTick();
       window.print();
-      setTimeout(() => { batchPrintMode.value = false; }, 500);
+      setTimeout(() => { batchPrintMode.value = false; document.body.classList.remove('printing-batch'); }, 500);
     }
 
     function exportBatchExcel() {
@@ -12836,7 +12894,7 @@ createApp({
         Status: r.status==='submitted'?'Submitted':'Draft',
         Kamera: r.cameras?.length||0,
       }));
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Rekod PM');
@@ -13476,17 +13534,32 @@ createApp({
       // by THIS client) doesn't go stale between page loads — allUsers is
       // otherwise only fetched once at login.
       try { await loadUsers(); } catch(e) {}
-      // Freezing a user (toggleFreeze) only sets `disabled` in Firestore —
-      // an already-open tab for that account stays fully authenticated
-      // until something re-checks. The heartbeat is the only recurring
-      // client-side tick, so use it to force-logout as soon as another
-      // admin freezes this session's own account.
+      // Freezing a user (toggleFreeze) or deleting them (deleteUser) only
+      // touches Firestore — an already-open tab for that account stays
+      // fully authenticated until something re-checks. The heartbeat is the
+      // only recurring client-side tick, so use it to force-logout as soon
+      // as another admin freezes/deletes this session's own account.
+      //
+      // Deliberately re-fetches this user's OWN doc directly instead of
+      // reading it back out of allUsers.value — loadUsers() filters the
+      // viewer's own account OUT of that list for every role except
+      // superadmin (see its own comment), so `allUsers.value.find(u=>
+      // u.id===authProfile.value.id)` was always undefined for staff/admin,
+      // meaning this check silently never fired for them. A direct doc
+      // fetch also naturally covers full account DELETION (doc no longer
+      // exists), which a list-membership check can't distinguish from
+      // "just not loaded".
       if(authProfile.value?.id) {
-        const own = allUsers.value.find(u => u.id === authProfile.value.id);
-        if(own?.disabled) {
-          showToast('Akaun anda telah di-freeze oleh Superadmin/Admin.', 'error');
-          await doLogout();
-        }
+        try {
+          const ownSnap = await db.collection('users').doc(authProfile.value.id).get();
+          if(!ownSnap.exists) {
+            showToast('Akaun anda telah dipadam oleh Superadmin.', 'error');
+            await doLogout();
+          } else if(ownSnap.data()?.disabled) {
+            showToast('Akaun anda telah di-freeze oleh Superadmin/Admin.', 'error');
+            await doLogout();
+          }
+        } catch(e) { /* fail-open — don't force-logout on a network hiccup */ }
       }
     }
     function _startHeartbeat() {
@@ -13602,11 +13675,17 @@ createApp({
     async function recordLoginFailure(username) {
       try {
         const ref = db.collection('loginAttempts').doc(_safeLoginAttemptId(username));
-        const doc = await ref.get();
-        const newCount = Math.min((doc.exists ? (doc.data().count||0) : 0) + 1, 20);
-        const update = { count: newCount, lastAttempt: firebase.firestore.FieldValue.serverTimestamp() };
-        if(newCount >= 5) update.lockedUntil = firebase.firestore.Timestamp.fromMillis(Date.now() + 15*60*1000);
-        await ref.set(update, { merge: true });
+        // Transaction, not a plain get()-then-set() — two near-simultaneous
+        // failed attempts (double-submit, two tabs) would otherwise both
+        // read the same count and both write count+1, losing an increment
+        // (lockout would trigger a bit later than the intended 5th failure).
+        await db.runTransaction(async (tx) => {
+          const doc = await tx.get(ref);
+          const newCount = Math.min((doc.exists ? (doc.data().count||0) : 0) + 1, 20);
+          const update = { count: newCount, lastAttempt: firebase.firestore.FieldValue.serverTimestamp() };
+          if(newCount >= 5) update.lockedUntil = firebase.firestore.Timestamp.fromMillis(Date.now() + 15*60*1000);
+          tx.set(ref, update, { merge: true });
+        });
       } catch(e) { /* best-effort */ }
     }
     async function clearLoginFailures(username) {
@@ -13648,10 +13727,23 @@ createApp({
       if(!/^\d{6}$/.test(pinModal.pin)) { pinModal.err = 'PIN mesti 6 digit angka.'; return; }
       loading.value = true;
       try {
+        // Unlike the password step, PIN verification used to have no
+        // lockout at all — hashPin() runs entirely client-side against an
+        // already-fetched hash/salt, so without this check someone with an
+        // open session could brute-force all 1,000,000 6-digit PINs locally
+        // with zero server interaction. Reuses the same loginAttempts
+        // counter/lockout the password step already uses, keyed by username.
+        const lock = await checkLoginLockout(authProfile.value.username);
+        if(lock.locked) {
+          pinModal.err = `Terlalu banyak percubaan salah. Cuba lagi selepas ${lock.minsLeft} minit.`;
+          loading.value = false; return;
+        }
         const hash = await hashPin(pinModal.pin, authProfile.value.pinSalt);
         if(hash !== authProfile.value.pinHash) {
+          await recordLoginFailure(authProfile.value.username);
           pinModal.err = 'PIN salah.'; pinModal.pin=''; loading.value = false; return;
         }
+        await clearLoginFailures(authProfile.value.username);
         pinModal.show = false; pinModal.pin = '';
         await finishLogin();
       } catch(e) { pinModal.err = 'Ralat: ' + e.message; }
@@ -13896,6 +13988,12 @@ createApp({
       allUsers.value=[];
       pwChange.newPw=''; pwChange.confirmPw=''; pwChange.err='';
       ocrState.active=false; ocrState.tokens=[];
+      // PM_DRAFT_KEY/EQUIP_DRAFT_KEY are plain global localStorage keys, not
+      // scoped per-user — on a shared/kiosk device, a next person logging in
+      // would otherwise get prompted to recover THIS session's unsaved PM
+      // form/equipment draft and could submit it under their own identity.
+      clearPmDraftLocal();
+      clearEquipDraftLocal();
       page.value='dashboard';
     }
 
@@ -18954,7 +19052,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         '#': i+1, Site: r.site, Projek: r.proj, Kategori: r.cat, 'Nama/Jenis': r.name,
         Brand: r.brand, Model: r.model, 'No. Siri': r.serial, 'Maklumat Tambahan': r.extra,
       }));
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Inventori Peralatan');
@@ -19789,7 +19887,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         '#': i+1, Site: r.siteName, Projek: r.project.toUpperCase(), Kategori: r.category,
         'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Lain-lain': r.lain, 'Jumlah': r.total,
       }));
-      const ws = XLSX.utils.json_to_sheet(rows);
+      const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Ganti-Rosak Peralatan');
