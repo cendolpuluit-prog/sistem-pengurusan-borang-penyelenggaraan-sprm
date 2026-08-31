@@ -151,6 +151,13 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    small 8px rise so navigating still feels immediate, not slow. */
 @keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .page-view{animation:pageFadeIn .22s ease both}
+/* Native View Transitions API cross-fade (see _usePageTransitionRef in
+   setup()) — these pseudo-elements only exist in browsers that support
+   document.startViewTransition and only during an active transition, so
+   this rule is simply inert/ignored everywhere else (Firefox, older
+   Safari). Short duration to complement, not fight, .page-view's own
+   220ms fade-in above. */
+::view-transition-old(root),::view-transition-new(root){animation-duration:.2s;animation-timing-function:ease}
 .app-footer{text-align:center;padding:16px 24px;font-size:.76rem;color:#8a95a8;border-top:1px solid rgba(0,51,102,.08)}
 .app-footer b{color:#5a6a85}
 
@@ -356,6 +363,58 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes checkmarkPath{to{stroke-dashoffset:0}}
 @keyframes checkmarkFadeOut{0%,65%{opacity:1}100%{opacity:0}}
 
+/* MILESTONE CELEBRATION — cinematic upgrade of fireConfetti()'s dim+badge
+   layer (the confetti pieces themselves are unchanged, still built via
+   .confetti-piece/@keyframes confettiFall). Reuses checkmarkCircle/
+   checkmarkPath (same viewBox/dasharray values, just re-themed to the
+   ops-room green) instead of defining new draw keyframes. One overlay
+   element, CSS-only animation, self-removing — same performance profile
+   as the existing save-checkmark overlay it's modeled on. */
+.milestone-overlay{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;background:rgba(0,10,8,.55);animation:milestoneFade 2.8s ease forwards}
+@keyframes milestoneFade{0%{opacity:0}12%{opacity:1}78%{opacity:1}100%{opacity:0}}
+.milestone-badge{width:130px;height:130px;filter:drop-shadow(0 0 20px rgba(77,255,153,.65))}
+.milestone-badge-ring{stroke:#4dff99;stroke-width:3;fill:rgba(0,40,25,.9);stroke-dasharray:151;stroke-dashoffset:151;animation:checkmarkCircle .5s ease-out .15s forwards}
+.milestone-badge-check{stroke:#4dff99;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;fill:none;stroke-dasharray:40;stroke-dashoffset:40;animation:checkmarkPath .35s ease-out .6s forwards}
+.milestone-text{margin-top:16px;color:#fff;font-weight:800;font-size:1.1rem;text-shadow:0 2px 10px rgba(0,0,0,.5);opacity:0;animation:milestoneTextIn .4s ease .95s forwards;text-align:center;padding:0 20px}
+@keyframes milestoneTextIn{to{opacity:1}}
+@media (prefers-reduced-motion: reduce){.milestone-overlay{animation:none;display:none}}
+
+/* SESSION COUNTDOWN GLITCH — the countdown number is re-keyed by its own
+   value (see the template's :key binding), so Vue treats each tick as a
+   brand-new element and replays this short digital-glitch animation once
+   per second instead of it only playing on the very first render. Kept
+   under 300ms and CSS-only (transform/text-shadow, no layout properties)
+   so it can't visibly lag behind the actual 1s countdown tick. */
+.session-countdown-glitch{animation:sessionGlitch .3s steps(2) both}
+@keyframes sessionGlitch{
+  0%{transform:translate(0)}
+  20%{transform:translate(-2px,1px);text-shadow:2px 0 #00e5ff,-2px 0 #ff1744}
+  45%{transform:translate(2px,-1px);text-shadow:-2px 0 #00e5ff,2px 0 #ff1744}
+  70%{transform:translate(-1px,0);text-shadow:1px 0 #00e5ff,-1px 0 #ff1744}
+  100%{transform:translate(0);text-shadow:none}
+}
+@media (prefers-reduced-motion: reduce){.session-countdown-glitch{animation:none}}
+
+/* LOGOUT WIPE — see doLogout(). A thin line collapses to solid black
+   (mimicking an old CRT monitor powering off) while the real session
+   teardown happens hidden behind it, then fades away to reveal the fresh
+   login screen. transform/opacity only — GPU-composited, no layout cost. */
+.logout-wipe-overlay{position:fixed;inset:0;z-index:999999;background:#000;pointer-events:none;transform:scaleY(.004);transform-origin:center;animation:logoutWipeIn .45s cubic-bezier(.4,0,1,1) forwards}
+@keyframes logoutWipeIn{0%{transform:scaleY(.004)}55%{transform:scaleY(.004)}100%{transform:scaleY(1)}}
+.logout-wipe-overlay.logout-wipe-fadeout{animation:logoutWipeOut .5s ease-out forwards}
+@keyframes logoutWipeOut{0%{opacity:1}100%{opacity:0}}
+
+/* LOGIN HANDSHAKE — terminal-style step readout visualizing doLogin()'s
+   real await chain (see loginHandshake in setup()), not a decorative
+   fake sequence. Each step fades in only once its own line is added to
+   the DOM (v-for grows the list as steps become visible via loading
+   staying true), and ticks from "…" to "✓" the instant its flag flips. */
+.login-handshake{margin-top:2px;padding:10px 14px;border-radius:8px;background:rgba(0,0,0,.25);border:1px solid rgba(77,255,153,.25);font-family:var(--font-mono,monospace);font-size:.74rem;display:flex;flex-direction:column;gap:5px}
+.login-handshake-step{color:rgba(255,255,255,.45);animation:loginHandshakeLineIn .25s ease both}
+.login-handshake-step.done{color:#4dff99}
+.login-handshake-check{display:inline-block;width:14px}
+@keyframes loginHandshakeLineIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+
 /* MAP PIN PULSE — radar-ping ring behind each state pin that HAS a team
    assignment on the selected date (renderMapPins()), drawing the eye to
    where work is actually happening today. transform-box:fill-box makes
@@ -364,6 +423,15 @@ details.form-control[open] summary::after{content:'▴'}
    shape uses by default. */
 .mp-pin-pulse{transform-box:fill-box;transform-origin:center;pointer-events:none;animation:mapPinPulse 2s ease-out infinite}
 @keyframes mapPinPulse{0%{transform:scale(1);opacity:.75}100%{transform:scale(2.6);opacity:0}}
+/* Health-tinted state fills (renderMapStateFills/mapStateFillColor) — smooth
+   color transition instead of an instant flat swap when data changes, and a
+   slow, low-cost opacity pulse (not a repaint-heavy filter/box-shadow) on
+   any state that currently has an overdue site, so it draws the eye without
+   competing with the existing team-assignment pins/pulses above. */
+.mp-state{transition:fill 1s ease}
+.mp-state-warn{animation:mapStateWarnPulse 2.4s ease-in-out infinite}
+@keyframes mapStateWarnPulse{0%,100%{fill-opacity:1}50%{fill-opacity:.6}}
+@media (prefers-reduced-motion: reduce){.mp-state-warn{animation:none}}
 
 /* TAB UNDERLINE — a single indicator div is dynamically appended into
    whichever .tabs container is active (updateTabIndicators(), called on
@@ -487,6 +555,39 @@ details.form-control[open] summary::after{content:'▴'}
 /* CHARTS */
 .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:8px}
 .chart-wrap{position:relative;height:240px}
+
+/* OPS ROOM HERO — dashboard "control room" summary. Reuses the same dark
+   navy/green palette + neon accent already established on the login page
+   and welcome popup (#00281a/#013a24/#002855, #4dff99), so this reads as
+   consistent with the app's own brand instead of a mismatched bolt-on.
+   Animations are transform/opacity/background-position only (GPU-composited,
+   no layout/paint thrash) and capped to a handful of elements — the scanline
+   is one pseudo-element, the pulse ring uses a single one-time :style write
+   (not a per-frame JS loop), and zone dots only animate the ones actually
+   flagged overdue, not all 5 at once. */
+.ops-hero{position:relative;overflow:hidden;border-radius:14px;padding:22px 26px;margin-bottom:16px;background:linear-gradient(135deg,#00160e 0%,#00281a 45%,#002244 100%);box-shadow:0 8px 28px rgba(0,20,15,.35)}
+.ops-hero-scanline{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 0%,rgba(77,255,153,.05) 45%,rgba(77,255,153,.09) 50%,rgba(77,255,153,.05) 55%,transparent 100%);background-size:250% 250%;animation:opsScanline 9s linear infinite}
+@keyframes opsScanline{0%{background-position:0% 0%}100%{background-position:100% 100%}}
+.ops-hero-content{position:relative;display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.ops-pulse-wrap{position:relative;width:100px;height:100px;flex-shrink:0}
+.ops-pulse-ring{width:100%;height:100%;transform:rotate(-90deg)}
+.ops-pulse-track{fill:none;stroke:rgba(255,255,255,.1);stroke-width:8}
+.ops-pulse-fill{fill:none;stroke:#4dff99;stroke-width:8;stroke-linecap:round;stroke-dasharray:326.7;transition:stroke-dashoffset 1s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 0 4px rgba(77,255,153,.7))}
+.ops-pulse-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ops-pulse-pct{font-size:1.3rem;font-weight:800;color:#4dff99;animation:opsPulseGlow 2.6s ease-in-out infinite}
+@keyframes opsPulseGlow{0%,100%{text-shadow:0 0 6px rgba(77,255,153,.5)}50%{text-shadow:0 0 14px rgba(77,255,153,.9)}}
+.ops-pulse-sub{font-size:.62rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;text-align:center}
+.ops-stat-row{display:flex;gap:28px;flex-wrap:wrap}
+.ops-stat-num{font-size:1.6rem;font-weight:800;color:#fff;line-height:1.1}
+.ops-stat-warn .ops-stat-num{color:#ff8a80;animation:opsPulseGlow 2.6s ease-in-out infinite}
+.ops-stat-lbl{font-size:.68rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.ops-zone-row{display:flex;gap:10px;margin-left:auto}
+.ops-zone-dot{width:11px;height:11px;border-radius:50%;display:inline-block;cursor:default}
+.ops-zone-ok{background:#4dff99;box-shadow:0 0 5px rgba(77,255,153,.7)}
+.ops-zone-warn{background:#ff5252;box-shadow:0 0 5px rgba(255,82,82,.7);animation:opsZoneBlink 1.6s ease-in-out infinite}
+@keyframes opsZoneBlink{0%,100%{opacity:1}50%{opacity:.35}}
+@media (prefers-reduced-motion: reduce){.ops-hero-scanline,.ops-pulse-pct,.ops-stat-warn .ops-stat-num,.ops-zone-warn{animation:none}}
+@media (max-width:640px){.ops-hero-content{gap:18px}.ops-zone-row{margin-left:0;width:100%;justify-content:center}}
 
 /* OVERDUE ALERT */
 .overdue-alert{background:rgba(220,53,69,.07);border:1.5px solid rgba(220,53,69,.25);border-radius:10px;padding:14px 18px;margin-bottom:16px}
@@ -1148,7 +1249,7 @@ details.form-control[open] summary::after{content:'▴'}
     <div style="font-weight:700;font-size:1.05rem;color:#b71c1c;margin-bottom:8px">Sesi Hampir Tamat</div>
     <div style="font-size:.88rem;color:#555;margin-bottom:18px;line-height:1.6">
       Tiada aktiviti dikesan. Sesi akan ditamatkan secara automatik dalam<br>
-      <span style="font-size:1.6rem;font-weight:900;color:#b71c1c;display:block;margin:8px 0">{{sessionWarning.countdown}}s</span>
+      <span :key="sessionWarning.countdown" class="session-countdown-glitch" style="font-size:1.6rem;font-weight:900;color:#b71c1c;display:block;margin:8px 0">{{sessionWarning.countdown}}s</span>
     </div>
     <button @click="extendSession" style="background:#003366;color:#fff;border:none;border-radius:8px;padding:10px 28px;font-size:.92rem;font-weight:700;cursor:pointer;width:100%">
       ✅ Teruskan Sesi
@@ -1230,6 +1331,11 @@ details.form-control[open] summary::after{content:'▴'}
         <span v-if="loading" class="login-spin"></span>
         <span v-else>LOG MASUK</span>
       </button>
+      <div v-if="loginHandshake.active" class="login-handshake no-print" aria-live="polite">
+        <div v-for="(s,i) in loginHandshake.steps" :key="i" class="login-handshake-step" :class="{done:s.done}">
+          <span class="login-handshake-check">{{s.done?'✓':'…'}}</span> {{s.label}}
+        </div>
+      </div>
       <button type="button" @click="openForgotPw" style="background:none;border:none;color:#5aaf7a;font-size:.78rem;cursor:pointer;text-align:center;padding:2px;text-decoration:underline;text-underline-offset:2px">Lupa kata laluan?</button>
     </div>
 
@@ -1555,6 +1661,44 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <div v-if="page==='dashboard' && !initialLoading" class="page-view">
+
+        <!-- OPS ROOM HERO — bold "control room" overview, reuses existing
+             healthCountCctv/Vir, zoneOverdueCounts, ZONES & countUp numbers
+             (no new data source) so this is purely a visual summary layer. -->
+        <div class="ops-hero no-print">
+          <div class="ops-hero-scanline" aria-hidden="true"></div>
+          <div class="ops-hero-content">
+            <div class="ops-pulse-wrap">
+              <svg viewBox="0 0 120 120" class="ops-pulse-ring" role="img" aria-label="Skor kesihatan keseluruhan">
+                <circle cx="60" cy="60" r="52" class="ops-pulse-track"></circle>
+                <circle cx="60" cy="60" r="52" class="ops-pulse-fill" :style="{strokeDashoffset: 326.7 - (326.7 * opsOverallHealthPct/100)}"></circle>
+              </svg>
+              <div class="ops-pulse-label">
+                <div class="ops-pulse-pct">{{opsOverallHealthPct}}%</div>
+                <div class="ops-pulse-sub">Kesihatan Sistem</div>
+              </div>
+            </div>
+            <div class="ops-stat-row">
+              <div class="ops-stat">
+                <div class="ops-stat-num">{{cctvSitesCount + virSitesCount}}</div>
+                <div class="ops-stat-lbl">Jumlah Site</div>
+              </div>
+              <div class="ops-stat" :class="{'ops-stat-warn': (overdueSortedCctv.length + overdueSortedVir.length) > 0}">
+                <div class="ops-stat-num">{{overdueSortedCctv.length + overdueSortedVir.length}}</div>
+                <div class="ops-stat-lbl">Site Overdue</div>
+              </div>
+              <div class="ops-stat">
+                <div class="ops-stat-num">{{cctvRecordsCount + virRecordsCount}}</div>
+                <div class="ops-stat-lbl">Jumlah Rekod PM</div>
+              </div>
+            </div>
+            <div class="ops-zone-row">
+              <span v-for="(zoneInfo, zoneKey) in ZONES" :key="zoneKey" class="ops-zone-dot"
+                :class="(zoneOverdueCounts[zoneKey]?.overdue || 0) > 0 ? 'ops-zone-warn' : 'ops-zone-ok'"
+                :title="zoneInfo.label + ': ' + (zoneOverdueCounts[zoneKey]?.overdue || 0) + ' overdue daripada ' + (zoneOverdueCounts[zoneKey]?.total || 0) + ' site'"></span>
+            </div>
+          </div>
+        </div>
 
         <!-- FESTIVE HOLIDAY BANNER -->
         <div v-if="todayHoliday" style="background:linear-gradient(135deg,#003366,#00805a);color:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;text-align:center;font-size:.9rem;font-weight:700">
@@ -7549,7 +7693,7 @@ const OPTAGER_MOBO = ['Gigabyte B760 DS3H AX (LGA1700)','Gigabyte B760M DS3H AX 
 const OPTAGER_MOBO_TYPE = ['ATX','m-ATX','Lain-lain'];
 const OPTAGER_OS = ['Windows 10 Pro x64','Windows 11 Pro x64','Lain-lain'];
 
-const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, nextTick, customRef } = Vue;
 
 createApp({
   setup() {
@@ -7597,10 +7741,61 @@ createApp({
     ];
     const loginTipIndex = ref(0);
     let _loginTipTimer = setInterval(() => { loginTipIndex.value = (loginTipIndex.value + 1) % LOGIN_TIPS.length; }, 6000);
-    const page = ref('dashboard');
+    // Wraps every page.value assignment — including the dozens of existing
+    // template `@click="page='x'"` bindings, which compile to the exact
+    // same `.value =` setter — in the native View Transitions API for a
+    // smooth cross-fade between pages, with ZERO changes needed at any
+    // individual call site. Falls back to a plain instant assignment on
+    // unsupported browsers (Firefox, older Safari — both feature-detected)
+    // or under prefers-reduced-motion. Preserves the same no-op-on-
+    // same-value semantics a plain ref() already has (restoreLastPage()
+    // depends on setting page to its own current value NOT re-triggering
+    // watch(page,...) — see that function's own comment).
+    function _usePageTransitionRef(initial) {
+      let val = initial;
+      return customRef((track, trigger) => ({
+        get() {
+          track();
+          return val;
+        },
+        set(newVal) {
+          if (newVal === val) return;
+          const supportsVT = typeof document.startViewTransition === 'function';
+          const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          if (!supportsVT || reduceMotion) {
+            val = newVal;
+            trigger();
+            return;
+          }
+          document.startViewTransition(() => {
+            val = newVal;
+            trigger();
+            return nextTick();
+          });
+        }
+      }));
+    }
+    const page = _usePageTransitionRef('dashboard');
     const authUser = ref(null);
     const authProfile = ref(null);
     const loading = ref(false);
+    // Login "handshake sequence" — visualizes doLogin()'s real await chain
+    // (credential check -> profile load -> finishLogin) instead of a blank
+    // spinner. `active` is driven off `loading` itself (see the watch()
+    // right below, declared AFTER loginHandshake on purpose — a watch()
+    // call forces an immediate read of its source, so it must come after
+    // the const it watches, same lesson as the dashboard map's earlier
+    // fix) rather than doLogin() manually clearing it on every one of its
+    // several early-return branches — that would risk a branch getting
+    // missed and leaving the panel stuck showing "in progress" forever.
+    // `loading` reliably flips back to false on every doLogin() exit path
+    // already, so piggybacking on it is a hide-guarantee for free.
+    const loginHandshake = reactive({ active:false, steps:[
+      { label:'Mengesahkan kelayakan...', done:false },
+      { label:'Memuat profil pengguna...', done:false },
+      { label:'Menyegerakkan sesi...', done:false },
+    ]});
+    watch(loading, (v) => { if(!v) loginHandshake.active = false; });
     const initialLoading = ref(true); // true until loadAll() completes for the first time this session
     // Firebase restores a persisted session asynchronously, so on every page
     // load/refresh there's a brief window where we don't yet know if the
@@ -9014,6 +9209,14 @@ createApp({
     let mapPath = null, mapCentroids = [];
     async function initMapWidget() {
       if (!mapContainerEl.value || mapContainerEl.value.querySelector('svg')) return;
+      // Captured by IDENTITY (not just nullness) — see the re-check below
+      // for why. Rapid navigate-away-then-back before this call's fetch
+      // resolves triggers a SECOND initMapWidget() call against a freshly
+      // remounted container; without tying each call to the specific
+      // element it started with, both calls could pass a plain nullness
+      // check and both append their own <svg> into the (by then, in the
+      // second call's case) current container — duplicate stacked maps.
+      const myContainer = mapContainerEl.value;
       mapLoading.value = true;
       try {
         if (!mapTopologyCache) {
@@ -9025,40 +9228,44 @@ createApp({
         // Firebase/D3 CDN scripts for bandwidth), the user can navigate
         // away from the dashboard before this fetch resolves. v-if then
         // destroys the container and nulls this ref, but nothing else
-        // aborts the in-flight promise — without this check, the code
-        // below would call d3.select(null).append('svg'), which throws,
-        // landing in the catch block below where the fallback error
-        // message ALSO can't render (container's gone too), so the whole
-        // failure is silent. That's the "map sometimes just disappears
-        // after a refresh" behaviour — this was a real, reproducible race,
-        // not a one-off glitch.
-        if (!mapContainerEl.value) return;
+        // aborts the in-flight promise. Comparing by identity (not just
+        // truthiness) also catches the case where the user navigated back
+        // again in the meantime — mapContainerEl.value is non-null again by
+        // then, but points at a DIFFERENT (freshly mounted) element than
+        // the one this call captured above, which is exactly the race that
+        // produced duplicate maps before this check existed.
+        if (mapContainerEl.value !== myContainer) return;
         const geo = topojson.feature(mapTopologyCache, mapTopologyCache.objects.states);
         const width = 560, height = 340;
         const projection = d3.geoMercator().fitSize([width, height], geo);
         mapPath = d3.geoPath(projection);
-        const svg = d3.select(mapContainerEl.value).append('svg')
+        const svg = d3.select(myContainer).append('svg')
           .attr('viewBox', '0 0 ' + width + ' ' + height)
           .attr('role', 'img')
           .style('width', '100%').style('height', 'auto').style('display', 'block');
         svg.append('title').text('Peta penugasan staff mengikut negeri');
         svg.selectAll('path.mp-state').data(geo.features).join('path')
-          .attr('class', 'mp-state').attr('d', mapPath)
-          .style('fill', '#eef2f8').style('stroke', '#c3cfe0').style('stroke-width', 1);
+          .attr('class', d => 'mp-state' + (mapStateHealth.value[d.properties.Name]?.overdue ? ' mp-state-warn' : ''))
+          .attr('d', mapPath)
+          .style('fill', d => mapStateFillColor(d.properties.Name)).style('stroke', '#c3cfe0').style('stroke-width', 1);
         svg.append('g').attr('class', 'mp-pins');
         mapCentroids = geo.features.map(f => ({ name: f.properties.Name, c: mapPath.centroid(f) }));
         renderMapPins();
       } catch (e) {
         mapTopologyCache = null; // allow retry (e.g. next dashboard visit) if the fetch failed transiently
-        if (mapContainerEl.value) {
-          mapContainerEl.value.innerHTML = '';
+        if (mapContainerEl.value === myContainer) {
+          myContainer.innerHTML = '';
           const p = document.createElement('p');
           p.style.cssText = 'font-size:.8rem;color:#888;padding:12px 0';
           p.textContent = 'Peta tidak dapat dimuat: ' + e.message;
-          mapContainerEl.value.appendChild(p);
+          myContainer.appendChild(p);
         }
       } finally {
-        mapLoading.value = false;
+        // Only the call still "owning" the current container should flip
+        // this back off — otherwise a stale call's finally could clear the
+        // loading indicator while a newer call is still genuinely in
+        // flight (the mapLoading-flicker symptom of the same race).
+        if (mapContainerEl.value === myContainer) mapLoading.value = false;
       }
     }
     function renderMapPins() {
@@ -9105,6 +9312,11 @@ createApp({
     // elsewhere in that unrelated chain.
     watch([page, initialLoading], ([p, il]) => { if (p === 'dashboard' && !il) nextTick(() => initMapWidget()); }, { immediate: true });
     watch(mapStateAssignments, () => { mapDetailState.value = null; renderMapPins(); });
+    // renderMapStateFills()/its watcher are declared further down, right
+    // next to mapStateHealth's own const — see there for why (a watch()
+    // call referencing a const declared LATER in setup() throws a temporal-
+    // dead-zone ReferenceError immediately, unlike a function body merely
+    // referencing one, which is fine since it's not evaluated until called).
 
     // ---- "Time-lapse PM Setahun" (Year-in-Review companion) ----
     // Replays, month by month, which states had at least one completed
@@ -9631,6 +9843,16 @@ createApp({
       if(ratio < 0.67) return '#ffe0b2';
       return '#fdecea';
     }
+    // mapStateHealth/mapStateFillColor/renderMapStateFills (used by the
+    // dashboard "Peta Penugasan" map's state fill) are declared further
+    // down, right after overdueMap's own const — see the comment there for
+    // why: watch()'ing a computed forces an immediate synchronous read of
+    // it (to establish a baseline "oldValue"), and mapStateHealth's body
+    // reads overdueMap.value, so registering that watch here — before
+    // overdueMap itself is declared — threw a temporal-dead-zone
+    // ReferenceError on overdueMap. A plain function referencing a
+    // later-declared const is fine (not evaluated until called); a bare
+    // watch(theConst, cb) call is not, since it reads .value immediately.
 
     // { uid: { zone: count } } — counts distinct YYYY-MM months per zone (PM only)
     // CCTV+VIR in the same month = 1 zone visit
@@ -12569,6 +12791,50 @@ createApp({
       return result;
     });
 
+    // Per-STATE (not per-zone) health aggregation for the "Peta Penugasan"
+    // dashboard map's state fill — same overdueMap/SITE_STATE_MAP source as
+    // zoneOverdueCounts, just grouped at the finer 16-state granularity the
+    // topojson actually renders, instead of reusing the coarser 5-zone
+    // number uniformly across every state in that zone. Declared after
+    // overdueMap (not up near zoneOverdueCounts/zoneHeatColor, which read
+    // just as naturally) because the watch() below needs to sit after it —
+    // see the note left at the old location.
+    const mapStateHealth = computed(() => {
+      const byState = {};
+      [...SITES, ...VIR_SITES].forEach(s => {
+        const state = SITE_STATE_MAP[s.id];
+        if(!state) return;
+        if(!byState[state]) byState[state] = { total:0, overdue:0 };
+        byState[state].total++;
+        if(overdueMap.value[s.id]) byState[state].overdue++;
+      });
+      return byState;
+    });
+    function mapStateFillColor(stateName) {
+      const st = mapStateHealth.value[stateName];
+      if(!st || !st.total) return '#eef2f8'; // no tracked sites in this state — neutral, unchanged from before
+      if(st.overdue === 0) return '#1d9e75'; // teal-green glow — fully healthy
+      const ratio = st.overdue / st.total;
+      return ratio < 0.5 ? '#ef9f27' : '#e24b4a'; // amber then red as overdue share grows
+    }
+    // Re-tints existing state <path> fills/classes in place (no SVG rebuild)
+    // whenever health/overdue data changes — e.g. after submitting a PM that
+    // clears a site's overdue flag, the map should visibly recolor without
+    // waiting for the next dashboard remount.
+    function renderMapStateFills() {
+      if (!mapContainerEl.value) return;
+      d3.select(mapContainerEl.value).selectAll('path.mp-state')
+        .classed('mp-state-warn', function() {
+          const name = d3.select(this).datum()?.properties?.Name;
+          return !!mapStateHealth.value[name]?.overdue;
+        })
+        .style('fill', function() {
+          const name = d3.select(this).datum()?.properties?.Name;
+          return mapStateFillColor(name);
+        });
+    }
+    watch(mapStateHealth, () => renderMapStateFills());
+
     // Sites within 4 weeks of next PM due (not yet overdue but approaching)
     const siteNextPmMap = computed(() => {
       const now = new Date();
@@ -12850,6 +13116,15 @@ createApp({
       const c = { green:0, yellow:0, red:0 };
       VIR_SITES.forEach(s => { const l = siteHealthScores.value[s.id]?.level; if(l) c[l]++; });
       return c;
+    });
+    // Combined CCTV+VIR "green" ratio, for the Ops Room hero's pulse ring —
+    // reuses healthCountCctv/Vir rather than re-deriving from
+    // siteHealthScores directly, so this can't drift from the numbers
+    // already shown in the Skor Kesihatan Site card just below it.
+    const opsOverallHealthPct = computed(() => {
+      const total = SITES.length + VIR_SITES.length;
+      if(!total) return 0;
+      return Math.round((healthCountCctv.value.green + healthCountVir.value.green) / total * 100);
     });
 
     // ---- Dashboard: overdue widget (sorted by urgency, split per project) ----
@@ -13350,7 +13625,7 @@ createApp({
         if(status === 'resolved' && rec.siteId) {
           const stillOpen = pmRecords.value.some(r => r.siteId === rec.siteId && r.maintType === 'CM' && (r.cmStatus||'open') !== 'resolved');
           if(!stillOpen) {
-            fireConfetti();
+            fireConfetti(`Backlog CM "${rec.siteName}" selesai!`);
             showToast(`🎉 Semua CM untuk site "${rec.siteName}" telah diselesaikan!`);
             return;
           }
@@ -13615,7 +13890,7 @@ createApp({
     // Small celebratory burst shown once a site hits its full annual PM
     // quota — pure CSS/DOM, no library, self-removing after the animation
     // finishes so it never lingers or piles up in the DOM.
-    function fireConfetti() {
+    function fireConfetti(label) {
       const colors = ['#ff595e','#ffca3a','#8ac926','#1982c4','#6a4c93'];
       const container = document.createElement('div');
       container.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:99999;overflow:hidden';
@@ -13632,6 +13907,17 @@ createApp({
         container.appendChild(piece);
       }
       setTimeout(() => container.remove(), 4000);
+      // Cinematic badge layer — CSS-only (see .milestone-overlay), built the
+      // same imperative way as the confetti above so this stays a
+      // self-contained function with no new template/return{} surface.
+      const overlay = document.createElement('div');
+      overlay.className = 'milestone-overlay';
+      overlay.innerHTML = `<svg viewBox="0 0 52 52" class="milestone-badge">
+        <circle class="milestone-badge-ring" cx="26" cy="26" r="24"/>
+        <path class="milestone-badge-check" d="M14 27l7 7 16-16"/>
+      </svg><div class="milestone-text">${label ? esc(label) : 'Pencapaian dibuka!'}</div>`;
+      document.body.appendChild(overlay);
+      setTimeout(() => overlay.remove(), 2800);
     }
 
     // ---- Firestore write wrapper — tracks pending writes for UI indicator ----
@@ -13834,6 +14120,8 @@ createApp({
         return;
       }
       loading.value=true;
+      loginHandshake.steps.forEach(s => s.done = false);
+      loginHandshake.active = true;
       try {
         // Check hardcoded superadmin first
         const builtIn = USER_MAP[uid];
@@ -13849,6 +14137,7 @@ createApp({
         }
 
         await auth.signInWithEmailAndPassword(email, loginPass.value);
+        loginHandshake.steps[0].done = true;
         await clearLoginFailures(uid);
         // Fire-and-forget — surfaces in Senarai Pengguna as "Log masuk
         // terakhir" so a stale/duplicate account (like the mohdasrul@pm.admin
@@ -13877,6 +14166,7 @@ createApp({
           if(snap2.empty){ await auth.signOut(); loginErr.value='ID pengguna tidak dijumpai.'; triggerShake(); loading.value=false; return; }
           authProfile.value = { id: snap2.docs[0].id, ...snap2.docs[0].data() };
         }
+        loginHandshake.steps[1].done = true;
         // Check account expiry for temporary users
         const prof = authProfile.value;
         if(prof?.accessType === 'temporary' && prof?.expiryDate) {
@@ -13903,6 +14193,7 @@ createApp({
             return; // submitPinSetup() calls finishLogin() once the PIN is created
           }
         }
+        loginHandshake.steps[2].done = true;
         await finishLogin();
       } catch(e) {
         if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') {
@@ -13982,6 +14273,21 @@ createApp({
     async function doLogout() {
       const _logName = authProfile.value?.name || authProfile.value?.username || '';
       await logAudit('LOGOUT', _logName);
+      // "Secure Session Wipe" — brief CRT-style black wipe while the actual
+      // teardown below happens hidden underneath it. Deliberately a plain
+      // body-appended overlay (see .logout-wipe-overlay), NOT a CSS
+      // transform on #app itself — transforming #app would make it a new
+      // containing block for every position:fixed descendant inside it
+      // (modals, the offline banner, scroll-top button, etc.), silently
+      // breaking their positioning for the animation's duration.
+      const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let wipe = null;
+      if (!reduceMotion) {
+        wipe = document.createElement('div');
+        wipe.className = 'logout-wipe-overlay';
+        document.body.appendChild(wipe);
+        await new Promise(r => setTimeout(r, 450));
+      }
       auth.signOut();
       authProfile.value=null;
       loginUser.value=''; loginPass.value='';
@@ -13995,6 +14301,11 @@ createApp({
       clearPmDraftLocal();
       clearEquipDraftLocal();
       page.value='dashboard';
+      if (wipe) {
+        await nextTick();
+        wipe.classList.add('logout-wipe-fadeout');
+        setTimeout(() => wipe.remove(), 550);
+      }
     }
 
     // ---- Reset form ----
@@ -17076,7 +17387,7 @@ createApp({
           const hs = siteHealthScores.value[data.siteId];
           const targetCount = data.project === 'vir' ? hs?.totalWindows : PM_PER_YEAR[data.project];
           if(hs && targetCount && hs.pmCount === targetCount) {
-            fireConfetti();
+            fireConfetti(`100% pematuhan PM — "${data.siteName}"!`);
             showToast(`🎉 Tahniah! Site "${data.siteName}" capai 100% pematuhan PM tahun ini!`);
           }
         }
@@ -20249,7 +20560,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     return {
-      page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
+      page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
@@ -20358,7 +20669,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
       yirYear, printYearInReview,
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
-      healthCountCctv, healthCountVir, siteLeaderboard, siteBadges, siteBadgesMap, generateSiteReportCard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
+      healthCountCctv, healthCountVir, opsOverallHealthPct, siteLeaderboard, siteBadges, siteBadgesMap, generateSiteReportCard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
