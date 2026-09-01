@@ -169,8 +169,8 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    the section divider); this is purely a decorative "brand mark" detail,
    re-plays every time its card mounts (e.g. navigating back to a page),
    consistent with the page-fade-in already doing the same. */
-.card-title::after{content:'';position:absolute;left:10px;bottom:-1px;height:2px;width:0;background:linear-gradient(90deg,#003366,#006633);animation:cardTitleUnderline .5s ease .1s forwards}
-@keyframes cardTitleUnderline{to{width:36px}}
+.card-title::after{content:'';position:absolute;left:10px;bottom:-1px;height:2px;width:36px;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,#003366,#006633);animation:cardTitleUnderline .5s ease .1s forwards}
+@keyframes cardTitleUnderline{to{transform:scaleX(1)}}
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:20px}
 .laporan-chart-row{display:grid;gap:16px;margin-bottom:16px}
 .stat-card{background:linear-gradient(160deg,rgba(255,255,255,.98),rgba(244,248,255,.9));backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:12px;padding:16px;text-align:center;box-shadow:0 2px 10px rgba(0,40,100,.06);border:1px solid rgba(0,51,102,.05);position:relative;overflow:hidden;transition:transform .15s,box-shadow .15s,background-color .3s ease,color .3s ease}
@@ -5986,7 +5986,7 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- Kontraktor Luar add/edit modal -->
-      <div v-if="kModal.show" class="modal-bg" @click.self="kModal.show=false">
+      <div v-if="kModal.show" class="modal-bg">
         <div class="modal">
           <h3>🛠️ {{kModal.editId ? 'Edit' : 'Tambah'}} Kontraktor/Kedai{{kModal.editId ? ' — '+(kModal.proj==='vir'?'VIR':'CCTV') : ''}}</h3>
           <div v-if="!kModal.editId" class="form-group"><label>Sistem</label>
