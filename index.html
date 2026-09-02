@@ -697,6 +697,7 @@ details.form-control[open] summary::after{content:'▴'}
 .proj-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 14px;border-radius:20px;font-size:.8rem;font-weight:700}
 .proj-cctv{background:#e3f0ff;color:#003366}
 .proj-vir{background:#fff0e6;color:#7a2e00}
+.cm-entry-editing{background:#fff8e1;border-radius:6px;padding-left:8px;padding-right:8px;margin:0 -8px}
 
 /* BACKUP */
 .backup-card{background:#fff;border:1px solid #e0e0e0;border-radius:10px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:14px}
@@ -5650,7 +5651,7 @@ details.form-control[open] summary::after{content:'▴'}
 
       <!-- ====== DETAIL/TIMELINE KES CM MODAL ====== -->
       <div v-if="cmCaseDetail.show && cmCaseDetailCase" class="modal-bg">
-        <div class="modal" style="position:relative;max-width:560px">
+        <div class="modal" style="position:relative;max-width:760px">
           <button aria-label="Tutup" @click="cmCaseDetail.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
           <h3>{{cmCaseDetailCase.title}}</h3>
           <p class="text-sm text-muted" style="margin:-6px 0 14px">
@@ -5660,26 +5661,37 @@ details.form-control[open] summary::after{content:'▴'}
             <span :class="['expiry-badge', cmCaseDetailCase.status==='selesai'?'active':'soon']">{{cmCaseDetailCase.status==='selesai'?'✅ Selesai':'🟡 Pending'}}</span>
           </p>
 
-          <div style="max-height:320px;overflow-y:auto;margin-bottom:16px;border:1px solid rgba(0,51,102,.1);border-radius:8px;padding:10px">
+          <div style="max-height:340px;overflow-y:auto;margin-bottom:16px;border:1px solid rgba(0,51,102,.1);border-radius:8px;padding:10px">
             <div v-if="!(cmCaseDetailCase.entries||[]).length" class="empty" style="padding:16px 0">Tiada catatan lagi.</div>
-            <div v-for="e in [...(cmCaseDetailCase.entries||[])].sort((a,b)=>a.date.localeCompare(b.date)||a.ts-b.ts)" :key="e.id" style="padding:8px 0;border-bottom:1px solid rgba(0,51,102,.06)">
+            <div v-for="e in [...(cmCaseDetailCase.entries||[])].sort((a,b)=>a.date.localeCompare(b.date)||a.ts-b.ts)" :key="e.id" style="padding:8px 0;border-bottom:1px solid rgba(0,51,102,.06)" :class="{'cm-entry-editing':cmCaseDetail.editingEntryId===e.id}">
               <div class="flex justify-between items-center">
                 <b style="font-size:.8rem;color:#003366">{{fmtDate(e.date)}}</b>
-                <button v-if="canEditCmCase" class="btn btn-sm btn-outline btn-icon" @click="deleteCmCaseEntry(e.id)" title="Padam catatan" style="padding:2px 6px;font-size:.7rem">🗑</button>
+                <div class="flex gap-8">
+                  <button v-if="canAddCmCase" class="btn btn-sm btn-outline btn-icon" @click="startEditCmCaseEntry(e)" title="Edit catatan" style="padding:2px 6px;font-size:.7rem">✏️</button>
+                  <button v-if="canEditCmCase" class="btn btn-sm btn-outline btn-icon" @click="deleteCmCaseEntry(e.id)" title="Padam catatan" style="padding:2px 6px;font-size:.7rem">🗑</button>
+                </div>
               </div>
-              <div style="font-size:.85rem;white-space:pre-wrap">{{e.note}}</div>
+              <div v-if="e.status" style="font-size:.78rem;font-weight:700;color:#003366;margin-top:2px">📌 {{e.status}}</div>
+              <div style="font-size:.85rem;white-space:pre-wrap;margin-top:2px">{{e.note}}</div>
               <div v-if="e.author" class="text-muted" style="font-size:.7rem;margin-top:2px">— {{e.author}}</div>
             </div>
           </div>
 
-          <div v-if="canAddCmCase" class="form-group"><label>Tambah Catatan Baru</label>
+          <div v-if="canAddCmCase" class="form-group"><label>{{cmCaseDetail.editingEntryId ? '✏️ Edit Catatan' : 'Tambah Catatan Baru'}}</label>
             <input class="form-control" type="date" v-model="cmCaseDetail.newEntryDate" style="margin-bottom:6px">
-            <textarea class="form-control" rows="2" v-model="cmCaseDetail.newEntryNote" placeholder="cth: ACER datang, part tak ready, akan datang lagi minggu depan"></textarea>
+            <input class="form-control" v-model="cmCaseDetail.newEntryStatus" placeholder="Status terkini (cth: Menunggu part dari ACER)" style="margin-bottom:6px">
+            <textarea class="form-control" rows="2" v-model="cmCaseDetail.newEntryNote" placeholder="Tindakan/langkah yang diambil (cth: ACER datang, part tak ready, akan datang lagi minggu depan)"></textarea>
           </div>
           <p v-if="cmCaseDetail.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{cmCaseDetail.err}}</p>
 
           <div class="flex gap-8" style="flex-wrap:wrap">
-            <button v-if="canAddCmCase" class="btn btn-primary btn-sm" @click="addCmCaseEntry" :disabled="loading">+ Tambah Catatan</button>
+            <template v-if="canAddCmCase">
+              <button v-if="!cmCaseDetail.editingEntryId" class="btn btn-primary btn-sm" @click="addCmCaseEntry" :disabled="loading">+ Tambah Catatan</button>
+              <template v-else>
+                <button class="btn btn-primary btn-sm" @click="saveEditCmCaseEntry" :disabled="loading">💾 Simpan Perubahan</button>
+                <button class="btn btn-outline btn-sm" @click="cancelEditCmCaseEntry">Batal Edit</button>
+              </template>
+            </template>
             <button class="btn btn-outline btn-sm" @click="exportCmCasePdf(cmCaseDetailCase)">📄 Export PDF</button>
             <button v-if="canEditCmCase" class="btn btn-sm" :class="cmCaseDetailCase.status==='selesai'?'btn-outline':'btn-success'" @click="toggleCmCaseStatus(cmCaseDetailCase)" :disabled="loading">{{cmCaseDetailCase.status==='selesai'?'↺ Buka Semula':'✅ Tandakan Selesai'}}</button>
             <button class="btn btn-outline btn-sm" style="margin-left:auto" @click="cmCaseDetail.show=false">Tutup</button>
@@ -11104,7 +11116,7 @@ createApp({
     // newEntryDate/newEntryNote live here (not per-case) since only one
     // detail modal is open at a time — mirrors the single-modal pattern
     // used everywhere else in this file (e.g. letterMemoModal).
-    const cmCaseDetail = reactive({ show:false, id:null, newEntryDate:'', newEntryNote:'', err:'' });
+    const cmCaseDetail = reactive({ show:false, id:null, newEntryDate:'', newEntryStatus:'', newEntryNote:'', editingEntryId:null, err:'' });
 
     async function loadCmCases() {
       try {
@@ -11202,7 +11214,9 @@ createApp({
     function openCmCaseDetail(k) {
       cmCaseDetail.id = k.id;
       cmCaseDetail.newEntryDate = _localDateStr();
+      cmCaseDetail.newEntryStatus = '';
       cmCaseDetail.newEntryNote = '';
+      cmCaseDetail.editingEntryId = null;
       cmCaseDetail.err = '';
       cmCaseDetail.show = true;
     }
@@ -11222,13 +11236,59 @@ createApp({
       }
       loading.value = true;
       try {
-        const entry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:cmCaseDetail.newEntryDate, note:cmCaseDetail.newEntryNote.trim(), ts:Date.now(), author:authUser.value?.email || '' };
+        const entry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:cmCaseDetail.newEntryDate, status:cmCaseDetail.newEntryStatus.trim(), note:cmCaseDetail.newEntryNote.trim(), ts:Date.now(), author:authUser.value?.email || '' };
         await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayUnion(entry) });
         k.entries = [...(k.entries||[]), entry];
+        cmCaseDetail.newEntryStatus = '';
         cmCaseDetail.newEntryNote = '';
         cmCaseDetail.newEntryDate = _localDateStr();
         await logAudit('CM_CASE_ADD_ENTRY', `${k.title} — ${entry.date}`);
         showToast('Catatan ditambah!');
+      } catch(e) { cmCaseDetail.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    // Populates the same date/status/note fields used by "Tambah Catatan
+    // Baru" with the entry being corrected — the form switches into "edit
+    // mode" (cmCaseDetail.editingEntryId set) rather than opening a second
+    // modal, so there's only ever one add/edit form on screen.
+    function startEditCmCaseEntry(e) {
+      if(!canAddCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      cmCaseDetail.editingEntryId = e.id;
+      cmCaseDetail.newEntryDate = e.date;
+      cmCaseDetail.newEntryStatus = e.status || '';
+      cmCaseDetail.newEntryNote = e.note;
+      cmCaseDetail.err = '';
+    }
+    function cancelEditCmCaseEntry() {
+      cmCaseDetail.editingEntryId = null;
+      cmCaseDetail.newEntryDate = _localDateStr();
+      cmCaseDetail.newEntryStatus = '';
+      cmCaseDetail.newEntryNote = '';
+      cmCaseDetail.err = '';
+    }
+    // Whole-array overwrite (not arrayRemove+arrayUnion) since editing one
+    // entry's fields in place isn't expressible as a single atomic Firestore
+    // array op — same accepted low-concurrency tradeoff already used by
+    // submitCmCase's edit path elsewhere in this feature. `id`/`ts`/`author`
+    // are preserved from the original entry; only date/status/note change.
+    async function saveEditCmCaseEntry() {
+      if(!canAddCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const k = cmCaseDetailCase.value;
+      if(!k) return;
+      cmCaseDetail.err = '';
+      if(!cmCaseDetail.newEntryDate || !cmCaseDetail.newEntryNote.trim()) {
+        cmCaseDetail.err = 'Tarikh dan catatan wajib diisi.'; return;
+      }
+      loading.value = true;
+      try {
+        const newEntries = (k.entries||[]).map(e => e.id === cmCaseDetail.editingEntryId
+          ? { ...e, date:cmCaseDetail.newEntryDate, status:cmCaseDetail.newEntryStatus.trim(), note:cmCaseDetail.newEntryNote.trim() }
+          : e);
+        await db.collection('cmCases').doc(k.id).update({ entries: newEntries });
+        k.entries = newEntries;
+        await logAudit('CM_CASE_EDIT_ENTRY', `${k.title} — ${cmCaseDetail.newEntryDate}`);
+        showToast('Catatan dikemaskini!');
+        cancelEditCmCaseEntry();
       } catch(e) { cmCaseDetail.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -11241,6 +11301,9 @@ createApp({
       try {
         await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayRemove(entry) });
         k.entries = (k.entries||[]).filter(e=>e.id!==entryId);
+        // If the entry being deleted was mid-edit, the edit form would keep
+        // referencing a now-nonexistent id — fall back to "add" mode.
+        if(cmCaseDetail.editingEntryId === entryId) cancelEditCmCaseEntry();
         await logAudit('CM_CASE_DELETE_ENTRY', `${k.title} — ${entry.date}`);
         showToast('Catatan dipadam.');
       } catch(e) { showToast('Gagal padam catatan: ' + e.message, 'error'); }
@@ -11254,7 +11317,7 @@ createApp({
     async function exportCmCasePdf(k) {
       const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
       const entriesSorted = [...(k.entries||[])].sort((a,b)=> a.date.localeCompare(b.date) || a.ts-b.ts);
-      const rows = entriesSorted.map(e => `<tr><td>${esc(fmtDate(e.date))}</td><td>${esc(e.note).replace(/\n/g,'<br>')}</td></tr>`).join('');
+      const rows = entriesSorted.map(e => `<tr><td>${esc(fmtDate(e.date))}</td><td>${e.status ? `<b style="color:#003366">${esc(e.status)}</b><br>` : ''}${esc(e.note).replace(/\n/g,'<br>')}</td></tr>`).join('');
       const statusLabel = k.status==='selesai' ? `✅ Selesai (${fmtDate(k.resolvedDate)})` : '🟡 Pending';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log Kes CM - ${esc(k.title)}</title>
 <style>
@@ -21024,7 +21087,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       canEditLetterMemo, canAddLetterMemo,
       cmCases, cmCaseFilterSite, cmCaseFilterProject, cmCaseFilterStatus, cmCasesFiltered, cmCaseModal, cmCaseDetail, cmCaseDetailCase,
       loadCmCases, onCmCaseProjectChange, onCmCaseSiteChange, openAddCmCase, openEditCmCase, submitCmCase, deleteCmCase, toggleCmCaseStatus,
-      openCmCaseDetail, addCmCaseEntry, deleteCmCaseEntry, exportCmCasePdf, canEditCmCase, canAddCmCase,
+      openCmCaseDetail, addCmCaseEntry, deleteCmCaseEntry, startEditCmCaseEntry, cancelEditCmCaseEntry, saveEditCmCaseEntry, exportCmCasePdf, canEditCmCase, canAddCmCase,
       serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
       showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
       filePreviewModal, previewServiceReport, printImagePreview, closeFilePreview,
