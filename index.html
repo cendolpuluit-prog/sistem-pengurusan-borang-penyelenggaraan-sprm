@@ -705,7 +705,6 @@ details.form-control[open] summary::after{content:'▴'}
 .backup-card .bc-info{flex:1}
 .backup-card .bc-info b{font-size:.9rem;color:#003366}
 .backup-card .bc-info p{font-size:.78rem;color:#888;margin-top:2px}
-.backup-auto-tag{background:#e6f4ea;color:#1e7e34;font-size:.72rem;padding:2px 8px;border-radius:10px;font-weight:600}
 .backup-manual-tag{background:#e3f0ff;color:#003366;font-size:.72rem;padding:2px 8px;border-radius:10px;font-weight:600}
 .progress-bar{height:6px;background:#e0e0e0;border-radius:3px;margin-top:8px;overflow:hidden}
 .progress-fill{height:100%;background:#003366;border-radius:3px;transition:width .3s}
@@ -5278,29 +5277,6 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <div class="card">
-          <div class="card-title">☁️ Auto-Backup Cloud (Max 3)</div>
-          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Auto-backup dibuat sekali sehari (~jam 10 malam) dan disimpan di Firestore (cloud) — boleh diakses dari mana-mana peranti/pelayar, bukan disimpan dalam komputer/telefon sahaja. Hanya 3 terkini disimpan (backup terlama digantikan bila yang ke-4 dibuat). Skop terhad kepada data <b>penting/operasi</b> sahaja (peralatan site &amp; rekod PM) supaya kekal di bawah had saiz dokumen Firestore — untuk backup semua data, guna Backup Manual di sebelah.</p>
-          <button class="btn btn-outline btn-sm" @click="doAutoBackup" :disabled="loading" style="margin-bottom:14px">
-            ⚡ Buat Auto-Backup Sekarang
-          </button>
-          <div v-if="autoBackups.length===0" style="color:#aaa;font-size:.85rem;text-align:center;padding:20px 0">
-            Tiada auto-backup disimpan.
-          </div>
-          <div v-for="(b,i) in autoBackups" :key="i" class="backup-card">
-            <div class="bc-icon">💾</div>
-            <div class="bc-info">
-              <b>Auto-Backup #{{autoBackups.length - i}}</b>
-              <p>{{new Date(b.timestamp).toLocaleString('ms-MY')}} &nbsp;·&nbsp; {{(b.size/1024).toFixed(1)}} KB</p>
-            </div>
-            <span class="backup-auto-tag">AUTO</span>
-            <div style="display:flex;gap:6px;margin-left:10px">
-              <button class="btn btn-sm btn-primary" @click="loadLocalBackup(i)">Restore</button>
-              <button :disabled="loading" class="btn btn-sm btn-outline" style="color:red;border-color:red" @click="deleteLocalBackup(i)">Padam</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
           <div class="card-title">📂 Restore dari Fail</div>
           <p style="color:#555;font-size:.88rem;margin-bottom:14px">Muat naik fail backup JSON yang telah dimuat turun sebelum ini untuk pulihkan data.</p>
           <label class="btn btn-warning" style="cursor:pointer;display:inline-block">
@@ -7443,9 +7419,6 @@ const SITE_STATE_MAP = {
   v29:'Sabah', v30:'Sabah', v31:'Sabah', v32:'Sarawak', v33:'Sarawak',
   v34:'Sarawak', v35:'Sarawak',
 };
-
-const LAST_BACKUP_KEY = 'pm_sprm_last_backup'; // local hint only (avoid redundant Firestore checks within the same browser session)
-const MAX_AUTO_BACKUPS = 3;
 
 const MONTHS = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
 const BRANDS = ['Panasonic','Hanwha','Bosch','Hikvision','Dahua','Axis','Uniview','Vivotek','Lain-lain'];
@@ -11166,7 +11139,7 @@ createApp({
       loading.value = true;
       try {
         if(!cmCaseModal.editing) {
-          const firstEntry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:d.openedDate, note:d.initialNote.trim() || 'Kes dibuka.', ts:Date.now(), author:authUser.value?.email || '' };
+          const firstEntry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:d.openedDate, note:d.initialNote.trim() || 'Kes dibuka.', ts:Date.now(), author:authProfile.value?.username || authUser.value?.email || '' };
           await db.collection('cmCases').add({
             project:d.project, siteId:d.siteId, siteName:d.siteName, title:d.title.trim(),
             status:'pending', openedDate:d.openedDate, resolvedDate:'',
@@ -11236,7 +11209,7 @@ createApp({
       }
       loading.value = true;
       try {
-        const entry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:cmCaseDetail.newEntryDate, status:cmCaseDetail.newEntryStatus.trim(), note:cmCaseDetail.newEntryNote.trim(), ts:Date.now(), author:authUser.value?.email || '' };
+        const entry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:cmCaseDetail.newEntryDate, status:cmCaseDetail.newEntryStatus.trim(), note:cmCaseDetail.newEntryNote.trim(), ts:Date.now(), author:authProfile.value?.username || authUser.value?.email || '' };
         await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayUnion(entry) });
         k.entries = [...(k.entries||[]), entry];
         cmCaseDetail.newEntryStatus = '';
@@ -12275,7 +12248,6 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function openBackup() { page.value = 'backup'; }
 
     // ---- Backup / Restore ----
-    const autoBackups = ref([]);
     const backupProgress = ref(0);
 
     function collectBackupData() {
@@ -12490,101 +12462,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       loading.value = false;
     }
 
-    // Auto-backups live entirely in Firestore ('systemBackups' collection,
-    // JSON payload stored as a document field) — NOT Firebase Storage, which
-    // requires upgrading the project to the Blaze billing plan. NOT
-    // localStorage either, which only lives on the one device/browser that
-    // created it and is wiped if that browser's cache/site-data is cleared.
-    // Trade-off: a single Firestore document is capped at ~1MiB, so very
-    // large datasets (many years of accumulated PM records) could eventually
-    // outgrow this — doAutoBackup() below guards against that and tells the
-    // admin to use manual file-download backup instead if it happens.
-    const BACKUP_COLLECTION = 'systemBackups';
-    const BACKUP_MAX_BYTES = 900000; // stay safely under Firestore's ~1MiB document limit
-    let _autoBackupWatcher = null;
     let _notifWatcher = null;
-
-    async function doAutoBackup() {
-      const data = collectBackupData();
-      try {
-        const json = JSON.stringify(data);
-        const sizeBytes = new Blob([json]).size;
-        if(sizeBytes > BACKUP_MAX_BYTES) {
-          showToast(`Data terlalu besar untuk auto-backup cloud (${(sizeBytes/1024).toFixed(0)}KB > had ~880KB). Sila guna "Backup Manual" (muat turun fail) sebagai gantinya.`, 'error');
-          return;
-        }
-        await db.collection(BACKUP_COLLECTION).add({
-          timestamp: data.exportedAt,
-          sizeBytes,
-          payload: json,
-          type: 'auto',
-          createdBy: authUser.value?.email || '',
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        });
-        // Enforce retention: keep only the newest MAX_AUTO_BACKUPS
-        const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').get();
-        const extras = snap.docs.slice(MAX_AUTO_BACKUPS);
-        for(const doc of extras) { await doc.ref.delete(); }
-        localStorage.setItem(LAST_BACKUP_KEY, data.exportedAt); // local hint only, to avoid redundant checks this session
-        await refreshAutoBackups();
-        showToast('Auto-backup berjaya disimpan ke Firestore (cloud).');
-      } catch(e) { showToast('Auto-backup gagal: '+e.message, 'error'); }
-    }
-
-    async function refreshAutoBackups() {
-      const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').limit(MAX_AUTO_BACKUPS).get();
-      autoBackups.value = snap.docs.map(d => ({ id:d.id, timestamp:d.data().timestamp, size:d.data().sizeBytes }));
-    }
-
-    // Daily at ~10pm local time — there's no server-side cron in a static
-    // client app, so this fires once per calendar day (by local date, not
-    // last-24h) the first time ANY logged-in session checks in at/after
-    // 22:00. If nobody has the app open right at 10pm, the first check-in
-    // after that time that same day still counts as "today's" backup —
-    // catch-up, not skipped. Retention (FIFO, oldest replaces first once at
-    // MAX_AUTO_BACKUPS) is already handled inside doAutoBackup().
-    const AUTO_BACKUP_HOUR = 22;
-    async function checkAutoBackup() {
-      try {
-        const snap = await db.collection(BACKUP_COLLECTION).orderBy('createdAt','desc').limit(1).get();
-        const last = snap.docs[0]?.data()?.timestamp;
-        const lastDay = last ? _localDateStr(new Date(last)) : null;
-        const isDueToday = lastDay !== _localDateStr() && new Date().getHours() >= AUTO_BACKUP_HOUR;
-        if(isDueToday) {
-          await doAutoBackup();
-        } else {
-          await refreshAutoBackups();
-        }
-      } catch(e) { console.warn('checkAutoBackup error:', e); }
-    }
-
-    async function loadLocalBackup(idx) {
-      const b = autoBackups.value[idx];
-      if(!b) return;
-      loading.value = true;
-      try {
-        const doc = await db.collection(BACKUP_COLLECTION).doc(b.id).get();
-        if(!doc.exists) { showToast('Backup tidak dijumpai.', 'error'); loading.value = false; return; }
-        applyRestore(JSON.parse(doc.data().payload));
-      } catch(e) { showToast('Gagal muat backup: '+e.message, 'error'); }
-      loading.value = false;
-    }
-
-    async function deleteLocalBackup(idx) {
-      // Firestore rules already restrict systemBackups delete to superadmin —
-      // this mirrors that client-side (matches deleteUser/deleteAuditLog
-      // pattern) so a non-superadmin gets a clean toast instead of a raw
-      // Firestore permission-denied error.
-      if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm('Padam backup ini?')) return;
-      const b = autoBackups.value[idx];
-      if(!b) return;
-      try {
-        await db.collection(BACKUP_COLLECTION).doc(b.id).delete();
-        await refreshAutoBackups();
-        showToast('Backup dipadam.');
-      } catch(e) { showToast('Gagal padam backup: '+e.message, 'error'); }
-    }
 
     function restoreFromFile(evt) {
       const file = evt.target.files[0];
@@ -12602,11 +12480,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     async function applyRestore(data) {
       const isFull = !!data.full;
-      if(!confirm(`Restore data ini${isFull?' (PENUH — termasuk pengguna, kontrak, contact person, jadual, log audit & senarai custom)':''}? Data semasa akan digantikan.\n\nSatu backup automatik akan disimpan dahulu sebagai langkah keselamatan.`)) return;
+      if(!confirm(`Restore data ini${isFull?' (PENUH — termasuk pengguna, kontrak, contact person, jadual, log audit & senarai custom)':''}? Data semasa akan digantikan.\n\nPastikan anda sudah ada salinan backup terkini sebelum meneruskan.`)) return;
       loading.value=true;
       try {
-        // Checkpoint current state before overwriting anything
-        await doAutoBackup();
+        // Auto-backup cloud checkpoint (doAutoBackup()) was removed from the
+        // whole app — this project's data long ago outgrew the ~880KB
+        // Firestore document cap it relied on, so the checkpoint failed
+        // every time anyway (see the removed function's history). Manual
+        // file-download backup (doManualBackup) is now the only backup path
+        // — the confirm() above tells the user to have a recent one ready
+        // instead of silently promising a checkpoint that couldn't succeed.
 
         // Write to Firestore FIRST — only update local state after each commit succeeds
         // Merge each restored site onto the full default shape — an older
@@ -12778,17 +12661,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!confirm(`Restore data peralatan untuk "${site?.name}" SAHAJA dari fail backup ini?\n\nSite lain langsung tidak disentuh. Data semasa site ini akan digantikan.`)) return;
       loading.value = true;
       try {
-        // Deliberately NOT calling doAutoBackup() here (unlike the full
-        // Restore above) — that checkpoint serializes EVERY site + all
-        // pmRecords into one Firestore document capped at ~880KB, and this
-        // project's data now regularly exceeds that, so the checkpoint
-        // fails every time and only produces a confusing "backup gagal —
-        // saiz terlalu besar" toast without actually blocking anything
-        // (doAutoBackup() fails soft, not by throwing). Skipping it outright
-        // is more honest than showing an alarming error for a checkpoint
-        // that can't succeed — and the blast radius here is inherently
-        // smaller than the full Restore anyway (one site, not everything),
-        // so the safety net matters less to begin with.
+        // No auto-backup checkpoint here — the whole auto-backup-to-cloud
+        // feature (doAutoBackup) was removed app-wide, since it serialized
+        // data into one Firestore document capped at ~880KB and this
+        // project's data long ago outgrew that. Manual file-download backup
+        // is the only backup path now; the confirm() above tells the user
+        // to have a recent one ready instead.
         if(isVir) {
           const EQUIP_SHAPE_VIR = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
           const rooms = singleSiteRestore.data.virSiteEquip?.[id]?.rooms || [];
@@ -15497,19 +15375,6 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         }
         initDbStorageWidgetIfStale(); // fire-and-forget — no-op for non-superadmin, cache-first for superadmin
 
-        // systemBackups is superadmin-only in Firestore rules — calling this
-        // for any other role means the read inside it always fails
-        // permission-denied (silently swallowed, but still a wasted round
-        // trip on every login + every 30-min re-check).
-        if(authProfile.value?.role === 'superadmin') {
-          checkAutoBackup();
-          // Re-check periodically too — checkAutoBackup only fires once per
-          // calendar day, so re-running it is a cheap no-op except right
-          // after 10pm, when it catches sessions left open through the mark
-          // instead of only checking once at login.
-          clearInterval(_autoBackupWatcher);
-          _autoBackupWatcher = setInterval(checkAutoBackup, 30*60*1000);
-        }
         buildNotifications();
         // Re-run periodically too — buildNotifications is otherwise only
         // triggered by pmRecords/contracts watchers, so day-threshold alerts
@@ -18134,9 +17999,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       trashLoading.value = false;
     }
     // Client-only app, no server cron — this fires whenever a superadmin
-    // opens Tong Sampah (mirrors doAutoBackup()'s "checks in when someone
-    // happens to be logged in" pattern, an accepted limitation elsewhere in
-    // this codebase already).
+    // opens Tong Sampah ("checks in when someone happens to be logged in",
+    // an accepted limitation elsewhere in this codebase already).
     async function _purgeOldTrash() {
       const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
       const expired = trashedPmRecords.value.filter(r => { const ms = _trashMs(r); return ms && ms < cutoff; });
@@ -21112,10 +20976,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       bulkEditModal, bulkEditFieldOptions, openBulkEdit, applyBulkEdit,
       infoModal, showInfo,
       openSites, openPMList, openBackup,
-      autoBackups, backupProgress, doManualBackup, doAutoBackup,
+      backupProgress, doManualBackup,
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
       migrateHanwhaModal, migrateHanwhaBrandName,
-      loadLocalBackup, deleteLocalBackup, restoreFromFile,
+      restoreFromFile,
       singleSiteRestore, singleSiteRestoreFile, singleSiteRestoreOptions, singleSiteRestorePreview, restoreSingleSite,
       startNewPM, loadPMEquip, savePM, viewRecord, editRecord, cancelPmForm, deleteRecord,
       TRASH_RETENTION_DAYS, trashedPmRecords, trashLoading, trashDeletedAtLabel, trashDaysLeft, openTrash, loadTrash, restoreDeletedRecord, permanentlyDeleteRecord,
