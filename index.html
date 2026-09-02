@@ -1502,6 +1502,10 @@ details.form-control[open] summary::after{content:'▴'}
       <div class="nav-item" :class="{active:page==='surat-memo'}" @click="loadLetterMemos();page='surat-memo'" v-if="canViewCredentials">
         <span class="icon">📄</span> Surat &amp; Memo
       </div>
+      <div class="nav-item" :class="{active:page==='log-cm'}" @click="loadCmCases();page='log-cm'" v-if="canViewCredentials">
+        <span class="icon">🔧</span> Log Kes CM
+        <span v-if="cmCases.filter(k=>k.status!=='selesai').length>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{cmCases.filter(k=>k.status!=='selesai').length}}</span>
+      </div>
       <div class="nav-item" :class="{active:page==='laporan'}" @click="page='laporan'" v-if="canViewCredentials">
         <span class="icon">📋</span> Laporan
       </div>
@@ -2448,6 +2452,61 @@ details.form-control[open] summary::after{content:'▴'}
                     <button :disabled="loading" class="btn btn-sm btn-danger btn-icon" @click="deleteLetterMemo(m)" title="Padam">🗑</button>
                   </template>
                   <span v-else class="text-muted text-sm">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ====== LOG KES CM ====== -->
+      <div v-if="page==='log-cm'" class="page-view">
+        <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin:0;border:none;padding:0">🔧 Log Kes CM</div>
+          <button v-if="canAddCmCase" class="btn btn-primary btn-sm" @click="openAddCmCase">+ Buka Kes Baru</button>
+        </div>
+        <p class="text-sm text-muted mb-16">Jejak progress kes CM yang belum selesai (cth: peralatan dibawa balik untuk claim waranti, menunggu vendor) — tambah catatan setiap kali ada perkembangan, tanpa perlu copy-paste mesej WhatsApp lama. Export PDF untuk share progress terkini.</p>
+
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
+          <select class="form-control" style="width:auto;min-width:160px" v-model="cmCaseFilterStatus">
+            <option value="">Semua Status</option>
+            <option value="pending">🟡 Pending</option>
+            <option value="selesai">✅ Selesai</option>
+          </select>
+          <select class="form-control" style="width:auto;min-width:160px" v-model="cmCaseFilterProject">
+            <option value="">Semua Projek</option>
+            <option value="cctv">CCTV</option>
+            <option value="vir">VIR</option>
+          </select>
+          <select class="form-control" style="width:auto;min-width:200px;margin-left:auto" v-model="cmCaseFilterSite">
+            <option value="">Semua Site</option>
+            <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}} (CCTV)</option>
+            <option v-for="s in VIR_SITES" :key="s.id" :value="s.id">{{s.name}} (VIR)</option>
+          </select>
+        </div>
+
+        <div v-if="!cmCasesFiltered.length" class="empty">Tiada kes CM lagi.</div>
+        <div v-else class="tbl-wrap">
+          <table>
+            <thead><tr><th>Tajuk Kes</th><th>Projek/Site</th><th>Status</th><th>Dibuka</th><th>Catatan</th><th>Tindakan</th></tr></thead>
+            <tbody>
+              <tr v-for="k in cmCasesFiltered" :key="k.id">
+                <td style="max-width:260px;white-space:pre-wrap">{{k.title}}</td>
+                <td style="font-size:.82rem">
+                  <span v-if="k.project==='cctv'" class="proj-badge proj-cctv">CCTV</span>
+                  <span v-else-if="k.project==='vir'" class="proj-badge proj-vir">VIR</span>
+                  <span><br>{{k.siteName}}</span>
+                </td>
+                <td><span :class="['expiry-badge', k.status==='selesai'?'active':'soon']">{{k.status==='selesai'?'✅ Selesai':'🟡 Pending'}}</span></td>
+                <td style="white-space:nowrap">{{fmtDate(k.openedDate)}}</td>
+                <td style="text-align:center">{{(k.entries||[]).length}}</td>
+                <td class="flex gap-8">
+                  <button class="btn btn-sm btn-outline btn-icon" @click="openCmCaseDetail(k)" title="Lihat/Tambah Catatan">📜</button>
+                  <button class="btn btn-sm btn-outline btn-icon" @click="exportCmCasePdf(k)" title="Export PDF">📄</button>
+                  <template v-if="canEditCmCase">
+                    <button class="btn btn-sm btn-outline btn-icon" @click="openEditCmCase(k)" title="Edit">✏️</button>
+                    <button :disabled="loading" class="btn btn-sm btn-danger btn-icon" @click="deleteCmCase(k)" title="Padam">🗑</button>
+                  </template>
                 </td>
               </tr>
             </tbody>
@@ -5559,6 +5618,75 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
       </div>
 
+      <!-- ====== ADD/EDIT KES CM MODAL ====== -->
+      <div v-if="cmCaseModal.show" class="modal-bg">
+        <div class="modal" style="position:relative">
+          <button aria-label="Tutup" @click="cmCaseModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
+          <h3>{{cmCaseModal.editing?'Edit Kes CM':'Buka Kes CM Baru'}}</h3>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Projek *</label>
+              <select class="form-control" v-model="cmCaseModal.data.project" @change="onCmCaseProjectChange">
+                <option value="cctv">CCTV</option>
+                <option value="vir">VIR</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Site *</label>
+              <select class="form-control" v-model="cmCaseModal.data.siteId" @change="onCmCaseSiteChange">
+                <option value="">-- Pilih Site --</option>
+                <option v-for="s in (cmCaseModal.data.project==='vir'?VIR_SITES:SITES)" :key="s.id" :value="s.id">{{s.name}}</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group"><label>Tajuk Kes *</label><input class="form-control" v-model="cmCaseModal.data.title" placeholder="cth: Claim Waranti PC — ACER Malaysia"></div>
+          <div class="form-group"><label>Tarikh Dibuka *</label><input class="form-control" type="date" v-model="cmCaseModal.data.openedDate"></div>
+          <div class="form-group" v-if="!cmCaseModal.editing"><label>Catatan Awal <span class="text-muted text-sm">(pilihan)</span></label><textarea class="form-control" rows="2" v-model="cmCaseModal.data.initialNote" placeholder="cth: PC dibawa balik ke office Daya One untuk claim waranti"></textarea></div>
+          <p v-if="cmCaseModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{cmCaseModal.err}}</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="cmCaseModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="submitCmCase" :disabled="loading">{{loading?'Menyimpan...':cmCaseModal.editing?'Simpan Perubahan':'Buka Kes'}}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== DETAIL/TIMELINE KES CM MODAL ====== -->
+      <div v-if="cmCaseDetail.show && cmCaseDetailCase" class="modal-bg">
+        <div class="modal" style="position:relative;max-width:560px">
+          <button aria-label="Tutup" @click="cmCaseDetail.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
+          <h3>{{cmCaseDetailCase.title}}</h3>
+          <p class="text-sm text-muted" style="margin:-6px 0 14px">
+            <span v-if="cmCaseDetailCase.project==='cctv'" class="proj-badge proj-cctv">CCTV</span>
+            <span v-else-if="cmCaseDetailCase.project==='vir'" class="proj-badge proj-vir">VIR</span>
+            {{cmCaseDetailCase.siteName}} &nbsp;·&nbsp;
+            <span :class="['expiry-badge', cmCaseDetailCase.status==='selesai'?'active':'soon']">{{cmCaseDetailCase.status==='selesai'?'✅ Selesai':'🟡 Pending'}}</span>
+          </p>
+
+          <div style="max-height:320px;overflow-y:auto;margin-bottom:16px;border:1px solid rgba(0,51,102,.1);border-radius:8px;padding:10px">
+            <div v-if="!(cmCaseDetailCase.entries||[]).length" class="empty" style="padding:16px 0">Tiada catatan lagi.</div>
+            <div v-for="e in [...(cmCaseDetailCase.entries||[])].sort((a,b)=>a.date.localeCompare(b.date)||a.ts-b.ts)" :key="e.id" style="padding:8px 0;border-bottom:1px solid rgba(0,51,102,.06)">
+              <div class="flex justify-between items-center">
+                <b style="font-size:.8rem;color:#003366">{{fmtDate(e.date)}}</b>
+                <button v-if="canEditCmCase" class="btn btn-sm btn-outline btn-icon" @click="deleteCmCaseEntry(e.id)" title="Padam catatan" style="padding:2px 6px;font-size:.7rem">🗑</button>
+              </div>
+              <div style="font-size:.85rem;white-space:pre-wrap">{{e.note}}</div>
+              <div v-if="e.author" class="text-muted" style="font-size:.7rem;margin-top:2px">— {{e.author}}</div>
+            </div>
+          </div>
+
+          <div v-if="canAddCmCase" class="form-group"><label>Tambah Catatan Baru</label>
+            <input class="form-control" type="date" v-model="cmCaseDetail.newEntryDate" style="margin-bottom:6px">
+            <textarea class="form-control" rows="2" v-model="cmCaseDetail.newEntryNote" placeholder="cth: ACER datang, part tak ready, akan datang lagi minggu depan"></textarea>
+          </div>
+          <p v-if="cmCaseDetail.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{cmCaseDetail.err}}</p>
+
+          <div class="flex gap-8" style="flex-wrap:wrap">
+            <button v-if="canAddCmCase" class="btn btn-primary btn-sm" @click="addCmCaseEntry" :disabled="loading">+ Tambah Catatan</button>
+            <button class="btn btn-outline btn-sm" @click="exportCmCasePdf(cmCaseDetailCase)">📄 Export PDF</button>
+            <button v-if="canEditCmCase" class="btn btn-sm" :class="cmCaseDetailCase.status==='selesai'?'btn-outline':'btn-success'" @click="toggleCmCaseStatus(cmCaseDetailCase)" :disabled="loading">{{cmCaseDetailCase.status==='selesai'?'↺ Buka Semula':'✅ Tandakan Selesai'}}</button>
+            <button class="btn btn-outline btn-sm" style="margin-left:auto" @click="cmCaseDetail.show=false">Tutup</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ====== ADD/EDIT WARANTI PERALATAN VIR MODAL ====== -->
       <div v-if="virWarrantyModal.show" class="modal-bg">
         <div class="modal" style="position:relative">
@@ -5831,6 +5959,29 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>
                     <button :disabled="loading" class="btn btn-sm btn-success" @click="restoreTrashSuratMemo(r.id)">♻️ Pulihkan</button>
                     <button :disabled="loading" class="btn btn-sm btn-danger" @click="purgeTrashSuratMemo(r.id)">🗑️ Padam Kekal</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">🗑️ Tong Sampah — Log Kes CM Dipadam</div>
+          <div v-if="!trashedCmCases.length" class="empty">Tong sampah kosong.</div>
+          <div v-else class="tbl-wrap">
+            <table>
+              <thead><tr><th>Tajuk Kes</th><th>Site</th><th>Dipadam Pada</th><th>Oleh</th><th>Baki Hari</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="r in trashedCmCases" :key="r.id">
+                  <td>{{r.title||'-'}}</td>
+                  <td>{{r.siteName||'-'}}</td>
+                  <td>{{trashDeletedAtLabel(r)}}</td>
+                  <td>{{r.deletedBy||'-'}}</td>
+                  <td>{{trashDaysLeft(r)}}</td>
+                  <td>
+                    <button :disabled="loading" class="btn btn-sm btn-success" @click="restoreTrashCmCases(r.id)">♻️ Pulihkan</button>
+                    <button :disabled="loading" class="btn btn-sm btn-danger" @click="purgeTrashCmCases(r.id)">🗑️ Padam Kekal</button>
                   </td>
                 </tr>
               </tbody>
@@ -10067,6 +10218,13 @@ createApp({
     // scoped). Same permission shape as canEditWarranty/canAddWarranty above.
     const canEditLetterMemo = computed(()=> isAdminRole() || hasPermOverride('editSuratMemo'));
     const canAddLetterMemo = computed(()=> canEditLetterMemo.value || authProfile.value?.role==='staff');
+    // Log Kes CM — pending corrective-maintenance case timeline (e.g. warranty
+    // claim progress). canEditCmCase (admin+/override) may edit case info,
+    // delete, and toggle resolved status; canAddCmCase additionally lets a
+    // plain staff account open new cases and append timeline entries — same
+    // shape as canEditLetterMemo/canAddLetterMemo above.
+    const canEditCmCase = computed(()=> isAdminRole() || hasPermOverride('editCmCase'));
+    const canAddCmCase = computed(()=> canEditCmCase.value || authProfile.value?.role==='staff');
     // The service-report modal/upload pipeline is shared between CCTV
     // (equipmentWarranty), VIR (virEquipmentWarranty), and Surat & Memo
     // (suratMemo), each with its own permission tier — resolve
@@ -10924,6 +11082,221 @@ createApp({
         showToast('Rekod surat/memo dipindah ke Tong Sampah.');
       } catch(e) { showToast('Gagal padam rekod surat/memo: ' + e.message, 'error'); }
     }
+
+    // ── Log Kes CM — pending corrective-maintenance case timeline ──
+    // Purpose: replace the old workflow of re-typing a growing WhatsApp
+    // message every time a pending CM case (e.g. a PC sent to Daya One's
+    // office for an ACER warranty claim, with the vendor coming back
+    // multiple times before it's fixed) gets a progress update. Each case
+    // is one Firestore doc holding an append-only `entries` array (dated
+    // notes); staff add a new entry each time there's progress instead of
+    // copy-pasting the old WhatsApp text, and the whole timeline can be
+    // exported as a clean PDF to share in the group. Deliberately NOT a
+    // full ticketing system (no assignee/priority/SLA) — just enough to
+    // replace the manual copy-paste.
+    const cmCases = ref([]);
+    const cmCaseFilterSite = ref('');
+    const cmCaseFilterProject = ref('');
+    const cmCaseFilterStatus = ref('');
+    const cmCaseModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
+      project:'cctv', siteId:'', siteName:'', title:'', openedDate:'', initialNote:'',
+    } });
+    // newEntryDate/newEntryNote live here (not per-case) since only one
+    // detail modal is open at a time — mirrors the single-modal pattern
+    // used everywhere else in this file (e.g. letterMemoModal).
+    const cmCaseDetail = reactive({ show:false, id:null, newEntryDate:'', newEntryNote:'', err:'' });
+
+    async function loadCmCases() {
+      try {
+        const snap = await db.collection('cmCases').orderBy('openedDate','desc').get();
+        cmCases.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      } catch(e) { showToast('Gagal muat Log Kes CM: ' + e.message, 'error'); }
+    }
+    const cmCasesFiltered = computed(() => cmCases.value.filter(k =>
+      (!cmCaseFilterSite.value || k.siteId === cmCaseFilterSite.value) &&
+      (!cmCaseFilterProject.value || k.project === cmCaseFilterProject.value) &&
+      (!cmCaseFilterStatus.value || k.status === cmCaseFilterStatus.value)
+    ));
+    // The currently-open case in the detail modal, resolved live from
+    // cmCases (not a snapshot copy) so a newly-added/removed entry shows
+    // up immediately without a full reload.
+    const cmCaseDetailCase = computed(() => cmCases.value.find(k => k.id === cmCaseDetail.id) || null);
+
+    function onCmCaseProjectChange() {
+      cmCaseModal.data.siteId = ''; cmCaseModal.data.siteName = '';
+    }
+    function onCmCaseSiteChange() {
+      const list = cmCaseModal.data.project === 'vir' ? VIR_SITES : SITES;
+      const s = list.find(x => x.id === cmCaseModal.data.siteId);
+      cmCaseModal.data.siteName = s?.name || '';
+    }
+    function openAddCmCase() {
+      if(!canAddCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      cmCaseModal.editing = false; cmCaseModal.err = '';
+      Object.assign(cmCaseModal.data, { project:'cctv', siteId:'', siteName:'', title:'', openedDate:_localDateStr(), initialNote:'' });
+      cmCaseModal.show = true;
+    }
+    function openEditCmCase(k) {
+      if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      cmCaseModal.editing = true; cmCaseModal.err = '';
+      Object.assign(cmCaseModal.data, { project:k.project||'cctv', siteId:k.siteId||'', siteName:k.siteName||'', title:k.title||'', openedDate:k.openedDate||'', initialNote:'' });
+      cmCaseModal._editId = k.id;
+      cmCaseModal.show = true;
+    }
+    async function submitCmCase() {
+      const allowed = cmCaseModal.editing ? canEditCmCase.value : canAddCmCase.value;
+      if(!allowed){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      cmCaseModal.err = '';
+      const d = cmCaseModal.data;
+      if(!d.siteId || !d.title.trim() || !d.openedDate) {
+        cmCaseModal.err = 'Site, tajuk kes dan tarikh dibuka wajib diisi.'; return;
+      }
+      loading.value = true;
+      try {
+        if(!cmCaseModal.editing) {
+          const firstEntry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:d.openedDate, note:d.initialNote.trim() || 'Kes dibuka.', ts:Date.now(), author:authUser.value?.email || '' };
+          await db.collection('cmCases').add({
+            project:d.project, siteId:d.siteId, siteName:d.siteName, title:d.title.trim(),
+            status:'pending', openedDate:d.openedDate, resolvedDate:'',
+            entries:[firstEntry],
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '',
+          });
+          await logAudit('CM_CASE_ADD', `${d.title.trim()} — ${d.siteName}`);
+          showToast('Kes CM berjaya dibuka!');
+        } else {
+          await db.collection('cmCases').doc(cmCaseModal._editId).update({
+            project:d.project, siteId:d.siteId, siteName:d.siteName, title:d.title.trim(), openedDate:d.openedDate,
+          });
+          await logAudit('CM_CASE_EDIT', `${d.title.trim()} — ${d.siteName}`);
+          showToast('Kes CM dikemaskini!');
+        }
+        cmCaseModal.show = false;
+        await loadCmCases();
+      } catch(e) { cmCaseModal.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    async function deleteCmCase(k) {
+      if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!confirm(`Padam kes CM "${k.title}" (${k.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      try {
+        await _softDeleteToTrash('cmCases', 'deletedCmCases', k.id);
+        cmCases.value = cmCases.value.filter(x => x.id !== k.id);
+        await logAudit('CM_CASE_DELETE', `${k.title} — ${k.siteName}`);
+        showToast('Kes CM dipindah ke Tong Sampah.');
+      } catch(e) { showToast('Gagal padam kes CM: ' + e.message, 'error'); }
+    }
+    async function toggleCmCaseStatus(k) {
+      if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const resolving = k.status !== 'selesai';
+      if(!confirm(`Kes CM "${k.title}" — ${resolving ? 'tandakan SELESAI' : 'buka semula (reopen)'}?`)) return;
+      loading.value = true;
+      try {
+        const patch = resolving ? { status:'selesai', resolvedDate:_localDateStr() } : { status:'pending', resolvedDate:'' };
+        await db.collection('cmCases').doc(k.id).update(patch);
+        Object.assign(k, patch);
+        await logAudit(resolving?'CM_CASE_RESOLVE':'CM_CASE_REOPEN', `${k.title} — ${k.siteName}`);
+        showToast(resolving ? 'Kes ditandakan selesai!' : 'Kes dibuka semula.');
+      } catch(e) { showToast('Ralat: ' + e.message, 'error'); }
+      loading.value = false;
+    }
+    function openCmCaseDetail(k) {
+      cmCaseDetail.id = k.id;
+      cmCaseDetail.newEntryDate = _localDateStr();
+      cmCaseDetail.newEntryNote = '';
+      cmCaseDetail.err = '';
+      cmCaseDetail.show = true;
+    }
+    // arrayUnion (not a local-then-reload round trip) so two staff adding
+    // entries to the same case around the same time can't clobber each
+    // other's entry — each append is atomic server-side. The per-entry
+    // `id`/`ts` guarantees the object is never byte-identical to an
+    // existing entry, which matters because arrayUnion silently drops an
+    // element that already exists verbatim in the array.
+    async function addCmCaseEntry() {
+      if(!canAddCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const k = cmCaseDetailCase.value;
+      if(!k) return;
+      cmCaseDetail.err = '';
+      if(!cmCaseDetail.newEntryDate || !cmCaseDetail.newEntryNote.trim()) {
+        cmCaseDetail.err = 'Tarikh dan catatan wajib diisi.'; return;
+      }
+      loading.value = true;
+      try {
+        const entry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:cmCaseDetail.newEntryDate, note:cmCaseDetail.newEntryNote.trim(), ts:Date.now(), author:authUser.value?.email || '' };
+        await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayUnion(entry) });
+        k.entries = [...(k.entries||[]), entry];
+        cmCaseDetail.newEntryNote = '';
+        cmCaseDetail.newEntryDate = _localDateStr();
+        await logAudit('CM_CASE_ADD_ENTRY', `${k.title} — ${entry.date}`);
+        showToast('Catatan ditambah!');
+      } catch(e) { cmCaseDetail.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    async function deleteCmCaseEntry(entryId) {
+      if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const k = cmCaseDetailCase.value;
+      if(!k) return;
+      const entry = (k.entries||[]).find(e=>e.id===entryId);
+      if(!entry || !confirm('Padam catatan ini?')) return;
+      try {
+        await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayRemove(entry) });
+        k.entries = (k.entries||[]).filter(e=>e.id!==entryId);
+        await logAudit('CM_CASE_DELETE_ENTRY', `${k.title} — ${entry.date}`);
+        showToast('Catatan dipadam.');
+      } catch(e) { showToast('Gagal padam catatan: ' + e.message, 'error'); }
+    }
+    // Popup-window "browser Print to PDF" export — same pattern as
+    // printQuarterlyReport/printLaporan (a self-contained HTML string with
+    // its own <style>, opened in a new tab, printed once images load).
+    // Chosen over building the PDF with jsPDF directly because every other
+    // export in this codebase already uses this approach, and it gets the
+    // exact same page-styled look for free.
+    async function exportCmCasePdf(k) {
+      const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
+      const entriesSorted = [...(k.entries||[])].sort((a,b)=> a.date.localeCompare(b.date) || a.ts-b.ts);
+      const rows = entriesSorted.map(e => `<tr><td>${esc(fmtDate(e.date))}</td><td>${esc(e.note).replace(/\n/g,'<br>')}</td></tr>`).join('');
+      const statusLabel = k.status==='selesai' ? `✅ Selesai (${fmtDate(k.resolvedDate)})` : '🟡 Pending';
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Log Kes CM - ${esc(k.title)}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;color:#1a1a1a;padding:26px 30px}
+.hdr{text-align:center;border-bottom:3px solid #003366;padding-bottom:12px;margin-bottom:18px}
+.hdr-logos{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.hdr-logo{height:44px;max-width:130px;object-fit:contain}
+.hdr .co{font-size:15px;font-weight:900;color:#003366}
+.hdr h1{font-size:17px;font-weight:900;color:#003366;margin:8px 0 4px}
+.hdr .sub{font-size:10px;color:#888}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin:16px 0;font-size:10.5px}
+.info-grid b{color:#003366}
+table{width:100%;border-collapse:collapse;font-size:10px;margin-top:10px}
+thead tr{background:#003366;color:#fff}
+th{padding:6px 8px;text-align:left}
+td{padding:6px 8px;border-bottom:1px solid #eaecf2;vertical-align:top}
+td:first-child{white-space:nowrap;font-weight:700;width:80px}
+.footer{margin-top:18px;padding-top:8px;border-top:1px solid #ddd;font-size:8.5px;color:#aaa;text-align:center}
+@media print{@page{margin:12mm;size:A4}}
+</style></head><body>
+<div class="hdr"><div class="hdr-logos"><img src="LogoD1.svg" alt="Daya One" class="hdr-logo"><img src="Logo-SPRM.svg" alt="SPRM" class="hdr-logo"></div><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>LOG KES CM</h1><div class="sub">SPRM — ${esc((k.project||'cctv').toUpperCase())} &nbsp;|&nbsp; Dijana: ${genDate}</div></div>
+<div class="info-grid">
+  <div><b>Tajuk Kes:</b> ${esc(k.title)}</div>
+  <div><b>Status:</b> ${statusLabel}</div>
+  <div><b>Site:</b> ${esc(k.siteName)}</div>
+  <div><b>Tarikh Dibuka:</b> ${fmtDate(k.openedDate)}</div>
+</div>
+<table><thead><tr><th>Tarikh</th><th>Catatan / Progress</th></tr></thead>
+<tbody>${rows || '<tr><td colspan="2" style="text-align:center;color:#aaa">Tiada catatan</td></tr>'}</tbody></table>
+<div class="footer">Dijana automatik oleh Sistem PM-CCTV-SPRM pada ${new Date().toLocaleString('ms-MY')}</div>
+</body></html>`;
+      const w = window.open('','_blank','width=850,height=900');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(html); w.document.close(); w.focus();
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); }, 200);
+      await logAudit('CM_CASE_EXPORT_PDF', `${k.title} — ${k.siteName}`);
+    }
+
     // ── Fail Servis Vendor (service report) — PDF/gambar/dokumen yang
     // vendor bagi lepas repair/replacement barang under warranty. Disimpan
     // dalam Firebase Storage (bukan Firestore — fail boleh besar), Firestore
@@ -11865,7 +12238,7 @@ createApp({
     // window (before auto-purge or a manual restore) doesn't lose that copy
     // — the backup itself is the last safety net if the trash entry expires
     // with no other record of it.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','cmCases','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty','deletedCmCases'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -11900,7 +12273,7 @@ createApp({
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','cmCases','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty','deletedCmCases'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -12769,7 +13142,7 @@ createApp({
       const todayStr = _localDateStr();
       const active = relevant.find(c => c.startDate <= todayStr && (!c.endDate || c.endDate >= todayStr));
       const chosen = active || relevant.slice().sort((a,b) => a.startDate.localeCompare(b.startDate))[0];
-      return chosen.startDate ? new Date(chosen.startDate) : null;
+      return chosen.startDate ? _parseLocalDate(chosen.startDate) : null;
     }
 
     const overdueMap = computed(() => {
@@ -17685,7 +18058,7 @@ createApp({
     }
     async function openTrash() {
       page.value = 'trash';
-      await Promise.all([loadTrash(), loadTrashContracts(), loadTrashWarranty(), loadTrashVirWarranty(), loadTrashSuratMemo()]);
+      await Promise.all([loadTrash(), loadTrashContracts(), loadTrashWarranty(), loadTrashVirWarranty(), loadTrashSuratMemo(), loadTrashCmCases()]);
     }
     async function loadTrash() {
       if(authProfile.value?.role !== 'superadmin') return;
@@ -17911,6 +18284,39 @@ createApp({
       try {
         await _permanentlyDeleteFromTrash('deletedSuratMemo', id, trashedSuratMemo);
         await logAudit('LETTER_MEMO_PURGE', recLabel);
+        showToast('Dipadam kekal.');
+      } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
+    }
+
+    // Log Kes CM
+    const trashedCmCases = ref([]);
+    async function loadTrashCmCases() {
+      if(authProfile.value?.role !== 'superadmin') return;
+      try {
+        const snap = await db.collection('deletedCmCases').orderBy('deletedAt','desc').get();
+        trashedCmCases.value = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+        await _purgeOldTrashGeneric('deletedCmCases', trashedCmCases);
+      } catch(e) { showToast('Gagal muat Tong Sampah Log Kes CM: ' + e.message, 'error'); }
+    }
+    async function restoreTrashCmCases(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
+      const rec = trashedCmCases.value.find(r=>r.id===id);
+      if(!rec || !confirm(`Pulihkan kes CM "${rec.title}" (${rec.siteName})?`)) return;
+      try {
+        await _restoreFromTrash('deletedCmCases', 'cmCases', id, trashedCmCases);
+        await loadCmCases();
+        await logAudit('CM_CASE_RESTORE', `${rec.title} — ${rec.siteName}`);
+        showToast('Kes CM berjaya dipulihkan!');
+      } catch(e) { showToast('Gagal memulihkan kes CM: ' + e.message, 'error'); }
+    }
+    async function purgeTrashCmCases(id) {
+      if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
+      const rec = trashedCmCases.value.find(r=>r.id===id);
+      const recLabel = rec ? rec.title : id;
+      if(!confirm(`Padam KEKAL kes CM "${recLabel}"? Tindakan ini tidak boleh diundur.`)) return;
+      try {
+        await _permanentlyDeleteFromTrash('deletedCmCases', id, trashedCmCases);
+        await logAudit('CM_CASE_PURGE', recLabel);
         showToast('Dipadam kekal.');
       } catch(e) { showToast('Gagal padam kekal: ' + e.message, 'error'); }
     }
@@ -20616,6 +21022,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
       onLetterMemoSiteChange, onLetterMemoProjectChange, openAddLetterMemo, openEditLetterMemo, submitLetterMemo, deleteLetterMemo,
       canEditLetterMemo, canAddLetterMemo,
+      cmCases, cmCaseFilterSite, cmCaseFilterProject, cmCaseFilterStatus, cmCasesFiltered, cmCaseModal, cmCaseDetail, cmCaseDetailCase,
+      loadCmCases, onCmCaseProjectChange, onCmCaseSiteChange, openAddCmCase, openEditCmCase, submitCmCase, deleteCmCase, toggleCmCaseStatus,
+      openCmCaseDetail, addCmCaseEntry, deleteCmCaseEntry, exportCmCasePdf, canEditCmCase, canAddCmCase,
       serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
       showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
       filePreviewModal, previewServiceReport, printImagePreview, closeFilePreview,
@@ -20651,6 +21060,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       trashedWarranty, loadTrashWarranty, restoreTrashWarranty, purgeTrashWarranty,
       trashedVirWarranty, loadTrashVirWarranty, restoreTrashVirWarranty, purgeTrashVirWarranty,
       trashedSuratMemo, loadTrashSuratMemo, restoreTrashSuratMemo, purgeTrashSuratMemo,
+      trashedCmCases, loadTrashCmCases, restoreTrashCmCases, purgeTrashCmCases,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF, exportUnderMaintenance,
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
