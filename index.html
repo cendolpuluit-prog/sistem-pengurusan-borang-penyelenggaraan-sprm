@@ -2514,7 +2514,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <td style="text-align:center">{{(k.entries||[]).length}}</td>
                 <td class="flex gap-8">
                   <button class="btn btn-sm btn-outline btn-icon" @click="openCmCaseDetail(k)" title="Lihat/Tambah Catatan">📜</button>
-                  <button class="btn btn-sm btn-outline btn-icon" @click="exportCmCasePdf(k)" title="Export PDF">📄</button>
+                  <button :disabled="loading" class="btn btn-sm btn-outline btn-icon" @click="exportCmCasePdf(k)" title="Export PDF">📄</button>
                   <template v-if="canEditCmCase">
                     <button class="btn btn-sm btn-outline btn-icon" @click="openEditCmCase(k)" title="Edit">✏️</button>
                     <button :disabled="loading" class="btn btn-sm btn-danger btn-icon" @click="deleteCmCase(k)" title="Padam">🗑</button>
@@ -5656,7 +5656,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <b style="font-size:.8rem;color:#003366">{{fmtDate(e.date)}}</b>
                 <div class="flex gap-8">
                   <button v-if="canAddCmCase" class="btn btn-sm btn-outline btn-icon" @click="startEditCmCaseEntry(e)" title="Edit catatan" style="padding:2px 6px;font-size:.7rem">✏️</button>
-                  <button v-if="canEditCmCase" class="btn btn-sm btn-outline btn-icon" @click="deleteCmCaseEntry(e.id)" title="Padam catatan" style="padding:2px 6px;font-size:.7rem">🗑</button>
+                  <button v-if="canEditCmCase" :disabled="loading" class="btn btn-sm btn-outline btn-icon" @click="deleteCmCaseEntry(e.id)" title="Padam catatan" style="padding:2px 6px;font-size:.7rem">🗑</button>
                 </div>
               </div>
               <div v-if="e.status" style="font-size:.78rem;font-weight:700;color:#003366;margin-top:2px">📌 {{e.status}}</div>
@@ -5680,7 +5680,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <button class="btn btn-outline btn-sm" @click="cancelEditCmCaseEntry">Batal Edit</button>
               </template>
             </template>
-            <button class="btn btn-outline btn-sm" @click="exportCmCasePdf(cmCaseDetailCase)">📄 Export PDF</button>
+            <button :disabled="loading" class="btn btn-outline btn-sm" @click="exportCmCasePdf(cmCaseDetailCase)">📄 Export PDF</button>
             <button v-if="canEditCmCase" class="btn btn-sm" :class="cmCaseDetailCase.status==='selesai'?'btn-outline':'btn-success'" @click="toggleCmCaseStatus(cmCaseDetailCase)" :disabled="loading">{{cmCaseDetailCase.status==='selesai'?'↺ Buka Semula':'✅ Tandakan Selesai'}}</button>
             <button class="btn btn-outline btn-sm" style="margin-left:auto" @click="cmCaseDetail.show=false">Tutup</button>
           </div>
@@ -19891,8 +19891,8 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     }
     const customRangeRecords = computed(() => {
       if(!customRangeStart.value || !customRangeEnd.value || customRangeStart.value > customRangeEnd.value) return [];
-      const start = new Date(customRangeStart.value);
-      const end = new Date(customRangeEnd.value);
+      const start = _parseLocalDate(customRangeStart.value);
+      const end = _parseLocalDate(customRangeEnd.value);
       end.setHours(23,59,59,999); // inclusive of the whole end day
       return pmRecords.value.filter(r => {
         const d = _recDate(r);
