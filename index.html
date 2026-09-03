@@ -10763,10 +10763,31 @@ createApp({
       warranty.value.map(w => w.vendor).filter(v => v && !CCTV_WARRANTY_VENDORS.includes(v))
     )]);
     const warrantyFilterStatus = ref('');
+    // Retries a Firestore read ONCE, after a short delay, but only if it
+    // failed with 'permission-denied' — confirmed (2026-09) as a real,
+    // reproducible-but-transient race: a backgrounded browser tab that
+    // auto-reloads can fire onAuthStateChanged with a restored/cached user
+    // before the Firestore SDK actually has a validated ID token ready
+    // server-side, so the very first read or two right after login can get
+    // rejected even though the account genuinely has access. Reported by a
+    // superadmin as happening exactly once on tab auto-reload, never on a
+    // manual refresh moments later — i.e. it self-resolves once the token
+    // settles, so a short wait-and-retry avoids surfacing a scary,
+    // misleading "no permission" toast for something that isn't a real
+    // permissions problem. Any other error code still throws immediately —
+    // this is not a general-purpose retry-everything wrapper.
+    async function _retryOnPermDenied(fn) {
+      try { return await fn(); }
+      catch(e) {
+        if(e.code !== 'permission-denied') throw e;
+        await new Promise(res => setTimeout(res, 1500));
+        return await fn();
+      }
+    }
     async function loadWarranty() {
       warrantyLoading.value = true;
       try {
-        const snap = await db.collection('equipmentWarranty').orderBy('endDate','asc').get();
+        const snap = await _retryOnPermDenied(() => db.collection('equipmentWarranty').orderBy('endDate','asc').get());
         warranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
       } catch(e) { showToast('Gagal muat waranti peralatan: ' + e.message, 'error'); }
       warrantyLoading.value = false;
@@ -10780,7 +10801,7 @@ createApp({
     const vendorContractForm = reactive({ vendor:'', contractEndDate:'' });
     async function loadVendorContracts() {
       try {
-        const snap = await db.collection('warrantyVendorContracts').get();
+        const snap = await _retryOnPermDenied(() => db.collection('warrantyVendorContracts').get());
         const map = {};
         snap.docs.forEach(d => { map[d.id] = d.data().contractEndDate || ''; });
         vendorContracts.value = map;
@@ -13546,8 +13567,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // sees only staff entries. Matches firestore.rules' per-document read
       // check exactly — each query below is deliberately a single equality
       // filter + orderBy (not a combined `in` + orderBy), since that
-      // combination needs a composite index Firestore may not have; two
-      // simple queries merged client-side avoids that risk entirely.
+      // combination needs a composite index Firestore definitely won't have
+      // auto-created.
+      // CORRECTION (verified against Firestore's own docs): this does NOT
+      // avoid the composite-index requirement entirely, as originally
+      // claimed here — any equality where() + orderBy() on a DIFFERENT
+      // field still needs one (just a simpler one than the `in` case would:
+      // a single composite index on auditLogs(userRole ASC, timestamp DESC)
+      // covers all 3 query variations below, since Firestore composite
+      // indexes are keyed by field+order, not by the specific value being
+      // filtered). If that index was never created in the Firebase Console,
+      // this whole function throws for admin/staff (not superadmin, whose
+      // query above has no where() at all) — check Firestore ▸ Indexes if
+      // admin/staff report an empty or erroring Log Audit page.
       auditLogsLoading.value = true;
       try {
         const myRole = authProfile.value?.role;
@@ -13566,7 +13598,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         merged.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
         auditLogs.value = merged;
         auditLogPage.value = 1;
-      } catch(e) { console.warn('loadAuditLogs failed:', e); }
+      } catch(e) {
+        console.warn('loadAuditLogs failed:', e);
+        // Was silently swallowed (console.warn only) — a missing Firestore
+        // composite index (this query pairs an equality where('userRole')
+        // with orderBy('timestamp'), which per Firestore's own rules DOES
+        // require one despite this function's own comment above claiming
+        // otherwise) throws exactly this kind of error for admin/staff,
+        // and with no toast it looked like Log Audit was just empty.
+        showToast('Gagal muat Log Audit: ' + e.message, 'error');
+      }
       auditLogsLoading.value = false;
     }
 
