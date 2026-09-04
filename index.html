@@ -4666,13 +4666,13 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="cal-scroll-wrap">
           <div class="cal-grid">
-            <div class="cal-dh sun">Ahd</div>
             <div class="cal-dh">Isn</div>
             <div class="cal-dh">Sel</div>
             <div class="cal-dh">Rab</div>
             <div class="cal-dh">Kha</div>
             <div class="cal-dh">Jum</div>
             <div class="cal-dh sat">Sab</div>
+            <div class="cal-dh sun">Ahd</div>
             <template v-for="(cell,i) in calCells" :key="i">
               <div
                 :class="['cal-cell', !cell?'empty':'', cell&&isToday(cell)?'today':'', cell&&isWeekend(i%7)?'weekend':'', canEditSchedule&&cell?'can-edit':'', cell&&isPublicHoliday(calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(cell).padStart(2,'0'))?'ph-day':'', cell&&!isPublicHoliday(calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(cell).padStart(2,'0'))&&isSchoolHoliday(calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(cell).padStart(2,'0'))?'school-day':'']"
@@ -10257,7 +10257,10 @@ createApp({
     const canViewCredentials = computed(()=> ['superadmin','admin','staff'].includes(authProfile.value?.role));
 
     const calCells = computed(()=>{
-      const first = new Date(calYear.value, calMonth.value, 1).getDay(); // 0=Sun
+      // getDay() is 0=Sun..6=Sat; the grid starts the week on Monday, so
+      // shift it to a Monday-first offset (0=Mon..6=Sun) before using it as
+      // the leading-blank-cell count.
+      const first = (new Date(calYear.value, calMonth.value, 1).getDay() + 6) % 7;
       const days  = new Date(calYear.value, calMonth.value+1, 0).getDate();
       const cells = [];
       for(let i=0;i<first;i++) cells.push(null);
@@ -10275,7 +10278,7 @@ createApp({
     function isToday(day){
       const t = new Date(); return day===t.getDate() && calMonth.value===t.getMonth() && calYear.value===t.getFullYear();
     }
-    function isWeekend(col){ return col===0||col===6; } // 0=Sun, 6=Sat
+    function isWeekend(col){ return col===5||col===6; } // Monday-first grid: 5=Sat, 6=Sun
     // Local-timezone YYYY-MM-DD string. `.toISOString()` returns the UTC
     // date, which lags a full calendar day behind Malaysia (UTC+8) local
     // time between 00:00–08:00 — using it for "today" date-string
@@ -10379,7 +10382,7 @@ createApp({
       // Visual month-grid — mirrors the on-screen colourful calendar (day
       // cells with coloured team pills) rather than just a flat list table,
       // so the exported PDF looks like what's actually shown in the app.
-      const dayHeaders = ['Ahd','Isn','Sel','Rab','Kha','Jum','Sab'];
+      const dayHeaders = ['Isn','Sel','Rab','Kha','Jum','Sab','Ahd'];
       const gridCells = calCells.value.map((cell, i) => {
         if(!cell) return '<div class="cal-cell-print empty"></div>';
         const dstr = dateStr(cell);
