@@ -840,12 +840,6 @@ details.form-control[open] summary::after{content:'▴'}
   .pm-sign-box{display:grid!important;grid-template-rows:subgrid!important;grid-row:span 6!important}
   .pm-vir-2col{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
   .pm-vir-2col>.pm-tbl{min-width:0!important}
-  /* Forces a page break between consecutive page-groups of the SAME VIR
-     checklist section (see virChecklistPages()) — each group is already
-     sized to fit one page on its own, so this just stops the browser from
-     trying to cram two page-groups' worth of rows onto one page instead of
-     respecting the intended one-page-per-group split. */
-  .pm-vir-page-break{page-break-after:always;break-after:page}
   .pm-tbl{table-layout:fixed!important;width:100%!important;border-collapse:collapse!important}
   .pm-tbl td{word-break:break-all!important;overflow-wrap:break-word!important;max-width:0!important}
   /* Section header labels (e.g. "Adv 4 Way Quad", "SEDANG DIGUNAKAN") only
@@ -4380,43 +4374,33 @@ details.form-control[open] summary::after{content:'▴'}
           <template v-if="viewPM?.project==='vir'">
             <template v-for="section in viewPMVirPrintSections" :key="section">
               <div class="pm-section-hdr pm-vir-sec">{{section}}</div>
-              <!-- One .pm-vir-2col block PER PAGE (not one big block holding
-                   every column for the whole section) — each page's block
-                   only contains as many rows as actually fit that page (see
-                   virChecklistCols/virChecklistPages), with a forced break
-                   between page blocks, so left/right columns print in sync
-                   page-by-page instead of the left column racing ahead
-                   across every page the section needs before the right
-                   column even starts. -->
-              <template v-for="(page,pi) in virChecklistPages(section)" :key="pi">
-                <div :class="['pm-vir-2col', !page.isLast ? 'pm-vir-page-break' : '']">
-                  <table class="pm-tbl" v-for="(col,ci) in page.cols" :key="ci">
-                    <thead><tr><th style="width:4%">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
-                    <tbody>
-                      <template v-for="(item,idx) in col.items" :key="item.key">
-                        <tr v-if="item.isHeader">
-                          <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#F5F6F8">{{item.label}}</td>
-                          <td style="text-align:center;white-space:nowrap;background:#F5F6F8;font-size:7pt;color:#555;font-weight:400">
-                            <template v-if="idx+1<col.items.length && !col.items[idx+1].isHeader">
-                              <span style="color:#155724">&#10003;</span>&nbsp;/&nbsp;<span style="color:#721c24">&#10007;</span>
-                            </template>
-                          </td>
-                          <td style="background:#F5F6F8"></td>
-                        </tr>
-                        <tr v-else>
-                          <td style="white-space:nowrap;text-align:center;color:#1A2332">{{virChecklistNumbered(section) ? (col.offset+idx+1) : '–'}}</td>
-                          <td>{{item.label}}</td>
-                          <td style="text-align:center;white-space:nowrap">
-                            <span class="pm-chk-box"></span>
-                            <span class="pm-chk-box"></span>
-                          </td>
-                          <td>{{item.nota}}</td>
-                        </tr>
-                      </template>
-                    </tbody>
-                  </table>
-                </div>
-              </template>
+              <div :class="virChecklistCols(section).length>1 ? 'pm-vir-2col' : ''">
+                <table class="pm-tbl" v-for="(col,ci) in virChecklistCols(section)" :key="ci">
+                  <thead><tr><th style="width:4%">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
+                  <tbody>
+                    <template v-for="(item,idx) in col.items" :key="item.key">
+                      <tr v-if="item.isHeader">
+                        <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#F5F6F8">{{item.label}}</td>
+                        <td style="text-align:center;white-space:nowrap;background:#F5F6F8;font-size:7pt;color:#555;font-weight:400">
+                          <template v-if="idx+1<col.items.length && !col.items[idx+1].isHeader">
+                            <span style="color:#155724">&#10003;</span>&nbsp;/&nbsp;<span style="color:#721c24">&#10007;</span>
+                          </template>
+                        </td>
+                        <td style="background:#F5F6F8"></td>
+                      </tr>
+                      <tr v-else>
+                        <td style="white-space:nowrap;text-align:center;color:#1A2332">{{virChecklistNumbered(section) ? (col.offset+idx+1) : '–'}}</td>
+                        <td>{{item.label}}</td>
+                        <td style="text-align:center;white-space:nowrap">
+                          <span class="pm-chk-box"></span>
+                          <span class="pm-chk-box"></span>
+                        </td>
+                        <td>{{item.nota}}</td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
               <!-- Legend for the two blank boxes under Status — left box is
                    ticked for "Berfungsi" (functional), right box is crossed
                    for "Tidak Berfungsi" (not functional). Placed once below
@@ -8795,60 +8779,15 @@ createApp({
     // absorbs the merged "Rangkaian & Sokongan" and "Perisian (Software)"
     // items, and the client asked for it as a single complete table
     // rather than split left/right.
-    // Rows per printed column-page, estimated from .pm-tbl's actual print
-    // CSS: A4 minus @page margins (12mm+20mm) ≈ 265mm ≈ 751pt of page
-    // height; .pm-tbl td is 8pt font at line-height:1.4 (≈11.2pt) plus
-    // ~4pt padding+border ≈ 15pt/row. 751/15 ≈ 50 rows would fill an
-    // ENTIRE page with nothing else on it — deliberately using a lower,
-    // more conservative number here since a real page also carries the
-    // section header bar, a repeating <thead> row per page, and often
-    // shares space with the tail of a previous section. This is a
-    // calibrated estimate, not a measured value (can't be verified without
-    // an actual print-preview pass) — if real output still shows pages
-    // running noticeably short or slightly overflowing, adjust this number.
-    const VIR_ROWS_PER_PAGE_COL = 40;
-    // Was a straight 50/50-by-COUNT split into exactly 2 columns — correct
-    // for a section short enough to fit one page, but for a longer section
-    // (e.g. "Sistem Rakaman Audio/Video" running 2+ pages), that meant the
-    // ENTIRE first half printed as one long left-hand strip spanning every
-    // page the section needed, with the right-hand column only starting
-    // once the whole left half was exhausted — i.e. left-column-page-1,
-    // left-column-page-2, left-column-page-2.5, THEN right-column-page-1 —
-    // instead of the expected newspaper-style left-page-1 → right-page-1 →
-    // left-page-2 → right-page-2 flow. Root cause: two independent <table>
-    // elements placed as CSS Grid siblings (.pm-vir-2col) don't reliably
-    // co-fragment across print pages in sync — grid/flex containers are
-    // notoriously unreliable for cross-page pagination in every major
-    // browser's print engine. Chunking into fixed page-sized groups up
-    // front (see virChecklistPages below, which pairs these into left/right
-    // per page) sidesteps that entirely: each chunk is sized to fit within
-    // one page on its own, so there's nothing left for the browser to have
-    // to fragment/synchronize.
     function virChecklistCols(section) {
       const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
       if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG || section === SEC_CAM_CONFIG || section === SEC_CAM3_CONFIG) return [{ items, offset: 0 }];
-      const chunks = [];
-      let i = 0;
-      while (i < items.length) {
-        let end = Math.min(i + VIR_ROWS_PER_PAGE_COL, items.length);
-        // Don't strand a header as the very last row of a chunk (same
-        // header-avoidance intent as the old single-split version).
-        while (end > i + 1 && end < items.length && items[end-1].isHeader) end--;
-        chunks.push({ items: items.slice(i, end), offset: i });
-        i = end;
-      }
-      return chunks.length ? chunks : [{ items: [], offset: 0 }];
-    }
-    // Pairs virChecklistCols()' page-sized chunks into left+right columns
-    // PER PAGE (chunk 0+1 = page 1, chunk 2+3 = page 2, ...), so the
-    // template can render one .pm-vir-2col grid block per page and force a
-    // page break between them — the actual fix for the left-column-runs-
-    // ahead-of-right-column issue (see the comment on virChecklistCols).
-    function virChecklistPages(section) {
-      const cols = virChecklistCols(section);
-      const pages = [];
-      for (let i = 0; i < cols.length; i += 2) pages.push(cols.slice(i, i + 2));
-      return pages.map((cols, idx) => ({ cols, isLast: idx === pages.length - 1 }));
+      let splitAt = Math.ceil(items.length / 2);
+      while (splitAt > 0 && splitAt < items.length && items[splitAt-1].isHeader) splitAt--;
+      return [
+        { items: items.slice(0, splitAt), offset: 0 },
+        { items: items.slice(splitAt), offset: splitAt },
+      ];
     }
     // "Status Operasi Sistem" lists functional tests, not physical parts —
     // reads better as "Fungsi" (function) than "Item" in that one section's
@@ -21041,7 +20980,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
-      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
