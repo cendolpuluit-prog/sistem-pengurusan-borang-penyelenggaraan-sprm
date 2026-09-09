@@ -840,6 +840,12 @@ details.form-control[open] summary::after{content:'▴'}
   .pm-sign-box{display:grid!important;grid-template-rows:subgrid!important;grid-row:span 6!important}
   .pm-vir-2col{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
   .pm-vir-2col>.pm-tbl{min-width:0!important}
+  /* Forces a page break between consecutive page-groups of the SAME VIR
+     checklist section (see virChecklistPages()) — each group is already
+     sized to fit one page on its own, so this just stops the browser from
+     trying to cram two page-groups' worth of rows onto one page instead of
+     respecting the intended one-page-per-group split. */
+  .pm-vir-page-break{page-break-after:always;break-after:page}
   .pm-tbl{table-layout:fixed!important;width:100%!important;border-collapse:collapse!important}
   .pm-tbl td{word-break:break-all!important;overflow-wrap:break-word!important;max-width:0!important}
   /* Section header labels (e.g. "Adv 4 Way Quad", "SEDANG DIGUNAKAN") only
@@ -1883,6 +1889,66 @@ details.form-control[open] summary::after{content:'▴'}
                 <span style="font-weight:600;color:#7a2e00">🖥️ VIR — {{pmThisYearVIR}}/{{virYearTarget}} kunjungan ({{virTargetPct}}%)</span>
               </div>
               <div class="progress-bar"><div class="progress-fill" :style="{width:virTargetPct+'%', background: virTargetPct>=100?'#198754':virTargetPct>=60?'#003366':'#e65100'}"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STATUS PEMATUHAN PM IKUT SITE — distinct from Sasaran
+             Penyelenggaraan above: that card counts total VISIT-instances
+             across all sites (a site with 2/3 CCTV visits still
+             contributes "2" toward its tally); this counts sites that hit
+             their FULL individual quota, i.e. "15 of 17 CCTV sites have
+             completed their current cycle = 88.24%". NOT calendar-year
+             bucketed — each site's cycle is auto-detected from its own PM
+             record dates (see _cctvSiteCycleStatus/_virSiteCycleStatus),
+             so it isn't tied to the dashboardYear filter above. -->
+        <div class="card">
+          <div class="card-title">📋 Status Pematuhan PM Ikut Site <span style="font-weight:400;color:#888;font-size:.75rem">(kitaran semasa setiap site)</span></div>
+          <div class="form-row form-row-2">
+            <div class="health-summary-card" style="background:#f0f4ff">
+              <div style="font-size:.75rem;font-weight:700;color:#003366;text-transform:uppercase;margin-bottom:8px">📹 CCTV — {{siteCompletionCctv.filter(s=>s.complete).length}}/{{siteCompletionCctv.length}} site siap</div>
+              <div style="font-size:1.5rem;font-weight:800;color:#003366">{{siteCompletionPctCctv}}%</div>
+              <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" :style="{width:siteCompletionPctCctv+'%', background: siteCompletionPctCctv>=100?'#198754':siteCompletionPctCctv>=60?'#003366':'#e65100'}"></div></div>
+            </div>
+            <div class="health-summary-card" style="background:#fff6ee">
+              <div style="font-size:.75rem;font-weight:700;color:#7a2e00;text-transform:uppercase;margin-bottom:8px">🖥️ VIR — {{siteCompletionVir.filter(s=>s.complete).length}}/{{siteCompletionVir.length}} site siap</div>
+              <div style="font-size:1.5rem;font-weight:800;color:#7a2e00">{{siteCompletionPctVir}}%</div>
+              <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" :style="{width:siteCompletionPctVir+'%', background: siteCompletionPctVir>=100?'#198754':siteCompletionPctVir>=60?'#003366':'#e65100'}"></div></div>
+            </div>
+          </div>
+          <button class="btn btn-outline btn-sm" style="margin-top:12px" @click="showSiteCompletionDetail=!showSiteCompletionDetail">
+            {{showSiteCompletionDetail?'▲ Sembunyi butiran ikut site':'▼ Papar butiran ikut site'}}
+          </button>
+          <div v-if="showSiteCompletionDetail" style="margin-top:12px">
+            <div style="font-size:.78rem;font-weight:700;color:#003366;margin-bottom:6px">📹 CCTV — kitaran 3 PM, mula auto-kesan dari PM pertama site</div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Site</th><th style="text-align:center;width:70px">Kitaran</th><th style="text-align:center;width:70px">PM Siap</th><th>Tarikh PM (kitaran semasa)</th><th style="text-align:center;width:90px">Status</th></tr></thead>
+                <tbody>
+                  <tr v-for="s in siteCompletionCctv" :key="s.id">
+                    <td>{{s.name}}</td>
+                    <td style="text-align:center">#{{s.cycleNum}}</td>
+                    <td style="text-align:center">{{s.done}}/{{s.expected}}</td>
+                    <td style="font-size:.78rem;color:#666">{{s.dates.join(', ')||'-'}}</td>
+                    <td style="text-align:center"><span :class="['badge', s.complete?'badge-green':'badge-red']">{{s.complete?'✅ Siap':'⏳ Belum'}}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="font-size:.78rem;font-weight:700;color:#7a2e00;margin:14px 0 6px">🖥️ VIR — tingkap kontrak keseluruhan (4 tingkap sepanjang tempoh kontrak)</div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Site</th><th style="text-align:center;width:80px">Tingkap</th><th style="text-align:center;width:90px">Tingkap Lengkap</th><th>Tarikh PM</th><th style="text-align:center;width:90px">Status</th></tr></thead>
+                <tbody>
+                  <tr v-for="s in siteCompletionVir" :key="s.id">
+                    <td>{{s.name}}</td>
+                    <td style="text-align:center">#{{s.windowNum}}{{s.windowYear?' ('+s.windowYear+')':''}}</td>
+                    <td style="text-align:center">{{s.done}}/{{s.expected}}</td>
+                    <td style="font-size:.78rem;color:#666">{{s.dates.join(', ')||'-'}}</td>
+                    <td style="text-align:center"><span :class="['badge', s.complete?'badge-green':'badge-red']">{{s.complete?'✅ Siap':'⏳ Belum'}}</span></td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -4374,33 +4440,43 @@ details.form-control[open] summary::after{content:'▴'}
           <template v-if="viewPM?.project==='vir'">
             <template v-for="section in viewPMVirPrintSections" :key="section">
               <div class="pm-section-hdr pm-vir-sec">{{section}}</div>
-              <div :class="virChecklistCols(section).length>1 ? 'pm-vir-2col' : ''">
-                <table class="pm-tbl" v-for="(col,ci) in virChecklistCols(section)" :key="ci">
-                  <thead><tr><th style="width:4%">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
-                  <tbody>
-                    <template v-for="(item,idx) in col.items" :key="item.key">
-                      <tr v-if="item.isHeader">
-                        <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#F5F6F8">{{item.label}}</td>
-                        <td style="text-align:center;white-space:nowrap;background:#F5F6F8;font-size:7pt;color:#555;font-weight:400">
-                          <template v-if="idx+1<col.items.length && !col.items[idx+1].isHeader">
-                            <span style="color:#155724">&#10003;</span>&nbsp;/&nbsp;<span style="color:#721c24">&#10007;</span>
-                          </template>
-                        </td>
-                        <td style="background:#F5F6F8"></td>
-                      </tr>
-                      <tr v-else>
-                        <td style="white-space:nowrap;text-align:center;color:#1A2332">{{virChecklistNumbered(section) ? (col.offset+idx+1) : '–'}}</td>
-                        <td>{{item.label}}</td>
-                        <td style="text-align:center;white-space:nowrap">
-                          <span class="pm-chk-box"></span>
-                          <span class="pm-chk-box"></span>
-                        </td>
-                        <td>{{item.nota}}</td>
-                      </tr>
-                    </template>
-                  </tbody>
-                </table>
-              </div>
+              <!-- One .pm-vir-2col block PER PAGE (not one big block holding
+                   every column for the whole section) — each page's block
+                   only contains as many rows as actually fit that page (see
+                   virChecklistCols/virChecklistPages), with a forced break
+                   between page blocks, so left/right columns print in sync
+                   page-by-page instead of the left column racing ahead
+                   across every page the section needs before the right
+                   column even starts. -->
+              <template v-for="(page,pi) in virChecklistPages(section)" :key="pi">
+                <div :class="['pm-vir-2col', !page.isLast ? 'pm-vir-page-break' : '']">
+                  <table class="pm-tbl" v-for="(col,ci) in page.cols" :key="ci">
+                    <thead><tr><th style="width:4%">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
+                    <tbody>
+                      <template v-for="(item,idx) in col.items" :key="item.key">
+                        <tr v-if="item.isHeader">
+                          <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#F5F6F8">{{item.label}}</td>
+                          <td style="text-align:center;white-space:nowrap;background:#F5F6F8;font-size:7pt;color:#555;font-weight:400">
+                            <template v-if="idx+1<col.items.length && !col.items[idx+1].isHeader">
+                              <span style="color:#155724">&#10003;</span>&nbsp;/&nbsp;<span style="color:#721c24">&#10007;</span>
+                            </template>
+                          </td>
+                          <td style="background:#F5F6F8"></td>
+                        </tr>
+                        <tr v-else>
+                          <td style="white-space:nowrap;text-align:center;color:#1A2332">{{virChecklistNumbered(section) ? (col.offset+idx+1) : '–'}}</td>
+                          <td>{{item.label}}</td>
+                          <td style="text-align:center;white-space:nowrap">
+                            <span class="pm-chk-box"></span>
+                            <span class="pm-chk-box"></span>
+                          </td>
+                          <td>{{item.nota}}</td>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </template>
               <!-- Legend for the two blank boxes under Status — left box is
                    ticked for "Berfungsi" (functional), right box is crossed
                    for "Tidak Berfungsi" (not functional). Placed once below
@@ -8779,15 +8855,147 @@ createApp({
     // absorbs the merged "Rangkaian & Sokongan" and "Perisian (Software)"
     // items, and the client asked for it as a single complete table
     // rather than split left/right.
+    // Rows per printed column-page — RE-CALIBRATED from a real exported PDF
+    // (Nitro PDF Creator, 75% scale) the user sent, not just a theoretical
+    // estimate. Measured directly off that PDF: each row is ~13.6pt tall,
+    // and a full A4 print area (12mm+20mm @page margins) is ~751pt. The
+    // catch: page 1 ALSO carries the borang's letterhead, info table, and
+    // this section's title bar above the checklist (~176pt), leaving room
+    // for only ~40 rows/column there — but every OTHER page (a continuation
+    // of a long section, or a later section like Skop Kerja Sivil) has none
+    // of that overhead and can fit ~54 rows/column. Using the page-1 number
+    // (40) everywhere — as an earlier version of this fix did — left every
+    // non-first page only ~70% full, i.e. the large empty-space complaint.
+    // Two tiers fix it: a small cap for the one page that actually shares
+    // space with the letterhead, a larger cap (with its own safety margin
+    // for occasional 2-line-wrapped rows) for every other page.
+    const VIR_ROWS_PER_PAGE_COL = 40;
+    // Was 48 — a 6-row/column safety margin under the ~54 measured true
+    // capacity, "for occasional 2-line-wrapped rows". That margin turned
+    // out too generous: a section landing just over 1 continuation page's
+    // worth (e.g. ~98 items vs a 96-item two-column capacity) was forced
+    // into 2 continuation pages instead of 1, each roughly half-empty — a
+    // real exported PDF (Nitro PDF Creator, 75% scale) confirmed this is
+    // still the "large empty-space" symptom even after fixing the
+    // even-vs-packed distribution strategy above, since that fix only
+    // controls HOW a fixed page count is split, not the page count
+    // itself. Tightened to a 4-row/column margin (52) — still leaves
+    // headroom for wrapped rows, but pushes borderline sections like this
+    // one back under a single continuation page.
+    const VIR_ROWS_PER_PAGE_COL_CONT = 52;
+    // Was a straight 50/50-by-COUNT split into exactly 2 columns — correct
+    // for a section short enough to fit one page, but for a longer section
+    // (e.g. "Sistem Rakaman Audio/Video" running 2+ pages), that meant the
+    // ENTIRE first half printed as one long left-hand strip spanning every
+    // page the section needed, with the right-hand column only starting
+    // once the whole left half was exhausted — i.e. left-column-page-1,
+    // left-column-page-2, left-column-page-2.5, THEN right-column-page-1 —
+    // instead of the expected newspaper-style left-page-1 → right-page-1 →
+    // left-page-2 → right-page-2 flow. Root cause: two independent <table>
+    // elements placed as CSS Grid siblings (.pm-vir-2col) don't reliably
+    // co-fragment across print pages in sync — grid/flex containers are
+    // notoriously unreliable for cross-page pagination in every major
+    // browser's print engine. Fix: chunk by PAGE capacity (2 columns' worth
+    // at a time) and split EACH page's own items in half for its left/right
+    // columns — NOT sequential-fill-left-then-right — so a page's two
+    // columns stay balanced and only overflow to a new page once the
+    // section's content actually exceeds one page. (An earlier version of
+    // this fix filled the left column to full capacity before touching the
+    // right column at all, which left the entire right column blank for
+    // every section short enough to fit one page — visible as large empty
+    // gaps on the printed form.)
+    // Scoped to BCD's 3 checklist sections only (SEC_AV/SEC_SIVIL/SEC_MEK)
+    // — those are the ones that actually run 2+ pages and hit the original
+    // bug this was built for. Optager's sections (Status Operasi Sistem +
+    // the 4 single-table config sections) never had that problem and stay
+    // on the original plain 50/50 split below, unchanged.
+    // Splits one page's worth of items into a left/right column pair,
+    // shared by every branch below — also guards against stranding a
+    // header as the very last row of the left column (it would sit right
+    // above the right column's first item instead of its own group).
+    function _virSplitPageCols(pageItems, offset) {
+      let mid = Math.ceil(pageItems.length / 2);
+      while (mid > 0 && mid < pageItems.length && pageItems[mid-1].isHeader) mid--;
+      const out = [{ items: pageItems.slice(0, mid), offset }];
+      if (mid < pageItems.length) out.push({ items: pageItems.slice(mid), offset: offset + mid });
+      return out;
+    }
     function virChecklistCols(section) {
       const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
-      if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG || section === SEC_CAM_CONFIG || section === SEC_CAM3_CONFIG) return [{ items, offset: 0 }];
-      let splitAt = Math.ceil(items.length / 2);
-      while (splitAt > 0 && splitAt < items.length && items[splitAt-1].isHeader) splitAt--;
-      return [
-        { items: items.slice(0, splitAt), offset: 0 },
-        { items: items.slice(splitAt), offset: splitAt },
-      ];
+      const isBcdSplit = section === SEC_AV || section === SEC_SIVIL || section === SEC_MEK;
+      if (!isBcdSplit) {
+        if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG || section === SEC_CAM_CONFIG || section === SEC_CAM3_CONFIG) return [{ items, offset: 0 }];
+        return _virSplitPageCols(items, 0);
+      }
+      // Only SEC_AV's very first page-group is literally page 1 of the
+      // whole printed borang (sharing space with the letterhead) — every
+      // other page-group, including SEC_AV's own later pages, gets the
+      // larger continuation cap.
+      const firstCap = (section === SEC_AV ? VIR_ROWS_PER_PAGE_COL : VIR_ROWS_PER_PAGE_COL_CONT) * 2;
+      const contCap = VIR_ROWS_PER_PAGE_COL_CONT * 2;
+      if (items.length <= firstCap) return _virSplitPageCols(items, 0);
+      // Two regimes, chosen by whether the section fits in exactly 2 pages
+      // or needs 3+:
+      // - Exactly 2 pages (items.length <= firstCap+contCap): split evenly
+      //   between them (still capped by firstCap on page 1) — a plain
+      //   "page 1 maxed, rest on page 2" split would strand a handful of
+      //   items alone on page 2 whenever the section only barely spills
+      //   past firstCap (e.g. 81 items → 80 then a lone 1-item page).
+      // - 3+ pages: max out page 1 at firstCap — its capacity is the
+      //   genuinely scarce resource (shares the page with the borang's
+      //   letterhead, see VIR_ROWS_PER_PAGE_COL above). Continuation pages
+      //   are then packed to their FULL contCap each, except the very last
+      //   one (which naturally gets whatever remains). An earlier version
+      //   of this always spread the remainder EVENLY across every
+      //   continuation page instead — meant to avoid a long section's last
+      //   continuation page landing with only a handful of items dangling
+      //   — but that under-filled EVERY continuation page by the same
+      //   amount instead of just the actual last one, which is the "large
+      //   empty-space on page after page" complaint re-reported from a
+      //   real exported PDF (Nitro PDF Creator, 75% scale) after that
+      //   earlier fix. Now: pack pages fully, and ONLY fall back to even
+      //   redistribution if the naive last page would come out under half
+      //   a page (still guards the original stranded-last-page case,
+      //   without sacrificing fill on every page before it).
+      let page0Cap, contTargets;
+      if (items.length <= firstCap + contCap) {
+        const target = Math.ceil(items.length / 2);
+        page0Cap = Math.min(target, firstCap);
+        contTargets = [items.length - page0Cap];
+      } else {
+        page0Cap = firstCap;
+        const remaining = items.length - firstCap;
+        const numContPages = Math.ceil(remaining / contCap);
+        const lastPageNaive = remaining - contCap * (numContPages - 1);
+        if (numContPages > 1 && lastPageNaive < contCap / 2) {
+          contTargets = new Array(numContPages).fill(Math.ceil(remaining / numContPages));
+        } else {
+          contTargets = new Array(numContPages - 1).fill(contCap);
+          contTargets.push(lastPageNaive);
+        }
+      }
+      const caps = [page0Cap, ...contTargets];
+      const cols = [];
+      let i = 0;
+      for (const cap of caps) {
+        let end = Math.min(i + cap, items.length);
+        // Don't strand a header as the very last row of a page.
+        while (end > i + 1 && end < items.length && items[end-1].isHeader) end--;
+        cols.push(..._virSplitPageCols(items.slice(i, end), i));
+        i = end;
+      }
+      return cols.length ? cols : [{ items: [], offset: 0 }];
+    }
+    // Pairs virChecklistCols()' page-sized chunks into left+right columns
+    // PER PAGE (chunk 0+1 = page 1, chunk 2+3 = page 2, ...), so the
+    // template can render one .pm-vir-2col grid block per page and force a
+    // page break between them — the actual fix for the left-column-runs-
+    // ahead-of-right-column issue (see the comment on virChecklistCols).
+    function virChecklistPages(section) {
+      const cols = virChecklistCols(section);
+      const pages = [];
+      for (let i = 0; i < cols.length; i += 2) pages.push(cols.slice(i, i + 2));
+      return pages.map((cols, idx) => ({ cols, isLast: idx === pages.length - 1 }));
     }
     // "Status Operasi Sistem" lists functional tests, not physical parts —
     // reads better as "Fungsi" (function) than "Item" in that one section's
@@ -13098,10 +13306,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     function _virWindowStatus(siteId) {
       const now = new Date();
-      const pmDates = (pmRecordsBySite.value[siteId] || [])
-        .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
-        .map(r => _recDate(r))
-        .sort((a,b) => a - b);
+      // VIR requires pm.virRoomNo on every PM submission, so ONE physical
+      // visit to a site with N rooms produces N separate same-dated
+      // pmRecords docs. Without deduping to one entry per calendar day
+      // here, a 4-room site's single visit would fulfill up to 4 contract
+      // windows at once instead of 1 — _parseLocalDate always builds
+      // local-midnight Dates from the same visitDate string (or the same
+      // year/month fallback), so same-day records collapse to an
+      // identical .getTime() and Set naturally dedupes them.
+      const pmDates = [...new Set(
+        (pmRecordsBySite.value[siteId] || [])
+          .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
+          .map(r => _recDate(r).getTime())
+      )].sort((a,b) => a-b).map(ms => new Date(ms));
       const windows = VIR_PM_WINDOWS.map((w,i) => ({ start:_parseLocalDate(w.start), end:_parseLocalDate(w.end), fulfilled: !!pmDates[i] }));
       const fulfilledCount = windows.filter(w => w.fulfilled).length;
       const overdue = windows.some(w => w.end < now && !w.fulfilled);
@@ -13128,6 +13345,89 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function _virExpectedForYear(year) {
       return VIR_PM_WINDOWS.filter(w => _parseLocalDate(w.end).getFullYear() === year).length;
     }
+
+    // Per-site PM completion — powers the "Status Pematuhan PM Ikut Site"
+    // dashboard card. NOT calendar-year bucketed (a site's cycle used to
+    // reset every Jan 1 regardless of when its PMs actually happened) —
+    // instead auto-detected from each site's own PM record dates, per
+    // user request: the site's cycle starts from its OWN first PM record,
+    // then rolls continuously (CCTV: every group of 3 visits is one
+    // cycle — cycle 2 begins the instant cycle 1's 3rd visit is logged,
+    // not on the next Jan 1). VIR reuses _virWindowStatus() as-is, since
+    // that already does exactly this kind of sequential visit-to-window
+    // matching (just against the contract's real, unevenly-spaced 1/2/1
+    // windows instead of a flat interval) — no need to reinvent it here.
+    function _fmtRecDate(r) {
+      return r.visitDate ? fmtDate(r.visitDate) : (_recDate(r) ? MONTHS[_recDate(r).getMonth()]+' '+_recDate(r).getFullYear() : null);
+    }
+    function _cctvSiteCycleStatus(siteId) {
+      const recs = (pmRecordsBySite.value[siteId] || [])
+        .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
+        .sort((a,b) => _recDate(a) - _recDate(b));
+      const cycleSize = PM_PER_YEAR.cctv; // 3
+      const total = recs.length;
+      // Which group-of-3 the most recent record falls into — group 0 is
+      // cycle 1, group 1 is cycle 2, etc. A site with exactly 3/6/9...
+      // records has just completed a cycle (shown as that cycle's 3/3,
+      // not the next cycle's 0/3) rather than looking like it's "behind"
+      // the instant it finishes on schedule.
+      const groupIndex = total === 0 ? 0 : Math.floor((total-1)/cycleSize);
+      const cycleRecs = recs.slice(groupIndex*cycleSize, groupIndex*cycleSize+cycleSize);
+      return {
+        cycleNum: groupIndex+1, done: cycleRecs.length, expected: cycleSize,
+        complete: cycleRecs.length === cycleSize,
+        dates: cycleRecs.map(_fmtRecDate).filter(Boolean),
+      };
+    }
+    function _virSiteCycleStatus(siteId) {
+      const status = _virWindowStatus(siteId);
+      const recs = (pmRecordsBySite.value[siteId] || [])
+        .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
+        .sort((a,b) => _recDate(a) - _recDate(b));
+      // VIR submits one pmRecords doc PER ROOM (pm.virRoomNo is required on
+      // the VIR PM form) — a single physical visit to a 4-room site is 4
+      // separate same-dated records here, so dedupe to one entry per
+      // calendar day for display (a technician's one visit shouldn't read
+      // as 4 separate dates).
+      const dates = [...new Set(recs.map(_fmtRecDate).filter(Boolean))];
+      // VIR doesn't repeat forever like CCTV's rolling 3-visit cycle — it's
+      // a FIXED set of 4 windows total across the whole 2-year contract,
+      // unevenly split per year per VIR_PM_WINDOWS (2026:1, 2027:2, 2028:1
+      // — the 2026 contract only started in August, so that year's window
+      // is deliberately just 1, not the usual "2x setahun"). windowNum/
+      // windowYear label WHICH of those 4 windows is current/just-done, to
+      // mirror CCTV's "Kitaran #N" column without implying VIR repeats the
+      // same way CCTV does.
+      const windowIdx = Math.min(status.fulfilledCount, status.totalWindows - 1);
+      const windowNum = status.totalWindows ? windowIdx + 1 : null;
+      const windowYear = status.windows[windowIdx] ? status.windows[windowIdx].end.getFullYear() : null;
+      // Counting-based, matching CCTV's philosophy of "did the actual
+      // visits happen", not date-based like _virWindowStatus's own
+      // `overdue` (which only trips once a window's END date has fully
+      // passed). A window counts as "due" the moment it STARTS — so a
+      // site sitting inside an already-open window that hasn't been
+      // visited yet correctly reads as "⏳ Belum" here even though it
+      // isn't technically overdue yet (unlike the previous !status.overdue
+      // definition, which credited it as "✅ Siap" purely for not having
+      // missed the deadline, regardless of whether the visit happened).
+      const now = new Date();
+      const dueSoFar = status.windows.filter(w => w.start <= now).length;
+      return {
+        windowNum, windowYear,
+        done: status.fulfilledCount, expected: status.totalWindows,
+        complete: status.fulfilledCount >= dueSoFar,
+        dates,
+      };
+    }
+    function _completionPct(list) {
+      if(!list.length) return 0;
+      return Math.round(list.filter(s => s.complete).length / list.length * 10000) / 100;
+    }
+    const siteCompletionCctv = computed(() => SITES.map(s => ({ id:s.id, name:s.name, ..._cctvSiteCycleStatus(s.id) })));
+    const siteCompletionVir = computed(() => VIR_SITES.map(s => ({ id:s.id, name:s.name, ..._virSiteCycleStatus(s.id) })));
+    const siteCompletionPctCctv = computed(() => _completionPct(siteCompletionCctv.value));
+    const siteCompletionPctVir = computed(() => _completionPct(siteCompletionVir.value));
+    const showSiteCompletionDetail = ref(false);
 
     function _lastPmDate(siteId) {
       const recs = (pmRecordsBySite.value[siteId] || []).filter(r => (r.maintType||'PM') !== 'CM');
@@ -20980,7 +21280,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
-      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, equipVirSystem,
       siteEquip, selSite, eqTab,
@@ -20997,6 +21297,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       dashboardCompact, toggleDashboardCompact,
       cctvSitesCount, cctvRecordsCount, cctvThisYearCount, cctvThisYearCMCount, virSitesCount, virRecordsCount, virThisYearCount, virThisYearCMCount,
       cctvYearTarget, virYearTarget, cctvTargetPct, virTargetPct,
+      siteCompletionCctv, siteCompletionVir, siteCompletionPctCctv, siteCompletionPctVir, showSiteCompletionDetail,
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
       todayAttentionRows, handleTodayAttentionClick, smartInsights,
