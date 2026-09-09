@@ -2146,9 +2146,10 @@ details.form-control[open] summary::after{content:'▴'}
                info, not a rendering bug, and previously had no visible
                trace at all. -->
           <div v-if="!mapLoading && mapUnmappedToday.length" style="font-size:.75rem;color:#a33;background:#fff0f0;border:1px solid #f5c2c2;border-radius:6px;padding:8px 12px;margin-top:8px">
-            ⚠️ {{mapUnmappedToday.length}} penugasan pada {{fmtDateDash(mapSelectedDate)}} <b>tidak dapat dipetakan</b> ke peta (site tak dikenali):
+            ⚠️ {{mapUnmappedToday.length}} penugasan pada {{fmtDateDash(mapSelectedDate)}} <b>tidak dapat dipetakan</b> ke peta:
             <div v-for="(u,i) in mapUnmappedToday" :key="i" style="margin-top:3px;padding-left:8px">
-              &bull; {{u.team}} — {{u.siteName}} <span style="color:#c88">(siteId: {{u.siteId}})</span>
+              &bull; {{u.team}} — {{u.siteName}}
+              <span style="color:#c88">{{u.isNonSprm ? '(negeri belum dipilih)' : `(site tak dikenali — siteId: ${u.siteId})`}}</span>
             </div>
           </div>
         </div>
@@ -3826,7 +3827,6 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=2">← Balik</button>
-            <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
             <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang VIR'}}</button>
             <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
@@ -4085,7 +4085,6 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=4">← Balik</button>
-            <button class="btn btn-warning" @click="savePM('draft')" :disabled="loading">💾 Simpan Draft</button>
             <button class="btn btn-success" @click="savePM('submitted')" :disabled="loading">{{pm._isEdit?'✅ Simpan Perubahan':'✅ Submit Borang'}}</button>
             <button class="btn btn-outline" @click="cancelPmForm">✕ Batal</button>
           </div>
@@ -8976,13 +8975,26 @@ createApp({
       }
       const caps = [page0Cap, ...contTargets];
       const cols = [];
-      let i = 0;
-      for (const cap of caps) {
+      let i = 0, ci = 0;
+      // Loop on "items left", not on caps.length — the caps above are
+      // planned sizes computed BEFORE the header-avoidance shift below is
+      // known. Whenever that shift pulls a page's real end back a row or
+      // two, every later page starts earlier than planned, and the caps
+      // array runs out before i reaches items.length. A fixed for-of over
+      // caps then silently drops that leftover tail — real checklist rows
+      // vanish from the printed borang with no warning. Falling back to
+      // contCap for any extra page needed past the plan guarantees every
+      // item still ends up in some column, at the cost of an occasional
+      // extra page in the rare case a section has enough headers to shift
+      // the plan by that much.
+      while (i < items.length) {
+        const cap = ci < caps.length ? caps[ci] : contCap;
         let end = Math.min(i + cap, items.length);
         // Don't strand a header as the very last row of a page.
         while (end > i + 1 && end < items.length && items[end-1].isHeader) end--;
         cols.push(..._virSplitPageCols(items.slice(i, end), i));
         i = end;
+        ci++;
       }
       return cols.length ? cols : [{ items: [], offset: 0 }];
     }
@@ -9487,19 +9499,23 @@ createApp({
         .sort();
       return dates[0] || null;
     });
-    // Diagnostic only — the raw count of assignments matching the selected
-    // date, BEFORE the SITE_STATE_MAP lookup that mapStateAssignments below
-    // does. Compared against mapMappedCount in the template: if raw > 0 but
-    // mapped is lower, some assignment's siteId genuinely isn't in
-    // SITE_STATE_MAP (a real data/config gap, not a rendering bug) — surface
-    // that difference explicitly instead of it silently vanishing, since
-    // "the data admin set isn't showing up" is otherwise unfalsifiable from
-    // the UI alone.
-    const mapTodayRawCount = computed(() =>
-      teamAssignments.value.filter(a => a.date === mapSelectedDate.value).length);
+    // Diagnostic — lists exactly which assignments on the selected date
+    // couldn't get a pin (rather than just a bare count), so the "data
+    // admin set isn't showing up" case is directly actionable from the UI.
     const mapUnmappedToday = computed(() =>
-      teamAssignments.value.filter(a => a.date === mapSelectedDate.value && !SITE_STATE_MAP[a.siteId])
-        .map(a => ({ siteName: a.siteName || '(tiada nama)', siteId: a.siteId || '(kosong)', team: a.team })));
+      teamAssignments.value.filter(a => a.date === mapSelectedDate.value)
+        // Must mirror mapStateAssignments' own state-resolution exactly
+        // (SITE_STATE_MAP lookup, falling back to manualState for non-SPRM
+        // projects) — this used to check SITE_STATE_MAP[a.siteId] alone,
+        // which flagged EVERY non-SPRM assignment as "unmapped" even when
+        // its manualState was set and it was already showing correctly on
+        // the map, since those projects never have a siteId by design
+        // (free-text location, not a Site SPRM dropdown).
+        .filter(a => !(SITE_STATE_MAP[a.siteId] || (NON_SPRM_PROJECTS.includes(a.project) ? a.manualState : null)))
+        .map(a => ({
+          siteName: a.siteName || '(tiada nama)', siteId: a.siteId || '(kosong)', team: a.team,
+          isNonSprm: NON_SPRM_PROJECTS.includes(a.project),
+        })));
     // Groups team assignments for the selected date by real state name
     // (via SITE_STATE_MAP) — a state only gets a pin on the map if
     // someone is actually scheduled there that day, never "all sites".
@@ -17975,16 +17991,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         showToast(`No. rujukan "${pm.refNo}" sudah wujud. Sila guna nombor lain.`, 'error');
         return;
       }
-      // Drafts may stay incomplete, but a final "Submit" must have these —
-      // otherwise the record can silently save with maintType:'PM' (masking
-      // a CM that was never classified, losing rootCause) or with no
-      // month/year/visitDate, which then makes it vanish from the dashboard
-      // year stats and "last PM" overdue tracking even though it was submitted.
+      // A final "Submit" must have these — otherwise the record can
+      // silently save with maintType:'PM' (masking a CM that was never
+      // classified, losing rootCause) or with no month/year, which then
+      // makes it vanish from the dashboard year stats and "last PM"
+      // overdue tracking even though it was submitted. visitDate itself is
+      // intentionally NOT required — every place that reads it (dashboard,
+      // Laporan, Executive Summary, Year-in-Review, and the schedule/actual
+      // "team visited" match below) already falls back to month/year when
+      // it's blank, so leaving it out at submit time doesn't break those.
       if(status === 'submitted') {
         if(!pm.siteId) { showToast('Sila pilih site.', 'error'); return; }
         if(!pm.maintType) { showToast('Sila pilih Jenis Penyelenggaraan (PM/CM).', 'error'); return; }
         if(!pm.month || !pm.year) { showToast('Sila pilih Bulan dan Tahun Penyelenggaraan.', 'error'); return; }
-        if(!pm.visitDate) { showToast('Sila isi Tarikh Penyelenggaraan.', 'error'); return; }
         if(pm.maintType === 'CM' && !pm.rootCause) { showToast('Sila isi Punca Masalah (Root Cause) untuk CM.', 'error'); return; }
         const nudgeIssues = _pmNudgeIssues();
         if(nudgeIssues.length) {
@@ -20613,7 +20632,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         perTeam[team].assigned++;
         (t.members||[]).forEach(m => perTeam[team].members.add(m.name));
         const tDate = t.date ? new Date(t.date) : null;
-        const hasRecord = tDate && pmRecords.value.some(r => r.siteId===t.siteId && r.visitDate && Math.abs(new Date(r.visitDate) - tDate) <= 7*86400000);
+        // _recDate(r) falls back to month/year when visitDate is blank
+        // (visitDate isn't required at submit — see savePM()) — without
+        // this fallback, a submitted record missing just that one field
+        // would silently look like the team never showed up here.
+        const hasRecord = tDate && pmRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         if(hasRecord) perTeam[team].completed++;
       });
       return Object.values(perTeam)
@@ -20633,7 +20656,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project)).forEach(t => {
         const isCm = t.maintType === 'CM';
         const tDate = t.date ? new Date(t.date) : null;
-        const hasRecord = tDate && pmRecords.value.some(r => r.siteId===t.siteId && r.visitDate && Math.abs(new Date(r.visitDate) - tDate) <= 7*86400000);
+        // _recDate(r) falls back to month/year when visitDate is blank
+        // (visitDate isn't required at submit — see savePM()) — without
+        // this fallback, a submitted record missing just that one field
+        // would silently look like the team never showed up here.
+        const hasRecord = tDate && pmRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         // Dedup by uid within this one assignment first — a malformed/
         // duplicate member entry on a single doc would otherwise inflate
         // that staff member's count for what is really one assignment.
@@ -21307,7 +21334,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForDayGrouped, projShortLabel, teamsForMonth,
-      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos, mapPopupAlign, mapLoading, mapNearestUpcomingDate, mapTodayRawCount, mapUnmappedToday,
+      mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos, mapPopupAlign, mapLoading, mapNearestUpcomingDate, mapUnmappedToday,
       timelapseModal, timelapseMapEl, timelapseYearOptions, timelapseMonthCount, timelapseYearVisitedSites, timelapseYearTotalSites, openTimelapse, closeTimelapse, timelapseTogglePlay,
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
