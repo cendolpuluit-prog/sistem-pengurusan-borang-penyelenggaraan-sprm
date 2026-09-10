@@ -10900,17 +10900,19 @@ createApp({
       loading.value = true;
       try {
         const data = { ...contractModal.data, reminderDays: contractModal.data.reminderDays || 60 };
+        const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!contractModal.editing) {
-          await db.collection('contracts').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-          await logAudit('CONTRACT_CREATE', data.title);
+          const ref = await db.collection('contracts').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          _localUpsert(contracts, ref.id, { project:'cctv', ...data }, sortByEnd);
+          logAudit('CONTRACT_CREATE', data.title);
           showToast('Kontrak berjaya ditambah!');
         } else {
           await db.collection('contracts').doc(contractModal._editId).update(data);
-          await logAudit('CONTRACT_EDIT', data.title);
+          _localUpsert(contracts, contractModal._editId, data, sortByEnd);
+          logAudit('CONTRACT_EDIT', data.title);
           showToast('Kontrak dikemas kini!');
         }
         contractModal.show = false;
-        await loadContracts();
       } catch(e) { contractModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -11216,17 +11218,19 @@ createApp({
         const vendor = (d.vendor === 'Lain-lain' && d.vendorCustom.trim()) ? d.vendorCustom.trim() : d.vendor;
         const { vendorCustom, ...rest } = d;
         const data = { ...rest, vendor, reminderDays: d.reminderDays || 60 };
+        const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!warrantyModal.editing) {
-          await db.collection('equipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-          await logAudit('WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
+          const ref = await db.collection('equipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          _localUpsert(warranty, ref.id, data, sortByEnd);
+          logAudit('WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan berjaya ditambah!');
         } else {
           await db.collection('equipmentWarranty').doc(warrantyModal._editId).update(data);
-          await logAudit('WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
+          _localUpsert(warranty, warrantyModal._editId, data, sortByEnd);
+          logAudit('WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan dikemaskini!');
         }
         warrantyModal.show = false;
-        await loadWarranty();
       } catch(e) { warrantyModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -11332,17 +11336,19 @@ createApp({
       try {
         const category = (d.category === 'lain' && d.categoryCustom.trim()) ? d.categoryCustom.trim() : d.category;
         const data = { ...d, category };
+        const sortByLetterDateDesc = (a,b) => (b.letterDate||'').localeCompare(a.letterDate||'');
         if(!letterMemoModal.editing) {
-          await db.collection('suratMemo').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' });
-          await logAudit('LETTER_MEMO_ADD', `${letterMemoCategoryLabel(category)} — ${d.letterDate}`);
+          const ref = await db.collection('suratMemo').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' });
+          _localUpsert(letterMemos, ref.id, data, sortByLetterDateDesc);
+          logAudit('LETTER_MEMO_ADD', `${letterMemoCategoryLabel(category)} — ${d.letterDate}`);
           showToast('Surat/memo berjaya ditambah!');
         } else {
           await db.collection('suratMemo').doc(letterMemoModal._editId).update(data);
-          await logAudit('LETTER_MEMO_EDIT', `${letterMemoCategoryLabel(category)} — ${d.letterDate}`);
+          _localUpsert(letterMemos, letterMemoModal._editId, data, sortByLetterDateDesc);
+          logAudit('LETTER_MEMO_EDIT', `${letterMemoCategoryLabel(category)} — ${d.letterDate}`);
           showToast('Surat/memo dikemaskini!');
         }
         letterMemoModal.show = false;
-        await loadLetterMemos();
       } catch(e) { letterMemoModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -11427,25 +11433,29 @@ createApp({
       }
       loading.value = true;
       try {
+        const sortByOpenedDesc = (a,b) => (b.openedDate||'').localeCompare(a.openedDate||'');
         if(!cmCaseModal.editing) {
           const firstEntry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:d.openedDate, note:d.initialNote.trim() || 'Kes dibuka.', ts:Date.now(), author:authProfile.value?.username || authUser.value?.email || '' };
-          await db.collection('cmCases').add({
+          const newCase = {
             project:d.project, siteId:d.siteId, siteName:d.siteName, title:d.title.trim(),
             status:'pending', openedDate:d.openedDate, resolvedDate:'',
             entries:[firstEntry],
+          };
+          const ref = await db.collection('cmCases').add({
+            ...newCase,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '',
           });
-          await logAudit('CM_CASE_ADD', `${d.title.trim()} — ${d.siteName}`);
+          _localUpsert(cmCases, ref.id, newCase, sortByOpenedDesc);
+          logAudit('CM_CASE_ADD', `${d.title.trim()} — ${d.siteName}`);
           showToast('Kes CM berjaya dibuka!');
         } else {
-          await db.collection('cmCases').doc(cmCaseModal._editId).update({
-            project:d.project, siteId:d.siteId, siteName:d.siteName, title:d.title.trim(), openedDate:d.openedDate,
-          });
-          await logAudit('CM_CASE_EDIT', `${d.title.trim()} — ${d.siteName}`);
+          const patch = { project:d.project, siteId:d.siteId, siteName:d.siteName, title:d.title.trim(), openedDate:d.openedDate };
+          await db.collection('cmCases').doc(cmCaseModal._editId).update(patch);
+          _localUpsert(cmCases, cmCaseModal._editId, patch, sortByOpenedDesc);
+          logAudit('CM_CASE_EDIT', `${d.title.trim()} — ${d.siteName}`);
           showToast('Kes CM dikemaskini!');
         }
         cmCaseModal.show = false;
-        await loadCmCases();
       } catch(e) { cmCaseModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -11953,17 +11963,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           purchaseDate:d.purchaseDate, startDate:d.purchaseDate, endDate:d.endDate,
           cost: d.cost || '', reminderDays: d.reminderDays || 60, notes:d.notes,
         };
+        const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!virWarrantyModal.editing) {
-          await db.collection('virEquipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-          await logAudit('VIR_WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
+          const ref = await db.collection('virEquipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          _localUpsert(virWarranty, ref.id, data, sortByEnd);
+          logAudit('VIR_WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan VIR berjaya ditambah!');
         } else {
           await db.collection('virEquipmentWarranty').doc(virWarrantyModal._editId).update(data);
-          await logAudit('VIR_WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
+          _localUpsert(virWarranty, virWarrantyModal._editId, data, sortByEnd);
+          logAudit('VIR_WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan VIR dikemaskini!');
         }
         virWarrantyModal.show = false;
-        await loadVirWarranty();
       } catch(e) { virWarrantyModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -14369,11 +14381,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!confirm(`Kemaskini ${ids.length} rekod CM kepada "${statusLabel}"?`)) return;
       loading.value = true;
       try {
-        const batch = db.batch();
         const bulkUpdates = { cmStatus: bulkCmStatus.value };
         if(bulkCmStatus.value === 'resolved') bulkUpdates.resolvedAt = firebase.firestore.FieldValue.serverTimestamp();
-        ids.forEach(id => batch.update(db.collection('pmRecords').doc(id), bulkUpdates));
-        await _fw(batch.commit());
+        // Firestore batched writes cap at 500 ops — chunk defensively, same
+        // as bulkDeleteAuditLogs() above. The "select all" checkbox on the
+        // filtered PM list (see filteredPM.map(...) in the template) can
+        // realistically pull in more than 500 CM records at once on an
+        // unfiltered/long-history view, which would otherwise fail the
+        // whole batch.commit() outright.
+        for(let i=0; i<ids.length; i+=500) {
+          const batch = db.batch();
+          ids.slice(i, i+500).forEach(id => batch.update(db.collection('pmRecords').doc(id), bulkUpdates));
+          await _fw(batch.commit());
+        }
         // update local state only after commit
         ids.forEach(id => {
           const idx = pmRecords.value.findIndex(r => r.id === id);
@@ -14640,6 +14660,22 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       pendingWrites.value++;
       try { return await promise; }
       finally { pendingWrites.value--; }
+    }
+
+    // Patches a single add/edit result into a local ref-array list in
+    // place, instead of re-fetching the whole collection (the same
+    // reasoning as savePM's local pmRecords patch above) — used by the
+    // admin CRUD modals (contracts/warranty/suratMemo/cmCases) so a save
+    // doesn't cost an extra full-collection round-trip on top of the
+    // write that just happened. `sortFn` re-sorts after an insert/edit so
+    // the list stays in the same order its load*() function fetches it in
+    // (e.g. contracts by endDate) — cheap for these small admin lists,
+    // unlike re-sorting something the size of pmRecords.
+    function _localUpsert(list, id, data, sortFn) {
+      const idx = list.value.findIndex(x => x.id === id);
+      if(idx > -1) list.value[idx] = { ...list.value[idx], ...data };
+      else list.value.push({ id, ...data });
+      if(sortFn) list.value.sort(sortFn);
     }
 
     // ---- Auth ----
@@ -17787,9 +17823,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         ? { [equipVirSystem.value]: creds }
         : creds;
       try {
-        await _fw(db.collection(col).doc(siteId).set(data, { merge: true }));
-        await _fw(db.collection(credCol).doc(siteId).set(credData, { merge: true }));
-        await logAudit('EQUIPMENT_UPDATE', siteLabel);
+        // Batched into one round-trip instead of two sequential awaited
+        // .set() calls — this fires on every auto-save (every ~2s of
+        // inactivity while editing), so it's the single most frequent write
+        // in the whole app; halving its round-trips matters more here than
+        // almost anywhere else. logAudit is fire-and-forget for the same
+        // reason autosave shouldn't make the user wait on it (see savePM).
+        const batch = db.batch();
+        batch.set(db.collection(col).doc(siteId), data, { merge: true });
+        batch.set(db.collection(credCol).doc(siteId), credData, { merge: true });
+        await _fw(batch.commit());
+        logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
         if(opts.toast !== false) showToast('Peralatan berjaya disimpan!');
       } catch(e){
@@ -18077,11 +18121,35 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(!pm._draftId) pm._draftId = db.collection('pmRecords').doc().id;
         const docRef = db.collection('pmRecords').doc(pm._draftId);
         await _fw(docRef.set(data));
-        await logAudit(pm._isEdit ? 'BORANG_EDIT' : (status==='submitted'?'BORANG_SUBMIT':'BORANG_DRAFT'), pm.refNo||pm._draftId);
+        // Fire-and-forget — logAudit already has its own internal try/catch
+        // and swallows failures silently (see its definition), same as the
+        // login "lastLogin" write elsewhere — no reason to make the user
+        // wait on a 3rd round-trip just to see the "saved" toast.
+        logAudit(pm._isEdit ? 'BORANG_EDIT' : (status==='submitted'?'BORANG_SUBMIT':'BORANG_DRAFT'), pm.refNo||pm._draftId);
         showToast(pm._isEdit ? 'Perubahan borang berjaya disimpan!' : (status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!'));
         if(status === 'submitted') flashSavedCheckmark();
         clearPmDraftLocal(); // Firestore now holds the authoritative copy — local recovery draft no longer needed
-        await loadAll();
+        // Was `await loadAll()` — a full reload of pmRecords + BOTH
+        // projects' site equipment + credentials + teamAssignments + users
+        // + kontraktor, just to reflect the ONE record actually written
+        // here. That was the single biggest cost in this whole function —
+        // savePM only ever WRITES to pmRecords, so patch just this record
+        // into the local list instead of re-fetching everything.
+        // serverTimestamp() fields aren't resolved to a real value
+        // client-side yet, so they're swapped for a plain {seconds}
+        // stand-in — the same shape every .toDate-guarded read elsewhere
+        // already expects — until the user's next full login/reload
+        // naturally picks up the real server value.
+        const _now = { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 };
+        const localData = {
+          ...data,
+          createdAt: (pm._createdAt && pm._createdAt.toDate) ? pm._createdAt : _now,
+          ...(pm._isEdit ? { updatedAt: _now } : {}),
+          ...(status==='submitted' ? { submittedAt: (pm._submittedAt && pm._submittedAt.toDate) ? pm._submittedAt : _now } : {}),
+        };
+        const _existingIdx = pmRecords.value.findIndex(r => r.id === pm._draftId);
+        if(_existingIdx > -1) pmRecords.value[_existingIdx] = { id: pm._draftId, ...localData };
+        else pmRecords.value.unshift({ id: pm._draftId, ...localData });
         // Celebrate the moment a site's PM quota is hit exactly — CCTV's is
         // the flat annual PM_PER_YEAR quota; VIR's is the whole contract's
         // 4-window schedule (its quota isn't annual/flat, see
@@ -18096,7 +18164,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             showToast(`🎉 Tahniah! Site "${data.siteName}" capai 100% pematuhan PM tahun ini!`);
           }
         }
-        viewPM.value = {id:pm._draftId,...data};
+        viewPM.value = {id:pm._draftId,...localData};
         pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; // clear so next new form gets fresh ID
         page.value='pm-view';
       } catch(e){ showToast('Gagal: '+e.message,'error'); }
@@ -18426,8 +18494,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         batch.delete(db.collection('deletedPmRecords').doc(id));
         await _fw(batch.commit());
         trashedPmRecords.value = trashedPmRecords.value.filter(r=>r.id!==id);
-        await loadAll();
-        await logAudit('BORANG_RESTORE', rec.refNo||id);
+        // Was `await loadAll()` — same unnecessary full-app reload fixed in
+        // savePM() above, for the same reason: this only ever writes to
+        // pmRecords, so patch the restored record back into the local list
+        // directly. `data` here came from a Firestore read (loadTrash), not
+        // a fresh write, so its timestamps are already real — no sentinel
+        // stand-in needed like savePM's case.
+        if(!pmRecords.value.some(r => r.id === id)) pmRecords.value.unshift({ id, ...data });
+        logAudit('BORANG_RESTORE', rec.refNo||id);
         showToast('Rekod berjaya dipulihkan!');
       } catch(e) { showToast('Gagal memulihkan rekod: ' + e.message, 'error'); }
     }
@@ -18474,7 +18548,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       batch.delete(db.collection(deletedCollection).doc(id));
       await _fw(batch.commit());
       list.value = list.value.filter(r=>r.id!==id);
-      return rec;
+      return data; // caller patches this straight into the live list — see restoreTrash*() below
     }
     async function _permanentlyDeleteFromTrash(deletedCollection, id, list) {
       await _fw(db.collection(deletedCollection).doc(id).delete());
@@ -18505,9 +18579,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const rec = trashedContracts.value.find(r=>r.id===id);
       if(!rec || !confirm(`Pulihkan kontrak "${rec.title||id}"?`)) return;
       try {
-        await _restoreFromTrash('deletedContracts', 'contracts', id, trashedContracts);
-        await loadContracts();
-        await logAudit('CONTRACT_RESTORE', rec.title||id);
+        const data = await _restoreFromTrash('deletedContracts', 'contracts', id, trashedContracts);
+        if(data) _localUpsert(contracts, id, data, (a,b) => (a.endDate||'').localeCompare(b.endDate||''));
+        logAudit('CONTRACT_RESTORE', rec.title||id);
         showToast('Kontrak berjaya dipulihkan!');
       } catch(e) { showToast('Gagal memulihkan kontrak: ' + e.message, 'error'); }
     }
@@ -18537,9 +18611,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const rec = trashedWarranty.value.find(r=>r.id===id);
       if(!rec || !confirm(`Pulihkan waranti "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
       try {
-        await _restoreFromTrash('deletedEquipmentWarranty', 'equipmentWarranty', id, trashedWarranty);
-        await loadWarranty();
-        await logAudit('WARRANTY_RESTORE', `${rec.equipmentName||id} — ${rec.siteName||'-'}`);
+        const data = await _restoreFromTrash('deletedEquipmentWarranty', 'equipmentWarranty', id, trashedWarranty);
+        if(data) _localUpsert(warranty, id, data, (a,b) => (a.endDate||'').localeCompare(b.endDate||''));
+        logAudit('WARRANTY_RESTORE', `${rec.equipmentName||id} — ${rec.siteName||'-'}`);
         showToast('Waranti berjaya dipulihkan!');
       } catch(e) { showToast('Gagal memulihkan waranti: ' + e.message, 'error'); }
     }
@@ -18569,9 +18643,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const rec = trashedVirWarranty.value.find(r=>r.id===id);
       if(!rec || !confirm(`Pulihkan waranti VIR "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
       try {
-        await _restoreFromTrash('deletedVirEquipmentWarranty', 'virEquipmentWarranty', id, trashedVirWarranty);
-        await loadVirWarranty();
-        await logAudit('VIR_WARRANTY_RESTORE', `${rec.equipmentName||id} — ${rec.siteName||'-'}`);
+        const data = await _restoreFromTrash('deletedVirEquipmentWarranty', 'virEquipmentWarranty', id, trashedVirWarranty);
+        if(data) _localUpsert(virWarranty, id, data, (a,b) => (a.endDate||'').localeCompare(b.endDate||''));
+        logAudit('VIR_WARRANTY_RESTORE', `${rec.equipmentName||id} — ${rec.siteName||'-'}`);
         showToast('Waranti VIR berjaya dipulihkan!');
       } catch(e) { showToast('Gagal memulihkan waranti VIR: ' + e.message, 'error'); }
     }
@@ -18601,9 +18675,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const rec = trashedSuratMemo.value.find(r=>r.id===id);
       if(!rec || !confirm(`Pulihkan surat/memo "${letterMemoCategoryLabel(rec.category)}" (${fmtDate(rec.letterDate)})?`)) return;
       try {
-        await _restoreFromTrash('deletedSuratMemo', 'suratMemo', id, trashedSuratMemo);
-        await loadLetterMemos();
-        await logAudit('LETTER_MEMO_RESTORE', `${letterMemoCategoryLabel(rec.category)} — ${rec.letterDate}`);
+        const data = await _restoreFromTrash('deletedSuratMemo', 'suratMemo', id, trashedSuratMemo);
+        if(data) _localUpsert(letterMemos, id, data, (a,b) => (b.letterDate||'').localeCompare(a.letterDate||''));
+        logAudit('LETTER_MEMO_RESTORE', `${letterMemoCategoryLabel(rec.category)} — ${rec.letterDate}`);
         showToast('Surat/memo berjaya dipulihkan!');
       } catch(e) { showToast('Gagal memulihkan surat/memo: ' + e.message, 'error'); }
     }
@@ -18634,9 +18708,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const rec = trashedCmCases.value.find(r=>r.id===id);
       if(!rec || !confirm(`Pulihkan kes CM "${rec.title}" (${rec.siteName})?`)) return;
       try {
-        await _restoreFromTrash('deletedCmCases', 'cmCases', id, trashedCmCases);
-        await loadCmCases();
-        await logAudit('CM_CASE_RESTORE', `${rec.title} — ${rec.siteName}`);
+        const data = await _restoreFromTrash('deletedCmCases', 'cmCases', id, trashedCmCases);
+        if(data) _localUpsert(cmCases, id, data, (a,b) => (b.openedDate||'').localeCompare(a.openedDate||''));
+        logAudit('CM_CASE_RESTORE', `${rec.title} — ${rec.siteName}`);
         showToast('Kes CM berjaya dipulihkan!');
       } catch(e) { showToast('Gagal memulihkan kes CM: ' + e.message, 'error'); }
     }
@@ -18835,7 +18909,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         set('B532', r.contractorJawatan||'');
         set('B533', r.contractorTarikh||'');
       });
-      XLSX_TEMPLATE.writeFile(wb, 'PM-VIR-'+r.siteName.replace(/\s+/g,'-')+'-'+r.visitDate+'.xlsx');
+      // visitDate isn't required at submit (see savePM()) — fall back to
+      // year like the DOCX export's filename does, so a blank visitDate
+      // doesn't leave a dangling trailing "-" before the extension.
+      XLSX_TEMPLATE.writeFile(wb, 'PM-VIR-'+r.siteName.replace(/\s+/g,'-')+'-'+(r.visitDate||r.year)+'.xlsx');
       await logAudit('EXPORT_EXCEL_VIR', `${r.refNo||'-'} — ${r.siteName}`);
       showToast('Excel VIR berjaya dieksport!');
     }
