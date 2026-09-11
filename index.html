@@ -7478,13 +7478,21 @@ const VIR_SITES = [
   {id:'v25',name:'Kompleks Pejabat SPRM Terengganu',code:'TRG',zone:'PANTAI_TIMUR'},
   {id:'v26',name:'Pejabat SPRM Cawangan Kemaman',code:'KMN',zone:'PANTAI_TIMUR'},
   {id:'v27',name:'Kompleks Pejabat SPRM Kelantan',code:'KTN',zone:'PANTAI_TIMUR'},
-  {id:'v29',name:'Kompleks Pejabat SPRM Sabah',code:'SBH',zone:'BORNEO'},
+  {id:'v29',name:'Kompleks Pejabat SPRM Sabah (Bangunan Baru)',code:'SBH',zone:'BORNEO'},
   {id:'v30',name:'Pejabat SPRM Cawangan Sandakan',code:'SDK',zone:'BORNEO'},
   {id:'v31',name:'Pejabat SPRM Cawangan Tawau',code:'TWU',zone:'BORNEO'},
   {id:'v32',name:'Kompleks Pejabat SPRM Sarawak',code:'SWK',zone:'BORNEO'},
   {id:'v33',name:'Pejabat SPRM Cawangan Miri',code:'MRI',zone:'BORNEO'},
   {id:'v34',name:'Pejabat SPRM Cawangan Sibu',code:'SBU',zone:'BORNEO'},
   {id:'v35',name:'Pejabat SPRM Cawangan Bintulu',code:'BTU',zone:'BORNEO'},
+  // Sabah's old building runs a separate BCD-only room, distinct from the
+  // 4 Optager rooms tracked under v29 (the new building) — room names
+  // ("Bilik 1" etc.) must be unique per site, so a second physical
+  // building sharing "Bilik 1" needs its own site entry, not a room under
+  // v29. v29 keeps its original code (SBH, already baked into that
+  // site's existing PM refNos/equipment names) — this one gets a fresh
+  // code (SBHL) since it's new data with no history to stay consistent with.
+  {id:'v38',name:'Kompleks Pejabat SPRM Sabah (Bangunan Lama)',code:'SBHL',zone:'BORNEO'},
 ];
 
 const ZONES = {
@@ -7518,7 +7526,7 @@ const SITE_STATE_MAP = {
   v18:'Johor', v19:'Johor', v20:'Johor', v22:'Pahang', v23:'Pahang',
   v24:'Pahang', v25:'Terengganu', v26:'Terengganu', v27:'Kelantan',
   v29:'Sabah', v30:'Sabah', v31:'Sabah', v32:'Sarawak', v33:'Sarawak',
-  v34:'Sarawak', v35:'Sarawak',
+  v34:'Sarawak', v35:'Sarawak', v38:'Sabah',
 };
 
 const MONTHS = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
