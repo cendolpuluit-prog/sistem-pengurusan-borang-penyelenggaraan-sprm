@@ -838,8 +838,15 @@ details.form-control[open] summary::after{content:'▴'}
   .pm-sign-wrap{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr 1fr!important;grid-template-rows:repeat(6,auto)!important;box-sizing:border-box}
   .pm-sign-wrap.pm-sign-wrap-2{grid-template-columns:1fr 1fr!important}
   .pm-sign-box{display:grid!important;grid-template-rows:subgrid!important;grid-row:span 6!important}
-  .pm-vir-2col{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;box-sizing:border-box}
+  .pm-vir-2col{width:100%!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;box-sizing:border-box}
   .pm-vir-2col>.pm-tbl{min-width:0!important}
+  /* Sections/groups with only ONE table (e.g. Optager's single full-width
+     "Perkakasan dan Perisian" checklist, or a site with exactly 1 camera
+     in "Default Setting Perkakasan") still rendered inside a 2-column
+     grid — the sole table only filled the left 1fr track, leaving the
+     right track blank (the "table won't stretch right" gap a real
+     exported PDF confirmed). Collapses to a single full-width column. */
+  .pm-vir-2col-single{grid-template-columns:1fr!important}
   /* Forces a page break between consecutive page-groups of the SAME VIR
      checklist section (see virChecklistPages()) — each group is already
      sized to fit one page on its own, so this just stops the browser from
@@ -4448,9 +4455,9 @@ details.form-control[open] summary::after{content:'▴'}
                    across every page the section needs before the right
                    column even starts. -->
               <template v-for="(page,pi) in virChecklistPages(section)" :key="pi">
-                <div :class="['pm-vir-2col', !page.isLast ? 'pm-vir-page-break' : '']">
+                <div :class="['pm-vir-2col', page.cols.length===1 ? 'pm-vir-2col-single' : '', !page.isLast ? 'pm-vir-page-break' : '']">
                   <table class="pm-tbl" v-for="(col,ci) in page.cols" :key="ci">
-                    <thead><tr><th style="width:4%">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:65%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
+                    <thead><tr><th :style="section==='Status Operasi Sistem'?'width:6%':'width:4%'">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:63%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
                     <tbody>
                       <template v-for="(item,idx) in col.items" :key="item.key">
                         <tr v-if="item.isHeader">
@@ -4498,7 +4505,7 @@ details.form-control[open] summary::after{content:'▴'}
                "IP Address" (the column header), per client request. -->
           <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && virDefaultSettingUnits.length">
             <div class="pm-section-hdr">Default Setting Perkakasan</div>
-            <div class="pm-vir-2col">
+            <div :class="['pm-vir-2col', virDefaultSettingUnits.length===1 ? 'pm-vir-2col-single' : '']">
               <table class="pm-tbl" v-for="(u,ui) in virDefaultSettingUnits" :key="ui">
                 <thead>
                   <tr><th colspan="3" style="text-align:left;background:#F5F6F8">{{u.name}}</th></tr>
@@ -11818,10 +11825,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!canEditWarrantyReportFor(serviceReportModal.collection)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!confirm(`Padam fail servis "${report.name}"?`)) return;
       try {
-        await storage.ref(report.path).delete().catch(()=>{}); // ignore if already gone
+        // Firestore arrayRemove FIRST, Storage delete second (was reversed)
+        // — if the Storage delete happened first and the Firestore update
+        // then failed (offline, permission edge case, concurrent doc
+        // modification), the serviceReports entry would survive pointing
+        // at an already-deleted Storage object: a broken download link
+        // shown to the user. This order's worst case is the opposite and
+        // harmless — an orphaned Storage file with no Firestore reference,
+        // costing a little unused storage but never breaking a live link.
         await db.collection(serviceReportModal.collection).doc(w.id).update({
           serviceReports: firebase.firestore.FieldValue.arrayRemove(report),
         });
+        await storage.ref(report.path).delete().catch(()=>{}); // ignore if already gone
         w.serviceReports = (w.serviceReports||[]).filter(r => r.path !== report.path);
         await logAudit('WARRANTY_SERVICE_REPORT_DELETE', `${w.equipmentName || w.perihal || '-'} — ${w.siteName} — ${report.name}`);
         showToast('Fail servis dipadam.');
@@ -16769,6 +16784,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // Backfill ids for equipment saved before this id-based keying existed.
       EQUIP_KINDS.forEach(k => (eq[k]||[]).forEach(item => { if(!item._uid) item._uid = _genId(); }));
       EQUIP_KINDS.forEach(k => equipSelected[k].clear()); // don't carry bulk-selection over from a previous site
+      // Same reasoning for password-reveal state — unlike equipSelected,
+      // revealedPw previously had no reset at all, so a credential
+      // revealed on one site stayed unmasked indefinitely for the rest of
+      // the session (including after navigating away and back), a minor
+      // info-exposure risk on a shared/handed-off screen. Optional-chained
+      // since revealedPw only has keys for equipment kinds that actually
+      // carry a credential field (no hdd/servers entry).
+      EQUIP_KINDS.forEach(k => revealedPw[k]?.clear());
       // Also clear any in-progress "Kemaskini" edit from the previous site —
       // otherwise equipEditIdx[key] still points at a row index in the new
       // site's list, and clicking "+ Tambah" (relabelled "Kemaskini" while
