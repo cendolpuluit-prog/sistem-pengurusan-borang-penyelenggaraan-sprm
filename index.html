@@ -3279,13 +3279,27 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="eqTab==='servers'">
           <div class="card" id="equip-form-servers">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Appliance Optager HD4000</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Appliance {{equipVirSystem==='VCS'?'VCS':'Optager HD4000'}}</div>
               <button class="btn btn-outline btn-sm" @click="resetForm('nServer')">↺ Reset</button>
             </div>
-            <div class="form-group"><label>Nama/Label Appliance</label><input class="form-control" v-model="nServer.name" placeholder="cth: Appliance Optager Bilik VIR 1"></div>
+            <div class="form-group"><label>Nama/Label Appliance</label><input class="form-control" v-model="nServer.name" :placeholder="'cth: Appliance '+(equipVirSystem==='VCS'?'VCS':'Optager')+' Bilik VIR 1'"></div>
             <div class="form-row form-row-3">
-              <div class="form-group"><label>Brand</label><input class="form-control" v-model="nServer.brand" readonly></div>
-              <div class="form-group"><label>Model</label><input class="form-control" v-model="nServer.model" readonly></div>
+              <div class="form-group" v-if="equipVirSystem==='VCS'"><label>Brand</label>
+                <select class="form-control" v-model="nServer.brand" @change="nServer.model=''">
+                  <option v-for="b in brandOptionsFor('VCS_SERVER_BRANDS')" :key="b">{{b}}</option>
+                </select>
+                <input v-if="nServer.brand==='Lain-lain'" class="form-control" v-model="nServer.brandCustom" placeholder="Nyatakan brand sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group" v-else><label>Brand</label><input class="form-control" v-model="nServer.brand" readonly></div>
+              <div class="form-group" v-if="equipVirSystem==='VCS'"><label>Model</label>
+                <select v-if="nServer.brand && nServer.brand!=='Lain-lain'" class="form-control" v-model="nServer.model">
+                  <option value="">-- Pilih Model --</option>
+                  <option v-for="m in modelOptionsFor('servers', nServer.brand)" :key="m">{{m}}</option>
+                </select>
+                <input v-else class="form-control" v-model="nServer.model" placeholder="Nyatakan model">
+                <input v-if="nServer.model==='Lain-lain'" class="form-control" v-model="nServer.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
+              </div>
+              <div class="form-group" v-else><label>Model</label><input class="form-control" v-model="nServer.model" readonly></div>
               <div class="form-group"><label>Appliance No. Siri</label><input class="form-control" v-model="nServer.serial" placeholder="No. Siri appliance"></div>
             </div>
 
@@ -3419,7 +3433,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.serial"></div>
               <div class="form-group"><label>Machine ID <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.controlAppMachineId"></div>
               <div class="form-group">
-                <label>Optager HD4000 Control APP License Key <span class="text-muted text-sm">(pilihan — rekod dalaman staf sahaja, tidak dipaparkan dalam borang PM/CM)</span></label>
+                <label>{{equipVirSystem==='VCS'?'VCS':'Optager HD4000'}} Control APP License Key <span class="text-muted text-sm">(pilihan — rekod dalaman staf sahaja, tidak dipaparkan dalam borang PM/CM)</span></label>
                 <input class="form-control" v-model="nTablet.controlAppLicenseKey">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer;display:inline-flex;margin-top:6px">📎 Upload .lic<input type="file" accept=".lic" style="display:none" @change="uploadTabletLicense">
                 </label>
@@ -5208,6 +5222,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="hdd">Hard Disk</option>
                 <option value="switches">Network Switch</option>
                 <option value="tablets">Tablet</option>
+                <option value="servers">Appliance (VCS)</option>
               </select>
             </div>
             <div class="form-group">
@@ -7924,6 +7939,17 @@ const TABLET_MODELS = {
   'Lain-lain': [],
 };
 
+// VIR VCS (Video Capture System) — Appliance brand/model. Unlike
+// Optager HD4000's Appliance (a single fixed appliance, no brand/model
+// choice at all), VCS's is a real crowdsourced dropdown — see
+// _maybeAddCustomBrand/_maybeAddCustomModel and the 'servers' entries in
+// BRAND_LISTS/EQUIP_MODEL_DICTS below.
+const VCS_SERVER_BRANDS = ['VCS', 'Lain-lain'];
+const VCS_SERVER_MODELS = {
+  'VCS': ['Video Capture System', 'Lain-lain'],
+  'Lain-lain': [],
+};
+
 // VIR Optager HD4000 — Server hardware/software spec dropdowns. Reflects
 // the actual PC-based hardware used for this system (unlike BCD, which is
 // a fixed closed hardware set shared identically across every site).
@@ -8199,8 +8225,13 @@ createApp({
     // VIR Optager HD4000 — Server & Android Tablet, the two equipment types
     // specific enough (nested hardware/software specs, license tracking)
     // that they don't fit the generic misc schema.
+    // brand/model default to Optager's fixed values here — VCS overrides
+    // both to 'VCS'/'Video Capture System' on form reset instead (see
+    // resetForm), since it's a different vendor's appliance. brandCustom/
+    // modelCustom back a "Lain-lain" option for VCS only (Optager's own
+    // brand/model stay fixed/readonly, unaffected).
     const nServer = reactive({
-      name:'', brand:'OPTAGER', model:'HD4000', serial:'',
+      name:'', brand:'OPTAGER', model:'HD4000', brandCustom:'', modelCustom:'', serial:'',
       processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
       gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
       os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
@@ -12407,7 +12438,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
       nMISC: {name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nServer: {name:'', brand:'OPTAGER', model:'HD4000', serial:'',
+      nServer: {name:'', brand:'OPTAGER', model:'HD4000', brandCustom:'', modelCustom:'', serial:'',
         processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
         os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
@@ -12424,18 +12455,35 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // session. "Lain-lain" always stays as the last option so there's
     // always an escape hatch to add the next one.
     const CUSTOM_EQUIP_OPTIONS_COLLECTION = 'customEquipmentOptions';
-    const BRAND_LISTS = { BRANDS, NVR_BRANDS, HDD_BRANDS, SWITCH_BRANDS, TABLET_BRANDS };
-    const EQUIP_MODEL_DICTS = { cameras: CAMERA_MODELS, nvr: NVR_MODELS, hdd: HDD_MODELS, switches: SWITCH_MODELS, tablets: TABLET_MODELS };
-    const customBrands = reactive({ BRANDS: [], NVR_BRANDS: [], HDD_BRANDS: [], SWITCH_BRANDS: [] });
+    const BRAND_LISTS = { BRANDS, NVR_BRANDS, HDD_BRANDS, SWITCH_BRANDS, TABLET_BRANDS, VCS_SERVER_BRANDS };
+    const EQUIP_MODEL_DICTS = { cameras: CAMERA_MODELS, nvr: NVR_MODELS, hdd: HDD_MODELS, switches: SWITCH_MODELS, tablets: TABLET_MODELS, servers: VCS_SERVER_MODELS };
+    // TABLET_BRANDS/VCS_SERVER_BRANDS must be pre-declared here (not left
+    // for _maybeAddCustomBrand to create on first use) — loadCustomEquipmentOptions
+    // below only merges a loaded Firestore doc into customBrands[listKey] if
+    // that key already exists (!== undefined). TABLET_BRANDS was missing
+    // here entirely before this fix: a custom tablet brand typed via
+    // "Lain-lain" saved to Firestore fine and showed immediately in that
+    // same session (optimistic local push), but silently never loaded back
+    // on the next login/reload for anyone, including the person who typed
+    // it — write-only crowdsourcing, functionally broken. Declaring the key
+    // upfront (empty array) is what makes the loader's existence check
+    // pass.
+    const customBrands = reactive({ BRANDS: [], NVR_BRANDS: [], HDD_BRANDS: [], SWITCH_BRANDS: [], TABLET_BRANDS: [], VCS_SERVER_BRANDS: [] });
     // Crowdsourced MODELS are split per project (cctv/vir) — the Kamera/NVR/
     // HDD/Switch tabs are shared UI between CCTV and VIR (BCD) sites, but a
     // brand like Bosch is CCTV-only in practice, so a model typed in while
     // managing a CCTV site shouldn't also appear when managing a VIR site.
     // Brand names themselves stay shared (not split) — only the crowdsourced
     // MODEL lists underneath a brand are project-scoped.
+    // tablets/servers keys have the same "must pre-exist or the loader
+    // silently skips it" requirement as TABLET_BRANDS above — tablets was
+    // missing here too (same write-only bug, now fixed alongside it).
+    // servers only realistically populates under vir (Appliance is VIR-
+    // only), but both projects declare it for structural consistency with
+    // every other equipType here.
     const customModels = reactive({
-      cctv: { cameras: {}, nvr: {}, hdd: {}, switches: {} },
-      vir:  { cameras: {}, nvr: {}, hdd: {}, switches: {} },
+      cctv: { cameras: {}, nvr: {}, hdd: {}, switches: {}, tablets: {}, servers: {} },
+      vir:  { cameras: {}, nvr: {}, hdd: {}, switches: {}, tablets: {}, servers: {} },
     });
 
     async function loadCustomEquipmentOptions() {
@@ -12540,7 +12588,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     // ---- Urus Model Custom (superadmin cleanup tool) ----
     const customEquipCleanup = reactive({ equipType: 'cameras', project: 'cctv', brand: '' });
-    const CLEANUP_BRAND_LIST_KEY = { cameras: 'BRANDS', nvr: 'NVR_BRANDS', hdd: 'HDD_BRANDS', switches: 'SWITCH_BRANDS', tablets: 'TABLET_BRANDS' };
+    const CLEANUP_BRAND_LIST_KEY = { cameras: 'BRANDS', nvr: 'NVR_BRANDS', hdd: 'HDD_BRANDS', switches: 'SWITCH_BRANDS', tablets: 'TABLET_BRANDS', servers: 'VCS_SERVER_BRANDS' };
     const customEquipCleanupBrandList = computed(() => {
       const listKey = CLEANUP_BRAND_LIST_KEY[customEquipCleanup.equipType];
       return brandOptionsFor(listKey).filter(b => b !== 'Lain-lain');
@@ -15328,6 +15376,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function resetForm(formName) {
       const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC, nServer, nTablet, nRoom };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
+      // FORM_DEFAULTS.nServer's brand/model assume Optager (its only real
+      // appliance) — VCS is a different vendor, so override to its own
+      // fixed default here instead of showing "OPTAGER"/"HD4000" on a VCS
+      // room's Appliance form. Optager's own reset is untouched (condition
+      // only matches VCS).
+      if (formName === 'nServer' && currentProject.value === 'vir' && equipVirSystem.value === 'VCS') {
+        nServer.brand = 'VCS'; nServer.model = 'Video Capture System';
+      }
       if (ocrState.target === formName) { ocrState.active=false; ocrState.tokens=[]; }
       // Also drop any in-progress edit-in-place — otherwise the blanked
       // form would overwrite the row being edited with empty values the
@@ -18019,7 +18075,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const list = activeEquip()[selSite.value.id].servers;
       const item = {
         name: nServer.name,
-        brand: nServer.brand||'OPTAGER', model: nServer.model||'HD4000', serial: nServer.serial,
+        brand: _resolveDropdownCustom(nServer.brand, nServer.brandCustom)||'OPTAGER', model: _resolveDropdownCustom(nServer.model, nServer.modelCustom)||'HD4000', serial: nServer.serial,
         processor: _resolveDropdownCustom(nServer.processor, nServer.processorCustom),
         ram: _resolveDropdownCustom(nServer.ram, nServer.ramCustom),
         storage: [...nServer.storage],
@@ -18037,6 +18093,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       };
       const dup = _findDupConflict('servers', list, item, equipEditIdx.servers);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      // Only VCS's brand/model are a real crowdsourced dropdown — Optager's
+      // are a fixed constant (never a user pick), so 'OPTAGER'/'HD4000'
+      // must never get pushed into VCS_SERVER_BRANDS/servers as if someone
+      // had typed them as a new custom VCS entry.
+      if(equipVirSystem.value === 'VCS') {
+        _maybeAddCustomBrand('VCS_SERVER_BRANDS', item.brand);
+        _maybeAddCustomModel('servers', item.brand, item.model);
+      }
       if(equipEditIdx.servers !== null) { item._uid = list[equipEditIdx.servers]._uid||_genId(); list[equipEditIdx.servers] = item; equipEditIdx.servers = null; showToast('Appliance dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Appliance berjaya ditambah!'); }
       resetForm('nServer');
@@ -18365,7 +18429,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // even though the technician is actually visiting an Optager room.
         if(!pm.virRoomNo){ showToast('Sila pilih No. Bilik VIR', 'error'); return; }
         if(pm.virRoomNo === 'Lain-lain' && !pm.virRoomNoCustom.trim()){ showToast('Sila nyatakan no. bilik', 'error'); return; }
-        if(!pm.virSystem){ showToast('Sila pilih Jenis Sistem (BCD / Optager HD4000)', 'error'); return; }
+        if(!pm.virSystem){ showToast('Sila pilih Jenis Sistem (BCD / Optager HD4000 / VCS)', 'error'); return; }
         const site = VIR_SITES.find(s=>s.id===pm.siteId);
         pm.siteName = site?.name||'';
         pmStep.value = 2;
