@@ -8215,7 +8215,7 @@ createApp({
     // the physical components differ; which one applies is determined by
     // the room selected in Step 1 (rooms are tagged BCD/Optager per-site in
     // Urus Peralatan Site, since a single site can have mixed rooms).
-    const VIR_SYSTEMS = ['BCD', 'Optager HD4000'];
+    const VIR_SYSTEMS = ['BCD', 'Optager HD4000', 'VCS'];
     // Standardized room naming across all VIR sites — "Bilik 1".."Bilik 20"
     // covers every real room, so this is a dropdown (not free text) to keep
     // naming consistent; "Lain-lain" is kept as an escape hatch matching
@@ -8225,6 +8225,13 @@ createApp({
     const VIR_CHECKLIST_SECTIONS = {
       'BCD': ['Sistem Rakaman Audio/Video','Skop Kerja Sivil','Mekanikal & Awam'],
       'Optager HD4000': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem','Default Konfigurasi Appliance Optager HD4000','Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)','Default Konfigurasi Kamera Axis M4218-LV (CAM3)'],
+      // VCS — verbatim-duplicated section list from Optager (see
+      // VIR_CHECKLIST_TEMPLATE_VCS below for why). Literal strings here
+      // (not the SEC_*_VCS constant names — matching how the Optager row
+      // above also uses literal strings, not SEC_SVR_CONFIG etc.), since
+      // this object literal evaluates immediately at this point in the
+      // script and those constants aren't declared until further down.
+      'VCS': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem','Default Konfigurasi Appliance Optager HD4000','Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)','Default Konfigurasi Kamera Axis M4218-LV (CAM3)'],
     };
     // Expanded from the real "Senarai Pemeriksaan dan Penyelenggaraan VIR"
     // paper form (SPRM/KUL/VIR/25/004) — every numbered item's individual
@@ -8241,6 +8248,17 @@ createApp({
     const SEC_SVR_CONFIG = 'Default Konfigurasi Appliance Optager HD4000';
     const SEC_CAM_CONFIG = 'Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)';
     const SEC_CAM3_CONFIG = 'Default Konfigurasi Kamera Axis M4218-LV (CAM3)';
+    // VCS (Video Capture System) — SPRM Terengganu's older, different-vendor
+    // equivalent of Optager HD4000 (predates it). Per user request this is a
+    // deliberate VERBATIM duplicate of Optager's checklist/section text
+    // (including "Optager HD4000"/"Axis P3265-LV"/"Axis M4218-LV" wording)
+    // as a starting point — the user will review and rename product/model-
+    // specific text to VCS's actual hardware afterward. Kept as separate
+    // constants (not reusing SEC_SVR_CONFIG etc.) so that edit only touches
+    // VCS, never Optager's own real section names.
+    const SEC_SVR_CONFIG_VCS = 'Default Konfigurasi Appliance Optager HD4000';
+    const SEC_CAM_CONFIG_VCS = 'Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)';
+    const SEC_CAM3_CONFIG_VCS = 'Default Konfigurasi Kamera Axis M4218-LV (CAM3)';
     const VIR_CHECKLIST_TEMPLATE_BCD = [
       // ── 1. BCD USA ──
       {key:'h_bcd', label:'1.  BCD USA', section:SEC_AV, isHeader:true},
@@ -8805,11 +8823,111 @@ createApp({
       {key:'cam3_dyngop',      label:'Dynamic GOP — Set to: Off', section:SEC_CAM3_CONFIG},
       {key:'cam3_note_hardcode', label:'Nota: FPS rakaman sebenar di-hardcode 5 fps dalam aplikasi Optager HD4000 (berasingan daripada Frame Rate stream profile kamera di atas)', section:SEC_CAM3_CONFIG, isHeader:true},
     ];
+    // VCS (Video Capture System) — SPRM Terengganu's older, different-
+    // vendor equivalent of Optager HD4000 (predates it, per user). Deliberate
+    // VERBATIM duplicate of VIR_CHECKLIST_TEMPLATE_OPTAGER above (same
+    // items/wording, including "Optager HD4000"/"Axis P3265-LV"/"Axis
+    // M4218-LV" text) as a starting point per explicit user request — needs
+    // manual review/renaming of product/model-specific text to VCS's actual
+    // hardware afterward. Keys are vcs_-prefixed (not reusing opt_/svr_/
+    // cam_/cam3_) purely so the two templates' item keys never collide,
+    // even though each PM record only ever uses one template at a time.
+    const VIR_CHECKLIST_TEMPLATE_VCS = [
+      {key:'vcs_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_monitor',   label:'Monitor',                          section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_tv',        label:'TV',                               section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_ups',       label:'UPS',                              section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_camera',    label:'Kamera Rakaman',                   section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_mic',       label:'Mikrofon',                         section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_preamp',    label:'Audio Preamplifier',               section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_strobe_red',  label:'Strobe Light (Red)',             section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_strobe_blue', label:'Strobe Light (Blue)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_indication_light', label:'Indication Light (Sedang Digunakan)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_door_signage', label:'Door Signage (Bilik Merekod Penyataan)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_remote_ac', label:'Remote Penghawa Dingin (Air-Cond)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_remote_tv', label:'Remote Televisyen (TV)',           section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_network',   label:'Rangkaian / Network Switch',       section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_cable_network', label:'Pendawaian & Kabel Rangkaian (Network Cabling)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_cable_av',      label:'Pendawaian & Kabel Audio/HDMI', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_software',  label:'Perisian Rakaman Optager HD4000 (Optager HD4000 Recording Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_control_software', label:'Perisian Tablet Control (Optager HD4000 Tablet Control Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_storage',   label:'Storan Data (Storage)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_backup',    label:'Backup Data',                      section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_op_boot',       label:'Sistem Dihidupkan (Power On System)', section:'Status Operasi Sistem'},
+      {key:'vcs_op_record1min', label:'Ujian Rakaman',                 section:'Status Operasi Sistem'},
+      {key:'vcs_op_playback',   label:'Ujian Playback / Semakan Rakaman', section:'Status Operasi Sistem'},
+      {key:'vcs_op_dvd',        label:'Ujian Pindahan Rakaman ke DVD', section:'Status Operasi Sistem'},
+      {key:'vcs_op_usb',        label:'Ujian Pindahan Rakaman ke USB Drive', section:'Status Operasi Sistem'},
+      {key:'vcs_op_timestamp',  label:'Ketepatan Tarikh & Masa Rakaman (Timestamp)', section:'Status Operasi Sistem'},
+      {key:'vcs_op_panel',      label:'Operasi Menggunakan Button Panel', section:'Status Operasi Sistem'},
+      {key:'vcs_op_tablet',     label:'Operasi Menggunakan Tablet Control', section:'Status Operasi Sistem'},
+      {key:'vcs_op_strobe',     label:'Fungsi Strobe Light Semasa Rakaman', section:'Status Operasi Sistem'},
+      {key:'vcs_op_indication', label:'Fungsi Indication Light Semasa Rakaman', section:'Status Operasi Sistem'},
+      {key:'vcs_op_shutdown',   label:'Sistem Dimatikan (Shutdown System)', section:'Status Operasi Sistem'},
+      {key:'vcs_h_svr_windows',  label:'Windows System Settings', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_uac',        label:'Turn Off UAC (User Account Control Setting) — Set to "Never Notify"', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_autoplay',   label:'Autoplay Setting — Toggle OFF (Default: ON); set "Removable Drive" & "Memory Card" both to "Take no action"', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_firewall',   label:'Firewall & Network Protection — Turn off all 3 networks (Domain, Private, Public)', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_antivirus',  label:'Antivirus (Virus & Threat Protection Settings) — Turn off: Real-time protection, Cloud-delivered protection, Automatic sample submission, Tamper protection, etc.', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_notif',      label:'Notifications — Turn off all notification settings', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_faststartup', label:'Fast Startup — Untick (Control Panel → Power Options → Choose What the Power Buttons Do)', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_activation', label:'Activate Windows License (Change Product Key)', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_power',    label:'Power Settings', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_power_sleep', label:'Power & Sleep Settings — Set all to "Never"', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_power_plan', label:'Power Plan — Power Options → Select "High Performance", edit plan setting', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_hdd_sleep',  label:'High Performance Plan — Turn off HDD Sleep (set to 0 minutes), Apply', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_nvidia',   label:'Install Nvidia Control Panel', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_nvidia_install', label:'Download & Install Nvidia Control Panel', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_3d',       label:'1. Manage 3D Settings', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_3d_opengl',  label:'1.1 OpenGL Rendering GPU — Set to: Nvidia 5060/4060', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_3d_power',   label:'1.2 Power Management Mode — Set to: High Performance', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_3d_vsync',   label:'1.3 Vertical Sync — Set to: Off', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_physx',    label:'2. Set PhysX Configuration', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_physx_proc', label:'2.1 Select a PhysX Processor — Set to: Nvidia GeForce 5060/4060 (bukan Intel iGPU)', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_graphic',  label:'Graphic & Display Settings', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_graphic',    label:'Graphic Settings — Turn On; tambah "Optager" & "Axis Streaming Assistant"; set High Performance GPU untuk kedua-dua', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_wallpaper',  label:'Set Wallpaper PC — Solid Black Colour', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_msconfig', label:'System Configuration (MSConfig)', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_msconfig_boot', label:'Boot → Advanced Options — Tick "Number of Processors", pilih Max Core, Apply/OK', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_msconfig_timeout', label:'Boot → Timeout — Set 3 saat, Apply', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_startup',  label:'Startup & Shortcut', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_startup',    label:'Run → shell:startup → salin shortcut ikon Optager (dari Desktop) ke folder Startup', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_storage',  label:'Persediaan Storan (Drive D)', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_folders',    label:'Cipta 2 folder dalam Drive D: "Recordings" dan "TempDVD"', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_svr_gpedit',   label:'Group Policy — QOS Packet Scheduler (gpedit.msc)', section:SEC_SVR_CONFIG_VCS, isHeader:true},
+      {key:'vcs_svr_gpedit_outstanding', label:'Limit Outstanding Packet — Enabled, set 4000000000, OK', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_svr_gpedit_bandwidth',   label:'Limit Reservable Bandwidth — Enabled, set 0%, OK', section:SEC_SVR_CONFIG_VCS},
+      {key:'vcs_h_cam_general',   label:'1. Video > Stream > General (Stream Profile Utama)', section:SEC_CAM_CONFIG_VCS, isHeader:true},
+      {key:'vcs_cam_encoding',    label:'Encoding — Set to: H.264 (elak H.265 jika Optager tak stabil)', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_resolution',  label:'Resolution — Set to: 1920x1080 (Full HD), atau 1280x720 jika PC panas/lag', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_framerate',   label:'Frame Rate — Set tetap: 25 fps atau 30 fps', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_compression', label:'Compression / Quality — Set: 60–80 (70 disyorkan)', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_h_cam_zipstream', label:'2. Video > Stream > H.264 and H.265 Encoding (Zipstream)', section:SEC_CAM_CONFIG_VCS, isHeader:true},
+      {key:'vcs_cam_zipstream',   label:'Zipstream — Set to: Low (atau Off untuk smoothness maksimum)', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_dynfps',      label:'Dynamic FPS — Set to: Off', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_lowerlimit',  label:'Lower Limit — Tak perlu ubah (Dynamic FPS Off)', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_dyngop',      label:'Dynamic GOP — Set to: Off', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_pframes',     label:'P-frames — Set to: 61 (biarkan default)', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_cam_bitrate',     label:'Bitrate Control — Set to: Variable', section:SEC_CAM_CONFIG_VCS},
+      {key:'vcs_h_cam3_general',   label:'1. Video > Stream > General / Stream Profiles', section:SEC_CAM3_CONFIG_VCS, isHeader:true},
+      {key:'vcs_cam3_profile_new', label:'Buat Stream Profile baru bernama "Document4K"', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_cam3_resolution',  label:'Resolution — Set to: 3840x2160', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_cam3_framerate',   label:'Frame Rate — Set to: 15 fps (atau 10 fps)', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_cam3_encoding',    label:'Encoding — Set to: H.264', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_cam3_quality',     label:'Quality — Set to: 85', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_h_cam3_zipstream', label:'2. Video > Stream > H.264 and H.265 Encoding', section:SEC_CAM3_CONFIG_VCS, isHeader:true},
+      {key:'vcs_cam3_zipstream',   label:'Zipstream — Set to: Off (PALING PENTING untuk teks tajam)', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_cam3_dynfps',      label:'Dynamic FPS — Set to: Off', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_cam3_dyngop',      label:'Dynamic GOP — Set to: Off', section:SEC_CAM3_CONFIG_VCS},
+      {key:'vcs_cam3_note_hardcode', label:'Nota: FPS rakaman sebenar di-hardcode 5 fps dalam aplikasi Optager HD4000 (berasingan daripada Frame Rate stream profile kamera di atas)', section:SEC_CAM3_CONFIG_VCS, isHeader:true},
+    ];
     // Picks the right checklist array for a given system tag — falls back
     // to BCD if the system is unset/unrecognised (e.g. legacy records saved
     // before this BCD/Optager split existed).
     function virChecklistFor(system) {
-      return system === 'Optager HD4000' ? VIR_CHECKLIST_TEMPLATE_OPTAGER : VIR_CHECKLIST_TEMPLATE_BCD;
+      if (system === 'Optager HD4000') return VIR_CHECKLIST_TEMPLATE_OPTAGER;
+      if (system === 'VCS') return VIR_CHECKLIST_TEMPLATE_VCS;
+      return VIR_CHECKLIST_TEMPLATE_BCD;
     }
     function virSectionsFor(system) {
       return VIR_CHECKLIST_SECTIONS[system] || VIR_CHECKLIST_SECTIONS['BCD'];
@@ -8820,7 +8938,7 @@ createApp({
     // them. Data entry (pmStep) still collects them as before via
     // virSectionsFor() directly — only the print view is filtered.
     const viewPMVirPrintSections = computed(() => {
-      const excluded = new Set([SEC_SVR_CONFIG, SEC_CAM_CONFIG, SEC_CAM3_CONFIG]);
+      const excluded = new Set([SEC_SVR_CONFIG, SEC_CAM_CONFIG, SEC_CAM3_CONFIG, SEC_SVR_CONFIG_VCS, SEC_CAM_CONFIG_VCS, SEC_CAM3_CONFIG_VCS]);
       return virSectionsFor(viewPM.value?.virSystem).filter(s => !excluded.has(s));
     });
     // Groups a system's checklist by top-level equipment item (e.g. "1. BCD
@@ -8938,7 +9056,7 @@ createApp({
       const items = (viewPM.value?.virItems || []).filter(x => x.section === section);
       const isBcdSplit = section === SEC_AV || section === SEC_SIVIL || section === SEC_MEK;
       if (!isBcdSplit) {
-        if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG || section === SEC_CAM_CONFIG || section === SEC_CAM3_CONFIG) return [{ items, offset: 0 }];
+        if (section === 'Perkakasan dan Perisian (Hardware & Software)' || section === SEC_SVR_CONFIG || section === SEC_CAM_CONFIG || section === SEC_CAM3_CONFIG || section === SEC_SVR_CONFIG_VCS || section === SEC_CAM_CONFIG_VCS || section === SEC_CAM3_CONFIG_VCS) return [{ items, offset: 0 }];
         return _virSplitPageCols(items, 0);
       }
       // Only SEC_AV's very first page-group is literally page 1 of the
@@ -10855,13 +10973,15 @@ createApp({
     const contractsLoading = ref(false);
     const contractModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{ title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'',project:'cctv' } });
 
-    async function loadContracts() {
+    async function loadContracts(force) {
+      if(!force && _collFresh('contracts')) return;
       contractsLoading.value = true;
       try {
         const snap = await db.collection('contracts').orderBy('endDate','asc').get();
         // Legacy docs created before project-tagging default to 'cctv' (the
         // only project this feature supported at the time).
         contracts.value = snap.docs.map(d => ({id:d.id, project:'cctv', ...d.data()}));
+        _markCollLoaded('contracts');
       } catch(e) { console.warn('loadContracts failed:', e); }
       contractsLoading.value = false;
     }
@@ -10918,7 +11038,7 @@ createApp({
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!contractModal.editing) {
           const ref = await db.collection('contracts').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-          _localUpsert(contracts, ref.id, { project:'cctv', ...data }, sortByEnd);
+          _localUpsert(contracts, ref.id, { project:'cctv', ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('CONTRACT_CREATE', data.title);
           showToast('Kontrak berjaya ditambah!');
         } else {
@@ -11057,11 +11177,13 @@ createApp({
         return await fn();
       }
     }
-    async function loadWarranty() {
+    async function loadWarranty(force) {
+      if(!force && _collFresh('warranty')) return;
       warrantyLoading.value = true;
       try {
         const snap = await _retryOnPermDenied(() => db.collection('equipmentWarranty').orderBy('endDate','asc').get());
         warranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        _markCollLoaded('warranty');
       } catch(e) { showToast('Gagal muat waranti peralatan: ' + e.message, 'error'); }
       warrantyLoading.value = false;
       await loadVendorContracts();
@@ -11236,7 +11358,7 @@ createApp({
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!warrantyModal.editing) {
           const ref = await db.collection('equipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-          _localUpsert(warranty, ref.id, data, sortByEnd);
+          _localUpsert(warranty, ref.id, { ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan berjaya ditambah!');
         } else {
@@ -11295,10 +11417,12 @@ createApp({
     const letterMemoFilterSite = ref('');
     const letterMemoFilterCategory = ref('');
     const letterMemoFilterProject = ref('');
-    async function loadLetterMemos() {
+    async function loadLetterMemos(force) {
+      if(!force && _collFresh('letterMemos')) return;
       try {
         const snap = await db.collection('suratMemo').orderBy('letterDate','desc').get();
         letterMemos.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        _markCollLoaded('letterMemos');
       } catch(e) { showToast('Gagal muat surat & memo: ' + e.message, 'error'); }
     }
     const letterMemosFiltered = computed(() => letterMemos.value.filter(m =>
@@ -11354,7 +11478,7 @@ createApp({
         const sortByLetterDateDesc = (a,b) => (b.letterDate||'').localeCompare(a.letterDate||'');
         if(!letterMemoModal.editing) {
           const ref = await db.collection('suratMemo').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' });
-          _localUpsert(letterMemos, ref.id, data, sortByLetterDateDesc);
+          _localUpsert(letterMemos, ref.id, { ...data, createdAt: _fakeServerTimestamp(), createdBy: authUser.value?.email || '' }, sortByLetterDateDesc);
           logAudit('LETTER_MEMO_ADD', `${letterMemoCategoryLabel(category)} — ${d.letterDate}`);
           showToast('Surat/memo berjaya ditambah!');
         } else {
@@ -11401,10 +11525,12 @@ createApp({
     // used everywhere else in this file (e.g. letterMemoModal).
     const cmCaseDetail = reactive({ show:false, id:null, newEntryDate:'', newEntryStatus:'', newEntryNote:'', editingEntryId:null, err:'' });
 
-    async function loadCmCases() {
+    async function loadCmCases(force) {
+      if(!force && _collFresh('cmCases')) return;
       try {
         const snap = await db.collection('cmCases').orderBy('openedDate','desc').get();
         cmCases.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        _markCollLoaded('cmCases');
       } catch(e) { showToast('Gagal muat Log Kes CM: ' + e.message, 'error'); }
     }
     const cmCasesFiltered = computed(() => cmCases.value.filter(k =>
@@ -11460,7 +11586,7 @@ createApp({
             ...newCase,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '',
           });
-          _localUpsert(cmCases, ref.id, newCase, sortByOpenedDesc);
+          _localUpsert(cmCases, ref.id, { ...newCase, createdAt: _fakeServerTimestamp(), createdBy: authUser.value?.email || '' }, sortByOpenedDesc);
           logAudit('CM_CASE_ADD', `${d.title.trim()} — ${d.siteName}`);
           showToast('Kes CM berjaya dibuka!');
         } else {
@@ -11916,10 +12042,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       purchasedFrom:'', receiptNo:'', purchaseDate:'', endDate:'', cost:'', reminderDays:60, notes:'',
     } });
     const virWarrantyFilterStatus = ref('');
-    async function loadVirWarranty() {
+    async function loadVirWarranty(force) {
+      if(!force && _collFresh('virWarranty')) return;
       try {
         const snap = await db.collection('virEquipmentWarranty').orderBy('endDate','asc').get();
         virWarranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
+        _markCollLoaded('virWarranty');
       } catch(e) { showToast('Gagal muat waranti peralatan VIR: ' + e.message, 'error'); }
     }
     function virWarrantyStatus(w) { return warrantyStatus(w); } // same active/expiring/expired logic, reused
@@ -11989,7 +12117,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!virWarrantyModal.editing) {
           const ref = await db.collection('virEquipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-          _localUpsert(virWarranty, ref.id, data, sortByEnd);
+          _localUpsert(virWarranty, ref.id, { ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('VIR_WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan VIR berjaya ditambah!');
         } else {
@@ -12892,7 +13020,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // auto-backup (core-only) simply won't have these keys, so each
         // block is a no-op for that case.
         if(data.users?.length) { await _batchRestoreCollection('users', data.users); await loadUsers(); }
-        if(data.contracts?.length) { await _batchRestoreCollection('contracts', data.contracts); await loadContracts(); }
+        if(data.contracts?.length) { await _batchRestoreCollection('contracts', data.contracts); await loadContracts(true); }
         if(data.contactPersons?.length) { await _batchRestoreCollection('contactPersons', data.contactPersons); }
         if(data.teamAssignments?.length) {
           await _batchRestoreCollection('teamAssignments', data.teamAssignments);
@@ -12903,11 +13031,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(data.customEquipmentOptions?.length) { await _batchRestoreCollection('customEquipmentOptions', data.customEquipmentOptions); await loadCustomEquipmentOptions(); }
         if(data.loginAttempts?.length) { await _batchRestoreCollection('loginAttempts', data.loginAttempts); }
         if(data.kontraktorLuar?.length) { await _batchRestoreCollection('kontraktorLuar', data.kontraktorLuar); await loadKontraktorLuar(); }
-        if(data.equipmentWarranty?.length) { await _batchRestoreCollection('equipmentWarranty', data.equipmentWarranty); await loadWarranty(); }
-        if(data.virEquipmentWarranty?.length) { await _batchRestoreCollection('virEquipmentWarranty', data.virEquipmentWarranty); await loadVirWarranty(); }
+        if(data.equipmentWarranty?.length) { await _batchRestoreCollection('equipmentWarranty', data.equipmentWarranty); await loadWarranty(true); }
+        if(data.virEquipmentWarranty?.length) { await _batchRestoreCollection('virEquipmentWarranty', data.virEquipmentWarranty); await loadVirWarranty(true); }
         if(data.equipmentRemovalLog?.length) { await _batchRestoreCollection('equipmentRemovalLog', data.equipmentRemovalLog); await loadEquipmentRemovalLogs(); }
         if(data.warrantyVendorContracts?.length) { await _batchRestoreCollection('warrantyVendorContracts', data.warrantyVendorContracts); await loadVendorContracts(); }
-        if(data.suratMemo?.length) { await _batchRestoreCollection('suratMemo', data.suratMemo); await loadLetterMemos(); }
+        if(data.suratMemo?.length) { await _batchRestoreCollection('suratMemo', data.suratMemo); await loadLetterMemos(true); }
 
         showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
@@ -14364,7 +14492,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(status === 'resolved') updates.resolvedAt = firebase.firestore.FieldValue.serverTimestamp();
         await _fw(db.collection('pmRecords').doc(recordId).update(updates));
         const idx = pmRecords.value.findIndex(r => r.id === recordId);
-        if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: status, ...(status==='resolved' ? {resolvedAt:{seconds:Math.floor(Date.now()/1000)}} : {}) };
+        if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: status, ...(status==='resolved' ? {resolvedAt:_fakeServerTimestamp()} : {}) };
         await logAudit('CM_STATUS_UPDATE', `${recordId} → ${status}`);
         // Second confetti milestone (alongside savePM's "100% PM pematuhan"
         // one above) — celebrates the moment this site's CM backlog hits
@@ -14420,7 +14548,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // update local state only after commit
         ids.forEach(id => {
           const idx = pmRecords.value.findIndex(r => r.id === id);
-          if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: bulkCmStatus.value, ...(bulkCmStatus.value==='resolved' ? {resolvedAt:{seconds:Math.floor(Date.now()/1000)}} : {}) };
+          if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: bulkCmStatus.value, ...(bulkCmStatus.value==='resolved' ? {resolvedAt:_fakeServerTimestamp()} : {}) };
         });
         await logAudit('BULK_CM_STATUS', `${ids.length} rekod → ${bulkCmStatus.value}`);
         showToast(`${ids.length} rekod CM dikemaskini kepada "${statusLabel}"`);
@@ -14685,6 +14813,31 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       finally { pendingWrites.value--; }
     }
 
+    // Client-side stand-in for firebase.firestore.FieldValue.serverTimestamp()
+    // — the real sentinel only resolves to an actual value once Firestore's
+    // SDK syncs the write back from the server, so a LOCAL optimistic patch
+    // made right after that write must not store the raw sentinel itself
+    // (every .toDate-guarded read elsewhere would then treat it as
+    // unparseable and fall through to 0/"-"). Shaped like a real Firestore
+    // Timestamp's {seconds,nanoseconds} so those reads work correctly until
+    // the next full reload naturally picks up the true server value.
+    function _fakeServerTimestamp() { return { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 }; }
+    // Skip-if-fresh cache for page-nav-triggered collection reloads
+    // (contracts/warranty/virWarranty/letterMemos/cmCases) — every nav
+    // click to one of those pages called its load*() function
+    // unconditionally, so bouncing back and forth between pages (e.g.
+    // Dashboard → Kontrak → Dashboard → Kontrak) cost a full Firestore
+    // re-fetch every single time even when nothing had changed. None of
+    // these collections sync in real time (load*() are one-time .get()
+    // reads, not onSnapshot listeners), so a short skip-window doesn't
+    // give up any freshness guarantee that already existed. Call
+    // load*(true) to force a real fetch regardless — used right after a
+    // bulk backup restore, where the collection's data changed via a
+    // path these functions can't otherwise detect.
+    const COLL_CACHE_MS = 30 * 1000;
+    const _collLoadedAt = {};
+    function _collFresh(key) { return _collLoadedAt[key] && (Date.now() - _collLoadedAt[key] < COLL_CACHE_MS); }
+    function _markCollLoaded(key) { _collLoadedAt[key] = Date.now(); }
     // Patches a single add/edit result into a local ref-array list in
     // place, instead of re-fetching the whole collection (the same
     // reasoning as savePM's local pmRecords patch above) — used by the
@@ -15068,6 +15221,32 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       allUsers.value=[];
       pwChange.newPw=''; pwChange.confirmPw=''; pwChange.err='';
       ocrState.active=false; ocrState.tokens=[];
+      // Without this, the skip-if-fresh cache (see _collFresh) would think
+      // contracts/warranty/etc. are still "just loaded" for the next person
+      // to log in on this same tab within the cache window — on a
+      // shared/kiosk device that's one user's data flashing on another's
+      // screen, not just a stale-data inconvenience. Forces a real reload
+      // on next visit regardless of who's logging in or how soon.
+      Object.keys(_collLoadedAt).forEach(k => delete _collLoadedAt[k]);
+      // Clears the actual in-memory data too, not just the reload cache
+      // above — this was a pre-existing gap (predates today's caching
+      // work): logging out never wiped pmRecords/siteEquip/contracts/etc.,
+      // so on a shared/kiosk device the NEXT person to log in could
+      // briefly see the PREVIOUS person's PM records, site equipment
+      // (incl. credentials), contracts, warranty, surat/memo, CM cases,
+      // team schedule, audit log, kontraktor list, notifications, and
+      // Tong Sampah contents on screen before that page's own load()
+      // happens to run again. Every one of these is fully repopulated by
+      // loadAll()/the relevant load*() the moment the new session's
+      // onAuthStateChanged fires, so clearing them here loses nothing.
+      pmRecords.value = []; teamAssignments.value = [];
+      siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {};
+      contracts.value = []; warranty.value = []; virWarranty.value = [];
+      letterMemos.value = []; cmCases.value = [];
+      auditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
+      notifications.value = [];
+      trashedPmRecords.value = []; trashedContracts.value = []; trashedWarranty.value = [];
+      trashedVirWarranty.value = []; trashedSuratMemo.value = []; trashedCmCases.value = [];
       // PM_DRAFT_KEY/EQUIP_DRAFT_KEY are plain global localStorage keys, not
       // scoped per-user — on a shared/kiosk device, a next person logging in
       // would otherwise get prompted to recover THIS session's unsaved PM
@@ -18167,11 +18346,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // savePM only ever WRITES to pmRecords, so patch just this record
         // into the local list instead of re-fetching everything.
         // serverTimestamp() fields aren't resolved to a real value
-        // client-side yet, so they're swapped for a plain {seconds}
-        // stand-in — the same shape every .toDate-guarded read elsewhere
-        // already expects — until the user's next full login/reload
-        // naturally picks up the real server value.
-        const _now = { seconds: Math.floor(Date.now()/1000), nanoseconds: 0 };
+        // client-side yet, so they're swapped for _fakeServerTimestamp()
+        // — the same shape every .toDate-guarded read elsewhere already
+        // expects — until the user's next full login/reload naturally
+        // picks up the real server value.
+        const _now = _fakeServerTimestamp();
         const localData = {
           ...data,
           createdAt: (pm._createdAt && pm._createdAt.toDate) ? pm._createdAt : _now,
