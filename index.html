@@ -3387,7 +3387,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{s.brand||'OPTAGER'}}</td><td>{{s.model||'HD4000'}}</td><td>{{s.serial}}</td>
+                    <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}}</td><td>{{s.serial}}</td>
                     <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
@@ -4404,7 +4404,7 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
               <tbody>
                 <tr v-for="(s,i) in viewPM?.servers" :key="i">
-                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand||'OPTAGER'}}</td><td class="ctr">{{s.model||'HD4000'}}</td><td class="ctr">{{s.serial}}</td>
+                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand||(viewPM?.virSystem==='VCS'?'VCS':'OPTAGER')}}</td><td class="ctr">{{s.model||(viewPM?.virSystem==='VCS'?'':'HD4000')}}</td><td class="ctr">{{s.serial}}</td>
                 </tr>
               </tbody>
             </table>
@@ -13310,10 +13310,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const totalCameras = computed(() => Object.values(siteEquip.value).reduce((sum,s)=>sum+(s?.cameras?.length||0),0));
     const totalVirCameras = computed(() => {
       const countFromBCD = (obj) => Object.values(obj).reduce((sum,s)=>sum+(s?.cameras?.length||0),0);
-      // Optager is room-scoped — sum across every room, not the site level.
+      // Optager/VCS are room-scoped — sum across every room, not the site
+      // level. Same shape for both, so one helper covers both refs.
       const countFromOptager = (obj) => Object.values(obj).reduce((sum,site) =>
         sum + Object.values(site?.byRoom||{}).reduce((s2,room)=>s2+(room?.cameras?.length||0),0), 0);
-      return countFromBCD(virSiteEquipBCD.value) + countFromOptager(virSiteEquipOptager.value);
+      return countFromBCD(virSiteEquipBCD.value) + countFromOptager(virSiteEquipOptager.value) + countFromOptager(virSiteEquipVCS.value);
     });
 
     const pmThisYear = computed(() => pmRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
@@ -14163,7 +14164,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       } catch(e) { console.warn('logAudit failed:', e); }
     }
 
-    async function loadAuditLogs() {
+    async function loadAuditLogs(force) {
+      // Same 30s skip-if-fresh cache as loadContracts/loadWarranty/
+      // loadVirWarranty/loadLetterMemos/loadCmCases — this nav item was
+      // missed in that original pass, so every click re-ran the full
+      // (role-scoped, unbounded) auditLogs query even seconds after the
+      // last one. No call site needs force:true — delete/bulkDelete already
+      // patch auditLogs.value locally instead of reloading.
+      if(!force && _collFresh('auditLogs')) return;
       // Purge in background — never blocks the load if it fails. Only
       // superadmin can actually delete auditLogs (Firestore rules), so
       // there's no point even attempting this for other roles — it would
@@ -14220,6 +14228,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         merged.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
         auditLogs.value = merged;
         auditLogPage.value = 1;
+        _markCollLoaded('auditLogs');
       } catch(e) {
         console.warn('loadAuditLogs failed:', e);
         // Was silently swallowed (console.warn only) — a missing Firestore
@@ -15351,7 +15360,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // loadAll()/the relevant load*() the moment the new session's
       // onAuthStateChanged fires, so clearing them here loses nothing.
       pmRecords.value = []; teamAssignments.value = [];
-      siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {};
+      siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {};
       contracts.value = []; warranty.value = []; virWarranty.value = [];
       letterMemos.value = []; cmCases.value = [];
       auditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
@@ -20564,6 +20573,15 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
           pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
         });
       });
+      // VCS is room-scoped the same way as Optager — same push pattern.
+      VIR_SITES.forEach(s => {
+        const byRoom = virSiteEquipVCS.value[s.id]?.byRoom || {};
+        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
+          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
+          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
+          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
+        });
+      });
       return rows;
     });
     // Split from the row-BUILDING step above (assetRegisterRaw) so typing in
@@ -21416,6 +21434,15 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       // Optager is room-scoped — push each room separately (see assetRegister above).
       VIR_SITES.forEach(s => {
         const byRoom = virSiteEquipOptager.value[s.id]?.byRoom || {};
+        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
+          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
+          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
+          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
+        });
+      });
+      // VCS is room-scoped the same way as Optager — same push pattern.
+      VIR_SITES.forEach(s => {
+        const byRoom = virSiteEquipVCS.value[s.id]?.byRoom || {};
         Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
           const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
           const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
