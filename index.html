@@ -491,13 +491,22 @@ details.form-control[open] summary::after{content:'▴'}
 /* TOAST — stacked queue so rapid successive actions don't clobber each
    other's message before it's readable */
 .toast-stack{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:calc(24px + env(safe-area-inset-right));z-index:999;display:flex;flex-direction:column-reverse;gap:10px;max-width:calc(100vw - 32px)}
-.toast{padding:12px 20px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:600;animation:slideIn .3s ease;position:relative;overflow:hidden}
+.toast{padding:12px 20px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:600;position:relative;overflow:hidden}
 /* Matches showToast()'s 3000ms setTimeout exactly — purely visual, the
    actual dismiss is still driven by that timer, this just previews it. */
 @keyframes toastProgressShrink{from{width:100%}to{width:0%}}
 .toast-progress{position:absolute;left:0;bottom:0;height:3px;background:rgba(255,255,255,.7);animation:toastProgressShrink 3s linear forwards}
 .toast-success{background:#198754}
 .toast-error{background:#dc3545}
+/* Toast enter/leave — was a plain v-for (instant vanish on dismiss, no exit
+   animation); the <transition-group name="toast"> wrapper now applies
+   these classes automatically. leave-active is absolutely positioned so
+   the fading-out toast doesn't hold its flex slot open while it shrinks,
+   letting the stack (column-reverse) close the gap immediately instead of
+   a visible hole for the fade duration. */
+.toast-enter-active,.toast-leave-active{transition:transform .25s ease,opacity .25s ease}
+.toast-enter-from,.toast-leave-to{transform:translateX(60px);opacity:0}
+.toast-leave-active{position:absolute;right:0}
 @keyframes slideIn{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
 
 /* WELCOME POPUP (login) */
@@ -600,6 +609,23 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes opsZoneBlink{0%,100%{opacity:1}50%{opacity:.35}}
 @media (prefers-reduced-motion: reduce){.ops-hero-scanline,.ops-pulse-pct,.ops-stat-warn .ops-stat-num,.ops-zone-warn{animation:none}}
 @media (max-width:640px){.ops-hero-content{gap:18px}.ops-zone-row{margin-left:0;width:100%;justify-content:center}}
+/* Blanket reduced-motion fallback — the 4 rules above only cover a few
+   named animations picked off one at a time; everything else in this file
+   (page fade-in, modal pop-in, card stagger-in, dropdown panel, button
+   ripple, sidebar pulse, bell pulse, badge pulse, login screen animations,
+   toast enter/leave, etc.) still ran at full speed regardless of the OS/
+   browser "reduce motion" setting. Shortening durations to near-zero
+   (rather than `animation:none`) instead of removing them keeps every
+   `both`/`forwards` fill-mode end-state intact — elements still land
+   exactly where they should, just without the motion in between. */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+}
 
 /* OVERDUE ALERT */
 .overdue-alert{background:rgba(220,53,69,.07);border:1.5px solid rgba(220,53,69,.25);border-radius:10px;padding:14px 18px;margin-bottom:16px}
@@ -941,6 +967,13 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-section-hdr span{opacity:.75;font-size:8.5pt;font-weight:normal;margin-left:6px}
 .pm-tbl{width:100%;border-collapse:collapse;font-size:8pt;margin-bottom:2px;table-layout:fixed}
 .pm-vir-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}
+/* Screen-mode (Pratonton) equivalent of the @media print rule above — a
+   section that only has ONE table on screen (e.g. VCS/Optager's single
+   full-width "Perkakasan dan Perisian" checklist) still sat inside the
+   default 2-column grid, so the lone table only filled the left 1fr track
+   and stopped halfway, leaving the right half blank. The exported PDF
+   already collapses to 1 column in this case; preview never did. */
+.pm-vir-2col-single{grid-template-columns:1fr}
 .pm-chk-box{display:inline-block;width:11px;height:11px;line-height:10px;border:1px solid #444;text-align:center;font-size:7.5pt;color:transparent;margin:0 1px;vertical-align:middle}
 .pm-chk-box.filled{color:#000;font-weight:700}
 .pm-vir-2col>.pm-tbl{min-width:0}
@@ -1263,9 +1296,9 @@ details.form-control[open] summary::after{content:'▴'}
 <div v-if="loading" class="top-loading-bar" aria-hidden="true"></div>
 
 <!-- TOAST -->
-<div class="toast-stack" aria-live="polite" role="status">
+<transition-group tag="div" name="toast" class="toast-stack" aria-live="polite" role="status">
   <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]"><span aria-hidden="true">{{t.type==='error'?'❌':'✅'}}</span> {{t.msg}}<div class="toast-progress"></div></div>
-</div>
+</transition-group>
 
 <!-- SESSION TIMEOUT WARNING -->
 <div v-if="sessionWarning.show" id="sessionWarningOverlay" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));box-sizing:border-box;overflow-y:auto">
@@ -3757,7 +3790,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table>
                 <thead><tr><th style="width:40px">#</th><th>Item</th><th style="width:100px;text-align:center">Status</th><th>Nota</th></tr></thead>
                 <tbody>
-                  <template v-for="(item,idx) in pm.virItems.filter(x=>x.section===section)" :key="item.key">
+                  <template v-for="(item,idx) in (pmVirItemsBySection[section]||[])" :key="item.key">
                     <tr v-if="item.isHeader">
                       <td colspan="4" style="font-weight:700;background:#F5F6F8;color:#1A2332;padding:6px 8px">{{item.label}}</td>
                     </tr>
@@ -8870,7 +8903,6 @@ createApp({
     // cam_/cam3_) purely so the two templates' item keys never collide,
     // even though each PM record only ever uses one template at a time.
     const VIR_CHECKLIST_TEMPLATE_VCS = [
-      {key:'vcs_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_monitor',   label:'Monitor',                          section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_tv',        label:'TV',                               section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_ups',       label:'UPS',                              section:'Perkakasan dan Perisian (Hardware & Software)'},
@@ -8886,8 +8918,7 @@ createApp({
       {key:'vcs_network',   label:'Rangkaian / Network Switch',       section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_cable_network', label:'Pendawaian & Kabel Rangkaian (Network Cabling)', section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_cable_av',      label:'Pendawaian & Kabel Audio/HDMI', section:'Perkakasan dan Perisian (Hardware & Software)'},
-      {key:'vcs_software',  label:'Perisian Rakaman Optager HD4000 (Optager HD4000 Recording Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
-      {key:'vcs_control_software', label:'Perisian Tablet Control (Optager HD4000 Tablet Control Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_software',  label:'Perisian Rakaman Video Capture System', section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_storage',   label:'Storan Data (Storage)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_backup',    label:'Backup Data',                      section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_op_boot',       label:'Sistem Dihidupkan (Power On System)', section:'Status Operasi Sistem'},
@@ -9015,6 +9046,26 @@ createApp({
       });
       return items.filter(item => !excludedSet.has(item.key));
     }
+    // STEP 2 (VIR Checklist entry, both PM and CM) used to call
+    // `pm.virItems.filter(x=>x.section===section)` directly inside the
+    // template's v-for, once per section — for Optager/VCS (~85 items
+    // across ~5 sections) that's up to ~425 comparisons plus a fresh array
+    // allocation PER SECTION, and since this is one giant single-root
+    // component, typing a single character into ANY item's Nota field (or
+    // toggling any Status dropdown) re-runs the ENTIRE render function,
+    // which re-ran that filter for every section again on every keystroke.
+    // This computed groups by section ONCE and only re-groups when
+    // pm.virItems itself is reassigned/restructured (picking a room/system,
+    // loading a record to edit) — it only reads each item's `.section`
+    // (never mutated after creation), so editing `.status`/`.nota` doesn't
+    // invalidate it.
+    const pmVirItemsBySection = computed(() => {
+      const map = {};
+      for(const item of pm.virItems) {
+        (map[item.section] || (map[item.section] = [])).push(item);
+      }
+      return map;
+    });
     // Splits a section's items into 2 print columns (mirrors the original
     // paper form's half-page-per-column layout). Nudges the split point
     // earlier if it would otherwise strand a header row alone at the
@@ -10088,7 +10139,17 @@ createApp({
       // added later (e.g. D before A) shouldn't sit above A in the day
       // cell. Feeds both the on-screen calendar and the printed PDF grid
       // (printJadual), since both call this same function.
-      return teamAssignments.value.filter(t => t.date === dateStr).sort((a,b) => a.team.localeCompare(b.team));
+      // Filters from teamsForMonth (already scoped + cached to the current
+      // calendar month) instead of the full, unbounded teamAssignments —
+      // this function runs once per rendered day cell (up to ~42 for a
+      // full month grid), and since teamsForDay's own `dateStr` always
+      // falls within calYear/calMonth (calCells never renders adjacent-
+      // month overflow days, only blanks), teamsForMonth already contains
+      // every row this could possibly match. Re-scanning years of
+      // historical assignment history 42 times per calendar render (any
+      // reactive change on this page re-renders the whole grid, same as
+      // the VIR checklist form) was pure waste past year one of usage.
+      return teamsForMonth.value.filter(t => t.date === dateStr).sort((a,b) => a.team.localeCompare(b.team));
     }
 
     // SITES and VIR_SITES share a `code` per physical premise (e.g. both
@@ -13503,23 +13564,43 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // way to short-circuit — the old `if(equipMatches.length>=8) return`
       // only skipped to the next callback invocation, so it kept iterating
       // every remaining site/kind/item even after the cap was already hit).
+      // BUG FIX: VIR used to scan virSiteEquip.value here, which only ever
+      // holds { rooms:[...] } (see collectBackupData's comment) — it never
+      // held cameras/servers/tablets/etc. at all, so every VIR equipment
+      // search silently returned zero matches, for BCD/Optager/VCS alike.
+      // The real per-system stores are virSiteEquipBCD (flat, same shape as
+      // siteEquip) and virSiteEquipOptager/virSiteEquipVCS (room-scoped —
+      // each site holds byRoom[roomUid] buckets instead of the arrays
+      // directly, see _normalizeOptagerRec/_normalizeVcsRec).
       const equipMatches = [];
       outer:
-      for(const [proj, store, sites] of [['cctv', siteEquip.value, SITES], ['vir', virSiteEquip.value, VIR_SITES]]) {
+      for(const [proj, store, sites, system] of [
+        ['cctv', siteEquip.value, SITES, null],
+        ['vir', virSiteEquipBCD.value, VIR_SITES, 'BCD'],
+        ['vir', virSiteEquipOptager.value, VIR_SITES, 'Optager HD4000'],
+        ['vir', virSiteEquipVCS.value, VIR_SITES, 'VCS'],
+      ]) {
         for(const siteId of Object.keys(store||{})) {
           const site = sites.find(s => s.id === siteId);
           if(!site) continue;
-          for(const kind of Object.keys(EQUIP_KIND_TO_TAB)) {
-            for(const item of (store[siteId]?.[kind]||[])) {
-              const hay = [item.name, item.ip, item.serial, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
-              if(!hay.includes(q)) continue;
-              equipMatches.push({
-                _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
-                siteId, proj, kind, siteName:site.name,
-                label: item.name || item.model || item.serial || item.ip || '(tiada nama)',
-                detail: [item.brand, item.model, item.serial, item.ip].filter(Boolean).join(' · '),
-              });
-              if(equipMatches.length >= 8) break outer;
+          // Room-scoped stores (Optager/VCS) nest equipment under
+          // byRoom[roomUid] instead of directly on the site record — flatten
+          // every room's bucket into the same loop shape the flat (CCTV/BCD)
+          // case already uses below.
+          const buckets = system && system !== 'BCD' ? Object.values(store[siteId]?.byRoom || {}) : [store[siteId]];
+          for(const bucket of buckets) {
+            for(const kind of Object.keys(EQUIP_KIND_TO_TAB)) {
+              for(const item of (bucket?.[kind]||[])) {
+                const hay = [item.name, item.ip, item.serial, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
+                if(!hay.includes(q)) continue;
+                equipMatches.push({
+                  _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
+                  siteId, proj, kind, system, siteName:site.name,
+                  label: item.name || item.model || item.serial || item.ip || '(tiada nama)',
+                  detail: [item.brand, item.model, item.serial, item.ip].filter(Boolean).join(' · '),
+                });
+                if(equipMatches.length >= 8) break outer;
+              }
             }
           }
         }
@@ -13548,7 +13629,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         currentProject.value = item.proj;
         const site = (item.proj==='vir'?VIR_SITES:SITES).find(s=>s.id===item.siteId);
         if(site) {
-          openSiteEquip(site);
+          // VIR needs its system passed through (BCD/Optager HD4000/VCS) —
+          // openSiteEquip() routes Optager/VCS to their room picker instead
+          // of opening the equipment page directly, same as clicking that
+          // system's button on the site list manually.
+          openSiteEquip(site, item.proj === 'vir' ? item.system : undefined);
           if(item.proj === 'cctv') eqTab.value = EQUIP_KIND_TO_TAB[item.kind] || eqTab.value;
         }
       } else if(item._kind === 'kontraktor') {
@@ -21888,7 +21973,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     return {
       page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
-      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
+      SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, pmVirItemsBySection, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, virSiteEquipVCS, equipVirSystem, virSystemShortLabel,
       siteEquip, selSite, eqTab,
