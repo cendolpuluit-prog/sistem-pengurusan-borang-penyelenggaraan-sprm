@@ -14812,9 +14812,26 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!authUser.value || sessionWarning.show) return;
       sessionWarning.show = true;
       sessionWarning.countdown = SESSION_WARN_S;
+      // Multi-tab fix: LAST_ACTIVITY_KEY is shared (localStorage) across
+      // every tab of this origin, but auth.signOut() inside doLogout() is
+      // ALSO global — it kills every tab's session, not just this one's.
+      // _resetIdleTimer() already refuses to run while sessionWarning.show
+      // is true (both here and via the 15s safety-net _checkTimer, which
+      // bails out immediately on the same guard), so the only way
+      // _lastActivity() can advance during this countdown is genuine
+      // activity in a DIFFERENT tab. Without this check, that active tab
+      // got silently signed out mid-work the moment this idle tab's
+      // countdown reached 0, with no warning ever shown there.
+      const warnStartedAt = Date.now();
       _warnTimer = setInterval(() => {
         sessionWarning.countdown--;
         if(sessionWarning.countdown <= 0) {
+          if(_lastActivity() > warnStartedAt) {
+            clearInterval(_warnTimer); _warnTimer = null;
+            sessionWarning.show = false;
+            _resetIdleTimer();
+            return;
+          }
           _clearSessionTimers();
           sessionWarning.show = false;
           doLogout();
@@ -14918,11 +14935,26 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(authProfile.value?.id) {
         try {
           const ownSnap = await db.collection('users').doc(authProfile.value.id).get();
+          const ownData = ownSnap.data();
           if(!ownSnap.exists) {
             showToast('Akaun anda telah dipadam oleh Superadmin.', 'error');
             await doLogout();
-          } else if(ownSnap.data()?.disabled) {
+          } else if(ownData?.disabled) {
             showToast('Akaun anda telah di-freeze oleh Superadmin/Admin.', 'error');
+            await doLogout();
+          } else if(ownData?.accessType === 'temporary' && ownData?.expiryDate && ownData.expiryDate < _localDateStr()) {
+            // doLogin() only checks expiryDate once, at login — an account
+            // whose session was already open BEFORE its expiry date (tab
+            // left open across midnight) stayed fully authenticated
+            // client-side indefinitely afterward, same "already-open tab
+            // never re-checks" gap the disabled/deleted checks above exist
+            // to close. Firestore rules' accountNotExpired() would start
+            // rejecting WRITES once expired, but plenty of read rules
+            // (e.g. pmRecords) only require isSignedIn() — so the account
+            // could still browse data indefinitely, only hitting a
+            // confusing permission-denied on the next save instead of a
+            // clean logout.
+            showToast('Akaun anda telah tamat tempoh.', 'error');
             await doLogout();
           }
         } catch(e) { /* fail-open — don't force-logout on a network hiccup */ }
@@ -15551,6 +15583,28 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       nvrRef:   ['nvr','nvr ref','nvr berkaitan'],
       accessUser: ['access user','username','user name','pengguna','login'],
       accessPw:   ['access pw','password','kata laluan','passwd'],
+      // Appliance/Server (servers) + Tablet spec fields — these keys existed
+      // in IMPORT_FIELD_KEYS with no matching hints here at all, so an
+      // imported Excel/CSV's "Processor"/"RAM"/etc. columns could never
+      // auto-map regardless of header wording; only name/brand/model/serial
+      // (which already had hints) ever populated, silently dropping the
+      // rest. mobo is checked before moboType in IMPORT_FIELD_KEYS.servers'
+      // own order and both would otherwise match "Motherboard Type" (it
+      // contains the substring "motherboard"), so mobo would claim that
+      // column too — traded off deliberately in mobo's favour, since a
+      // plain "Motherboard" column (which ONLY mobo's hints can match) is
+      // far more common than sheets splitting out a separate "Type" column.
+      processor: ['processor','cpu','pemproses'],
+      ram:       ['ram','memory','memori'],
+      storage:   ['storage','storan','hard disk','ssd'],
+      gpu:       ['gpu','graphic','kad grafik'],
+      mobo:      ['motherboard','papan induk','mobo'],
+      moboType:  ['mobo type','jenis motherboard'],
+      lanIp:     ['lan ip','ip lan'],
+      wifiIp:    ['wifi ip','ip wifi'],
+      os:        ['operating system','sistem pengendalian'],
+      optagerMachineId:    ['machine id','id mesin'],
+      controlAppMachineId: ['machine id','id mesin'],
     };
     // Product-line names / model-number prefixes that reliably identify a
     // brand even when the brand itself was never typed or OCR'd — e.g. a
