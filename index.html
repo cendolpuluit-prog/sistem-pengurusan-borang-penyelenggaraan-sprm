@@ -14893,6 +14893,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         document.removeEventListener('visibilitychange', _onVisibilityRegain);
         window.removeEventListener('focus', _onVisibilityRegain);
         try { localStorage.removeItem(LAST_ACTIVITY_KEY); } catch(e) {}
+        // _notifWatcher (started in loadAll()) was never cleared on logout —
+        // pre-existing gap, harmless while it only re-ran buildNotifications()
+        // locally, but now that its tick also calls
+        // _refreshTeamAssignmentsForNotif() (a real Firestore read), leaving
+        // it running post-logout meant a doomed-to-fail permission-denied
+        // request firing every 5 minutes for as long as the tab stayed open.
+        clearInterval(_notifWatcher);
       }
     });
 
@@ -16346,9 +16353,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // Re-run periodically too — buildNotifications is otherwise only
         // triggered by pmRecords/contracts watchers, so day-threshold alerts
         // (CM open >14 days, draft >7 days) would never surface for a tab
-        // left open with no new Firestore writes.
+        // left open with no new Firestore writes. Ticks
+        // _refreshTeamAssignmentsForNotif (which re-fetches teamAssignments
+        // then calls buildNotifications itself) rather than
+        // buildNotifications directly, so a new "Penugasan" assignment made
+        // by an admin elsewhere also surfaces without needing a refresh.
         clearInterval(_notifWatcher);
-        _notifWatcher = setInterval(buildNotifications, 5*60*1000);
+        _notifWatcher = setInterval(_refreshTeamAssignmentsForNotif, 5*60*1000);
         if(_loadAllPartialFail) {
           showToast('Sebahagian data gagal dimuat — cuba muat semula halaman.', 'error');
         }
@@ -19887,6 +19898,20 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           list.push({ id:'contract-'+c.id, icon: status==='expired'?'🔴':'🟡', type:'contract', title:(status==='expired'?'Kontrak Tamat: ':'Kontrak Hampir Tamat: ')+c.title, body:'Tamat pada '+fmtDate(c.endDate)+' ('+((c.project||'cctv')==='vir'?'VIR':'CCTV')+')', time: now, read:false, action:'contracts', project: c.project||'cctv' });
         }
       });
+      // Team assignments (Jadual Penyelenggaraan) where the CURRENT user is
+      // one of the assigned members — upcoming only (date >= today), so an
+      // assignment for a date that's already passed doesn't linger as a
+      // stale "you're assigned" alert forever. teamAssignments is readable
+      // by every signed-in user already (no new Firestore access needed),
+      // members are matched by uid (same id as authProfile.value.id).
+      if(authProfile.value?.id) {
+        const todayStr = _localDateStr();
+        teamAssignments.value.forEach(a => {
+          if(a.date >= todayStr && (a.members||[]).some(m => m.uid === authProfile.value.id)) {
+            list.push({ id:'assign-'+a.id, icon:'📌', type:'assignment', title:'Penugasan: '+(a.siteName||'-'), body:'Team '+a.team+' — '+fmtDate(a.date)+(a.maintType?' ('+a.maintType+')':''), time: now, read:false, action:'jadual' });
+          }
+        });
+      }
       // Preserve read-state across rebuilds — ids are stable (e.g.
       // 'overdue-'+siteId), but this function reruns on every pmRecords
       // change and previously hardcoded read:false on every item, silently
@@ -19896,6 +19921,21 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const prevRead = new Set([...notifications.value.filter(n=>n.read).map(n=>n.id), ..._loadReadNotifIds()]);
       list.forEach(n => { if(prevRead.has(n.id)) n.read = true; });
       notifications.value = list;
+    }
+
+    // teamAssignments itself is only ever fetched once, at login (see
+    // loadAll()) — the periodic buildNotifications() timer below only
+    // re-scans that SAME already-loaded array, it never re-fetches. So a
+    // new assignment added by an admin while this staff member's own tab
+    // stays open would otherwise never surface as a "Penugasan" alert
+    // until their next login/refresh. Re-pulling just this one collection
+    // (not a full loadAll()) keeps the periodic tick cheap.
+    async function _refreshTeamAssignmentsForNotif() {
+      try {
+        const snap = await db.collection('teamAssignments').orderBy('date','asc').get();
+        teamAssignments.value = snap.docs.map(d => ({id:d.id,...d.data()}));
+      } catch(e) { /* best-effort — keep showing whatever's already loaded */ }
+      buildNotifications();
     }
 
     const _READ_NOTIF_KEY = 'pmcctv_readNotifIds';
