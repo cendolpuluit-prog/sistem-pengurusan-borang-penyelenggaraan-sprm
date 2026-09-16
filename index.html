@@ -290,6 +290,15 @@ details.form-control[open] summary::after{content:'▴'}
    forever once the user has actually seen it in the panel. */
 @keyframes bellPulse{0%,100%{transform:rotate(0)}10%{transform:rotate(-12deg)}20%{transform:rotate(10deg)}30%{transform:rotate(-8deg)}40%{transform:rotate(6deg)}50%{transform:rotate(0)}}
 .notif-bell-unread{display:inline-block;animation:bellPulse 2.2s ease-in-out infinite}
+/* One-shot "something NEW just landed" pop — distinct (scale, not the
+   ambient wiggle above) and fires once per genuinely new notification id
+   (see buildNotifications()'s _knownNotifIds tracking), not just because
+   unreadCount is still >0. Declared after .notif-bell-unread so it wins
+   the cascade (equal specificity, later rule) for the ~1.2s both classes
+   can be present together; bellPulse resumes on its own once this class
+   is removed. */
+@keyframes bellPop{0%{transform:scale(1)}30%{transform:scale(1.4)}55%{transform:scale(.85)}75%{transform:scale(1.15)}100%{transform:scale(1)}}
+.notif-bell-pop{display:inline-block;animation:bellPop .5s cubic-bezier(.36,.07,.19,.97) both}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;animation:modalBgIn .18s ease-out both}
 .modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both;transition:background-color .3s ease,color .3s ease}
 /* Wider variant for modals with more content (e.g. Log Kes CM detail,
@@ -415,6 +424,17 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes logoutWipeIn{0%{transform:scaleY(.004)}55%{transform:scaleY(.004)}100%{transform:scaleY(1)}}
 .logout-wipe-overlay.logout-wipe-fadeout{animation:logoutWipeOut .5s ease-out forwards}
 @keyframes logoutWipeOut{0%{opacity:1}100%{opacity:0}}
+/* Farewell text — a SEPARATE sibling element (not nested inside
+   .logout-wipe-overlay), since that overlay's own scaleY transform would
+   visually squash any child content along with it until the curtain
+   finishes closing. Delayed to .28s so it only starts fading in once the
+   curtain is already solid black (the overlay stays a near-invisible
+   sliver until 55% of its own .45s animation, i.e. ~.25s) — timed to fit
+   entirely within the existing wipe/fade durations, adds no extra delay
+   to the logout sequence itself. */
+.logout-wipe-msg{position:fixed;inset:0;z-index:1000000;display:flex;align-items:center;justify-content:center;color:#4dff99;font-family:var(--font-mono,monospace);font-size:.92rem;letter-spacing:.08em;text-transform:uppercase;pointer-events:none;opacity:0;animation:logoutWipeMsgIn .2s ease-out .28s forwards}
+@keyframes logoutWipeMsgIn{to{opacity:1}}
+.logout-wipe-msg.logout-wipe-fadeout{animation:logoutWipeOut .5s ease-out forwards}
 
 /* LOGIN HANDSHAKE — terminal-style step readout visualizing doLogin()'s
    real await chain (see loginHandshake in setup()), not a decorative
@@ -1673,7 +1693,7 @@ details.form-control[open] summary::after{content:'▴'}
         <!-- Bell notifications -->
         <div class="notif-panel-wrap" style="position:relative">
           <button class="btn btn-outline btn-sm topbar-icon-btn" @click.stop="showNotifPanel=!showNotifPanel" style="position:relative" aria-label="Notifikasi">
-            <span :class="{'notif-bell-unread':unreadCount>0}">🔔</span>
+            <span :class="{'notif-bell-unread':unreadCount>0, 'notif-bell-pop':bellNewPop}">🔔</span>
             <span v-if="unreadCount>0" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{unreadCount>9?'9+':unreadCount}}</span>
           </button>
           <div v-if="showNotifPanel" class="dropdown-panel" style="position:absolute;right:0;top:calc(100% + 8px);width:340px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
@@ -2327,7 +2347,14 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== KONTRAK & SLA ====== -->
-      <div v-if="page==='contracts'" class="page-view">
+      <div v-if="page==='contracts' && initialLoading" class="page-view skeleton-wrap">
+        <div class="card">
+          <div class="skel skel-line" style="width:35%;margin-bottom:14px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:16px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:8px" v-for="i in 6" :key="i"></div>
+        </div>
+      </div>
+      <div v-if="page==='contracts' && !initialLoading" class="page-view">
         <div class="flex justify-between items-center mb-20">
           <div class="card-title" style="margin:0;border:none;padding:0">📜 Kontrak &amp; SLA ({{currentProject==='vir'?'VIR':'CCTV'}}) — Penyelenggaraan</div>
           <div class="flex gap-8">
@@ -2365,7 +2392,14 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== WARANTI PERALATAN (CCTV sahaja — tracking dalaman, tidak terkait langsung borang PM/CM) ====== -->
-      <div v-if="page==='warranty'" class="page-view">
+      <div v-if="page==='warranty' && initialLoading" class="page-view skeleton-wrap">
+        <div class="card">
+          <div class="skel skel-line" style="width:35%;margin-bottom:14px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:16px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:8px" v-for="i in 6" :key="i"></div>
+        </div>
+      </div>
+      <div v-if="page==='warranty' && !initialLoading" class="page-view">
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">🛡️ Waranti Peralatan — Projek CCTV</div>
           <div class="flex gap-8">
@@ -2821,7 +2855,14 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== SITE EQUIPMENT ====== -->
-      <div v-if="page==='site-equip'" class="page-view">
+      <div v-if="page==='site-equip' && initialLoading" class="page-view skeleton-wrap">
+        <div class="card">
+          <div class="skel skel-line" style="width:35%;margin-bottom:14px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:16px"></div>
+          <div class="skel skel-block" style="height:38px;margin-bottom:8px" v-for="i in 6" :key="i"></div>
+        </div>
+      </div>
+      <div v-if="page==='site-equip' && !initialLoading" class="page-view">
         <div class="flex justify-between items-center mb-20">
           <div class="flex items-center gap-8">
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
@@ -11162,11 +11203,13 @@ createApp({
           _localUpsert(contracts, ref.id, { project:'cctv', ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('CONTRACT_CREATE', data.title);
           showToast('Kontrak berjaya ditambah!');
+          flashSavedCheckmark();
         } else {
           await db.collection('contracts').doc(contractModal._editId).update(data);
           _localUpsert(contracts, contractModal._editId, data, sortByEnd);
           logAudit('CONTRACT_EDIT', data.title);
           showToast('Kontrak dikemas kini!');
+          flashSavedCheckmark();
         }
         contractModal.show = false;
       } catch(e) { contractModal.err = 'Ralat: ' + e.message; }
@@ -11482,11 +11525,13 @@ createApp({
           _localUpsert(warranty, ref.id, { ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan berjaya ditambah!');
+          flashSavedCheckmark();
         } else {
           await db.collection('equipmentWarranty').doc(warrantyModal._editId).update(data);
           _localUpsert(warranty, warrantyModal._editId, data, sortByEnd);
           logAudit('WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan dikemaskini!');
+          flashSavedCheckmark();
         }
         warrantyModal.show = false;
       } catch(e) { warrantyModal.err = 'Ralat: ' + e.message; }
@@ -15218,14 +15263,22 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         forcePwModal.newPw=''; forcePwModal.confirmPw=''; forcePwModal.err='';
         forcePwModal.show = true;
       } else {
-        showWelcomePopup();
-        // Returning users (tutorial already seen) get the What's New
-        // changelog instead — first-time users get the tutorial, which
-        // already covers everything a changelog would repeat.
+        // Flash the same "success" checkmark used for PM/CM submits right
+        // as login completes, THEN let the welcome popup take over —
+        // sequenced, not simultaneous, since .welcome-popup-bg's z-index
+        // (9997) sits well above the checkmark overlay's (998) and would
+        // just hide it if both showed at once.
+        flashSavedCheckmark();
         setTimeout(() => {
-          if(localStorage.getItem('pm_tutorial_seen_v1')) maybeShowWhatsNew();
-          else maybeShowTutorial();
-        }, 10500); // after the 10s welcome popup auto-dismisses
+          showWelcomePopup();
+          // Returning users (tutorial already seen) get the What's New
+          // changelog instead — first-time users get the tutorial, which
+          // already covers everything a changelog would repeat.
+          setTimeout(() => {
+            if(localStorage.getItem('pm_tutorial_seen_v1')) maybeShowWhatsNew();
+            else maybeShowTutorial();
+          }, 10500); // after the 10s welcome popup auto-dismisses
+        }, 1300);
       }
     }
 
@@ -15452,11 +15505,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // (modals, the offline banner, scroll-top button, etc.), silently
       // breaking their positioning for the animation's duration.
       const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      let wipe = null;
+      let wipe = null, wipeMsg = null;
       if (!reduceMotion) {
         wipe = document.createElement('div');
         wipe.className = 'logout-wipe-overlay';
         document.body.appendChild(wipe);
+        // Separate sibling element, not a child of `wipe` — see
+        // .logout-wipe-msg's own comment for why.
+        wipeMsg = document.createElement('div');
+        wipeMsg.className = 'logout-wipe-msg';
+        wipeMsg.textContent = 'Sesi Ditamatkan Dengan Selamat';
+        document.body.appendChild(wipeMsg);
         await new Promise(r => setTimeout(r, 450));
       }
       auth.signOut();
@@ -15489,6 +15548,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       letterMemos.value = []; cmCases.value = [];
       auditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
       notifications.value = [];
+      // _knownNotifIds is a plain module-level `let`, not a reactive ref —
+      // invisible to the resets above, so it silently carried the PREVIOUS
+      // user's notification ids past logout. On a shared/kiosk device, the
+      // NEXT person's first buildNotifications() would then wrongly see
+      // none of their own ids as "already known" (since they're a
+      // different user with different overdue sites/assignments) and pop
+      // the bell immediately on login — exactly the false-positive the
+      // "skip on first build" (_knownNotifIds starting null) check exists
+      // to prevent, broken specifically for the 2nd+ session on one tab.
+      _knownNotifIds = null;
+      bellNewPop.value = false;
       trashedPmRecords.value = []; trashedContracts.value = []; trashedWarranty.value = [];
       trashedVirWarranty.value = []; trashedSuratMemo.value = []; trashedCmCases.value = [];
       // PM_DRAFT_KEY/EQUIP_DRAFT_KEY are plain global localStorage keys, not
@@ -15501,7 +15571,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if (wipe) {
         await nextTick();
         wipe.classList.add('logout-wipe-fadeout');
-        setTimeout(() => wipe.remove(), 550);
+        if (wipeMsg) wipeMsg.classList.add('logout-wipe-fadeout');
+        setTimeout(() => { wipe.remove(); if (wipeMsg) wipeMsg.remove(); }, 550);
       }
     }
 
@@ -18471,7 +18542,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         await _fw(batch.commit());
         logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
-        if(opts.toast !== false) showToast('Peralatan berjaya disimpan!');
+        // Checkmark only alongside the toast (i.e. never for the silent
+        // {toast:false} auto-save tick) — flashing it every ~2s while
+        // someone's actively typing would be constant visual noise, not delight.
+        if(opts.toast !== false) { showToast('Peralatan berjaya disimpan!'); flashSavedCheckmark(); }
       } catch(e){
         showToast('Gagal simpan automatik: '+e.message,'error');
       }
@@ -19863,6 +19937,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const notifications = ref([]);
     const showNotifPanel = ref(false);
     const unreadCount = computed(() => notifications.value.filter(n=>!n.read).length);
+    // Bell "pop" one-shot animation state + the previous-ids snapshot used
+    // to detect a genuinely new arrival — see buildNotifications() below.
+    const bellNewPop = ref(false);
+    let _knownNotifIds = null;
 
     function buildNotifications() {
       const list = [];
@@ -19920,6 +19998,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // (in-memory `notifications.value` alone doesn't).
       const prevRead = new Set([...notifications.value.filter(n=>n.read).map(n=>n.id), ..._loadReadNotifIds()]);
       list.forEach(n => { if(prevRead.has(n.id)) n.read = true; });
+      // Bell "pop" for a genuinely NEW notification id (never seen this
+      // session) — separate from bellPulse's continuous ambient wiggle,
+      // which already covers "still unread from before". Skipped on the
+      // very first build each session (_knownNotifIds starts null), so
+      // logging in doesn't pop the bell for every pre-existing overdue/
+      // contract alert that was already there before this tab opened.
+      const currentIds = new Set(list.map(n => n.id));
+      if(_knownNotifIds && [...currentIds].some(id => !_knownNotifIds.has(id))) {
+        bellNewPop.value = true;
+        setTimeout(() => { bellNewPop.value = false; }, 1200);
+      }
+      _knownNotifIds = currentIds;
       notifications.value = list;
     }
 
@@ -22172,7 +22262,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       auditLogPage, auditLogTotalPages, auditLogPagedList, auditLogGoToPage, auditLogPageNumbers,
       auditLogSelected, toggleAuditLogRow, isAuditLogAllSelected, toggleAuditLogSelectAll, bulkDeleteAuditLogs,
       updateCMStatus,
-      notifications, showNotifPanel, unreadCount, markAllRead, handleNotifClick, buildNotifications,
+      notifications, showNotifPanel, unreadCount, bellNewPop, markAllRead, handleNotifClick, buildNotifications,
       showOnlinePanel, onlineUsers,
       laporanTempoh, laporanProject, laporanSite, laporanFiltered, printLaporan,
       laporanCountTotal, laporanCountPm, laporanCountCm, laporanCountSites,
