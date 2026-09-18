@@ -4593,7 +4593,7 @@ details.form-control[open] summary::after{content:'▴'}
                individually, matching the client's reference borang (not
                grouped) — its Setting row reads "Web Access" rather than
                "IP Address" (the column header), per client request. -->
-          <template v-if="viewPM?.project==='vir' && viewPM?.virSystem==='Optager HD4000' && virDefaultSettingUnits.length">
+          <template v-if="viewPM?.project==='vir' && (viewPM?.virSystem==='Optager HD4000'||viewPM?.virSystem==='VCS') && virDefaultSettingUnits.length">
             <div class="pm-section-hdr">Default Setting Perkakasan</div>
             <div :class="['pm-vir-2col', virDefaultSettingUnits.length===1 ? 'pm-vir-2col-single' : '']">
               <table class="pm-tbl" v-for="(u,ui) in virDefaultSettingUnits" :key="ui">
@@ -8292,7 +8292,7 @@ createApp({
     // for that context only, VIR/BCD keeps the full list unchanged.
     const miscCategoriesShown = computed(() => {
       if(currentProject.value !== 'vir') return MISC_CATEGORIES_CCTV;
-      return equipVirSystem.value === 'Optager HD4000'
+      return (equipVirSystem.value === 'Optager HD4000' || equipVirSystem.value === 'VCS')
         ? MISC_CATEGORIES.filter(c => !c.startsWith('POE'))
         : MISC_CATEGORIES;
     });
@@ -8944,6 +8944,7 @@ createApp({
     // cam_/cam3_) purely so the two templates' item keys never collide,
     // even though each PM record only ever uses one template at a time.
     const VIR_CHECKLIST_TEMPLATE_VCS = [
+      {key:'vcs_pc',        label:'Appliance Optager HD4000',        section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_monitor',   label:'Monitor',                          section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_tv',        label:'TV',                               section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_ups',       label:'UPS',                              section:'Perkakasan dan Perisian (Hardware & Software)'},
@@ -8959,7 +8960,8 @@ createApp({
       {key:'vcs_network',   label:'Rangkaian / Network Switch',       section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_cable_network', label:'Pendawaian & Kabel Rangkaian (Network Cabling)', section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_cable_av',      label:'Pendawaian & Kabel Audio/HDMI', section:'Perkakasan dan Perisian (Hardware & Software)'},
-      {key:'vcs_software',  label:'Perisian Rakaman Video Capture System', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_software',  label:'Perisian Rakaman Optager HD4000 (Optager HD4000 Recording Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'vcs_control_software', label:'Perisian Tablet Control (Optager HD4000 Tablet Control Software)', section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_storage',   label:'Storan Data (Storage)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_backup',    label:'Backup Data',                      section:'Perkakasan dan Perisian (Hardware & Software)'},
       {key:'vcs_op_boot',       label:'Sistem Dihidupkan (Power On System)', section:'Status Operasi Sistem'},
@@ -10331,6 +10333,25 @@ createApp({
         teamModal.err = 'Sila nyatakan site SPRM (Lain-Lain).'; return;
       }
       teamModal.err = '';
+
+      // Double-booking check — same staff member assigned to a DIFFERENT
+      // team on the same date (any project/site) had no detection at all
+      // before this; excludes the entry being edited itself so re-saving
+      // an existing assignment unchanged doesn't warn against itself.
+      if(teamModal.data.date) {
+        const clashing = teamAssignments.value.filter(t =>
+          t.date === teamModal.data.date &&
+          !(teamModal.editing && teamModal.current?.id === t.id) &&
+          (t.members||[]).some(m => teamModal.selectedUids.includes(m.uid))
+        );
+        if(clashing.length) {
+          const names = [...new Set(clashing.flatMap(t => (t.members||[])
+            .filter(m => teamModal.selectedUids.includes(m.uid))
+            .map(m => `${m.name} (Team ${t.team} — ${t.siteName})`)))];
+          const ok = confirm(`⚠ Staff sudah ditugaskan pada tarikh ini:\n• ${names.join('\n• ')}\n\nTeruskan simpan juga?`);
+          if(!ok) return;
+        }
+      }
 
       // Rotation check — PM only, zone-based
       if((teamModal.data.maintType||'PM') === 'PM' && teamModal.data.siteId) {
@@ -13245,8 +13266,24 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(data.equipmentRemovalLog?.length) { await _batchRestoreCollection('equipmentRemovalLog', data.equipmentRemovalLog); await loadEquipmentRemovalLogs(); }
         if(data.warrantyVendorContracts?.length) { await _batchRestoreCollection('warrantyVendorContracts', data.warrantyVendorContracts); await loadVendorContracts(); }
         if(data.suratMemo?.length) { await _batchRestoreCollection('suratMemo', data.suratMemo); await loadLetterMemos(true); }
+        // These 7 were added to FULL_BACKUP_EXTRA_COLLECTIONS/collectFullBackupData
+        // (so a full backup DOES capture them) but never got a matching restore
+        // block here — a full restore was silently dropping every CM case and
+        // everything sitting in any of the 6 Tong Sampah trash collections even
+        // though the backup file on disk had the data.
+        if(data.cmCases?.length) { await _batchRestoreCollection('cmCases', data.cmCases); await loadCmCases(true); }
+        if(data.deletedPmRecords?.length) { await _batchRestoreCollection('deletedPmRecords', data.deletedPmRecords); await loadTrash(); }
+        if(data.deletedContracts?.length) { await _batchRestoreCollection('deletedContracts', data.deletedContracts); await loadTrashContracts(); }
+        if(data.deletedEquipmentWarranty?.length) { await _batchRestoreCollection('deletedEquipmentWarranty', data.deletedEquipmentWarranty); await loadTrashWarranty(); }
+        if(data.deletedVirEquipmentWarranty?.length) { await _batchRestoreCollection('deletedVirEquipmentWarranty', data.deletedVirEquipmentWarranty); await loadTrashVirWarranty(); }
+        if(data.deletedSuratMemo?.length) { await _batchRestoreCollection('deletedSuratMemo', data.deletedSuratMemo); await loadTrashSuratMemo(); }
+        if(data.deletedCmCases?.length) { await _batchRestoreCollection('deletedCmCases', data.deletedCmCases); await loadTrashCmCases(); }
 
-        showToast('Restore berjaya! Backup sebelum restore telah disimpan secara automatik.');
+        // doAutoBackup() (pre-restore cloud checkpoint) was removed app-wide —
+        // see the comment above — so this toast used to claim a safety net
+        // that no longer exists. restoreSingleSite()'s equivalent toast never
+        // made this claim; matched that wording here instead.
+        showToast('Restore berjaya!');
       } catch(e){ showToast('Gagal restore: '+e.message,'error'); }
       loading.value=false;
     }
@@ -18231,10 +18268,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Bilik berjaya ditambah!'); }
       resetForm('nRoom');
     }
+    // Always reassigns nRoom.excludedGroups to a brand-new array (never
+    // .push/.splice in place) — resetForm() Object.assign's FORM_DEFAULTS.nRoom
+    // straight onto nRoom, which would otherwise make nRoom.excludedGroups
+    // alias the SAME array object as the shared default; mutating it in
+    // place would corrupt that shared default for every future reset (same
+    // hazard as toggleServerStorage above).
     function toggleRoomGroup(groupKey) {
-      const idx = nRoom.excludedGroups.indexOf(groupKey);
-      if(idx === -1) nRoom.excludedGroups.push(groupKey);
-      else nRoom.excludedGroups.splice(idx, 1);
+      nRoom.excludedGroups = nRoom.excludedGroups.includes(groupKey)
+        ? nRoom.excludedGroups.filter(v => v !== groupKey)
+        : [...nRoom.excludedGroups, groupKey];
     }
     function addAlarm() {
       if(!nALM.name?.trim()){showToast('Sila masukkan nama alarm','error');return;}
@@ -22138,8 +22181,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             // Eager (not just on nav-click) — warrantyExpiringCount's nav
             // badge and the "Perlu Perhatian Hari Ini" dashboard widget both
             // need this on every login/refresh, not only after the user
-            // happens to visit the Warranty page first.
+            // happens to visit the Warranty page first. loadVirWarranty()
+            // had the exact same badge/widget dependency (virWarrantyExpiringCount)
+            // but was missing here — only ever loaded on nav-click into the
+            // VIR Warranty page, so the VIR badge silently showed 0 until then.
             loadWarranty();
+            loadVirWarranty();
           } else {
             authProfile.value = null;
           }
