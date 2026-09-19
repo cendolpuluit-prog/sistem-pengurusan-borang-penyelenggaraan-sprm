@@ -150,7 +150,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    flex+space-between it visibly shifted left/right as pageTitle changed
    length between pages. The outer 1fr columns absorb that variance instead
    of the centered search column. */
-.topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05);transition:border-bottom-color .3s ease,border-bottom-width .3s ease,background-color .3s ease,color .3s ease}
+.topbar{background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);padding:14px 24px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;border-bottom:1px solid rgba(0,51,102,.08);position:sticky;top:0;z-index:10;box-shadow:0 2px 14px rgba(0,40,100,.05);transition:border-bottom-color .3s ease,border-bottom-width .3s ease,background-color .3s ease,color .3s ease,padding .25s ease,box-shadow .25s ease}
+/* Shrinks slightly once .main has scrolled past a small threshold (see
+   setupScrollToTop's scroll listener) — a common "compact on scroll" cue
+   that reads as more premium without being a distracting animation. */
+.topbar-compact{padding:8px 24px;box-shadow:0 4px 18px rgba(0,40,100,.09)}
 .topbar-actions{justify-self:end}
 .topbar h3{font-size:1rem;color:#002244;font-weight:700}
 /* Uniform sizing for the topbar action row (online/notif/dark-mode/help/
@@ -261,6 +265,29 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    inside that frame, same reasoning. */
 .tbl-wrap{overflow:auto;max-height:65vh}
 .tbl-wrap th{position:sticky;top:0;z-index:1}
+/* Row stagger-in — plays whenever a <tr> is newly inserted into the DOM
+   (first render of a list page, or rows reappearing after a filter that
+   removed them), cascading via nth-child so it reads as "rows arriving
+   one after another" rather than a flat fade. Reordering existing rows
+   (e.g. sort) does NOT replay this, since v-for's :key means Vue moves the
+   existing DOM node rather than recreating it — only genuinely new nodes
+   restart their own CSS animation on insert. Capped at the first 10 rows
+   (both the stagger delay and the animation itself) so a huge table
+   doesn't (a) keep the tail of rows invisible for a long tail of delays or
+   (b) pay per-row animation cost at scale. */
+@keyframes rowFadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.tbl-wrap tbody tr{animation:rowFadeUp .3s ease-out both}
+.tbl-wrap tbody tr:nth-child(n+11){animation:none}
+.tbl-wrap tbody tr:nth-child(1){animation-delay:.02s}
+.tbl-wrap tbody tr:nth-child(2){animation-delay:.04s}
+.tbl-wrap tbody tr:nth-child(3){animation-delay:.06s}
+.tbl-wrap tbody tr:nth-child(4){animation-delay:.08s}
+.tbl-wrap tbody tr:nth-child(5){animation-delay:.1s}
+.tbl-wrap tbody tr:nth-child(6){animation-delay:.12s}
+.tbl-wrap tbody tr:nth-child(7){animation-delay:.14s}
+.tbl-wrap tbody tr:nth-child(8){animation-delay:.16s}
+.tbl-wrap tbody tr:nth-child(9){animation-delay:.18s}
+.tbl-wrap tbody tr:nth-child(10){animation-delay:.2s}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th{background:#003366;color:#fff;padding:10px 12px;text-align:left;white-space:nowrap;transition:background-color .3s ease,color .3s ease}
 td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-variant-numeric:tabular-nums;transition:background-color .3s ease,color .3s ease,border-color .3s ease}
@@ -372,6 +399,12 @@ details.form-control[open] summary::after{content:'▴'}
    is removed. */
 @keyframes bellPop{0%{transform:scale(1)}30%{transform:scale(1.4)}55%{transform:scale(.85)}75%{transform:scale(1.15)}100%{transform:scale(1)}}
 .notif-bell-pop{display:inline-block;animation:bellPop .5s cubic-bezier(.36,.07,.19,.97) both}
+/* Reuses the exact same bellNewPop signal as the bell pop above (a
+   genuinely new notification id, not just any unreadCount>0 state) so the
+   little red count badge gets its own tiny "bump" in sync, instead of just
+   silently changing its number. */
+@keyframes notifCountBump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+.notif-count-bump{animation:notifCountBump .5s ease}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;animation:modalBgIn .18s ease-out both}
 .modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both;transition:background-color .3s ease,color .3s ease}
 /* Wider variant for modals with more content (e.g. Log Kes CM detail,
@@ -1719,7 +1752,7 @@ details.form-control[open] summary::after{content:'▴'}
       <span v-else>{{ptrState.distance>60 ? '↑ Lepas untuk refresh' : '↓ Tarik untuk refresh'}}</span>
     </div>
     <button v-if="showScrollTop" class="scroll-top-btn no-print" @click="scrollToTop" title="Ke atas" aria-label="Scroll ke atas">⬆</button>
-    <div class="topbar no-print" :style="topbarAccentColor ? {borderBottomColor: topbarAccentColor, borderBottomWidth: '3px'} : {}">
+    <div class="topbar no-print" :class="{'topbar-compact':topbarCompact}" :style="topbarAccentColor ? {borderBottomColor: topbarAccentColor, borderBottomWidth: '3px'} : {}">
       <h3>{{pageTitle}}</h3>
       <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
         <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." style="font-size:.83rem;padding:7px 12px">
@@ -1775,7 +1808,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="notif-panel-wrap" style="position:relative">
           <button class="btn btn-outline btn-sm topbar-icon-btn" @click.stop="showNotifPanel=!showNotifPanel" style="position:relative" aria-label="Notifikasi">
             <span :class="{'notif-bell-unread':unreadCount>0, 'notif-bell-pop':bellNewPop}">🔔</span>
-            <span v-if="unreadCount>0" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{unreadCount>9?'9+':unreadCount}}</span>
+            <span v-if="unreadCount>0" :class="{'notif-count-bump':bellNewPop}" style="position:absolute;top:-4px;right:-4px;background:#dc3545;color:#fff;border-radius:50%;width:18px;height:18px;font-size:.65rem;display:flex;align-items:center;justify-content:center;font-weight:700">{{unreadCount>9?'9+':unreadCount}}</span>
           </button>
           <div v-if="showNotifPanel" class="dropdown-panel" style="position:absolute;right:0;top:calc(100% + 8px);width:340px;background:#fff;border:1px solid #e0e0e0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);z-index:200;overflow:hidden">
             <div style="padding:12px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center">
@@ -8248,9 +8281,11 @@ createApp({
       _tiltRaf = requestAnimationFrame(() => {
         _tiltRaf = null;
         // Tilt: only the ONE .card currently under the cursor: a subtle
-        // perspective rotation toward pointer position (max ~2.5deg),
-        // still keeping the existing hover lift (translateY(-2px)) since
-        // this inline style overrides that CSS :hover rule's transform.
+        // perspective rotation toward pointer position (max ~1deg — kept
+        // deliberately mild since a stronger tilt made clicking things
+        // inside the card feel off/annoying), still keeping the existing
+        // hover lift (translateY(-2px)) since this inline style overrides
+        // that CSS :hover rule's transform.
         const card = e.target.closest ? e.target.closest('.card') : null;
         document.querySelectorAll('.card-tilting').forEach(c => {
           if(c !== card) { c.style.transform = ''; c.classList.remove('card-tilting'); }
@@ -8258,7 +8293,7 @@ createApp({
         if(card) {
           const r = card.getBoundingClientRect();
           const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-          const rx = (0.5 - py) * 5, ry = (px - 0.5) * 5;
+          const rx = (0.5 - py) * 2, ry = (px - 0.5) * 2;
           card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-2px)`;
           card.classList.add('card-tilting');
         }
@@ -8330,6 +8365,9 @@ createApp({
     // dashboard happens right after login, which is an authUser change,
     // not a page change (page was already 'dashboard' from the start —
     // watch(page,...) alone would never fire for that initial render).
+    // initialLoading is watched too — see right after its declaration below
+    // (it's declared later in this setup() function, so referencing it here
+    // directly would hit the temporal dead zone).
     watch([authUser, page], () => nextTick(_observeRevealCards));
     // Login "handshake sequence" — visualizes doLogin()'s real await chain
     // (credential check -> profile load -> finishLogin) instead of a blank
@@ -8349,6 +8387,11 @@ createApp({
     ]});
     watch(loading, (v) => { if(!v) loginHandshake.active = false; });
     const initialLoading = ref(true); // true until loadAll() completes for the first time this session
+    // See the [authUser, page] reveal-card watch above — this covers the
+    // skeleton-wrap -> real .card content swap, which happens without a
+    // page/authUser change, so it needed its own watch declared down here
+    // (after initialLoading exists) instead of being added to that array.
+    watch(initialLoading, () => nextTick(_observeRevealCards));
     // Firebase restores a persisted session asynchronously, so on every page
     // load/refresh there's a brief window where we don't yet know if the
     // user is logged in. Without this gate, the template's v-if="!authUser"
@@ -22326,6 +22369,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // meaningfully down .main (same scrollable element PTR/page-transition
     // above already target), fades out again near the top.
     const showScrollTop = ref(false);
+    // Shrinks the sticky topbar slightly once .main has scrolled past a
+    // small threshold — same listener as showScrollTop below, just a much
+    // lower trigger point since this is a subtle compaction cue, not a
+    // "you've scrolled a lot" cue.
+    const topbarCompact = ref(false);
     // Same re-attachment guard as setupPullToRefresh above, and for the
     // same reason (called on every onAuthStateChanged transition, .main is
     // permanent) — without it, every re-login added another 'scroll'
@@ -22338,7 +22386,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const el = document.querySelector('.main');
       if(!el) return;
       _scrollToTopSetup = true;
-      el.addEventListener('scroll', () => { showScrollTop.value = el.scrollTop > 400; }, { passive:true });
+      el.addEventListener('scroll', () => {
+        showScrollTop.value = el.scrollTop > 400;
+        topbarCompact.value = el.scrollTop > 40;
+      }, { passive:true });
     }
     function scrollToTop() {
       document.querySelector('.main')?.scrollTo({ top:0, behavior:'smooth' });
@@ -22602,7 +22653,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
       kontraktorLuar, kontraktorLuarLoading, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
-      mobileNavOpen, sidebarIndicatorStyle, savedCheckmark, ptrState, showScrollTop, scrollToTop,
+      mobileNavOpen, sidebarIndicatorStyle, savedCheckmark, ptrState, showScrollTop, scrollToTop, topbarCompact,
       darkMode,
       setTimeout
     };
