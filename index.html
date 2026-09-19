@@ -1780,7 +1780,7 @@ details.form-control[open] summary::after{content:'▴'}
       <div class="flex gap-8 topbar-actions" style="align-items:center">
         <div class="text-sm text-muted" style="display:flex;flex-direction:column;align-items:flex-end;line-height:1.3;white-space:nowrap">
           <span>{{today}}</span>
-          <span style="font-size:.72rem;opacity:.75">{{currentTime}}</span>
+          <live-clock></live-clock>
         </div>
         <!-- Online users indicator -->
         <div class="online-panel-wrap" style="position:relative">
@@ -2203,8 +2203,8 @@ details.form-control[open] summary::after{content:'▴'}
               <span>🗒 Aktiviti Terkini</span>
               <button class="btn btn-outline btn-sm" @click="loadAuditLogs();page='audit-log'">Lihat Semua →</button>
             </div>
-            <div v-if="!visibleAuditLogs.length" class="empty" style="padding:20px">Tiada aktiviti direkodkan.</div>
-            <div v-for="l in visibleAuditLogs.slice(0,5)" :key="l.id" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
+            <div v-if="!recentAuditLogs.length" class="empty" style="padding:20px">Tiada aktiviti direkodkan.</div>
+            <div v-for="l in recentAuditLogs" :key="l.id" style="padding:8px 0;border-bottom:1px solid #f0f0f0">
               <div class="flex items-center gap-8">
                 <span class="badge badge-blue" style="font-size:.68rem">{{l.action}}</span>
                 <span style="font-size:.8rem;color:#222;font-weight:600">{{logActorDisplayName(l)}}</span>
@@ -5044,7 +5044,7 @@ details.form-control[open] summary::after{content:'▴'}
 
           <div v-if="rotationMatrix.length" class="day-summary-grid">
             <div v-for="u in rotationMatrix" :key="u.uid" class="day-summary-card" :title="u.name" @click="openStaffRotationDetail(u.uid)">
-              <div class="dsc-datenum"><img v-if="u.photoURL" :src="u.photoURL" alt=""><span v-else>{{(u.name||'?').charAt(0).toUpperCase()}}</span></div>
+              <div class="dsc-datenum"><img v-if="u.photoURL" :src="u.photoURL" alt="" loading="lazy"><span v-else>{{(u.name||'?').charAt(0).toUpperCase()}}</span></div>
               <div class="dsc-count" style="max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{u.name}}</div>
               <span :class="'badge '+(u.dueSites.length?'badge-red':'badge-green')" style="font-size:.64rem">{{u.dueSites.length?'⚠ '+u.dueSites.length+' zon':'✓ OK'}}</span>
             </div>
@@ -5360,13 +5360,13 @@ details.form-control[open] summary::after{content:'▴'}
                isn't clickable for that row (plain div, no file input). -->
           <label v-if="u.role!=='superadmin'" style="cursor:pointer;flex-shrink:0" title="Klik untuk tukar gambar profil pengguna (wajib pilih gambar baharu — tidak boleh buang tanpa gantikan)">
             <div class="user-avatar-sm" :class="'avatar-role-'+u.role">
-              <img v-if="u.photoURL" :src="u.photoURL" alt="">
+              <img v-if="u.photoURL" :src="u.photoURL" alt="" loading="lazy">
               <span v-else>{{u.name?.charAt(0)||u.username?.charAt(0)||'?'}}</span>
             </div>
             <input type="file" accept="image/*" style="display:none" @change="uploadPhoto($event, u.id)">
           </label>
           <div v-else class="user-avatar-sm" :class="'avatar-role-'+u.role" style="flex-shrink:0" title="Superadmin tukar gambar sendiri di tab Profil Saya">
-            <img v-if="u.photoURL" :src="u.photoURL" alt="">
+            <img v-if="u.photoURL" :src="u.photoURL" alt="" loading="lazy">
             <span v-else>{{u.name?.charAt(0)||u.username?.charAt(0)||'?'}}</span>
           </div>
           <div style="flex:1;min-width:0">
@@ -8158,9 +8158,28 @@ const OPTAGER_MOBO = ['Gigabyte B760 DS3H AX (LGA1700)','Gigabyte B760M DS3H AX 
 const OPTAGER_MOBO_TYPE = ['ATX','m-ATX','Lain-lain'];
 const OPTAGER_OS = ['Windows 10 Pro x64','Windows 11 Pro x64','Lain-lain'];
 
-const { createApp, ref, reactive, computed, watch, onMounted, nextTick, customRef } = Vue;
+const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, customRef } = Vue;
+
+// Isolated into its own component specifically so its 30s tick doesn't
+// touch the root component's render function at all — the root has no
+// child components anywhere else, so every reactive change (including this
+// clock) previously re-ran the ENTIRE template render (every {{ }} and every
+// function called inside every currently-rendered v-for), which is wasted
+// work on a page showing hundreds of table rows just to update a clock.
+const LiveClock = {
+  template: `<span style="font-size:.72rem;opacity:.75">{{ time }}</span>`,
+  setup() {
+    const fmt = () => new Date().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'});
+    const time = ref(fmt());
+    let timer = null;
+    onMounted(() => { timer = setInterval(() => { time.value = fmt(); }, 30000); });
+    onUnmounted(() => { if(timer) clearInterval(timer); });
+    return { time };
+  }
+};
 
 createApp({
+  components: { LiveClock },
   setup() {
     // ---- User registry (username → firebase email) ----
     const USER_MAP = {
@@ -11116,10 +11135,18 @@ createApp({
     // one camera brand at once (e.g. Gua Musang has both Hanwha and Axis),
     // so this is derived from the distinct brands actually recorded on
     // this PM record's cameras rather than a manually-picked single value.
+    // Cached by the cameras array's own reference (WeakMap, so it never
+    // leaks memory or needs manual invalidation) — this is called once per
+    // visible PM record row on every render, not just when that record's
+    // data changes, so rebuilding the Set+join from scratch every time was
+    // wasted work for rows that haven't actually changed.
+    const _brandsCache = new WeakMap();
     function cctvSystemBrands(cameras){
       if(!cameras || !cameras.length) return '';
-      const brands = [...new Set(cameras.map(c => c.brand).filter(Boolean))];
-      return brands.join(', ');
+      if(_brandsCache.has(cameras)) return _brandsCache.get(cameras);
+      const brands = [...new Set(cameras.map(c => c.brand).filter(Boolean))].join(', ');
+      _brandsCache.set(cameras, brands);
+      return brands;
     }
     // Short badge label for a VIR record's system — was a straight 2-way
     // Optager-or-BCD ternary before VCS existed, which would have wrongly
@@ -13073,16 +13100,33 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // above) — registered here, after both siteEquip and virSiteEquip
     // exist, so this watch() call doesn't reference virSiteEquip before
     // its own `const` has initialized.
-    watch([siteEquip, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, virSiteEquipVCS], () => {
-      if(page.value !== 'site-equip' || !selSite.value) return;
-      clearTimeout(_equipDraftTimer);
-      _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
-      // Debounced auto-save to Firestore — pushed back on every further
-      // edit so rapid typing doesn't hammer the database; fires once the
-      // user pauses for 2s.
-      clearTimeout(_equipAutoSaveTimer);
-      _equipAutoSaveTimer = setTimeout(() => { _equipAutoSaveTimer = null; _writeSiteEquipToFirestore({ toast:false }); }, 2000);
-    }, { deep: true });
+    //
+    // The actual {deep:true} watch is only created WHILE page==='site-equip'
+    // (started/stopped below), not for the whole app session — deep-watching
+    // these 5 stores means Vue has to recursively traverse every site/room/
+    // equipment item across BOTH projects to register dependencies, even
+    // though the callback itself only ever cares about whichever one site is
+    // open on this one page. Previously that traversal cost was paid for the
+    // entire login session (dashboard, reports, everywhere), scaling with
+    // total equipment across every site, not just the one being edited.
+    let _stopEquipDeepWatch = null;
+    function _startEquipDeepWatch() {
+      if(_stopEquipDeepWatch) return;
+      _stopEquipDeepWatch = watch([siteEquip, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, virSiteEquipVCS], () => {
+        if(!selSite.value) return;
+        clearTimeout(_equipDraftTimer);
+        _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
+        // Debounced auto-save to Firestore — pushed back on every further
+        // edit so rapid typing doesn't hammer the database; fires once the
+        // user pauses for 2s.
+        clearTimeout(_equipAutoSaveTimer);
+        _equipAutoSaveTimer = setTimeout(() => { _equipAutoSaveTimer = null; _writeSiteEquipToFirestore({ toast:false }); }, 2000);
+      }, { deep: true });
+    }
+    watch(page, (p) => {
+      if(p === 'site-equip') _startEquipDeepWatch();
+      else if(_stopEquipDeepWatch) { _stopEquipDeepWatch(); _stopEquipDeepWatch = null; }
+    }, { immediate: true });
 
     // Flush any pending auto-save immediately when the user navigates away
     // from site-equip (or to a different site) so a same-second exit can't
@@ -13713,11 +13757,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }[page.value]||''));
 
     const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
-    // Live clock shown under the date in the topbar — ticks on its own
-    // (not derived from a reactive dependency like `today` is), so it needs
-    // an explicit timer rather than a computed.
-    const currentTime = ref(new Date().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}));
-    setInterval(() => { currentTime.value = new Date().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}); }, 30000);
+    // Live clock itself now lives in the isolated <live-clock> component (see
+    // LiveClock above, before createApp) so its 30s tick doesn't re-run this
+    // whole component's render function.
 
     const totalCameras = computed(() => Object.values(siteEquip.value).reduce((sum,s)=>sum+(s?.cameras?.length||0),0));
     const totalVirCameras = computed(() => {
@@ -14586,6 +14628,36 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // ---- Audit Log ----
     const auditLogs = ref([]);
     const auditLogsLoading = ref(false);
+    // Separate, small, capped-at-5 fetch for the dashboard's "Aktiviti
+    // Terkini" preview widget — deliberately NOT the same auditLogs ref/cache
+    // as the full Log Audit page below, so the dashboard doesn't need to
+    // pull the entire (unbounded, ever-growing) role-scoped audit history on
+    // every single login just to show 5 rows. The full page's own
+    // loadAuditLogs() still loads lazily on first actual visit.
+    const recentAuditLogs = ref([]);
+    async function loadRecentAuditLogs() {
+      try {
+        const myRole = authProfile.value?.role;
+        let merged;
+        if(myRole === 'superadmin') {
+          const snap = await db.collection('auditLogs').orderBy('timestamp','desc').limit(5).get();
+          merged = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        } else if(myRole === 'admin') {
+          const snaps = await Promise.all([
+            db.collection('auditLogs').where('userRole','==','admin').orderBy('timestamp','desc').limit(5).get(),
+            db.collection('auditLogs').where('userRole','==','staff').orderBy('timestamp','desc').limit(5).get(),
+          ]);
+          merged = snaps.flatMap(s => s.docs.map(d => ({id: d.id, ...d.data()})));
+        } else if(myRole === 'staff') {
+          const snap = await db.collection('auditLogs').where('userRole','==','staff').orderBy('timestamp','desc').limit(5).get();
+          merged = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        } else {
+          return;
+        }
+        merged.sort((a, b) => (b.timestamp?.toMillis?.() || 0) - (a.timestamp?.toMillis?.() || 0));
+        recentAuditLogs.value = merged.slice(0, 5);
+      } catch(e) { console.warn('loadRecentAuditLogs failed:', e); }
+    }
 
     async function logAudit(action, detail) {
       try {
@@ -14719,7 +14791,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(log.userId && log.userId === authUser.value?.uid) {
         return authProfile.value?.name || authProfile.value?.username || log.userName || log.userId || '-';
       }
-      const match = allUsers.value.find(u => u.id === log.userId);
+      const match = usersById.value.get(log.userId);
       return match?.name || match?.username || log.userName || log.userId || '-';
     }
     // "Disubmit Oleh" on PM/CM records now stores username (see savePM) —
@@ -14728,10 +14800,25 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // to the matching username via allUsers so the column stays short
     // and consistent for old and new records alike, without needing to
     // migrate historical data.
+    // O(1) lookup instead of allUsers.find() per call — submittedByDisplayName
+    // and logActorDisplayName are each called once per visible table row, on
+    // every render (not just when the record/log list itself changes), so a
+    // linear scan here scales with rows-on-screen × users every re-render.
+    // Built together in one pass since both maps come from the same array.
+    const usersByEmail = computed(() => {
+      const map = new Map();
+      allUsers.value.forEach(u => { if(u.email) map.set(u.email, u); });
+      return map;
+    });
+    const usersById = computed(() => {
+      const map = new Map();
+      allUsers.value.forEach(u => { if(u.id) map.set(u.id, u); });
+      return map;
+    });
     function submittedByDisplayName(r) {
       if(!r.submittedBy) return '-';
       if(!String(r.submittedBy).includes('@')) return r.submittedBy;
-      const match = allUsers.value.find(u => u.email === r.submittedBy);
+      const match = usersByEmail.value.get(r.submittedBy);
       return match?.username || r.submittedBy;
     }
     // Role-based visibility: superadmin sees everything; admin sees
@@ -15860,7 +15947,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {};
       contracts.value = []; warranty.value = []; virWarranty.value = [];
       letterMemos.value = []; cmCases.value = [];
-      auditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
+      auditLogs.value = []; recentAuditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
       notifications.value = [];
       // _knownNotifIds is a plain module-level `let`, not a reactive ref —
       // invisible to the resets above, so it silently carried the PREVIOUS
@@ -16736,8 +16823,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // anchoring (see siteHealthScores) — that widget is visible to every
         // role, so contracts must load for everyone, not just admin/superadmin.
         loadContracts(); // fire-and-forget — needed for the dashboard expiry badge/alert + site health scoring
+        // The FULL auditLogs collection is NOT preloaded here on purpose —
+        // unlike contracts, it's an unbounded, ever-growing collection that's
+        // only otherwise read on the rarely-visited full Log Audit page (both
+        // entry points into that page already call loadAuditLogs() lazily
+        // themselves). Only a capped top-5 fetch runs here, for the
+        // dashboard's "Aktiviti Terkini" preview widget.
         if(['superadmin','admin','staff'].includes(authProfile.value?.role)) {
-          loadAuditLogs(); // fire-and-forget — not on critical login path
+          loadRecentAuditLogs(); // fire-and-forget — not on critical login path
         }
         initDbStorageWidgetIfStale(); // fire-and-forget — no-op for non-superadmin, cache-first for superadmin
 
@@ -17592,6 +17685,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
 
     // ---- Profile photo upload ----
+    // Uploads to Firebase Storage (same storage.ref(path).put() pattern as
+    // warranty service reports above) and stores only the download URL in
+    // Firestore — previously stored the full base64 JPEG string directly on
+    // the user doc, which meant loadUsers() (fetched in full, unconditionally,
+    // on every single login for every account) pulled every user's ~10-30KB
+    // photo string every time, even though only the currently-viewed avatar
+    // is ever rendered. A URL string is a few bytes; the image itself is now
+    // fetched lazily by the <img> tag only when actually displayed, and
+    // benefits from the browser/CDN cache across sessions.
     async function uploadPhoto(evt, uid) {
       const file = evt.target.files[0];
       if(!file) return;
@@ -17622,10 +17724,20 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           img.onerror = () => rej(new Error('Gagal muatkan imej'));
           img.src = raw;
         });
-        await db.collection('users').doc(uid).update({ photoURL: dataURL });
-        if(authProfile.value?.uid === uid) authProfile.value.photoURL = dataURL;
+        const blob = await (await fetch(dataURL)).blob();
+        const oldPath = allUsers.value.find(u => u.id === uid)?.photoPath || authProfile.value?.photoPath;
+        const path = `profile-photos/${uid}/${Date.now()}_avatar.jpg`;
+        const snap = await storage.ref(path).put(blob, { contentType: 'image/jpeg' });
+        const url = await snap.ref.getDownloadURL();
+        await db.collection('users').doc(uid).update({ photoURL: url, photoPath: path });
+        if(authProfile.value?.uid === uid) { authProfile.value.photoURL = url; authProfile.value.photoPath = path; }
         const idx = allUsers.value.findIndex(u => u.id === uid);
-        if(idx > -1) allUsers.value[idx].photoURL = dataURL;
+        if(idx > -1) { allUsers.value[idx].photoURL = url; allUsers.value[idx].photoPath = path; }
+        // Old avatar is now orphaned in Storage — clean it up. Best-effort:
+        // if this silently fails (already gone, permission edge case), the
+        // new photo is already live either way, so it shouldn't block or
+        // fail the whole operation (same reasoning as deleteServiceReport).
+        if(oldPath && oldPath !== path) storage.ref(oldPath).delete().catch(()=>{});
         showToast('Gambar profil berjaya dikemaskini!');
       } catch(e){ showToast('Gagal: '+e.message,'error'); }
       loading.value = false;
@@ -22536,7 +22648,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
       addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
-      pageTitle, topbarAccentColor, pageAccentClass, today, currentTime, totalCameras, totalVirCameras, pmThisYear,
+      pageTitle, topbarAccentColor, pageAccentClass, today, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
       dashboardCompact, toggleDashboardCompact,
       cctvSitesCount, cctvRecordsCount, cctvThisYearCount, cctvThisYearCMCount, virSitesCount, virRecordsCount, virThisYearCount, virThisYearCMCount,
@@ -22624,7 +22736,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       globalSearch, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
-      auditLogs, auditLogsLoading, visibleAuditLogs, logActorDisplayName, auditActionColor, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
+      auditLogs, auditLogsLoading, visibleAuditLogs, recentAuditLogs, logActorDisplayName, auditActionColor, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       auditLogFilter, resetAuditLogFilter, auditLogUserOptions, auditLogActionOptions, auditLogFilteredList,
       auditLogPage, auditLogTotalPages, auditLogPagedList, auditLogGoToPage, auditLogPageNumbers,
       auditLogSelected, toggleAuditLogRow, isAuditLogAllSelected, toggleAuditLogSelectAll, bulkDeleteAuditLogs,
