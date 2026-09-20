@@ -4974,12 +4974,13 @@ details.form-control[open] summary::after{content:'▴'}
                   <template v-for="g in teamsForDayGrouped(cell)" :key="'g'+g.entries.map(e=>e.id).join('-')">
                     <div :class="['team-pill','team-'+g.team]"
                       @click.stop="canEditSchedule?(g.entries.length>1?openDayDetail(dateStr(cell)):openEditTeam(g.entries[0])):null"
-                      :title="'Team '+g.team+': '+g.entries[0].members.map(m=>m.name).join(', ')+(rotationDueMembers(g.entries[0]).length?' | ⚠ Perlu rotasi: '+rotationDueMembers(g.entries[0]).join(', '):'')+(g.entries.length>1?' | '+g.entries.length+' penugasan (klik untuk lihat semua)':'')+(g.stopCount>1?' | Team '+g.team+' ada '+g.stopCount+' lawatan berlainan site hari ini':'')">
+                      :title="'Team '+g.team+': '+g.entries[0].members.map(m=>m.name).join(', ')+(rotationDueMembers(g.entries[0]).length?' | ⚠ Perlu rotasi: '+rotationDueMembers(g.entries[0]).join(', '):'')+(assignmentStateHoliday(g.entries[0])?' | 🎉 '+assignmentStateHoliday(g.entries[0]).name+' (cuti negeri ini sahaja)':'')+(g.entries.length>1?' | '+g.entries.length+' penugasan (klik untuk lihat semua)':'')+(g.stopCount>1?' | Team '+g.team+' ada '+g.stopCount+' lawatan berlainan site hari ini':'')">
                       <span :class="['team-badge','badge-'+g.team]">{{g.team}}</span>
                       {{shortSite(g.siteName)}}
                       <span v-if="g.projLabel" :class="['team-pill-proj', g.projLabel==='CCTV+VIR'?'proj-both':(g.projLabel==='VIR'?'proj-vir':'proj-cctv')]">{{g.projLabel}}</span>
                       <span v-if="g.stopCount>1" class="team-pill-multi">×{{g.stopCount}}</span>
                       <span v-if="rotationDueMembers(g.entries[0]).length" style="margin-left:3px;font-size:.65rem" title="Ada staff perlu rotasi">⚠</span>
+                      <span v-if="assignmentStateHoliday(g.entries[0])" style="margin-left:3px;font-size:.65rem" :title="assignmentStateHoliday(g.entries[0]).name+' — cuti negeri ini sahaja'">🎉</span>
                     </div>
                   </template>
                   <button v-if="canEditSchedule" class="cal-add-btn" @click.stop="openAddTeam(dateStr(cell))" title="Tambah penugasan">+</button>
@@ -5193,7 +5194,7 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="form-group">
               <label>Jenis Projek</label>
-              <select class="form-control" v-model="teamModal.data.project" @change="teamModal.data.siteId='';teamModal.data.siteName=''">
+              <select class="form-control" v-model="teamModal.data.project" @change="teamModal.data.siteId='';teamModal.data.siteName='';teamModal.data.manualState=''">
                 <option value="SPRM - CCTV">SPRM - CCTV</option>
                 <option value="SPRM - VIR">SPRM - VIR</option>
                 <option value="DOSM-Server">DOSM</option>
@@ -5251,6 +5252,9 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">-- Pilih --</option>
                 <option v-for="sp in NON_SPRM_SUBPROJECTS[teamModal.data.project]" :key="sp" :value="sp">{{sp}}</option>
               </select>
+            </div>
+            <div v-if="teamModalStateHoliday" class="form-group" style="grid-column:1/-1;background:#fff8e1;border:1px solid #fb8c00;border-radius:8px;padding:10px 12px;font-size:.82rem;color:#7a4a00">
+              ⚠️ Tarikh ini bertepatan dengan <b>{{teamModalStateHoliday.name}}</b> — cuti khusus negeri ini sahaja (bukan cuti umum kebangsaan). Pertimbangkan untuk jadualkan semula.
             </div>
             <div class="form-group" style="grid-column:1/-1">
               <label>Anggota Team (pilih satu atau lebih) — {{teamModal.selectedUids.length}} dipilih</label>
@@ -8312,7 +8316,10 @@ createApp({
         if(card) {
           const r = card.getBoundingClientRect();
           const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-          const rx = (0.5 - py) * 2, ry = (px - 0.5) * 2;
+          // Cut down twice now (was *5, then *2) — still felt like too much,
+          // so this is deliberately near-threshold-of-perceptible (~0.35deg
+          // max) rather than picking another "still noticeable" middle value.
+          const rx = (0.5 - py) * 0.7, ry = (px - 0.5) * 0.7;
           card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-2px)`;
           card.classList.add('card-tilting');
         }
@@ -10001,6 +10008,108 @@ createApp({
     function isPublicHoliday(dateStr) { return publicHolidaysForDay(dateStr).length > 0; }
     function isSchoolHoliday(dateStr) { return schoolHolidaysForDay(dateStr).length > 0; }
 
+    // ---- State-only holidays (Sultan/Raja/Governor birthdays etc.) ----
+    // Since SPRM sites/teams are deployed nationwide (1 Malaysia), a team
+    // scheduled into a DIFFERENT state can land on a holiday that ONLY that
+    // state observes (e.g. Sultan of Selangor's birthday means nothing in
+    // Johor and vice versa) — invisible in MY_PUBLIC_HOLIDAYS above, which is
+    // federal-only, so nothing previously warned the admin at scheduling
+    // time. Keyed by the exact same state-name strings as SITE_STATE_MAP /
+    // MAP_NEGERI_OPTIONS (Penang, Perak, Selangor, Negeri Sembilan, Melaka,
+    // Johor, Pahang, Terengganu, Kelantan, Putrajaya, Kuala Lumpur, Perlis,
+    // Kedah, Labuan, Sabah, Sarawak) so a plain object lookup by state name
+    // works with no translation layer.
+    //
+    // Best-effort from public holiday aggregator sites, cross-checked across
+    // 3 independent years (2025/2026/2027 sources) — the weekday-anchored
+    // ones (e.g. Perak's "first Friday of November") recede by ~1 day each
+    // year exactly as expected across all 3, which is what gave enough
+    // confidence to include them (including Kelantan's, initially left out
+    // after one conflicting mention — 3 other independent fetches all
+    // agreed on late September, so that one conflicting date was treated as
+    // the outlier). Still treat this as "flag it for a human to double-
+    // check", not an infallible source — verify against the state's own
+    // Warta Kerajaan closer to the date for anything schedule-critical.
+    // 2025 deliberately excluded (already past) — only 2026/2027 kept.
+    const MY_STATE_HOLIDAYS = {
+      Johor: {
+        2026: [{date:'2026-03-23', name:'Hari Keputeraan Sultan Johor'}, {date:'2026-07-21', name:'Hari Hol Almarhum Sultan Iskandar'}],
+        2027: [{date:'2027-03-23', name:'Hari Keputeraan Sultan Johor'}, {date:'2027-07-10', name:'Hari Hol Almarhum Sultan Iskandar'}],
+      },
+      Kedah: {
+        2026: [{date:'2026-01-17', name:'Israk dan Mikraj'}, {date:'2026-06-21', name:'Hari Keputeraan Sultan Kedah'}],
+        2027: [{date:'2027-01-06', name:'Israk dan Mikraj'}, {date:'2027-06-20', name:'Hari Keputeraan Sultan Kedah'}],
+      },
+      Melaka: {
+        2026: [{date:'2026-02-01', name:'Thaipusam'}, {date:'2026-02-20', name:'Hari Pengisytiharan Melaka Bandaraya Bersejarah'}, {date:'2026-08-24', name:'Hari Keputeraan Yang di-Pertua Negeri Melaka'}],
+        2027: [{date:'2027-01-22', name:'Thaipusam'}, {date:'2027-02-20', name:'Hari Pengisytiharan Melaka Bandaraya Bersejarah'}, {date:'2027-08-24', name:'Hari Keputeraan Yang di-Pertua Negeri Melaka'}],
+      },
+      'Negeri Sembilan': {
+        2026: [{date:'2026-01-14', name:'Hari Keputeraan Yang di-Pertuan Besar Negeri Sembilan'}, {date:'2026-01-17', name:'Israk dan Mikraj'}, {date:'2026-02-01', name:'Thaipusam'}],
+        2027: [{date:'2027-01-14', name:'Hari Keputeraan Yang di-Pertuan Besar Negeri Sembilan'}, {date:'2027-01-06', name:'Israk dan Mikraj'}, {date:'2027-01-22', name:'Thaipusam'}],
+      },
+      Pahang: {
+        2026: [{date:'2026-05-22', name:'Hari Hol Sultan Ahmad Shah'}, {date:'2026-07-31', name:'Hari Keputeraan Sultan Pahang'}],
+        2027: [{date:'2027-05-22', name:'Hari Hol Sultan Ahmad Shah'}, {date:'2027-07-30', name:'Hari Keputeraan Sultan Pahang'}],
+      },
+      Penang: {
+        2026: [{date:'2026-02-01', name:'Thaipusam'}, {date:'2026-07-07', name:'Hari George Town Warisan Dunia'}, {date:'2026-07-11', name:'Hari Keputeraan Yang di-Pertua Negeri Pulau Pinang'}],
+        2027: [{date:'2027-01-22', name:'Thaipusam'}, {date:'2027-07-07', name:'Hari George Town Warisan Dunia'}, {date:'2027-07-10', name:'Hari Keputeraan Yang di-Pertua Negeri Pulau Pinang'}],
+      },
+      Perak: {
+        2026: [{date:'2026-11-06', name:'Hari Keputeraan Sultan Perak'}],
+        2027: [{date:'2027-11-05', name:'Hari Keputeraan Sultan Perak'}],
+      },
+      Perlis: {
+        2026: [{date:'2026-01-17', name:'Israk dan Mikraj'}, {date:'2026-05-17', name:'Hari Keputeraan Raja Perlis'}],
+        2027: [{date:'2027-01-06', name:'Israk dan Mikraj'}, {date:'2027-05-17', name:'Hari Keputeraan Raja Perlis'}],
+      },
+      Kelantan: {
+        2026: [{date:'2026-09-29', name:'Hari Keputeraan Sultan Kelantan'}, {date:'2026-09-30', name:'Hari Keputeraan Sultan Kelantan (Hari Kedua)'}],
+        2027: [{date:'2027-09-29', name:'Hari Keputeraan Sultan Kelantan'}, {date:'2027-09-30', name:'Hari Keputeraan Sultan Kelantan (Hari Kedua)'}],
+      },
+      Sabah: {
+        2026: [{date:'2026-03-30', name:'Hari Keputeraan Yang di-Pertua Negeri Sabah'}, {date:'2026-04-03', name:'Good Friday'}, {date:'2026-05-30', name:'Pesta Kaamatan (Hari Pertama)'}, {date:'2026-05-31', name:'Pesta Kaamatan (Hari Kedua)'}, {date:'2026-12-24', name:'Christmas Eve'}],
+        2027: [{date:'2027-03-30', name:'Hari Keputeraan Yang di-Pertua Negeri Sabah'}, {date:'2027-03-26', name:'Good Friday'}, {date:'2027-05-30', name:'Pesta Kaamatan (Hari Pertama)'}, {date:'2027-05-31', name:'Pesta Kaamatan (Hari Kedua)'}, {date:'2027-12-24', name:'Christmas Eve'}],
+      },
+      Sarawak: {
+        2026: [{date:'2026-04-03', name:'Good Friday'}, {date:'2026-06-01', name:'Gawai Dayak (Hari Pertama)'}, {date:'2026-06-02', name:'Gawai Dayak (Hari Kedua)'}, {date:'2026-07-22', name:'Hari Sarawak'}, {date:'2026-10-10', name:'Hari Keputeraan Yang di-Pertua Negeri Sarawak'}],
+        2027: [{date:'2027-03-26', name:'Good Friday'}, {date:'2027-06-01', name:'Gawai Dayak (Hari Pertama)'}, {date:'2027-06-02', name:'Gawai Dayak (Hari Kedua)'}, {date:'2027-07-22', name:'Hari Sarawak'}, {date:'2027-10-09', name:'Hari Keputeraan Yang di-Pertua Negeri Sarawak'}],
+      },
+      Selangor: {
+        2026: [{date:'2026-02-01', name:'Thaipusam'}, {date:'2026-12-11', name:'Hari Keputeraan Sultan Selangor'}],
+        2027: [{date:'2027-01-22', name:'Thaipusam'}, {date:'2027-12-11', name:'Hari Keputeraan Sultan Selangor'}],
+      },
+      Terengganu: {
+        2026: [{date:'2026-03-04', name:'Hari Ulang Tahun Pertabalan Sultan Terengganu'}, {date:'2026-04-26', name:'Hari Keputeraan Sultan Terengganu'}],
+        2027: [{date:'2027-03-04', name:'Hari Ulang Tahun Pertabalan Sultan Terengganu'}, {date:'2027-04-26', name:'Hari Keputeraan Sultan Terengganu'}],
+      },
+      'Kuala Lumpur': {
+        2026: [{date:'2026-02-01', name:'Thaipusam / Hari Wilayah Persekutuan'}],
+        2027: [{date:'2027-01-22', name:'Thaipusam'}, {date:'2027-02-01', name:'Hari Wilayah Persekutuan'}],
+      },
+      Putrajaya: {
+        2026: [{date:'2026-02-01', name:'Thaipusam / Hari Wilayah Persekutuan'}],
+        2027: [{date:'2027-01-22', name:'Thaipusam'}, {date:'2027-02-01', name:'Hari Wilayah Persekutuan'}],
+      },
+      Labuan: {
+        2026: [{date:'2026-02-01', name:'Hari Wilayah Persekutuan'}, {date:'2026-05-30', name:'Pesta Kaamatan (Hari Pertama)'}, {date:'2026-05-31', name:'Pesta Kaamatan (Hari Kedua)'}],
+        2027: [{date:'2027-02-01', name:'Hari Wilayah Persekutuan'}, {date:'2027-05-30', name:'Pesta Kaamatan (Hari Pertama)'}, {date:'2027-05-31', name:'Pesta Kaamatan (Hari Kedua)'}],
+      },
+    };
+    // siteId covers both SITES (CCTV) and VIR_SITES (VIR) ids, which
+    // SITE_STATE_MAP already keys without needing to know which project —
+    // manualState is the fallback for non-SPRM assignments (DOSM/JPM-ICU/
+    // KLN/UTHM), which have no siteId at all (see teamModal.data.manualState).
+    function _resolveAssignmentState(siteId, manualState) {
+      return (siteId && SITE_STATE_MAP[siteId]) || manualState || null;
+    }
+    function stateHolidaysForDay(dateStr, state) {
+      if(!state) return [];
+      const year = dateStr.slice(0,4);
+      return (MY_STATE_HOLIDAYS[state]?.[year] || []).filter(h => h.date === dateStr);
+    }
+
     function holidaysForMonth() {
       const year = calYear.value;
       const month = calMonth.value + 1;
@@ -10863,6 +10972,16 @@ createApp({
 
     // Computed zone for the currently-open team modal's selected site
     const teamModalZone = computed(() => getSiteZone(teamModal.data.siteId));
+    // Warns the admin AT SCHEDULING TIME (not just after the fact on the
+    // calendar) when the chosen date+site falls on a holiday that's specific
+    // to THAT site's state — the whole point being to catch it before the
+    // team is already committed to travel, so it can be rescheduled here and
+    // now instead of discovered on the day.
+    const teamModalStateHoliday = computed(() => {
+      if(!teamModal.data.date) return null;
+      const state = _resolveAssignmentState(teamModal.data.siteId, teamModal.data.manualState);
+      return stateHolidaysForDay(teamModal.data.date, state)[0] || null;
+    });
 
     // Returns list of member names who need rotation for a given PM assignment
     function rotationDueMembers(assignment) {
@@ -10870,6 +10989,14 @@ createApp({
       const zone = getSiteZone(assignment.siteId);
       if(!zone) return [];
       return (assignment.members||[]).filter(m => staffZoneVisits(m.uid, zone) >= ROTATION_LIMIT).map(m => m.name);
+    }
+    // Same state-holiday check as teamModalStateHoliday above, but for an
+    // ALREADY-SAVED assignment shown on the calendar grid — so a schedule
+    // made before a state holiday was gazetted, or one nobody caught in the
+    // Tambah Penugasan warning, still surfaces at a glance while browsing.
+    function assignmentStateHoliday(assignment) {
+      const state = _resolveAssignmentState(assignment.siteId, assignment.manualState);
+      return stateHolidaysForDay(assignment.date, state)[0] || null;
     }
 
     // Does a calendar date have any PM assignment with rotation-due staff?
@@ -22668,6 +22795,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
+      teamModalStateHoliday, assignmentStateHoliday, stateHolidaysForDay,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday,
       fmtDate, fmtDateDash, cctvSystemBrands,
