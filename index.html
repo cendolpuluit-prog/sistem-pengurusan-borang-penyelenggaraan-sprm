@@ -721,6 +721,16 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-print table{width:100%;border-collapse:collapse;margin-bottom:8px}
 .pm-print table th,.pm-print table td{border:1px solid #000;padding:3px 6px;font-size:9pt}
 .pm-print table th{background:#dce6f1;font-weight:bold;text-align:center;white-space:normal}
+/* CCTV borang only (see 'pm-print-cctv' class on #print-area, added only
+   when viewPM.project!=='vir') — table cells were a mix of left-aligned
+   (whichever <td> never got the per-cell class="ctr") and center-aligned
+   (the ones that did), inconsistent column to column. Centering ALL
+   .pm-tbl cells by default here means every column reads the same way,
+   without having to audit/add class="ctr" to each individual <td> across
+   every CCTV section (cameras/NVR/HDD/switch/alarm/etc). Scoped to
+   .pm-print-cctv specifically — VIR's borang (same .pm-tbl class, own
+   template block) is untouched. */
+.pm-print-cctv .pm-tbl td{text-align:center}
 .pm-print .section-title{background:#1A2332;color:#fff;padding:4px 8px;font-weight:bold;margin:8px 0 4px;font-size:9.5pt}
 .pm-print .sign-table td{height:60px;vertical-align:bottom}
 
@@ -4245,10 +4255,11 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="card-title">🔌 Pemeriksaan POE/Network Switch</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Error Notification</th><th>Port Status</th><th>Status</th><th>Nota</th></tr></thead>
+                <thead><tr><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Error Notification</th><th>Port Status</th><th>Status</th><th>Nota</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in pm.switches" :key="s._uid||i">
                     <td>{{i+1}}</td>
+                    <td>{{s.name}}</td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.brand"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.model"></td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.serial"></td>
@@ -4257,7 +4268,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td><select class="status-sel" v-model="s.status" :class="s.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
                     <td><input class="form-control" style="min-width:100px" v-model="s.nota" placeholder="cth: Tingkat 2, Bilik Server"></td>
                   </tr>
-                  <tr v-if="!pm.switches.length"><td colspan="8" class="empty">Tiada switch didaftar.</td></tr>
+                  <tr v-if="!pm.switches.length"><td colspan="9" class="empty">Tiada switch didaftar.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4579,7 +4590,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="pm-preview-inner" id="pm-preview-inner">
             <div class="pm-print-scale-outer" :style="pmPreviewScale<1 && !pmReadMode ? {height:(pmPreviewNaturalHeight*pmPreviewScale)+'px',overflow:'hidden'} : null">
-            <div id="print-area" class="pm-print" :class="{'pm-read-mode': pmReadMode}" :style="pmPreviewScale<1 && !pmReadMode ? {width:PM_PREVIEW_DESIGN_WIDTH+'px',transform:'scale('+pmPreviewScale+')',transformOrigin:'top left'} : null">
+            <div id="print-area" class="pm-print" :class="{'pm-read-mode': pmReadMode, 'pm-print-cctv': viewPM?.project!=='vir'}" :style="pmPreviewScale<1 && !pmReadMode ? {width:PM_PREVIEW_DESIGN_WIDTH+'px',transform:'scale('+pmPreviewScale+')',transformOrigin:'top left'} : null">
 
           <!-- HEADER -->
           <div class="pm-corp-header">
@@ -4896,14 +4907,14 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-section-block">
           <div class="pm-section-hdr">4. &nbsp;POE/NETWORK SWITCH <span>({{viewPM?.switches?.length||0}} unit)</span></div>
           <table class="pm-tbl">
-            <thead><tr><th style="width:5%">No.</th><th style="width:17%">Brand</th><th style="width:43%">Model</th><th style="width:23%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
+            <thead><tr><th style="width:5%">No.</th><th style="width:25%">Nama</th><th style="width:14%">Brand</th><th style="width:28%">Model</th><th style="width:16%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(s,i) in viewPM?.switches" :key="i">
-                <td class="ctr">{{i+1}}</td><td>{{s.brand}}</td><td>{{s.model}}</td>
+                <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}}</td>
                 <td class="ctr">{{s.serial}}</td>
                 <td :class="s.status==='Baik'?'ok':'no'">{{s.status}}</td>
               </tr>
-              <tr v-if="!viewPM?.switches?.length"><td colspan="5" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
+              <tr v-if="!viewPM?.switches?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
             </tbody>
           </table>
           </div>
@@ -20549,8 +20560,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         children.push(sectionHdr('4.  POE/NETWORK SWITCH'));
         if (r.switches?.length) {
           children.push(makeTable(
-            ['No.','Brand','Model','No. Siri','Error Notification','Port Status','Status','Nota'],
-            r.switches.map((s,i)=>[i+1,s.brand,s.model,s.serial,s.errNotif,s.portStatus,s.status,s.nota||''])
+            ['No.','Nama','Brand','Model','No. Siri','Error Notification','Port Status','Status','Nota'],
+            r.switches.map((s,i)=>[i+1,s.name||'',s.brand,s.model,s.serial,s.errNotif,s.portStatus,s.status,s.nota||''])
           ));
         } else { children.push(emptyNote('Tiada rekod Switch.')); }
         children.push(spacer());
@@ -20672,11 +20683,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       // Browser "Save as PDF" uses the document <title> as the default filename.
       const refSafe = (viewPM.value?.refNo || 'Borang').replace(/[\\/:*?"<>|]/g, '-');
+      // el.cloneNode only carries innerHTML into the popup below (not el's
+      // OWN class attribute) — the CCTV-only 'pm-print-cctv' scoping class
+      // (see #print-area above, which drives the center-aligned table cells)
+      // has to be reapplied here explicitly or it's silently lost for the
+      // exported PDF even though the live preview shows it correctly.
+      const bodyClass = 'pm-print' + (viewPM.value?.project !== 'vir' ? ' pm-print-cctv' : '');
       w.document.write(`<!DOCTYPE html><html lang="ms"><head>
         <meta charset="UTF-8"><title>Borang_${refSafe}</title>
         ${styles}
         <style>body{background:#fff;margin:24px}@media print{body{margin:0}}</style>
-      </head><body class="pm-print">${clone.innerHTML}</body></html>`);
+      </head><body class="${bodyClass}">${clone.innerHTML}</body></html>`);
       w.document.close();
       w.focus();
       // The popup is a brand-new document, so its <img> tags (Daya One/SPRM
