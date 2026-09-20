@@ -30,7 +30,7 @@
 <script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 /* CUSTOM SCROLLBAR — thin, brand-navy/green instead of the default OS
@@ -50,6 +50,7 @@ html,body{overflow-x:hidden;max-width:100%}
    from the themed login screen. Kept very low-opacity (4-5%) and fixed in
    place (doesn't scroll/tile) specifically so it stays a background hint,
    never competing with card content sitting on top. */
+:root{--font-display:'Space Grotesk','Inter','Segoe UI',sans-serif}
 body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;background-image:radial-gradient(circle at 6% 4%,rgba(0,51,102,.05) 0%,transparent 40%),radial-gradient(circle at 96% 96%,rgba(0,140,80,.045) 0%,transparent 40%),radial-gradient(#c3cfe0 1px,transparent 1px);background-size:auto,auto,22px 22px;background-repeat:no-repeat,no-repeat,repeat;background-attachment:fixed,fixed,scroll;color:#1a2333;overflow-x:hidden;max-width:100vw;transition:background-color .3s ease,color .3s ease}
 
 /* SPLASH — brief screen shown while Firebase resolves whether a session is
@@ -156,7 +157,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    that reads as more premium without being a distracting animation. */
 .topbar-compact{padding:8px 24px;box-shadow:0 4px 18px rgba(0,40,100,.09)}
 .topbar-actions{justify-self:end}
-.topbar h3{font-size:1rem;color:#002244;font-weight:700}
+.topbar h3{font-family:var(--font-display);font-size:1rem;color:#002244;font-weight:700;letter-spacing:.01em}
 /* Uniform sizing for the topbar action row (online/notif/dark-mode/help/
    logout) so they line up consistently instead of each having its own
    one-off inline padding. */
@@ -215,7 +216,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    pre-reveal. Keeping transform at .2s here (not .55s) preserves the
    original snappy hover feel; only opacity gets the slower reveal fade. */
 .reveal-in{opacity:1;transform:translateY(0);transition:opacity .55s ease,box-shadow .2s,transform .2s,background-color .3s ease,border-color .3s ease,color .3s ease}
-.card-title{font-size:.9rem;font-weight:700;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px;padding-left:10px;border-left:3px solid #003366;position:relative}
+.card-title{font-family:var(--font-display);font-size:.9rem;font-weight:700;letter-spacing:.015em;color:#002244;margin-bottom:16px;border-bottom:1px solid rgba(0,51,102,.08);padding-bottom:10px;padding-left:10px;border-left:3px solid #003366;position:relative}
 /* Small animated accent line under the title text, drawn in on mount —
    separate from the full-width static border-bottom above (which stays as
    the section divider); this is purely a decorative "brand mark" detail,
@@ -251,7 +252,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .stat-card:nth-child(8),.zone-map-card:nth-child(8),.warranty-stat-card:nth-child(8){animation-delay:.37s}
 .stat-card-clickable:hover{transform:translateY(-3px);box-shadow:0 6px 20px rgba(0,40,100,.14)}
 .stat-card:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,40,100,.12)}
-.stat-card .num{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#003366,#006633);-webkit-background-clip:text;background-clip:text;color:transparent}
+.stat-card .num{font-family:var(--font-display);font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#003366,#006633);-webkit-background-clip:text;background-clip:text;color:transparent}
 .stat-card .lbl{font-size:.72rem;color:#888;margin-top:4px;text-transform:uppercase;letter-spacing:.05em;font-weight:600}
 
 
@@ -405,8 +406,34 @@ details.form-control[open] summary::after{content:'▴'}
    silently changing its number. */
 @keyframes notifCountBump{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
 .notif-count-bump{animation:notifCountBump .5s ease}
+/* Copy-to-clipboard button briefly turns green with a checkmark (via JS
+   swapping textContent, see copyToClipboard()) instead of just silently
+   succeeding — clipboard writes have no other visible effect, so without
+   this there'd be zero feedback that the click actually did anything. */
+.copy-btn-done{color:#198754!important;border-color:#198754!important}
+/* Search clear (×) — only exists in the DOM while globalSearch is
+   non-empty (v-if), so every appearance is a fresh mount and this fade+pop
+   plays every time rather than needing separate enter/leave transitions. */
+@keyframes searchClearIn{from{opacity:0;transform:translateY(-50%) scale(.5)}to{opacity:1;transform:translateY(-50%) scale(1)}}
+.search-clear-btn{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:20px;height:20px;border:none;background:rgba(0,51,102,.08);color:#666;border-radius:50%;font-size:.7rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;animation:searchClearIn .15s ease-out both;transition:background-color .15s,color .15s}
+.search-clear-btn:hover{background:rgba(0,51,102,.16);color:#003366}
+.dark-mode .search-clear-btn{background:rgba(255,255,255,.1);color:#aaa}
+.dark-mode .search-clear-btn:hover{background:rgba(255,255,255,.18);color:#e0e0e0}
+/* Dark/light toggle icon flips+shrinks through its midpoint (where the ☀️/🌙
+   swap via Vue re-render actually happens) rather than an instant, jarring
+   1-frame swap — same "reads as one continuous motion" trick as a card-flip,
+   without needing Vue's <Transition> component (unused anywhere else in
+   this file's animation patterns). */
+@keyframes themeIconFlip{0%{transform:rotate(0) scale(1)}50%{transform:rotate(180deg) scale(.5)}100%{transform:rotate(360deg) scale(1)}}
+.theme-icon-spin{animation:themeIconFlip .4s ease}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:100;display:flex;align-items:center;justify-content:center;animation:modalBgIn .18s ease-out both}
-.modal{background:#fff;border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both;transition:background-color .3s ease,color .3s ease}
+/* Same frosted-glass treatment as .card (rgba white + backdrop-blur) —
+   modals previously sat on a flat opaque white, which read as visually
+   disconnected from every card/topbar elsewhere already using this glass
+   look. Sits on top of .modal-bg's own dimmed+blurred backdrop, so this
+   blurs THAT (already-dark) layer rather than the raw page underneath —
+   still reads as a clean light panel since the white tint dominates. */
+.modal{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:12px;padding:28px;width:90%;max-width:600px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,20,50,.25),0 2px 8px rgba(0,20,50,.1);animation:modalPopIn .22s cubic-bezier(.22,1,.36,1) both;transition:background-color .3s ease,color .3s ease}
 /* Wider variant for modals with more content (e.g. Log Kes CM detail,
    Import Peralatan, Fail Servis Vendor, Time-lapse). Reads max-width from
    a --modal-max-width custom property (default 760px) instead of a plain
@@ -618,12 +645,16 @@ details.form-control[open] summary::after{content:'▴'}
    other's message before it's readable */
 .toast-stack{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:calc(24px + env(safe-area-inset-right));z-index:999;display:flex;flex-direction:column-reverse;gap:10px;max-width:calc(100vw - 32px)}
 .toast{padding:12px 20px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:600;position:relative;overflow:hidden}
-/* Matches showToast()'s 3000ms setTimeout exactly — purely visual, the
-   actual dismiss is still driven by that timer, this just previews it. */
+/* Matches showToast()'s 3000ms setTimeout exactly (or showUndoToast()'s
+   6000ms, via the animation-duration override in the template) — purely
+   visual, the actual dismiss is still driven by that timer, this just
+   previews it. */
 @keyframes toastProgressShrink{from{width:100%}to{width:0%}}
 .toast-progress{position:absolute;left:0;bottom:0;height:3px;background:rgba(255,255,255,.7);animation:toastProgressShrink 3s linear forwards}
 .toast-success{background:#198754}
 .toast-error{background:#dc3545}
+.toast-undo-btn{margin-left:10px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:2px 10px;font-size:.8rem;font-weight:700;cursor:pointer;white-space:nowrap}
+.toast-undo-btn:hover{background:rgba(255,255,255,.32)}
 /* Toast enter/leave — was a plain v-for (instant vanish on dismiss, no exit
    animation); the <transition-group name="toast"> wrapper now applies
    these classes automatically. leave-active is absolutely positioned so
@@ -725,8 +756,16 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes opsPulseGlow{0%,100%{text-shadow:0 0 6px rgba(77,255,153,.5)}50%{text-shadow:0 0 14px rgba(77,255,153,.9)}}
 .ops-pulse-sub{font-size:.62rem;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:.05em;margin-top:2px;text-align:center}
 .ops-stat-row{display:flex;gap:28px;flex-wrap:wrap}
-.ops-stat-num{font-size:1.6rem;font-weight:800;color:#fff;line-height:1.1}
-.ops-stat-warn .ops-stat-num{color:#ff8a80;animation:opsPulseGlow 2.6s ease-in-out infinite}
+/* tabular-nums stops the digits changing width as countUpFrom() animates
+   the value up (e.g. "1" vs "8"), which otherwise made the whole number
+   visibly wobble side-to-side mid-count instead of just growing in place —
+   same fix .stat-card .num and .wsc-value already have elsewhere. Gradient
+   text matches that hero-number treatment too, tuned to this banner's own
+   dark green/navy backdrop (white -> the app's existing mint-green accent)
+   rather than reusing .stat-card's blue/green (which needs a light
+   background to read against). */
+.ops-stat-num{font-family:var(--font-display);font-size:1.6rem;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;background:linear-gradient(135deg,#fff,#4dff99);-webkit-background-clip:text;background-clip:text;color:transparent}
+.ops-stat-warn .ops-stat-num{background:none;-webkit-background-clip:initial;background-clip:initial;color:#ff8a80;animation:opsPulseGlow 2.6s ease-in-out infinite}
 .ops-stat-lbl{font-size:.68rem;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
 .ops-zone-row{display:flex;gap:10px;margin-left:auto}
 .ops-zone-dot{width:11px;height:11px;border-radius:50%;display:inline-block;cursor:default}
@@ -1156,6 +1195,42 @@ details.form-control[open] summary::after{content:'▴'}
 .dark-mode .topbar h3{color:#90caf9}
 .dark-mode .card{background:rgba(22,27,34,.85)!important;border-color:rgba(255,255,255,.08)!important;color:#e0e0e0}
 .dark-mode .card-title{color:#90caf9!important;border-bottom-color:rgba(255,255,255,.08)!important}
+/* Was missing entirely — modals stayed white even in dark mode. Same
+   pattern as .dark-mode .card, since .modal content largely reuses the
+   same headings/labels/form-control patterns .card already handles. */
+.dark-mode .modal{background:rgba(22,27,34,.92)!important;border-color:rgba(255,255,255,.08);color:#e0e0e0}
+.dark-mode .modal h3{color:#90caf9}
+/* Pastel info/warning/success boxes throughout cards+modals are all
+   inline-styled per usage (~40 spots: light yellow/red/green/purple/pink
+   backgrounds, most with an equally dark paired text color) rather than a
+   shared CSS class — so dark mode couldn't touch them via a normal
+   selector. Targeting via attribute selectors on the literal inline
+   `style="..."` string instead of editing 40 template locations
+   individually; !important is required since these are overriding a real
+   inline style, not another class. Each background gets a dark equivalent
+   in the same hue; each known paired text color gets lightened so it still
+   reads as "the same semantic color", just inverted for a dark backdrop —
+   a dark-green-on-light-green box becomes light-green-on-dark-green,
+   rather than becoming unreadable dark-on-dark or light-gray-on-light. */
+.dark-mode [style*="background:#fff8e1"]{background:#3d3418!important}
+.dark-mode [style*="background:#fff5f5"]{background:#3d1f1f!important}
+.dark-mode [style*="background:#e8f5e9"]{background:#1a2e1c!important}
+.dark-mode [style*="background:#ffebee"]{background:#3d1f1f!important}
+/* Foreground colors are scoped to BOTH the background AND the specific
+   text color together (not color alone) — e.g. #003366/#e65100/#1b5e20/
+   #b71c1c are all also used pervasively elsewhere in the app (95+, 18+,
+   18+, 31+ occurrences respectively) for completely unrelated headings/
+   labels already handled correctly by their own .dark-mode rules; matching
+   on color alone would have overridden those too. */
+.dark-mode [style*="background:#fff8e1"][style*="color:#b26a00"]{color:#ffcc80!important}
+.dark-mode [style*="background:#fff8e1"][style*="color:#795548"]{color:#bcaaa4!important}
+.dark-mode [style*="background:#fff8e1"][style*="color:#7a4a00"]{color:#ffcc80!important}
+.dark-mode [style*="background:#fff8e1"][style*="color:#1b5e20"]{color:#81c995!important}
+.dark-mode [style*="background:#fff8e1"][style*="color:#e65100"]{color:#ffb74d!important}
+.dark-mode [style*="background:#e8f5e9"][style*="color:#1b5e20"]{color:#81c995!important}
+.dark-mode [style*="background:#ffebee"][style*="color:#b71c1c"]{color:#ff8a80!important}
+.dark-mode [style*="background:#ffebee"][style*="color:#1b5e20"]{color:#81c995!important}
+
 .dark-mode .card-title::after{background:linear-gradient(90deg,#58a6ff,#4dff99)}
 .dark-mode .form-control{background:#161b22;border-color:#30363d;color:#e0e0e0}
 .dark-mode .form-control:focus{border-color:#58a6ff;box-shadow:0 0 0 3px rgba(88,166,255,.15)}
@@ -1424,8 +1499,22 @@ details.form-control[open] summary::after{content:'▴'}
 
 <!-- TOAST -->
 <transition-group tag="div" name="toast" class="toast-stack" aria-live="polite" role="status">
-  <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]"><span aria-hidden="true">{{t.type==='error'?'❌':'✅'}}</span> {{t.msg}}<div class="toast-progress"></div></div>
+  <div v-for="t in toasts" :key="t.id" :class="['toast','toast-'+t.type]"><span aria-hidden="true">{{t.type==='error'?'❌':'✅'}}</span> {{t.msg}}<button v-if="t.undoFn" class="toast-undo-btn" @click="runToastUndo(t)">↩️ Undo</button><div class="toast-progress" :style="t.undoFn?'animation-duration:6s':''"></div></div>
 </transition-group>
+
+<!-- CUSTOM CONFIRM DIALOG — replaces native confirm(); z-index above every
+     other modal since a confirm can be triggered from inside one (e.g.
+     deleting a row from within an edit modal). -->
+<div v-if="confirmModal.show" class="modal-bg" style="z-index:100000" @click.self="respondConfirmModal(false)">
+  <div class="modal" style="max-width:440px">
+    <h3 style="display:flex;align-items:center;gap:8px">{{confirmModal.danger?'⚠️':'❓'}} {{confirmModal.title}}</h3>
+    <p style="white-space:pre-line;font-size:.88rem;line-height:1.6;margin:4px 0 22px">{{confirmModal.message}}</p>
+    <div class="flex gap-8" style="justify-content:flex-end">
+      <button class="btn btn-outline" @click="respondConfirmModal(false)">Batal</button>
+      <button :class="confirmModal.danger?'btn btn-danger':'btn btn-primary'" @click="respondConfirmModal(true)">Sahkan</button>
+    </div>
+  </div>
+</div>
 
 <!-- SESSION TIMEOUT WARNING -->
 <div v-if="sessionWarning.show" id="sessionWarningOverlay" style="position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));box-sizing:border-box;overflow-y:auto">
@@ -1755,7 +1844,8 @@ details.form-control[open] summary::after{content:'▴'}
     <div class="topbar no-print" :class="{'topbar-compact':topbarCompact}" :style="topbarAccentColor ? {borderBottomColor: topbarAccentColor, borderBottomWidth: '3px'} : {}">
       <h3>{{pageTitle}}</h3>
       <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
-        <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." style="font-size:.83rem;padding:7px 12px">
+        <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." :style="'font-size:.83rem;padding:7px '+(globalSearch?'30px':'12px')+' 7px 12px'">
+        <button v-if="globalSearch" type="button" class="search-clear-btn" @mousedown.prevent="globalSearch=''" title="Kosongkan carian" aria-label="Kosongkan carian">✕</button>
         <div v-if="showSearchResults && searchResults.length" class="dropdown-panel" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
           <div v-for="r in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
             <template v-if="r._kind==='site'">
@@ -1829,7 +1919,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
         </div>
         <!-- Dark mode toggle -->
-        <button @click="darkMode=!darkMode" class="btn btn-outline btn-sm topbar-icon-btn" :aria-label="darkMode?'Tukar ke mod terang':'Tukar ke mod gelap'">{{darkMode?'☀️':'🌙'}}</button>
+        <button @click="darkMode=!darkMode;themeIconSpin=true;setTimeout(()=>themeIconSpin=false,400)" class="btn btn-outline btn-sm topbar-icon-btn" :aria-label="darkMode?'Tukar ke mod terang':'Tukar ke mod gelap'"><span :class="{'theme-icon-spin':themeIconSpin}" style="display:inline-block">{{darkMode?'☀️':'🌙'}}</span></button>
         <button @click="openTutorial" class="btn btn-outline btn-sm topbar-icon-btn" title="Bantuan / Panduan" aria-label="Bantuan / Panduan">❓</button>
         <!-- Log Keluar — mobile only -->
         <div v-if="authUser" class="mobile-logout-btn" style="display:none;align-items:center;gap:6px">
@@ -3121,7 +3211,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('cameras',c._uid)" :title="revealedPw.cameras.has(c._uid)?'Sembunyi':'Papar'">{{revealedPw.cameras.has(c._uid)?'🙈':'👁'}}</button>
+                      <button v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('cameras',c._uid)" :title="revealedPw.cameras.has(c._uid)?'Sembunyi':'Papar'">{{revealedPw.cameras.has(c._uid)?'🙈':'👁'}}</button><button v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(c.accessPw, $event)" title="Salin kata laluan">📋</button>
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('cameras',c)" title="Sejarah PM/CM">🕐</button>
@@ -3208,7 +3298,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('nvr',n._uid)" :title="revealedPw.nvr.has(n._uid)?'Sembunyi':'Papar'">{{revealedPw.nvr.has(n._uid)?'🙈':'👁'}}</button>
+                      <button v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('nvr',n._uid)" :title="revealedPw.nvr.has(n._uid)?'Sembunyi':'Papar'">{{revealedPw.nvr.has(n._uid)?'🙈':'👁'}}</button><button v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(n.accessPw, $event)" title="Salin kata laluan">📋</button>
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('nvr',n)" title="Sejarah PM/CM">🕐</button>
@@ -3364,7 +3454,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('switches',s._uid)" :title="revealedPw.switches.has(s._uid)?'Sembunyi':'Papar'">{{revealedPw.switches.has(s._uid)?'🙈':'👁'}}</button>
+                      <button v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('switches',s._uid)" :title="revealedPw.switches.has(s._uid)?'Sembunyi':'Papar'">{{revealedPw.switches.has(s._uid)?'🙈':'👁'}}</button><button v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(s.accessPw, $event)" title="Salin kata laluan">📋</button>
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('switches',s)" title="Sejarah PM/CM">🕐</button>
@@ -3448,7 +3538,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('alarms',a._uid)" :title="revealedPw.alarms.has(a._uid)?'Sembunyi':'Papar'">{{revealedPw.alarms.has(a._uid)?'🙈':'👁'}}</button>
+                      <button v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('alarms',a._uid)" :title="revealedPw.alarms.has(a._uid)?'Sembunyi':'Papar'">{{revealedPw.alarms.has(a._uid)?'🙈':'👁'}}</button><button v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(a.accessPw, $event)" title="Salin kata laluan">📋</button>
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('alarms',a)" title="Sejarah PM/CM">🕐</button>
@@ -3739,7 +3829,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{m.accessPw ? (revealedPw.misc.has(m._uid) ? m.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('misc',m._uid)" :title="revealedPw.misc.has(m._uid)?'Sembunyi':'Papar'">{{revealedPw.misc.has(m._uid)?'🙈':'👁'}}</button>
+                      <button v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('misc',m._uid)" :title="revealedPw.misc.has(m._uid)?'Sembunyi':'Papar'">{{revealedPw.misc.has(m._uid)?'🙈':'👁'}}</button><button v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(m.accessPw, $event)" title="Salin kata laluan">📋</button>
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('misc',m)" title="Sejarah PM/CM">🕐</button>
@@ -5104,15 +5194,15 @@ details.form-control[open] summary::after{content:'▴'}
           <div v-if="!holidaysForMonth().length" style="text-align:center;color:#aaa;padding:20px;background:#fff;border-radius:10px;border:1px dashed #ddd;font-size:.88rem">
             Tiada cuti umum atau cuti sekolah bulan ini.
           </div>
-          <div v-for="(h,hi) in holidaysForMonth()" :key="hi" style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:6px" :style="h.type==='public'?'background:#fff5f5;border-left:3px solid #e53935':'background:#fffde7;border-left:3px solid #fb8c00'">
+          <div v-for="(h,hi) in holidaysForMonth()" :key="hi" style="display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-radius:8px;margin-bottom:6px" :style="holidayRowStyle(h)">
             <span style="font-size:1rem;flex-shrink:0">{{h.type==='public'?'🔴':'🟠'}}</span>
             <div>
-              <div style="font-weight:600;font-size:.88rem;color:#333">{{h.name}}</div>
-              <div style="font-size:.76rem;color:#777;margin-top:2px">
+              <div style="font-weight:600;font-size:.88rem">{{h.name}}</div>
+              <div style="font-size:.76rem;opacity:.75;margin-top:2px">
                 <span v-if="h.type==='public'">{{fmtDate(h.date)}}</span>
                 <span v-else>{{fmtDate(h.date)}} hingga {{fmtDate(h.endDate)}}</span>
                 &nbsp;·&nbsp;
-                <span :style="h.type==='public'?'color:#b71c1c':'color:#e65100'">{{h.type==='public'?'Cuti Umum':'Cuti Sekolah'}}</span>
+                <span :style="holidayTypeColor(h)">{{h.type==='public'?'Cuti Umum':'Cuti Sekolah'}}</span>
               </div>
             </div>
           </div>
@@ -5268,17 +5358,17 @@ details.form-control[open] summary::after{content:'▴'}
                   </tr></thead>
                   <tbody>
                     <tr v-for="u in allStaff" :key="u.id"
-                      :style="teamModal.data.maintType==='PM'&&teamModalZone&&staffZoneVisits(u.id,teamModalZone)>=ROTATION_LIMIT?'background:#fff5f5':''">
+                      :style="rotationRowStyle(u.id)">
                       <td><input type="checkbox" :value="u.id" v-model="teamModal.selectedUids"></td>
                       <td>{{u.name||u.username}}</td>
                       <td style="font-size:.78rem;color:#888">{{u.role}}</td>
                       <td>
                         <template v-if="teamModal.data.maintType==='PM' && teamModalZone">
-                          <span :style="'padding:1px 7px;border-radius:8px;font-size:.7rem;font-weight:700;'+(staffZoneVisits(u.id,teamModalZone)===0?'background:#e8f5e9;color:#1b5e20':staffZoneVisits(u.id,teamModalZone)===1?'background:#fff8e1;color:#e65100':'background:#ffebee;color:#b71c1c')">
+                          <span :style="zoneVisitBadgeStyle(u.id)">
                             {{staffZoneVisits(u.id,teamModalZone)}}x
                           </span>
                           <span v-if="staffZoneVisits(u.id,teamModalZone)>=ROTATION_LIMIT"
-                            style="font-size:.68rem;color:#b71c1c;font-weight:700;margin-left:4px">⚠ Rotasi</span>
+                            :style="'font-size:.68rem;font-weight:700;margin-left:4px;'+(darkMode?'color:#ff8a80':'color:#b71c1c')">⚠ Rotasi</span>
                         </template>
                       </td>
                     </tr>
@@ -9803,7 +9893,7 @@ createApp({
 
     // Called once after login/app load — offers to resume an unfinished
     // form left over from a session that never reached Submit/Save Draft.
-    function checkPmDraftRecovery() {
+    async function checkPmDraftRecovery() {
       let raw;
       try { raw = localStorage.getItem(PM_DRAFT_KEY); } catch(e) { return; }
       if(!raw) return;
@@ -9829,7 +9919,7 @@ createApp({
       }
       const when = new Date(draft.savedAt).toLocaleString('ms-MY');
       const siteLabel = draft.pm.siteName || draft.pm.refNo || '(site belum dipilih)';
-      if(confirm(`Ada borang PM belum siap dari sesi lepas (${siteLabel}, disimpan ${when}) — kemungkinan tak sempat disubmit sebab sambungan/tab terputus.\n\nNak sambung borang ni semula?`)) {
+      if(await askConfirm(`Ada borang PM belum siap dari sesi lepas (${siteLabel}, disimpan ${when}) — kemungkinan tak sempat disubmit sebab sambungan/tab terputus.\n\nNak sambung borang ni semula?`, {danger:false})) {
         currentProject.value = draft.project || 'cctv';
         Object.assign(pm, draft.pm);
         pmStep.value = draft.pmStep || 1;
@@ -9876,7 +9966,7 @@ createApp({
     // would throw a temporal-dead-zone ReferenceError at setup() time and
     // blank-screen the whole app).
 
-    function checkEquipDraftRecovery() {
+    async function checkEquipDraftRecovery() {
       let raw;
       try { raw = localStorage.getItem(EQUIP_DRAFT_KEY); } catch(e) { return; }
       if(!raw) return;
@@ -9889,7 +9979,7 @@ createApp({
       const site = siteList.find(s => s.id === draft.siteId);
       const siteLabel = site?.name || draft.siteId;
       const when = new Date(draft.savedAt).toLocaleString('ms-MY');
-      if(confirm(`Ada perubahan peralatan belum disimpan untuk site "${siteLabel}" dari sesi lepas (${when}) — kemungkinan tak sempat klik "Simpan" sebelum sambungan/tab terputus.\n\nNak pulihkan perubahan ni?`)) {
+      if(await askConfirm(`Ada perubahan peralatan belum disimpan untuk site "${siteLabel}" dari sesi lepas (${when}) — kemungkinan tak sempat klik "Simpan" sebelum sambungan/tab terputus.\n\nNak pulihkan perubahan ni?`, {danger:false})) {
         currentProject.value = draft.project;
         if(!site) { clearEquipDraftLocal(); return; }
         if(draft.project === 'vir' && (draft.system === 'Optager HD4000' || draft.system === 'VCS')) {
@@ -10127,6 +10217,21 @@ createApp({
         });
       }
       return [...phList, ...shList].sort((a,b) => (a.date||'').localeCompare(b.date||''));
+    }
+    // These 2 were bound via inline :style ternaries (JS string expressions)
+    // rather than a static style="..." attribute — Vue applies a string
+    // :style via el.style.cssText, which the browser then re-serializes
+    // into computed rgb()/spaced form, so the .dark-mode[style*="..."]
+    // attribute-selector trick used for the ~18 STATIC pastel boxes
+    // elsewhere can never match these no matter how it's written. Only a
+    // real JS-level dark/light branch works here.
+    function holidayRowStyle(h) {
+      if(darkMode.value) return h.type==='public' ? 'background:#3d1f1f;border-left:3px solid #e53935' : 'background:#3d3418;border-left:3px solid #fb8c00';
+      return h.type==='public' ? 'background:#fff5f5;border-left:3px solid #e53935' : 'background:#fffde7;border-left:3px solid #fb8c00';
+    }
+    function holidayTypeColor(h) {
+      if(darkMode.value) return h.type==='public' ? 'color:#ff8a80' : 'color:#ffb74d';
+      return h.type==='public' ? 'color:#b71c1c' : 'color:#e65100';
     }
 
     // ---- Team Assignments ----
@@ -10734,7 +10839,7 @@ createApp({
           const names = [...new Set(clashing.flatMap(t => (t.members||[])
             .filter(m => teamModal.selectedUids.includes(m.uid))
             .map(m => `${m.name} (Team ${t.team} — ${t.siteName})`)))];
-          const ok = confirm(`⚠ Staff sudah ditugaskan pada tarikh ini:\n• ${names.join('\n• ')}\n\nTeruskan simpan juga?`);
+          const ok = await askConfirm(`⚠ Staff sudah ditugaskan pada tarikh ini:\n• ${names.join('\n• ')}\n\nTeruskan simpan juga?`);
           if(!ok) return;
         }
       }
@@ -10749,7 +10854,7 @@ createApp({
             .filter(u => u && staffZoneVisits(u.id, zone) >= ROTATION_LIMIT)
             .map(u => u.name||u.username);
           if(dueStaff.length) {
-            const ok = confirm(`⚠ Amaran Rotasi PM — Zon ${zoneName}\n\nStaff berikut telah mencapai had ${ROTATION_LIMIT}x kunjungan PM ke zon ini:\n• ${dueStaff.join('\n• ')}\n\nMereka perlu dirotasi ke zon lain. Teruskan simpan?`);
+            const ok = await askConfirm(`⚠ Amaran Rotasi PM — Zon ${zoneName}\n\nStaff berikut telah mencapai had ${ROTATION_LIMIT}x kunjungan PM ke zon ini:\n• ${dueStaff.join('\n• ')}\n\nMereka perlu dirotasi ke zon lain. Teruskan simpan?`);
             if(!ok) return;
           }
         }
@@ -10972,6 +11077,23 @@ createApp({
 
     // Computed zone for the currently-open team modal's selected site
     const teamModalZone = computed(() => getSiteZone(teamModal.data.siteId));
+    // Same reason as holidayRowStyle/holidayTypeColor above — these were
+    // inline :style JS-string ternaries, which the browser re-serializes on
+    // render (to rgb()/spaced form), so they can't be reached by the
+    // .dark-mode[style*="..."] attribute-selector trick used for the static
+    // pastel boxes elsewhere. Needs an actual JS-level light/dark branch.
+    function rotationRowStyle(uid) {
+      if(!(teamModal.data.maintType==='PM' && teamModalZone.value && staffZoneVisits(uid, teamModalZone.value) >= ROTATION_LIMIT)) return '';
+      return darkMode.value ? 'background:#3d1f1f' : 'background:#fff5f5';
+    }
+    function zoneVisitBadgeStyle(uid) {
+      const visits = staffZoneVisits(uid, teamModalZone.value);
+      const base = 'padding:1px 7px;border-radius:8px;font-size:.7rem;font-weight:700;';
+      if(darkMode.value) {
+        return base + (visits===0 ? 'background:#1a2e1c;color:#81c995' : visits===1 ? 'background:#3d3418;color:#ffb74d' : 'background:#3d1f1f;color:#ff8a80');
+      }
+      return base + (visits===0 ? 'background:#e8f5e9;color:#1b5e20' : visits===1 ? 'background:#fff8e1;color:#e65100' : 'background:#ffebee;color:#b71c1c');
+    }
     // Warns the admin AT SCHEDULING TIME (not just after the fact on the
     // calendar) when the chosen date+site falls on a holiday that's specific
     // to THAT site's state — the whole point being to catch it before the
@@ -11038,7 +11160,7 @@ createApp({
     async function deleteTeam(t) {
       if(!canEditSchedule.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!t?.id) return;
-      if(!confirm('Padam penugasan Team ' + t.team + ' ini?')) return;
+      if(!await askConfirm('Padam penugasan Team ' + t.team + ' ini?')) return;
       try {
         await _fw(db.collection('teamAssignments').doc(t.id).delete());
         teamAssignments.value = teamAssignments.value.filter(x => x.id !== t.id);
@@ -11651,12 +11773,12 @@ createApp({
 
     async function deleteContract(c) {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam kontrak "${c.title}"? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      if(!await askConfirm(`Padam kontrak "${c.title}"? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await _softDeleteToTrash('contracts', 'deletedContracts', c.id);
+        const data = await _softDeleteToTrash('contracts', 'deletedContracts', c.id);
         contracts.value = contracts.value.filter(x => x.id !== c.id);
         await logAudit('CONTRACT_DELETE', c.title);
-        showToast('Kontrak dipindah ke Tong Sampah.');
+        showUndoToast('Kontrak dipindah ke Tong Sampah.', () => _undoSoftDelete('contracts', 'deletedContracts', c.id, data, contracts));
       } catch(e) { showToast('Gagal padam kontrak: ' + e.message, 'error'); }
     }
 
@@ -11972,12 +12094,12 @@ createApp({
     }
     async function deleteWarranty(w) {
       if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      if(!await askConfirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await _softDeleteToTrash('equipmentWarranty', 'deletedEquipmentWarranty', w.id);
+        const data = await _softDeleteToTrash('equipmentWarranty', 'deletedEquipmentWarranty', w.id);
         warranty.value = warranty.value.filter(x => x.id !== w.id);
         await logAudit('WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
-        showToast('Rekod waranti dipindah ke Tong Sampah.');
+        showUndoToast('Rekod waranti dipindah ke Tong Sampah.', () => _undoSoftDelete('equipmentWarranty', 'deletedEquipmentWarranty', w.id, data, warranty));
       } catch(e) { showToast('Gagal padam rekod waranti: ' + e.message, 'error'); }
     }
     // ── Surat & Memo — general correspondence repository, NOT scoped to one
@@ -12092,12 +12214,12 @@ createApp({
     }
     async function deleteLetterMemo(m) {
       if(!canEditLetterMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam rekod surat/memo "${letterMemoCategoryLabel(m.category)}" (${fmtDate(m.letterDate)})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      if(!await askConfirm(`Padam rekod surat/memo "${letterMemoCategoryLabel(m.category)}" (${fmtDate(m.letterDate)})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await _softDeleteToTrash('suratMemo', 'deletedSuratMemo', m.id);
+        const data = await _softDeleteToTrash('suratMemo', 'deletedSuratMemo', m.id);
         letterMemos.value = letterMemos.value.filter(x => x.id !== m.id);
         await logAudit('LETTER_MEMO_DELETE', `${letterMemoCategoryLabel(m.category)} — ${m.letterDate}`);
-        showToast('Rekod surat/memo dipindah ke Tong Sampah.');
+        showUndoToast('Rekod surat/memo dipindah ke Tong Sampah.', () => _undoSoftDelete('suratMemo', 'deletedSuratMemo', m.id, data, letterMemos));
       } catch(e) { showToast('Gagal padam rekod surat/memo: ' + e.message, 'error'); }
     }
 
@@ -12201,18 +12323,18 @@ createApp({
     }
     async function deleteCmCase(k) {
       if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam kes CM "${k.title}" (${k.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      if(!await askConfirm(`Padam kes CM "${k.title}" (${k.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await _softDeleteToTrash('cmCases', 'deletedCmCases', k.id);
+        const data = await _softDeleteToTrash('cmCases', 'deletedCmCases', k.id);
         cmCases.value = cmCases.value.filter(x => x.id !== k.id);
         await logAudit('CM_CASE_DELETE', `${k.title} — ${k.siteName}`);
-        showToast('Kes CM dipindah ke Tong Sampah.');
+        showUndoToast('Kes CM dipindah ke Tong Sampah.', () => _undoSoftDelete('cmCases', 'deletedCmCases', k.id, data, cmCases));
       } catch(e) { showToast('Gagal padam kes CM: ' + e.message, 'error'); }
     }
     async function toggleCmCaseStatus(k) {
       if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const resolving = k.status !== 'selesai';
-      if(!confirm(`Kes CM "${k.title}" — ${resolving ? 'tandakan SELESAI' : 'buka semula (reopen)'}?`)) return;
+      if(!await askConfirm(`Kes CM "${k.title}" — ${resolving ? 'tandakan SELESAI' : 'buka semula (reopen)'}?`)) return;
       loading.value = true;
       try {
         const patch = resolving ? { status:'selesai', resolvedDate:_localDateStr() } : { status:'pending', resolvedDate:'' };
@@ -12309,7 +12431,7 @@ createApp({
       const k = cmCaseDetailCase.value;
       if(!k) return;
       const entry = (k.entries||[]).find(e=>e.id===entryId);
-      if(!entry || !confirm('Padam catatan ini?')) return;
+      if(!entry || !await askConfirm('Padam catatan ini?')) return;
       try {
         await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayRemove(entry) });
         k.entries = (k.entries||[]).filter(e=>e.id!==entryId);
@@ -12556,7 +12678,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function deleteServiceReport(report) {
       const w = serviceReportModal.warranty;
       if(!canEditWarrantyReportFor(serviceReportModal.collection)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam fail servis "${report.name}"?`)) return;
+      if(!await askConfirm(`Padam fail servis "${report.name}"?`)) return;
       try {
         // Firestore arrayRemove FIRST, Storage delete second (was reversed)
         // — if the Storage delete happened first and the Firestore update
@@ -12731,12 +12853,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     async function deleteVirWarranty(w) {
       if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      if(!await askConfirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        await _softDeleteToTrash('virEquipmentWarranty', 'deletedVirEquipmentWarranty', w.id);
+        const data = await _softDeleteToTrash('virEquipmentWarranty', 'deletedVirEquipmentWarranty', w.id);
         virWarranty.value = virWarranty.value.filter(x => x.id !== w.id);
         await logAudit('VIR_WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
-        showToast('Rekod waranti VIR dipindah ke Tong Sampah.');
+        showUndoToast('Rekod waranti VIR dipindah ke Tong Sampah.', () => _undoSoftDelete('virEquipmentWarranty', 'deletedVirEquipmentWarranty', w.id, data, virWarranty));
       } catch(e) { showToast('Gagal padam rekod waranti VIR: ' + e.message, 'error'); }
     }
     // Waranti Peralatan's Excel/Word export temporarily disabled (both CCTV
@@ -13157,7 +13279,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function clearAllCustomModels() {
       if(authProfile.value?.role !== 'superadmin') return;
       const { equipType, project, brand } = customEquipCleanup;
-      if(!brand || !confirm(`Padam SEMUA model custom untuk ${brand} (${project.toUpperCase()})?`)) return;
+      if(!brand || !await askConfirm(`Padam SEMUA model custom untuk ${brand} (${project.toUpperCase()})?`)) return;
       try {
         await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('model__'+equipType+'__'+_safeIdPart(brand)+'__'+project).delete();
         customModels[project][equipType][brand] = [];
@@ -13483,7 +13605,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     async function migrateHanwhaBrandName() {
       if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm('Kemaskini SEMUA rekod CCTV sedia ada yang guna brand "Hanwha (Samsung)" kepada "Hanwha"?\n\nIni akan tulis semula dokumen dalam siteEquipment, equipmentWarranty, dan pmRecords (sejarah lawatan). Tindakan ini TIDAK boleh dibatalkan — pastikan backup terkini wujud sebelum teruskan.')) return;
+      if(!await askConfirm('Kemaskini SEMUA rekod CCTV sedia ada yang guna brand "Hanwha (Samsung)" kepada "Hanwha"?\n\nIni akan tulis semula dokumen dalam siteEquipment, equipmentWarranty, dan pmRecords (sejarah lawatan). Tindakan ini TIDAK boleh dibatalkan — pastikan backup terkini wujud sebelum teruskan.')) return;
       migrateHanwhaModal.running = true; migrateHanwhaModal.done = false;
       let changedDocs = 0, changedItems = 0;
       try {
@@ -13585,7 +13707,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     async function applyRestore(data) {
       const isFull = !!data.full;
-      if(!confirm(`Restore data ini${isFull?' (PENUH — termasuk pengguna, kontrak, contact person, jadual, log audit & senarai custom)':''}? Data semasa akan digantikan.\n\nPastikan anda sudah ada salinan backup terkini sebelum meneruskan.`)) return;
+      if(!await askConfirm(`Restore data ini${isFull?' (PENUH — termasuk pengguna, kontrak, contact person, jadual, log audit & senarai custom)':''}? Data semasa akan digantikan.\n\nPastikan anda sudah ada salinan backup terkini sebelum meneruskan.`)) return;
       loading.value=true;
       try {
         // Auto-backup cloud checkpoint (doAutoBackup()) was removed from the
@@ -13593,7 +13715,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // Firestore document cap it relied on, so the checkpoint failed
         // every time anyway (see the removed function's history). Manual
         // file-download backup (doManualBackup) is now the only backup path
-        // — the confirm() above tells the user to have a recent one ready
+        // — the askConfirm() above tells the user to have a recent one ready
         // instead of silently promising a checkpoint that couldn't succeed.
 
         // Write to Firestore FIRST — only update local state after each commit succeeds
@@ -13790,14 +13912,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const id = singleSiteRestore.siteId;
       const isVir = singleSiteRestore.project === 'vir';
       const site = (isVir ? VIR_SITES : SITES).find(s=>s.id===id);
-      if(!confirm(`Restore data peralatan untuk "${site?.name}" SAHAJA dari fail backup ini?\n\nSite lain langsung tidak disentuh. Data semasa site ini akan digantikan.`)) return;
+      if(!await askConfirm(`Restore data peralatan untuk "${site?.name}" SAHAJA dari fail backup ini?\n\nSite lain langsung tidak disentuh. Data semasa site ini akan digantikan.`)) return;
       loading.value = true;
       try {
         // No auto-backup checkpoint here — the whole auto-backup-to-cloud
         // feature (doAutoBackup) was removed app-wide, since it serialized
         // data into one Firestore document capped at ~880KB and this
         // project's data long ago outgrew that. Manual file-download backup
-        // is the only backup path now; the confirm() above tells the user
+        // is the only backup path now; the askConfirm() above tells the user
         // to have a recent one ready instead.
         if(isVir) {
           const EQUIP_SHAPE_VIR = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
@@ -15026,7 +15148,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     });
     async function deleteAuditLog(log) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm('Padam log audit ini? Tindakan ini tidak boleh dibatalkan.')) return;
+      if(!await askConfirm('Padam log audit ini? Tindakan ini tidak boleh dibatalkan.')) return;
       try {
         await db.collection('auditLogs').doc(log.id).delete();
         auditLogs.value = auditLogs.value.filter(l => l.id !== log.id);
@@ -15055,7 +15177,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(authProfile.value?.role !== 'superadmin') { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const ids = [...auditLogSelected];
       if(!ids.length) return;
-      if(!confirm(`Padam ${ids.length} log audit terpilih? Tindakan ini tidak boleh dibatalkan.`)) return;
+      if(!await askConfirm(`Padam ${ids.length} log audit terpilih? Tindakan ini tidak boleh dibatalkan.`)) return;
       loading.value = true;
       try {
         // Firestore batched writes cap at 500 ops — chunk defensively in
@@ -15307,7 +15429,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!ids.length) { showToast('Tiada kebenaran untuk mengemaskini rekod terpilih.', 'error'); return; }
       if(ids.length < allIds.length) showToast(`${allIds.length - ids.length} rekod dilangkau (bukan rekod anda).`, 'error');
       const statusLabel = bulkCmStatus.value === 'resolved' ? 'Selesai' : bulkCmStatus.value === 'in-progress' ? 'Dalam Proses' : 'Terbuka';
-      if(!confirm(`Kemaskini ${ids.length} rekod CM kepada "${statusLabel}"?`)) return;
+      if(!await askConfirm(`Kemaskini ${ids.length} rekod CM kepada "${statusLabel}"?`)) return;
       loading.value = true;
       try {
         const bulkUpdates = { cmStatus: bulkCmStatus.value };
@@ -15588,6 +15710,53 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const idx = toasts.findIndex(t => t.id === id);
         if(idx > -1) toasts.splice(idx, 1);
       }, 3000);
+    }
+    // Toast with an inline "↩️ Undo" action — used right after a soft-delete
+    // (move to Tong Sampah), so the user doesn't have to navigate to the
+    // Trash page and restore manually for a delete they change their mind
+    // about seconds later. Longer-lived than a normal toast (6s, not 3s)
+    // since deciding whether to undo takes a moment longer than just reading
+    // a message. undoFn is called with no re-confirmation — see
+    // _undoSoftDelete's own comment for why.
+    function showUndoToast(msg, undoFn) {
+      const id = ++_toastIdSeq;
+      toasts.push({ id, msg, type:'success', undoFn });
+      setTimeout(() => {
+        const idx = toasts.findIndex(t => t.id === id);
+        if(idx > -1) toasts.splice(idx, 1);
+      }, 6000);
+    }
+    async function runToastUndo(t) {
+      const idx = toasts.findIndex(x => x.id === t.id);
+      if(idx > -1) toasts.splice(idx, 1);
+      try {
+        await t.undoFn();
+        showToast('Dipulihkan!');
+      } catch(e) { showToast('Gagal memulihkan: ' + e.message, 'error'); }
+    }
+
+    // Custom confirm dialog — replaces the browser's native confirm(), which
+    // can't be styled/animated and looks jarringly out of place next to
+    // everything else in this app (unstyled OS-native popup, inconsistent
+    // across browsers, blocks the JS thread synchronously). Promise-based so
+    // every call site just does `if(!(await askConfirm('...'))) return;`,
+    // the same shape as the old `if(!confirm('...')) return;` it replaces —
+    // callers just need to be (or become) async functions.
+    const confirmModal = reactive({ show:false, message:'', title:'Sahkan Tindakan', danger:true, _resolve:null });
+    function askConfirm(message, opts = {}) {
+      return new Promise(resolve => {
+        confirmModal.message = message;
+        confirmModal.title = opts.title || 'Sahkan Tindakan';
+        confirmModal.danger = opts.danger !== false;
+        confirmModal._resolve = resolve;
+        confirmModal.show = true;
+      });
+    }
+    function respondConfirmModal(result) {
+      confirmModal.show = false;
+      const resolve = confirmModal._resolve;
+      confirmModal._resolve = null;
+      if(resolve) resolve(result);
     }
 
     // Small celebratory burst shown once a site hits its full annual PM
@@ -16018,8 +16187,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // User-initiated logout only — asks for confirmation first. Auto-logout
     // (session idle timeout) calls doLogout() directly and must NOT prompt,
     // since the user isn't around to answer a confirm dialog.
-    function confirmLogout() {
-      if(confirm('Adakah anda pasti untuk keluar?')) doLogout();
+    async function confirmLogout() {
+      if(await askConfirm('Adakah anda pasti untuk keluar?', {danger:false})) doLogout();
     }
 
     async function doLogout() {
@@ -17630,7 +17799,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     async function deleteKontraktor(id, itemProj) {
       if(!canEditKontraktor.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm('Padam kontraktor ini?')) return;
+      if(!await askConfirm('Padam kontraktor ini?')) return;
       // itemProj comes from the row's own tag (_kProj) when deleting from
       // the combined "Semua" view — falls back to the active tab otherwise,
       // same reasoning as openKModal()/kModal.proj above.
@@ -17729,7 +17898,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // (superadmin-only delete on users/{userId}).
       if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(u.role==='superadmin'){ showToast('Tidak boleh padam akaun Superadmin.','error'); return; }
-      if(!confirm(`Padam pengguna @${u.username}? Tindakan ini tidak boleh dibatalkan.`)) return;
+      if(!await askConfirm(`Padam pengguna @${u.username}? Tindakan ini tidak boleh dibatalkan.`)) return;
       try {
         await db.collection('users').doc(u.id).delete();
         allUsers.value = allUsers.value.filter(x=>x.id!==u.id);
@@ -18226,6 +18395,26 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!uid) return;
       revealedPw[kind].has(uid) ? revealedPw[kind].delete(uid) : revealedPw[kind].add(uid);
     }
+    // Generic copy-to-clipboard for any value shown in the UI that a staff
+    // member would otherwise have to manually select+copy (passwords, IPs,
+    // ref numbers) — swaps the clicked button's own icon to a checkmark
+    // briefly as feedback, same idea as the save-checkmark elsewhere, then
+    // restores it. Button DOM is mutated directly (not via a Vue ref) since
+    // this is a one-off, purely cosmetic click reaction with no state that
+    // needs to survive a re-render.
+    async function copyToClipboard(text, evt) {
+      if(!text) return;
+      try {
+        await navigator.clipboard.writeText(String(text));
+        const btn = evt?.currentTarget;
+        if(btn) {
+          const original = btn.textContent;
+          btn.textContent = '✓';
+          btn.classList.add('copy-btn-done');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copy-btn-done'); }, 1200);
+        }
+      } catch(e) { showToast('Gagal salin ke clipboard: ' + e.message, 'error'); }
+    }
     function toggleEquipRow(kind, uid) {
       if(!uid) return;
       equipSelected[kind].has(uid) ? equipSelected[kind].delete(uid) : equipSelected[kind].add(uid);
@@ -18258,10 +18447,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(isEquipGroupAllSelected(kind, items)) items.forEach(it => equipSelected[kind].delete(it._uid));
       else items.forEach(it => equipSelected[kind].add(it._uid));
     }
-    function bulkDeleteEquip(kind) {
+    async function bulkDeleteEquip(kind) {
       const sel = equipSelected[kind];
       if(!sel.size) return;
-      if(!confirm(`Padam ${sel.size} rekod terpilih?`)) return;
+      if(!(await askConfirm(`Padam ${sel.size} rekod terpilih?`))) return;
       const list = activeEquip()[selSite.value.id][kind];
       const editedUid = equipEditIdx[kind]!==null ? (list[equipEditIdx[kind]]||{})._uid : null;
       for(let i=list.length-1; i>=0; i--) { if(sel.has(list[i]._uid)) list.splice(i,1); }
@@ -18752,7 +18941,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // it runs — no brand/model/serial), so this skips the shared
     // brand/model dedupe machinery and just checks for a duplicate room
     // name within the same site.
-    function addVirRoom() {
+    async function addVirRoom() {
       if(!nRoom.name){ showToast('Sila pilih nama bilik', 'error'); return; }
       const resolvedName = _resolveDropdownCustom(nRoom.name, nRoom.nameCustom);
       if(!resolvedName.trim()){ showToast('Sila nyatakan nama bilik', 'error'); return; }
@@ -18772,7 +18961,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // exists in Firestore. Warn first, then migrate it to the
         // 'legacyUnassigned' bucket so it stays reachable/reviewable.
         if(existing.system === 'Optager HD4000' && resolved.system !== 'Optager HD4000' && _roomHasOptagerEquipment(selSite.value.id, roomUid)) {
-          if(!confirm(`Bilik "${existing.name}" masih ada peralatan Optager HD4000 direkodkan (kamera/server/dll). Menukar sistem bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan?`)) {
+          if(!(await askConfirm(`Bilik "${existing.name}" masih ada peralatan Optager HD4000 direkodkan (kamera/server/dll). Menukar sistem bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan?`))) {
             return;
           }
           _migrateOptagerRoomToUnassigned(selSite.value.id, roomUid);
@@ -18780,7 +18969,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // Same re-tagging-away-loses-reachability risk as Optager above,
         // parallel check for VCS (its own separate room-scoped store).
         if(existing.system === 'VCS' && resolved.system !== 'VCS' && _roomHasVcsEquipment(selSite.value.id, roomUid)) {
-          if(!confirm(`Bilik "${existing.name}" masih ada peralatan VCS direkodkan (kamera/server/dll). Menukar sistem bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan?`)) {
+          if(!(await askConfirm(`Bilik "${existing.name}" masih ada peralatan VCS direkodkan (kamera/server/dll). Menukar sistem bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan?`))) {
             return;
           }
           _migrateVcsRoomToUnassigned(selSite.value.id, roomUid);
@@ -18973,7 +19162,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       a.download = item.controlAppLicenseFile.name || 'vir-control-app-license.lic';
       a.click();
     }
-    function removeItem(siteId, key, idx) {
+    async function removeItem(siteId, key, idx) {
       // Deleting a room that still has recorded Optager equipment under its
       // uid would otherwise orphan that equipment forever — the room
       // picker only ever lists rooms currently present in
@@ -18986,17 +19175,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(key === 'rooms') {
         const room = virSiteEquip.value[siteId]?.rooms?.[idx];
         if(room?.system === 'Optager HD4000' && _roomHasOptagerEquipment(siteId, room._uid)) {
-          if(!confirm(`Bilik "${room.name}" masih ada peralatan Optager HD4000 direkodkan (kamera/server/dll). Memadam bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan padam bilik ini?`)) {
+          if(!(await askConfirm(`Bilik "${room.name}" masih ada peralatan Optager HD4000 direkodkan (kamera/server/dll). Memadam bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan padam bilik ini?`))) {
             return;
           }
           _migrateOptagerRoomToUnassigned(siteId, room._uid);
         } else if(room?.system === 'VCS' && _roomHasVcsEquipment(siteId, room._uid)) {
           // Same orphan-equipment risk as Optager above, parallel check for VCS.
-          if(!confirm(`Bilik "${room.name}" masih ada peralatan VCS direkodkan (kamera/server/dll). Memadam bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan padam bilik ini?`)) {
+          if(!(await askConfirm(`Bilik "${room.name}" masih ada peralatan VCS direkodkan (kamera/server/dll). Memadam bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan padam bilik ini?`))) {
             return;
           }
           _migrateVcsRoomToUnassigned(siteId, room._uid);
-        } else if(!confirm('Padam rekod ini?')) return;
+        } else if(!(await askConfirm('Padam rekod ini?'))) return;
         const list = virSiteEquip.value[siteId].rooms;
         const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
         list.splice(idx,1);
@@ -19287,7 +19476,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // marked "Tidak Baik" (or VIR's "nok") with an empty Nota, since a
     // record like that later shows up in Laporan/Analisis Kegagalan with no
     // explanation of what was actually wrong. Returns a list of short
-    // labels for the confirm() prompt in savePM(); an empty list means
+    // labels for the askConfirm() prompt in savePM(); an empty list means
     // nothing to nudge about.
     function _pmNudgeIssues() {
       const issues = [];
@@ -19328,7 +19517,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const nudgeIssues = _pmNudgeIssues();
         if(nudgeIssues.length) {
           const preview = nudgeIssues.slice(0,5).join(', ') + (nudgeIssues.length>5 ? `, dan ${nudgeIssues.length-5} lagi` : '');
-          if(!confirm(`${nudgeIssues.length} item ditanda "Tidak Baik" tanpa nota:\n${preview}\n\nTeruskan submit tanpa nota?`)) return;
+          if(!await askConfirm(`${nudgeIssues.length} item ditanda "Tidak Baik" tanpa nota:\n${preview}\n\nTeruskan submit tanpa nota?`)) return;
         }
       }
       loading.value=true;
@@ -19609,11 +19798,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // data is lost — wording differs for edit vs brand-new so it's clear
     // whether they're discarding fresh input or unsaved changes to an
     // already-submitted record.
-    function cancelPmForm() {
+    async function cancelPmForm() {
       const msg = pm._isEdit
         ? 'Batal edit borang ini? Sebarang perubahan yang belum disimpan akan hilang.'
         : 'Batal borang ini? Data yang telah dimasukkan akan hilang.';
-      if(!confirm(msg)) return;
+      if(!(await askConfirm(msg))) return;
       clearPmDraftLocal();
       const wasEdit = pm._isEdit;
       const originalId = pm._draftId;
@@ -19691,26 +19880,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function deleteRecord(id) {
       const rec = pmRecords.value.find(r=>r.id===id);
       if(rec && !canEditPmRecord(rec)){ showToast('Anda tiada kebenaran untuk memadam rekod ini.','error'); return; }
-      if(!confirm(`Padam rekod PM ini? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      if(!await askConfirm(`Padam rekod PM ini? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       try {
-        const snap = await db.collection('pmRecords').doc(id).get();
-        // Batched so the move-to-trash write and the live-record delete
-        // either both land or neither does — sequential awaits here would
-        // risk the record existing in BOTH pmRecords and deletedPmRecords if
-        // the first succeeded and the second failed mid-operation.
-        const batch = db.batch();
-        if(snap.exists) {
-          batch.set(db.collection('deletedPmRecords').doc(id), {
-            ...snap.data(),
-            deletedAt: firebase.firestore.FieldValue.serverTimestamp(),
-            deletedBy: authUser.value?.email || '',
-          });
-        }
-        batch.delete(db.collection('pmRecords').doc(id));
-        await _fw(batch.commit());
+        const data = await _softDeleteToTrash('pmRecords', 'deletedPmRecords', id);
         pmRecords.value = pmRecords.value.filter(r=>r.id!==id);
         await logAudit('BORANG_DELETE', rec?.refNo||id);
-        showToast('Rekod dipindah ke Tong Sampah.');
+        showUndoToast('Rekod dipindah ke Tong Sampah.', () => _undoSoftDelete('pmRecords', 'deletedPmRecords', id, data, pmRecords));
         if(page.value==='pm-view') page.value='pm-list';
       } catch(e) { showToast('Gagal padam rekod: ' + e.message, 'error'); }
     }
@@ -19762,7 +19937,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan rekod.', 'error'); return; }
       const rec = trashedPmRecords.value.find(r=>r.id===id);
       if(!rec) return;
-      if(!confirm(`Pulihkan rekod "${rec.refNo||id}"?`)) return;
+      if(!await askConfirm(`Pulihkan rekod "${rec.refNo||id}"?`)) return;
       try {
         const { deletedAt, deletedBy, id:_id, ...data } = rec;
         const batch = db.batch();
@@ -19784,7 +19959,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function permanentlyDeleteRecord(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
       const rec = trashedPmRecords.value.find(r=>r.id===id);
-      if(!confirm(`Padam KEKAL rekod "${rec?.refNo||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      if(!await askConfirm(`Padam KEKAL rekod "${rec?.refNo||id}"? Tindakan ini tidak boleh diundur.`)) return;
       try {
         await _fw(db.collection('deletedPmRecords').doc(id).delete());
         trashedPmRecords.value = trashedPmRecords.value.filter(r=>r.id!==id);
@@ -19814,6 +19989,24 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
       batch.delete(db.collection(collection).doc(id));
       await _fw(batch.commit());
+      // Returned so callers can offer an immediate "Undo" toast action
+      // without depending on the Tong Sampah page's own trashed-list cache
+      // (which is usually empty — only populated once that page is opened).
+      return snap.exists ? snap.data() : null;
+    }
+    // Direct counterpart to _softDeleteToTrash — restores from the exact
+    // data captured at delete time rather than looking the record up in a
+    // trashedX list (which, right after a delete, hasn't been loaded this
+    // session). Deliberately skips askConfirm(): undoing is itself the
+    // "are you sure" moment — a SECOND confirmation on top of the toast's
+    // few-second window would defeat the point of a quick undo.
+    async function _undoSoftDelete(collection, deletedCollection, id, data, localArray) {
+      if(!data) return;
+      const batch = db.batch();
+      batch.set(db.collection(collection).doc(id), data);
+      batch.delete(db.collection(deletedCollection).doc(id));
+      await _fw(batch.commit());
+      if(localArray && !localArray.value.some(r => r.id === id)) localArray.value.unshift({ id, ...data });
     }
     async function _restoreFromTrash(deletedCollection, collection, id, list) {
       const rec = list.value.find(r=>r.id===id);
@@ -19853,7 +20046,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function restoreTrashContract(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
       const rec = trashedContracts.value.find(r=>r.id===id);
-      if(!rec || !confirm(`Pulihkan kontrak "${rec.title||id}"?`)) return;
+      if(!rec || !await askConfirm(`Pulihkan kontrak "${rec.title||id}"?`)) return;
       try {
         const data = await _restoreFromTrash('deletedContracts', 'contracts', id, trashedContracts);
         if(data) _localUpsert(contracts, id, data, (a,b) => (a.endDate||'').localeCompare(b.endDate||''));
@@ -19864,7 +20057,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function purgeTrashContract(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
       const rec = trashedContracts.value.find(r=>r.id===id);
-      if(!confirm(`Padam KEKAL kontrak "${rec?.title||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      if(!await askConfirm(`Padam KEKAL kontrak "${rec?.title||id}"? Tindakan ini tidak boleh diundur.`)) return;
       try {
         await _permanentlyDeleteFromTrash('deletedContracts', id, trashedContracts);
         await logAudit('CONTRACT_PURGE', rec?.title||id);
@@ -19885,7 +20078,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function restoreTrashWarranty(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
       const rec = trashedWarranty.value.find(r=>r.id===id);
-      if(!rec || !confirm(`Pulihkan waranti "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
+      if(!rec || !await askConfirm(`Pulihkan waranti "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
       try {
         const data = await _restoreFromTrash('deletedEquipmentWarranty', 'equipmentWarranty', id, trashedWarranty);
         if(data) _localUpsert(warranty, id, data, (a,b) => (a.endDate||'').localeCompare(b.endDate||''));
@@ -19896,7 +20089,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function purgeTrashWarranty(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
       const rec = trashedWarranty.value.find(r=>r.id===id);
-      if(!confirm(`Padam KEKAL waranti "${rec?.equipmentName||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      if(!await askConfirm(`Padam KEKAL waranti "${rec?.equipmentName||id}"? Tindakan ini tidak boleh diundur.`)) return;
       try {
         await _permanentlyDeleteFromTrash('deletedEquipmentWarranty', id, trashedWarranty);
         await logAudit('WARRANTY_PURGE', rec?.equipmentName||id);
@@ -19917,7 +20110,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function restoreTrashVirWarranty(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
       const rec = trashedVirWarranty.value.find(r=>r.id===id);
-      if(!rec || !confirm(`Pulihkan waranti VIR "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
+      if(!rec || !await askConfirm(`Pulihkan waranti VIR "${rec.equipmentName||id}" (${rec.siteName||'-'})?`)) return;
       try {
         const data = await _restoreFromTrash('deletedVirEquipmentWarranty', 'virEquipmentWarranty', id, trashedVirWarranty);
         if(data) _localUpsert(virWarranty, id, data, (a,b) => (a.endDate||'').localeCompare(b.endDate||''));
@@ -19928,7 +20121,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function purgeTrashVirWarranty(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
       const rec = trashedVirWarranty.value.find(r=>r.id===id);
-      if(!confirm(`Padam KEKAL waranti VIR "${rec?.equipmentName||id}"? Tindakan ini tidak boleh diundur.`)) return;
+      if(!await askConfirm(`Padam KEKAL waranti VIR "${rec?.equipmentName||id}"? Tindakan ini tidak boleh diundur.`)) return;
       try {
         await _permanentlyDeleteFromTrash('deletedVirEquipmentWarranty', id, trashedVirWarranty);
         await logAudit('VIR_WARRANTY_PURGE', rec?.equipmentName||id);
@@ -19949,7 +20142,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function restoreTrashSuratMemo(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
       const rec = trashedSuratMemo.value.find(r=>r.id===id);
-      if(!rec || !confirm(`Pulihkan surat/memo "${letterMemoCategoryLabel(rec.category)}" (${fmtDate(rec.letterDate)})?`)) return;
+      if(!rec || !await askConfirm(`Pulihkan surat/memo "${letterMemoCategoryLabel(rec.category)}" (${fmtDate(rec.letterDate)})?`)) return;
       try {
         const data = await _restoreFromTrash('deletedSuratMemo', 'suratMemo', id, trashedSuratMemo);
         if(data) _localUpsert(letterMemos, id, data, (a,b) => (b.letterDate||'').localeCompare(a.letterDate||''));
@@ -19961,7 +20154,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
       const rec = trashedSuratMemo.value.find(r=>r.id===id);
       const recLabel = rec ? letterMemoCategoryLabel(rec.category) : id;
-      if(!confirm(`Padam KEKAL surat/memo "${recLabel}"? Tindakan ini tidak boleh diundur.`)) return;
+      if(!await askConfirm(`Padam KEKAL surat/memo "${recLabel}"? Tindakan ini tidak boleh diundur.`)) return;
       try {
         await _permanentlyDeleteFromTrash('deletedSuratMemo', id, trashedSuratMemo);
         await logAudit('LETTER_MEMO_PURGE', recLabel);
@@ -19982,7 +20175,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function restoreTrashCmCases(id) {
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan.', 'error'); return; }
       const rec = trashedCmCases.value.find(r=>r.id===id);
-      if(!rec || !confirm(`Pulihkan kes CM "${rec.title}" (${rec.siteName})?`)) return;
+      if(!rec || !await askConfirm(`Pulihkan kes CM "${rec.title}" (${rec.siteName})?`)) return;
       try {
         const data = await _restoreFromTrash('deletedCmCases', 'cmCases', id, trashedCmCases);
         if(data) _localUpsert(cmCases, id, data, (a,b) => (b.openedDate||'').localeCompare(a.openedDate||''));
@@ -19994,7 +20187,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memadam kekal.', 'error'); return; }
       const rec = trashedCmCases.value.find(r=>r.id===id);
       const recLabel = rec ? rec.title : id;
-      if(!confirm(`Padam KEKAL kes CM "${recLabel}"? Tindakan ini tidak boleh diundur.`)) return;
+      if(!await askConfirm(`Padam KEKAL kes CM "${recLabel}"? Tindakan ini tidak boleh diundur.`)) return;
       try {
         await _permanentlyDeleteFromTrash('deletedCmCases', id, trashedCmCases);
         await logAudit('CM_CASE_PURGE', recLabel);
@@ -22374,7 +22567,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     }));
     async function deleteEquipmentRemovalLog(log) {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
-      if(!confirm(`Padam log "${log.itemName}" (${log.siteName})? Tindakan ini tidak boleh dibatalkan.`)) return;
+      if(!await askConfirm(`Padam log "${log.itemName}" (${log.siteName})? Tindakan ini tidak boleh dibatalkan.`)) return;
       try {
         await db.collection('equipmentRemovalLog').doc(log.id).delete();
         equipmentRemovalLogs.value = equipmentRemovalLogs.value.filter(l => l.id !== log.id);
@@ -22658,6 +22851,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
     // ── Feature 8: Dark Mode ──
     const darkMode = ref(localStorage.getItem('pm_darkmode')==='1');
+    const themeIconSpin = ref(false);
     document.body.classList.toggle('dark-mode', darkMode.value);
     watch(darkMode, val => {
       document.body.classList.toggle('dark-mode', val);
@@ -22734,8 +22928,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             } catch(e) { console.warn('Profile load error:', e); }
             await loadAll();
             loadCustomEquipmentOptions();
-            checkPmDraftRecovery();
-            checkEquipDraftRecovery();
+            // Sequenced with await now that these use the custom askConfirm()
+            // modal — that modal is a single shared piece of state, so firing
+            // both checks concurrently (no await) would let the SECOND
+            // question silently overwrite the FIRST one's still-open dialog
+            // before the user ever got to answer it (the first askConfirm()
+            // call would then hang forever, its promise never resolved).
+            // Native confirm() never had this problem since it blocked the
+            // whole JS thread until dismissed, serializing these for free.
+            await checkPmDraftRecovery();
+            await checkEquipDraftRecovery();
             restoreLastPage();
             // Eager (not just on nav-click) — warrantyExpiringCount's nav
             // badge and the "Perlu Perhatian Hari Ini" dashboard widget both
@@ -22795,9 +22997,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
       openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
+      rotationRowStyle, zoneVisitBadgeStyle,
       teamModalStateHoliday, assignmentStateHoliday, stateHolidaysForDay,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
-      publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday,
+      publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday, holidayRowStyle, holidayTypeColor,
       fmtDate, fmtDateDash, cctvSystemBrands,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
@@ -22894,7 +23097,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       kontraktorLuar, kontraktorLuarLoading, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
       mobileNavOpen, sidebarIndicatorStyle, savedCheckmark, ptrState, showScrollTop, scrollToTop, topbarCompact,
-      darkMode,
+      confirmModal, askConfirm, respondConfirmModal, copyToClipboard, runToastUndo,
+      darkMode, themeIconSpin,
       setTimeout
     };
   }
