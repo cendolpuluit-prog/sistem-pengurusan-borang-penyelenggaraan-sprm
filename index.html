@@ -32,6 +32,13 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
+/* Hides the whole app (via [v-cloak] on #app below) until Vue actually
+   mounts — without this, the browser parses/paints the raw HTML (incl.
+   v-if blocks like the confirm-modal overlay) BEFORE Vue's JS has run,
+   so unevaluated "{{ }}" mustache text flashes visibly. Worse/longer on
+   a hard refresh (Ctrl+Shift+R) since that also re-fetches the Vue/
+   Firebase CDN scripts instead of serving them from cache. */
+[v-cloak]{display:none!important}
 *{box-sizing:border-box;margin:0;padding:0}
 /* CUSTOM SCROLLBAR — thin, brand-navy/green instead of the default OS
    scrollbar, applied globally so every scroll area in the app (sidebar
@@ -1502,7 +1509,7 @@ details.form-control[open] summary::after{content:'▴'}
 </style>
 </head>
 <body>
-<div id="app">
+<div id="app" v-cloak>
 
 <!-- TOP LOADING BAR -->
 <div v-if="loading" class="top-loading-bar" aria-hidden="true"></div>
@@ -16269,6 +16276,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       bellNewPop.value = false;
       trashedPmRecords.value = []; trashedContracts.value = []; trashedWarranty.value = [];
       trashedVirWarranty.value = []; trashedSuratMemo.value = []; trashedCmCases.value = [];
+      // Same shared/kiosk-device leak class as the resets above, missed
+      // here — revealedPw tracks which equipment passwords are currently
+      // UNMASKED on screen (see togglePwReveal/_finishOpenSiteEquipPage's
+      // own clear on site-equip page entry). Without this, logging out
+      // straight from a site-equip page with a password revealed leaves
+      // that _uid's mask state sitting in memory across the auth boundary.
+      EQUIP_KINDS.forEach(k => revealedPw[k]?.clear());
       // PM_DRAFT_KEY/EQUIP_DRAFT_KEY are plain global localStorage keys, not
       // scoped per-user — on a shared/kiosk device, a next person logging in
       // would otherwise get prompted to recover THIS session's unsaved PM
