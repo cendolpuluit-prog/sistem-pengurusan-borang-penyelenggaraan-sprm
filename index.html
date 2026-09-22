@@ -6691,18 +6691,19 @@ details.form-control[open] summary::after{content:'▴'}
           <div style="font-weight:700;font-size:.88rem;color:#003366;margin-bottom:12px">📄 Senarai Rekod ({{laporanFiltered.length}})</div>
           <div class="tbl-wrap">
             <table>
-              <thead><tr><th>#</th><th>No. Rujukan</th><th>Site</th><th>Tarikh</th><th>Jenis</th><th>Projek</th><th>Status</th></tr></thead>
+              <thead><tr><th>#</th><th>No. Rujukan</th><th>Site</th><th>Bilik</th><th>Tarikh</th><th>Jenis</th><th>Projek</th><th>Status</th></tr></thead>
               <tbody>
                 <tr v-for="(r,i) in laporanFiltered" :key="r.id">
                   <td>{{i+1}}</td>
                   <td><b>{{r.refNo||'—'}}</b></td>
                   <td>{{r.siteName}}</td>
+                  <td>{{r.virRoomNo||'—'}}</td>
                   <td>{{r.visitDate?fmtDateDash(r.visitDate):((r.month?MONTHS[r.month-1]:'—')+' '+r.year)}}</td>
                   <td><span :style="'padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700;background:'+(r.maintType==='CM'?'#ffebee':'#e8f5e9')+';color:'+(r.maintType==='CM'?'#b71c1c':'#1b5e20')">{{r.maintType||'PM'}}</span></td>
                   <td>{{(r.project||'cctv').toUpperCase()}}</td>
                   <td><span :class="'badge badge-'+(r.status==='submitted'?'green':'gray')">{{r.status==='submitted'?'Submitted':'Draft'}}</span></td>
                 </tr>
-                <tr v-if="!laporanFiltered.length"><td colspan="7" style="text-align:center;color:#aaa;padding:24px">Tiada rekod untuk tempoh/filter ini.</td></tr>
+                <tr v-if="!laporanFiltered.length"><td colspan="8" style="text-align:center;color:#aaa;padding:24px">Tiada rekod untuk tempoh/filter ini.</td></tr>
               </tbody>
             </table>
           </div>
@@ -6732,6 +6733,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr>
                   <th>#</th>
                   <th>Site</th>
+                  <th>Bilik</th>
                   <th style="width:60px;text-align:center">Projek</th>
                   <th>Tarikh</th>
                   <th>Jenis</th>
@@ -6744,6 +6746,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="(row,i) in laporanNotaItems" :key="i">
                   <td style="color:#999;font-size:.8rem">{{i+1}}</td>
                   <td style="font-size:.82rem">{{row.siteName}}</td>
+                  <td style="font-size:.82rem">{{row.virRoomNo||'—'}}</td>
                   <td style="text-align:center"><span :class="['proj-badge', row.project==='vir'?'proj-vir':'proj-cctv']" style="font-size:.68rem;padding:2px 7px">{{row.project==='vir'?'VIR':'CCTV'}}</span></td>
                   <td style="font-size:.82rem;white-space:nowrap">{{row.visitDate}}</td>
                   <td><span :style="'padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;background:'+(row.maintType==='CM'?'#ffebee':'#e8f5e9')+';color:'+(row.maintType==='CM'?'#b71c1c':'#1b5e20')">{{row.maintType}}</span></td>
@@ -13746,7 +13749,20 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const EQUIP_SHAPE_VIR  = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
         const restoredSiteEquip = {};
         const restoredVirRooms = {}, restoredVirBcd = {}, restoredVirOptager = {}, restoredVirVcs = {};
-        const batch = db.batch();
+        // Chunked the same way _batchRestoreCollection below already does
+        // (Firestore's 500-ops-per-batch cap) — this was a single unchunked
+        // batch (2 ops per CCTV site + 2 per VIR site). Safe today at this
+        // system's actual site count, but had zero margin: unlike every
+        // other bulk-write path in this function, growing past ~250
+        // combined sites would silently fail the ENTIRE restore with no
+        // chunking to fall back on.
+        const _pendingBatches = [];
+        let batch = db.batch();
+        let _batchOps = 0;
+        function _batchSetChunked(...args) {
+          batch.set(...args);
+          if(++_batchOps >= 450) { _pendingBatches.push(batch); batch = db.batch(); _batchOps = 0; }
+        }
         if(data.siteEquip) {
           Object.entries(data.siteEquip).forEach(([id,val])=>{
             const merged = {...EQUIP_SHAPE_CCTV, ...val};
@@ -13755,8 +13771,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             // — only the Firestore write is split into the two collections.
             restoredSiteEquip[id] = merged;
             const { stripped, creds } = _splitCredentials(merged);
-            batch.set(db.collection('siteEquipment').doc(id), stripped);
-            batch.set(db.collection('siteEquipmentCredentials').doc(id), creds);
+            _batchSetChunked(db.collection('siteEquipment').doc(id), stripped);
+            _batchSetChunked(db.collection('siteEquipmentCredentials').doc(id), creds);
           });
         }
         // VIR's rooms + BCD + Optager all live in the SAME Firestore doc
@@ -13786,11 +13802,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             const bcdSplit = _splitCredentials(bcd);
             const optagerSplit = _splitOptagerByRoom(optager);
             const vcsSplit = _splitVcsByRoom(vcs);
-            batch.set(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped }, { merge: true });
-            batch.set(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds }, { merge: true });
+            _batchSetChunked(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped }, { merge: true });
+            _batchSetChunked(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds }, { merge: true });
           });
         }
-        await _fw(batch.commit());
+        _pendingBatches.push(batch);
+        for(const b of _pendingBatches) await _fw(b.commit());
         // Any equipment edit-in-place in progress (equipEditIdx holds an
         // array INDEX into siteEquip/virSiteEquip) is about to be replaced
         // wholesale by the restored data below — unlike a re-sort, where the
@@ -16292,6 +16309,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       page.value='dashboard';
       if (wipe) {
         await nextTick();
+        // The login page's own .login-card-anim entrance (loginCardIn, .6s —
+        // see its @keyframes) starts ticking the moment the DOM above swaps
+        // to the login page, i.e. right now. Without this wait, the wipe's
+        // own fade-out (550ms) would run concurrently with that .6s
+        // animation, so the still-transparent-ing wipe reveals a login card
+        // (and the Daya One logo inside it) still visibly fading/sliding
+        // in — the "logo appears late" effect. Holding the wipe fully solid
+        // until the card animation has finished, THEN starting the wipe's
+        // own fade, reveals an already-settled login page instead — only
+        // one transition visible at a time. (If loginCardIn's duration in
+        // the CSS above ever changes, update this to match.)
+        await new Promise(r => setTimeout(r, 600));
         wipe.classList.add('logout-wipe-fadeout');
         if (wipeMsg) wipeMsg.classList.add('logout-wipe-fadeout');
         setTimeout(() => { wipe.remove(); if (wipeMsg) wipeMsg.remove(); }, 550);
@@ -19272,6 +19301,40 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           removedBy: authUser.value?.email || '',
         });
       } catch(e) { console.warn('Gagal log penyingkiran peralatan:', e); }
+      // Cross-reference against equipmentWarranty/virEquipmentWarranty by
+      // serial+site — without this, a warranty record for equipment that's
+      // now gone stays "active" forever, still counted in the dashboard's
+      // expiring-soon badge for hardware that no longer exists. Soft-delete
+      // (not hard-delete) via the SAME trash mechanism deleteWarranty/
+      // deleteVirWarranty already use, so vendor/purchase-date history
+      // isn't lost — reusing showUndoToast/_undoSoftDelete too, matching
+      // that exact existing pattern instead of a new confirm() prompt.
+      // Gated behind canEditWarranty/canEditVirWarranty specifically
+      // because canEditEquip (which already gated getting this far) also
+      // covers plain 'staff', while warranty editing does not — silently
+      // archiving a warranty record for a role that can't otherwise touch
+      // Waranti Peralatan would bypass that boundary. Surfaces an
+      // informational toast instead in that case so it's still not silent.
+      if(itemSnapshot.serial) {
+        const isVirWty = currentProject.value === 'vir';
+        const warrantyList = isVirWty ? virWarranty.value : warranty.value;
+        const match = warrantyList.find(w => w.serial && w.serial === itemSnapshot.serial && w.siteId === siteId);
+        if(match) {
+          if(isVirWty ? canEditVirWarranty.value : canEditWarranty.value) {
+            try {
+              const coll = isVirWty ? 'virEquipmentWarranty' : 'equipmentWarranty';
+              const delColl = isVirWty ? 'deletedVirEquipmentWarranty' : 'deletedEquipmentWarranty';
+              const localRef = isVirWty ? virWarranty : warranty;
+              const data = await _softDeleteToTrash(coll, delColl, match.id);
+              localRef.value = localRef.value.filter(x => x.id !== match.id);
+              await logAudit(isVirWty ? 'VIR_WARRANTY_DELETE' : 'WARRANTY_DELETE', `${match.equipmentName} — ${match.siteName} (auto: peralatan dibuang)`);
+              showUndoToast('Peralatan ini ada rekod waranti aktif — turut dipindah ke Tong Sampah.', () => _undoSoftDelete(coll, delColl, match.id, data, localRef));
+            } catch(e) { console.warn('Gagal arkibkan rekod waranti berkaitan:', e); }
+          } else {
+            showToast(`Peralatan ini ada rekod waranti aktif ("${match.equipmentName}") — sila maklumkan admin untuk kemaskini rekod tersebut.`, 'error');
+          }
+        }
+      }
     }
     // Shared write path for both the manual "Simpan Semua" button and the
     // debounced auto-save — captures the target site/label up front since
@@ -21003,13 +21066,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const pmCount = recs.filter(r=>(r.maintType||'PM')!=='CM').length;
       const cmCount = recs.filter(r=>r.maintType==='CM').length;
       const siteCount = new Set(recs.map(r=>r.siteId)).size;
-      const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.refNo||'—')}</td><td>${esc(r.siteName||'—')}</td><td>${esc(r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'))}</td><td>${esc(r.maintType||'PM')}</td><td>${esc((r.project||'cctv').toUpperCase())}</td></tr>`).join('')||'<tr><td colspan="6" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
+      const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.refNo||'—')}</td><td>${esc(r.siteName||'—')}</td><td>${esc(r.virRoomNo||'—')}</td><td>${esc(r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'))}</td><td>${esc(r.maintType||'PM')}</td><td>${esc((r.project||'cctv').toUpperCase())}</td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
       const notaRows = laporanNotaItems.value;
       const notaHtml = notaRows.length ? notaRows.map((row,i)=>{
         const stBg = /selesai/i.test(row.status)?'#F4F7DC':/pending/i.test(row.status)?'#fff8e1':'#e3f2fd';
         const stColor = /selesai/i.test(row.status)?'#7A841A':/pending/i.test(row.status)?'#e65100':'#0d47a1';
-        return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.visitDate)}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#7A841A'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
-      }).join('') : '<tr><td colspan="7" style="text-align:center;color:#aaa;padding:12px">Tiada data nota yang mengandungi format MASALAH/TINDAKAN/STATUS</td></tr>';
+        return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.virRoomNo||'—')}</td><td>${esc(row.visitDate)}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#7A841A'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
+      }).join('') : '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:12px">Tiada data nota yang mengandungi format MASALAH/TINDAKAN/STATUS</td></tr>';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Penyelenggaraan</title>
 <style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}.header-mid{flex:1}.co{font-size:13px;font-weight:800;color:#7A841A}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
 </head><body>
@@ -21017,8 +21080,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 <div class="stats"><div class="stat"><div class="n" style="color:#003366">${recs.length}</div><div class="l">Jumlah Rekod</div></div><div class="stat"><div class="n" style="color:#7A841A">${pmCount}</div><div class="l">Rekod PM</div></div><div class="stat"><div class="n" style="color:#b71c1c">${cmCount}</div><div class="l">Rekod CM</div></div><div class="stat"><div class="n" style="color:#4a148c">${siteCount}</div><div class="l">Site Diliputi</div></div></div>
 <div class="charts"><div class="chart-box"><h2>Trend PM vs CM per Bulan</h2>${img1?`<img src="${img1}">`:''}</div><div class="chart-box"><h2>Nisbah PM : CM</h2>${img2?`<img src="${img2}">`:''}</div></div>
 <div class="charts"><div class="chart-box"><h2>Top Site — CM Tertinggi</h2>${img3?`<img src="${img3}">`:''}</div><div class="chart-box"><h2>Peralatan Kerap Gagal</h2>${img4?`<img src="${img4}">`:''}</div></div>
-<h2>Senarai Rekod</h2><table><thead><tr><th>#</th><th>No. Rujukan</th><th>Site</th><th>Tarikh</th><th>Jenis</th><th>Projek</th></tr></thead><tbody>${rowsHtml}</tbody></table>
-<h2>Analisis Masalah &amp; Tindakan</h2><div class="nota-hint">Diekstrak daripada medan Nota/Catatan Tambahan — format: MASALAH: ... / TINDAKAN: ... / STATUS: ...</div><table><thead><tr><th>#</th><th>Site</th><th>Tarikh</th><th>Jenis</th><th>Masalah</th><th>Tindakan</th><th>Status</th></tr></thead><tbody>${notaHtml}</tbody></table>
+<h2>Senarai Rekod</h2><table><thead><tr><th>#</th><th>No. Rujukan</th><th>Site</th><th>Bilik</th><th>Tarikh</th><th>Jenis</th><th>Projek</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+<h2>Analisis Masalah &amp; Tindakan</h2><div class="nota-hint">Diekstrak daripada medan Nota/Catatan Tambahan — format: MASALAH: ... / TINDAKAN: ... / STATUS: ...</div><table><thead><tr><th>#</th><th>Site</th><th>Bilik</th><th>Tarikh</th><th>Jenis</th><th>Masalah</th><th>Tindakan</th><th>Status</th></tr></thead><tbody>${notaHtml}</tbody></table>
 <div class="footer">Laporan dijana pada ${new Date().toLocaleString('ms-MY')} oleh sistem PM-CCTV-SPRM</div>
 </body></html>`;
       const w = window.open('','_blank','width=1000,height=750');
@@ -21185,7 +21248,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       laporanFiltered.value.forEach(r => {
         const parsed = _getNotaItems(r);
         parsed.forEach(p => {
-          rows.push({ siteId:r.siteId, siteName:r.siteName||'—', visitDate:r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'), maintType:r.maintType||'PM', refNo:r.refNo||'—', project:r.project||'cctv', masalah:p.masalah, tindakan:p.tindakan, status:p.status });
+          rows.push({ siteId:r.siteId, siteName:r.siteName||'—', virRoomNo:r.virRoomNo||'', visitDate:r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'), maintType:r.maintType||'PM', refNo:r.refNo||'—', project:r.project||'cctv', masalah:p.masalah, tindakan:p.tindakan, status:p.status });
         });
       });
       return rows;
