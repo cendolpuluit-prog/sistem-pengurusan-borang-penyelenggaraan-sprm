@@ -8309,11 +8309,15 @@ createApp({
     // gated on this same constant, and stays in its exact original position
     // in the markup, so re-enabling needs no layout changes.
     const SHOW_SPRM_LOGO_LOGIN = false;
-    // Live clock + date + time-of-day greeting shown on the login screen —
-    // ticks every second but only while the login screen is actually up
-    // (checked inside the callback rather than start/stop on auth state, to
-    // keep this simple; a 1s interval doing a cheap string format is
-    // negligible even once logged in and the value just stops being read).
+    // Live clock + date + time-of-day greeting shown on the login screen.
+    // Stopped once authenticated (see onAuthStateChanged below — pointless
+    // to keep ticking once the login screen isn't shown) and explicitly
+    // restarted on logout via _startLoginScreenTimers(), since the login
+    // screen reappears then too (SPA — no full page reload). Missing that
+    // restart was a real bug: logging out showed the clock/date/greeting
+    // frozen at whatever they were at the moment of the ORIGINAL login,
+    // only fixing itself on a manual browser refresh (which re-runs this
+    // whole script from scratch, including this initial _startLoginScreenTimers() call).
     const loginClock = ref('');
     const loginDateStr = ref('');
     const loginGreeting = ref('');
@@ -8324,8 +8328,6 @@ createApp({
       const h = now.getHours();
       loginGreeting.value = h < 12 ? 'Selamat Pagi ☀️' : h < 18 ? 'Selamat Petang 🌤️' : 'Selamat Malam 🌙';
     }
-    _tickLoginClock();
-    let _loginClockTimer = setInterval(_tickLoginClock, 1000);
     // Rotating tips on the login screen — deliberately STATIC copy, not
     // live data. Real stats (site health, PM counts) live behind Firestore
     // rules requiring auth (isSignedIn()), so nothing real can be fetched
@@ -8339,7 +8341,18 @@ createApp({
       '📷 Kamera & Hard Disk kini boleh dikumpulkan ikut NVR untuk site yang besar.',
     ];
     const loginTipIndex = ref(0);
-    let _loginTipTimer = setInterval(() => { loginTipIndex.value = (loginTipIndex.value + 1) % LOGIN_TIPS.length; }, 6000);
+    let _loginClockTimer = null;
+    let _loginTipTimer = null;
+    // Guarded so calling this again on an already-running pair (shouldn't
+    // happen given the call sites, but cheap to make foolproof) can't leak a
+    // second interval on top of the first.
+    function _startLoginScreenTimers() {
+      if(_loginClockTimer) return;
+      _tickLoginClock();
+      _loginClockTimer = setInterval(_tickLoginClock, 1000);
+      _loginTipTimer = setInterval(() => { loginTipIndex.value = (loginTipIndex.value + 1) % LOGIN_TIPS.length; }, 6000);
+    }
+    _startLoginScreenTimers();
     // Wraps every page.value assignment — including the dozens of existing
     // template `@click="page='x'"` bindings, which compile to the exact
     // same `.value =` setter — in the native View Transitions API for a
@@ -19444,16 +19457,28 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       page.value='new-pm';
     }
 
-    // Borang HDD table shows one row per brand+model+capacity combo, summing
-    // totalUnit across every matching record regardless of which NVR it
-    // belongs to (the NVR-grouped breakdown is for the Urus Peralatan Site
-    // view only — the borang would get unreadably long if it listed every
-    // NVR's HDDs separately, e.g. 10 units under NVR1 + 5 under NVR2 becomes
-    // one "x15 unit" row here).
+    // Borang HDD table shows one row per brand+model+capacity combo WITHIN
+    // the same NVR, summing totalUnit across every matching record for that
+    // NVR (e.g. five separately-added "1 unit" rows of the same spec under
+    // one NVR become a single "x5 unit" row here).
+    //
+    // nvrRef MUST be part of the grouping key — without it (a real bug found
+    // and fixed here), two DIFFERENT NVRs that happen to use the same HDD
+    // brand/model/capacity (very common — sites standardize on one HDD model
+    // across every NVR) would get silently merged into ONE row, summing
+    // their unit counts together and keeping only whichever NVR's nvrRef
+    // happened to be encountered first. The other NVR would then vanish
+    // from Section 3 (Cakera Keras) entirely — even though it still
+    // correctly appears in Section 2 (NVR), which copies straight from
+    // Urus Peralatan Site with no grouping at all. viewPMHddGrouped
+    // (the print view's own re-grouping, via _groupCamerasByNvrRef same as
+    // cameras) already groups per-NVR correctly — but by the time it runs,
+    // the damage from this function's missing nvrRef was already baked into
+    // the saved PM record, since this runs first when the borang is opened.
     function _groupHddForPm(hddList) {
       const groups = {}; const order = [];
       (hddList||[]).forEach(h => {
-        const key = [h.brand||'', h.model||'', h.capacity||''].join('|');
+        const key = [h.brand||'', h.model||'', h.capacity||'', h.nvrRef||''].join('|');
         if(!groups[key]) { groups[key] = {...h, totalUnit:0}; order.push(key); }
         groups[key].totalUnit += Number(h.totalUnit) || 1;
       });
@@ -22999,16 +23024,19 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         authUser.value = user;
         try {
           if(user) {
-            // Login screen (clock tick + rotating tips) is gone for good
-            // once authenticated — these two 1s/6s intervals were never
-            // cleared anywhere before, so they kept firing in the
-            // background for the rest of the session (however many hours
-            // that is) updating refs nothing ever displays again. Cheap
-            // per-tick, but it's wasted reactive work compounding for as
-            // long as the tab stays open — exactly the kind of thing that
-            // makes a long-running session feel gradually more sluggish.
-            clearInterval(_loginClockTimer);
-            clearInterval(_loginTipTimer);
+            // Login screen (clock tick + rotating tips) isn't shown while
+            // authenticated — these two 1s/6s intervals were never cleared
+            // anywhere before, so they kept firing in the background for
+            // the rest of the session (however many hours that is) updating
+            // refs nothing displays anymore. Cheap per-tick, but wasted
+            // reactive work compounding for as long as the tab stays open.
+            // Restarted on logout below (_startLoginScreenTimers()) since
+            // the login screen reappears then too — this used to just clear
+            // them here with no restart anywhere, so logging out showed the
+            // clock/date/greeting frozen at the ORIGINAL login's moment
+            // until a full browser refresh.
+            clearInterval(_loginClockTimer); _loginClockTimer = null;
+            clearInterval(_loginTipTimer); _loginTipTimer = null;
             // Load profile on every session (login OR page refresh)
             try {
               const profileDoc = await db.collection('users').doc(user.uid).get();
@@ -23044,6 +23072,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             loadVirWarranty();
           } else {
             authProfile.value = null;
+            _startLoginScreenTimers();
           }
         } finally {
           // Always clear the splash gate, even if something above throws —
