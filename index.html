@@ -4541,7 +4541,8 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="pmc-site">{{r.siteName}} <span v-if="currentProject==='vir'" class="badge badge-gray" style="font-size:.65rem">{{virSystemShortLabel(r.virSystem)}}</span><span v-else class="badge badge-gray" style="font-size:.65rem">{{cctvSystemBrands(r.cameras) || '—'}}</span></div>
               <div class="pmc-meta">
                 <span>📅 {{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</span>
-                <span>🛠 {{fmtDateDash(r.visitDate)}}</span>
+                <span>🛠 {{fmtDateDashDay(r.visitDate)}}</span>
+                <span :style="pmHasNota(r)?'color:#198754;font-weight:700':''">📝 {{pmHasNota(r)?'Nota Ada':'Nota Kosong'}}</span>
               </div>
               <div v-if="r.submittedAt" class="pmc-meta">
                 <span>📤 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</span>
@@ -9827,7 +9828,7 @@ createApp({
     });
 
     const pm = reactive({
-      _draftId:null, _createdAt:null, _isEdit:false, _submittedAt:null, _submittedBy:null,
+      _draftId:null, _createdAt:null, _isEdit:false, _submittedAt:null, _submittedBy:null, _cmStatus:null, _resolvedAt:null,
       siteId:'', siteName:'', refNo:'',
       month: null, year: null,
       visitDate:'',
@@ -19542,7 +19543,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // ---- PM Form ----
     function startNewPM(proj) {
       clearPmDraftLocal();
-      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null;
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._cmStatus = null; pm._resolvedAt = null;
       if(proj) currentProject.value = proj;
       pm.virRoomNo=''; pm.virRoomNoCustom='';
       pm.virSystem = 'BCD'; // sane default until a room is picked (or changed via onVirRoomChange)
@@ -19772,7 +19773,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           notaCatatan: _buildNotaCatatan(),
           notaStruct: _buildNotaStruct(),
           status, createdBy: authUser.value?.email || '',
-          ...(pm.maintType==='CM' && status==='submitted' ? {cmStatus:'open'} : {}),
+          // Resubmitting an edit must NOT reset an already-resolved/in-
+          // progress CM record back to 'open' — pm._cmStatus (captured in
+          // editRecord()) carries the existing value forward; only a
+          // genuinely new CM submission (or a PM record just switched to
+          // CM, which never had a cmStatus to preserve) defaults to 'open'.
+          ...(pm.maintType==='CM' && status==='submitted' ? {cmStatus: pm._cmStatus || 'open'} : {}),
+          // Carries an existing resolvedAt forward across edits for the
+          // same reason as cmStatus above — this form never sets it itself
+          // (only updateCMStatus()/bulkUpdateCMStatus() do), so it would
+          // otherwise be silently dropped by the .set(data) overwrite.
+          ...(pm._resolvedAt ? {resolvedAt: pm._resolvedAt} : {}),
           // pm._createdAt round-trips through localStorage JSON if the crash-recovery
           // draft (checkPmDraftRecovery) saved it mid-edit — that strips the Firestore
           // Timestamp class down to a plain {seconds,nanoseconds} object. Only trust it
@@ -19856,7 +19867,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           }
         }
         viewPM.value = {id:pm._draftId,...localData};
-        pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; // clear so next new form gets fresh ID
+        pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._cmStatus = null; pm._resolvedAt = null; // clear so next new form gets fresh ID
         page.value='pm-view';
       } catch(e){ showToast('Gagal: '+e.message,'error'); }
       loading.value=false;
@@ -19921,6 +19932,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // forward rather than losing them.
       pm._submittedAt = r.submittedAt || null;
       pm._submittedBy = r.submittedBy || null;
+      // Same idea for CM Status — savePM() used to force this back to
+      // 'open' on every resubmit, silently undoing "Selesai"/"Dalam Proses"
+      // the moment someone edited an already-resolved CM record.
+      pm._cmStatus = r.cmStatus || null;
+      // Same reasoning — resolvedAt is only ever stamped by the separate
+      // updateCMStatus() dropdown (a partial .update()), never touched by
+      // this form. Without preserving it here, savePM()'s full .set(data)
+      // would silently erase it on resubmit even with cmStatus now fixed,
+      // dropping the record out of the Time-to-Resolution report.
+      pm._resolvedAt = r.resolvedAt || null;
       pm.siteId = r.siteId||''; pm.siteName = r.siteName||''; pm.refNo = r.refNo||'';
       const parts = (r.refNo||'').split('/');
       refNoSuffix.value = parts.length>1 ? parts[parts.length-1] : '';
@@ -20032,7 +20053,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       clearPmDraftLocal();
       const wasEdit = pm._isEdit;
       const originalId = pm._draftId;
-      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null;
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._cmStatus = null; pm._resolvedAt = null;
       if(wasEdit && originalId) {
         // Return to viewing the record as it was, not the bare list —
         // less jarring than dumping them back at the full pm-list table.
