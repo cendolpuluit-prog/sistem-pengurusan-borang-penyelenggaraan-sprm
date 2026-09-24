@@ -10,7 +10,21 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- Everything below this point (XLSX/Tesseract OCR/PDF.js/jsPDF/docx/
+     Chart.js/Mammoth/D3/TopoJSON) is only ever touched from inside specific
+     export/import/report/OCR/map functions — none of it is referenced at
+     the top level of the main app script below, or synchronously inside its
+     onMounted() (verified: firebase.initializeApp() is the only thing that
+     runs immediately there, and Firebase stays non-deferred above). `defer`
+     lets the browser download these in parallel with HTML parsing instead
+     of blocking it — previously the ENTIRE app (including the skeleton
+     loading screens) couldn't render a single pixel until every one of
+     these had fully downloaded and executed, even though most sessions
+     never touch OCR/Word-import/map features in their first few seconds.
+     Vue/Firebase above stay non-deferred since the app script's very first
+     lines destructure straight off the `Vue` global and onMounted() calls
+     firebase.initializeApp() — both need to already exist by then. -->
+<script defer src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <!-- XLSX_TEMPLATE keeps a reference to the plain SheetJS Community build
      BEFORE xlsx-js-style below overwrites window.XLSX — exportExcel()/
      exportExcelVIR() (which fill the official CCTV/VIR .xlsx templates)
@@ -19,17 +33,28 @@
      read-back round-trip in testing, only fill-color does) and the
      official templates must not risk any behaviour change. Every other
      Excel export (built fresh via json_to_sheet, no template) uses the
-     styled XLSX global instead, for the header fill-color highlight. -->
-<script>window.XLSX_TEMPLATE = window.XLSX;</script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+     styled XLSX global instead, for the header fill-color highlight.
+     Must run AFTER the xlsx.full.min.js above it, and BEFORE xlsx-js-style
+     below overwrites window.XLSX. `defer` has NO EFFECT on inline scripts
+     per spec (only ones with a `src`) — confirmed live: with a plain
+     `<script defer>` here, this ran IMMEDIATELY at parse time (same as no
+     defer at all), long before the deferred xlsx.full.min.js above had
+     actually executed, capturing XLSX_TEMPLATE as undefined. Routing the
+     same one-liner through a data: URI gives it a real `src`, so `defer`
+     actually applies and it correctly takes its turn in the deferred queue,
+     in this exact written position between the two xlsx scripts. -->
+<script defer src="data:text/javascript,window.XLSX_TEMPLATE%20%3D%20window.XLSX%3B"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Hides the whole app (via [v-cloak] on #app below) until Vue actually
@@ -4478,7 +4503,7 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Tarikh &amp; Jam Borang Submit</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Nota?</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in pmListPagedList" :key="r.id">
@@ -4489,8 +4514,8 @@ details.form-control[open] summary::after{content:'▴'}
                   <td v-if="currentProject!=='vir'">{{cctvSystemBrands(r.cameras) || '—'}}</td>
                   <td v-if="currentProject==='vir'">{{virSystemShortLabel(r.virSystem)}}</td>
                   <td>{{r.month?MONTHS[r.month-1]:'—'}} {{r.year}}</td>
-                  <td>{{fmtDateDash(r.visitDate)}}</td>
-                  <td>{{r.submittedAt?.toDate ? (r.submittedAt.toDate().toLocaleDateString('ms-MY') + ' ' + r.submittedAt.toDate().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'})) : '-'}}</td>
+                  <td>{{fmtDateDashDay(r.visitDate)}}</td>
+                  <td class="ctr"><span v-if="pmHasNota(r)" style="color:#198754;font-weight:700" title="Kotak Nota/Catatan Tambahan ada isi">✓</span><span v-else class="text-muted" title="Kotak Nota/Catatan Tambahan kosong">—</span></td>
                   <td>{{submittedByDisplayName(r)}}</td>
                   <td>
                     <template v-if="r.maintType==='CM'">
@@ -11414,6 +11439,23 @@ createApp({
     // request. fmtDate() above (slash-separated) stays the default
     // everywhere else in the app; this doesn't replace it globally.
     function fmtDateDash(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}-${m}-${y}`; }
+    // Rekod Borang list's "Tarikh Penyelenggaraan" column specifically —
+    // adds the day name so a user doesn't have to mentally work out what
+    // day of the week a visit fell on (useful now that state holidays feed
+    // into scheduling too). Year is shortened to 2 digits rather than
+    // dropped entirely — "Bulan/Tahun" sits in the column right before this
+    // one, but that's a SEPARATE pair of dropdowns from this date (see
+    // pm.month/pm.year vs pm.visitDate), not derived from it, so a PM
+    // scheduled for e.g. December but actually visited a few days into
+    // January would show a genuinely different year here — dropping it
+    // entirely risked silently misreading that row's real date.
+    const _DAY_NAMES_MY = ['Ahad','Isnin','Selasa','Rabu','Khamis','Jumaat','Sabtu'];
+    function fmtDateDashDay(dateStr) {
+      if(!dateStr) return '—';
+      const [y,m,d] = dateStr.split('-');
+      const dayName = _DAY_NAMES_MY[new Date(dateStr+'T00:00:00').getDay()];
+      return `${d}-${m}-${y.slice(2)} (${dayName})`;
+    }
     // "Jenis Sistem CCTV" on the printed borang — a site can run more than
     // one camera brand at once (e.g. Gua Musang has both Hanwha and Axis),
     // so this is derived from the distinct brands actually recorded on
@@ -21186,6 +21228,23 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       });
       return items.filter(Boolean);
     }
+    // Rekod Borang list column ("Ada Nota?") — whether the Nota/Catatan
+    // Tambahan box has ANY real content across all 4 of its optional parts
+    // (masalah/tindakan items, the overall status summary, or pending
+    // items). Deliberately does NOT just check `r.notaCatatan` for
+    // non-blank: _buildNotaCatatan() always emits a 2-line boilerplate
+    // header ("PREVENTIVE/CORRECTIVE MAINTENANCE (..)" + blank line) even
+    // when the technician left the whole box untouched, so every record's
+    // notaCatatan is non-empty regardless — that check would show ✓ for
+    // 100% of records. r.notaStruct (saved alongside notaCatatan, see
+    // _buildNotaStruct) carries the accurate breakdown for records created
+    // after that field existed; older records fall back to stripping the
+    // same boilerplate header and checking what's left.
+    function pmHasNota(r) {
+      if(r.notaStruct) return !!(r.notaStruct.items?.length || r.notaStruct.overallStatus || r.notaStruct.pending?.length);
+      const body = (r.notaCatatan||'').replace(/^(PREVENTIVE|CORRECTIVE) MAINTENANCE \([A-Z]+\)\s*/i, '').trim();
+      return !!body;
+    }
     // The filled (non-blank) notaItems — a row where the user never typed
     // anything in Masalah/Tindakan is dropped, same as before.
     function _filledNotaItems() {
@@ -23098,7 +23157,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
-      addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine,
+      addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine, pmHasNota,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, topbarAccentColor, pageAccentClass, today, totalCameras, totalVirCameras, pmThisYear,
       pmCCTV, pmVIR, pmThisYearCCTV, pmThisYearVIR, dashboardYear, dashboardYears,
@@ -23124,7 +23183,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamModalStateHoliday, assignmentStateHoliday, stateHolidaysForDay,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday, holidayRowStyle, holidayTypeColor,
-      fmtDate, fmtDateDash, cctvSystemBrands,
+      fmtDate, fmtDateDash, fmtDateDashDay, cctvSystemBrands,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
