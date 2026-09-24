@@ -10,51 +10,34 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
-<!-- Everything below this point (XLSX/Tesseract OCR/PDF.js/jsPDF/docx/
-     Chart.js/Mammoth/D3/TopoJSON) is only ever touched from inside specific
-     export/import/report/OCR/map functions — none of it is referenced at
-     the top level of the main app script below, or synchronously inside its
-     onMounted() (verified: firebase.initializeApp() is the only thing that
-     runs immediately there, and Firebase stays non-deferred above). `defer`
-     lets the browser download these in parallel with HTML parsing instead
-     of blocking it — previously the ENTIRE app (including the skeleton
-     loading screens) couldn't render a single pixel until every one of
-     these had fully downloaded and executed, even though most sessions
-     never touch OCR/Word-import/map features in their first few seconds.
-     Vue/Firebase above stay non-deferred since the app script's very first
-     lines destructure straight off the `Vue` global and onMounted() calls
-     firebase.initializeApp() — both need to already exist by then. -->
-<script defer src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<!-- XLSX_TEMPLATE keeps a reference to the plain SheetJS Community build
-     BEFORE xlsx-js-style below overwrites window.XLSX — exportExcel()/
-     exportExcelVIR() (which fill the official CCTV/VIR .xlsx templates)
-     deliberately keep using this untouched original, since xlsx-js-style's
-     style-read path has shown gaps (font.bold doesn't survive its own
-     read-back round-trip in testing, only fill-color does) and the
-     official templates must not risk any behaviour change. Every other
-     Excel export (built fresh via json_to_sheet, no template) uses the
-     styled XLSX global instead, for the header fill-color highlight.
-     Must run AFTER the xlsx.full.min.js above it, and BEFORE xlsx-js-style
-     below overwrites window.XLSX. `defer` has NO EFFECT on inline scripts
-     per spec (only ones with a `src`) — confirmed live: with a plain
-     `<script defer>` here, this ran IMMEDIATELY at parse time (same as no
-     defer at all), long before the deferred xlsx.full.min.js above had
-     actually executed, capturing XLSX_TEMPLATE as undefined. Routing the
-     same one-liner through a data: URI gives it a real `src`, so `defer`
-     actually applies and it correctly takes its turn in the deferred queue,
-     in this exact written position between the two xlsx scripts. -->
-<script defer src="data:text/javascript,window.XLSX_TEMPLATE%20%3D%20window.XLSX%3B"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+<!-- XLSX/Tesseract OCR/PDF.js/jsPDF/docx/Chart.js/Mammoth/D3/TopoJSON are
+     genuinely LAZY-loaded now (see _loadScript()/_ensureXLSX() etc. near the
+     top of the main app script below), not listed as script tags here at
+     all — each one only ever downloads+executes the first time a feature
+     that actually needs it runs (export/import/OCR/report/map), cached
+     after that so repeat use is instant.
+     History: first pass just added `defer` to all of these so they wouldn't
+     block the initial paint. That fixed the blocking problem but created a
+     NEW one — deferred scripts all execute in one back-to-back burst right
+     before/around the moment Vue mounts (since the main app script itself
+     stays non-deferred and runs earlier than any deferred script's actual
+     execution), meaning ~10 heavy libraries' setup code was competing for
+     the main thread at the exact moment the user first saw and started
+     clicking the freshly-mounted app — reported as "app feels laggy
+     immediately, on every page" (an even worse regression than the
+     blocking-load problem it replaced). True lazy loading avoids both:
+     nothing downloads/executes until a specific feature is actually used,
+     spread out over the session instead of bunched at startup. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- dns-prefetch (not preconnect) for the lazy-loaded library CDNs — these
+     aren't used until a specific feature is triggered (could be minutes
+     into the session, or never), so reserving a full TLS connection now
+     would likely just time out unused. DNS resolution alone is still a
+     small free win whenever one of them IS eventually needed. -->
+<link rel="dns-prefetch" href="https://cdn.sheetjs.com">
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Hides the whole app (via [v-cloak] on #app below) until Vue actually
@@ -8300,6 +8283,76 @@ const OPTAGER_OS = ['Windows 10 Pro x64','Windows 11 Pro x64','Lain-lain'];
 
 const { createApp, ref, reactive, computed, watch, onMounted, onUnmounted, nextTick, customRef } = Vue;
 
+// ---- Lazy-loaded heavy libraries (XLSX/Tesseract/PDF.js/jsPDF/docx/
+// Chart.js/Mammoth/D3+TopoJSON) — see the <head> comment above the
+// preconnect link for why these aren't plain <script> tags at all anymore.
+// Each _ensureX() is cached (the Promise itself, not just a boolean) so
+// concurrent calls before the first one resolves all share the same
+// in-flight load instead of injecting duplicate <script> tags, and every
+// call after the first resolves instantly.
+function _loadScript(src) {
+  if(!window.__loadedScripts) window.__loadedScripts = {};
+  if(!window.__loadedScripts[src]) {
+    window.__loadedScripts[src] = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error('Gagal muat pustaka: ' + src));
+      document.head.appendChild(s);
+    });
+  }
+  return window.__loadedScripts[src];
+}
+let _xlsxReady = null;
+function _ensureXLSX() {
+  if(!_xlsxReady) {
+    // Same load-then-capture-then-overwrite order as the original <head>
+    // script sequence (see removed XLSX_TEMPLATE comment, preserved here):
+    // xlsx.full.min.js first, snapshot it as XLSX_TEMPLATE before
+    // xlsx-js-style overwrites window.XLSX with the styled version.
+    _xlsxReady = _loadScript('https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js')
+      .then(() => { window.XLSX_TEMPLATE = window.XLSX; })
+      .then(() => _loadScript('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js'));
+  }
+  return _xlsxReady;
+}
+let _tesseractReady = null;
+function _ensureTesseract() {
+  if(!_tesseractReady) _tesseractReady = _loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+  return _tesseractReady;
+}
+let _pdfjsReady = null;
+function _ensurePdfjs() {
+  if(!_pdfjsReady) _pdfjsReady = _loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+  return _pdfjsReady;
+}
+let _jspdfReady = null;
+function _ensureJspdf() {
+  if(!_jspdfReady) _jspdfReady = _loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+  return _jspdfReady;
+}
+let _docxReady = null;
+function _ensureDocx() {
+  if(!_docxReady) _docxReady = _loadScript('https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js');
+  return _docxReady;
+}
+let _chartjsReady = null;
+function _ensureChartjs() {
+  if(!_chartjsReady) _chartjsReady = _loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js');
+  return _chartjsReady;
+}
+let _mammothReady = null;
+function _ensureMammoth() {
+  if(!_mammothReady) _mammothReady = _loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js');
+  return _mammothReady;
+}
+let _d3Ready = null;
+function _ensureD3() {
+  if(!_d3Ready) _d3Ready = _loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js')
+    .then(() => _loadScript('https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js'));
+  return _d3Ready;
+}
+
 // Isolated into its own component specifically so its 30s tick doesn't
 // touch the root component's render function at all — the root has no
 // child components anywhere else, so every reactive change (including this
@@ -10430,6 +10483,7 @@ createApp({
       const myContainer = mapContainerEl.value;
       mapLoading.value = true;
       try {
+        await _ensureD3();
         if (!mapTopologyCache) {
           const res = await fetch('malaysia-states.topojson');
           mapTopologyCache = await res.json();
@@ -10622,6 +10676,7 @@ createApp({
       if(!timelapseMapEl.value) return;
       if(timelapseMapEl.value.querySelector('svg')) { renderTimelapsePins(); return; }
       try {
+        await _ensureD3();
         if(!mapTopologyCache) {
           const res = await fetch('malaysia-states.topojson');
           mapTopologyCache = await res.json();
@@ -11875,6 +11930,7 @@ createApp({
     }
     const CONTRACT_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
     async function exportContractsExcel() {
+      await _ensureXLSX();
       const rows = contractsFiltered.value.map((c,i) => ({
         '#': i+1, 'Tajuk Kontrak': c.title, 'No. Kontrak': c.contractNo||'-',
         'Tarikh Mula': fmtDate(c.startDate), 'Tarikh Tamat': fmtDate(c.endDate),
@@ -12682,6 +12738,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(!canvases.length) return file;
         const avgCharsPerPage = (text||'').trim().length / canvases.length;
         if(avgCharsPerPage > 20) return file; // PDF native/teks — jangan sentuh
+        await _ensureJspdf();
         if(!window.jspdf) return file; // library gagal load — fallback selamat
         const { jsPDF } = window.jspdf;
         let doc = null;
@@ -12945,6 +13002,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       showToast('Fungsi ini masih diselenggara oleh admin.', 'error');
     }
     async function exportWarrantyExcel() {
+      await _ensureXLSX();
       const rows = warrantyFiltered.value.map((w,i) => ({
         '#': i+1, 'Vendor': w.vendor||'-',
         'Tempoh Jaminan Kontrak': vendorContracts.value[w.vendor] ? fmtDate(vendorContracts.value[w.vendor]) : '-',
@@ -13019,6 +13077,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       await logAudit('WARRANTY_EXPORT_PDF', `${list.length} rekod`);
     }
     async function exportWarrantyDocx() {
+      await _ensureDocx();
       if(!window.docx) { showToast('DOCX library tidak tersedia. Semak sambungan internet.', 'error'); return; }
       const { Document, Packer, Paragraph, Table, TableRow, TableCell,
               TextRun, AlignmentType, BorderStyle, WidthType, ShadingType,
@@ -14609,7 +14668,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // clears a site's overdue flag, the map should visibly recolor without
     // waiting for the next dashboard remount.
     function renderMapStateFills() {
-      if (!mapContainerEl.value) return;
+      // d3 may not be loaded yet if this fires (e.g. mapStateHealth settling
+      // right after dashboard nav) before initMapWidget()'s own _ensureD3()
+      // resolves — safe to skip, since that same initial build reads
+      // mapStateHealth fresh and will already paint the current state.
+      if (!mapContainerEl.value || typeof d3 === 'undefined') return;
       d3.select(mapContainerEl.value).selectAll('path.mp-state')
         .classed('mp-state-warn', function() {
           const name = d3.select(this).datum()?.properties?.Name;
@@ -14941,8 +15004,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       setTimeout(() => { batchPrintMode.value = false; document.body.classList.remove('printing-batch'); }, 500);
     }
 
-    function exportBatchExcel() {
+    async function exportBatchExcel() {
       if(!batchPrintRecords.value.length) return;
+      await _ensureXLSX();
       const rows = batchPrintRecords.value.map((r,i) => ({
         '#': i+1,
         'No. Rujukan': r.refNo||'-',
@@ -15300,6 +15364,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
 
     async function exportAuditLogExcel() {
+      await _ensureXLSX();
       // Butiran (l.detail) embeds free text a user typed elsewhere (contract
       // titles, equipment names, notes) — every other XLSX export in this
       // file runs rows through _xlsxSafeRows() to neutralize a leading
@@ -15370,7 +15435,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(chartTypeInst) { chartTypeInst.destroy(); chartTypeInst = null; }
     }
 
-    function initCharts() {
+    async function initCharts() {
+      await _ensureChartjs();
       const yr = dashboardYear.value;
       // Stacked bar chart: PM vs CM per site for the selected dashboard
       // year (top 8 by total). PM count is fixed by contract schedule and
@@ -16409,6 +16475,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       ocrState.active=true; ocrState.target=formName; ocrState.loading=true; ocrState.tokens=[]; ocrState.progress=0;
       event.target.value='';
       try {
+        await _ensureTesseract();
         const result = await Tesseract.recognize(file, 'eng', {
           logger: m => { if(m.status==='recognizing text') ocrState.progress=Math.round(m.progress*100); }
         });
@@ -16722,6 +16789,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // table rows via their layout, reusing the same header/column mapping
     // logic as xlsx/csv imports.
     async function _ocrToRows(source, kind) {
+      await _ensureTesseract();
       const { data } = await Tesseract.recognize(source, 'eng', {
         logger: m => { if(m.status==='recognizing text') importState.ocrProgress = Math.round(m.progress*100); }
       });
@@ -16737,6 +16805,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
 
     async function _extractPdfPages(file) {
+      await _ensurePdfjs();
       if(window['pdfjsLib'] && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
       }
@@ -16815,6 +16884,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const isImage = file.type.startsWith('image/') || ['png','jpg','jpeg','webp','bmp'].includes(ext);
         let rows = [];
         if(ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+          await _ensureXLSX();
           const buf = await _readFileAsArrayBuffer(file);
           const wb = XLSX.read(buf, { type: 'array' });
           const ws = wb.Sheets[wb.SheetNames[0]];
@@ -16832,6 +16902,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const text = await file.text();
           rows = _rowsFromFreeText(text, kind);
         } else if(ext === 'docx') {
+          await _ensureMammoth();
           if(!window.mammoth) { importState.err = 'Library pembaca DOCX tidak tersedia. Semak sambungan internet.'; importState.loading = false; return; }
           const buf = await _readFileAsArrayBuffer(file);
           const result = await mammoth.extractRawText({ arrayBuffer: buf });
@@ -20545,6 +20616,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function exportDOCX() {
       const r = viewPM.value;
       if (!r) return;
+      await _ensureDocx();
       if (!window.docx) { showToast('DOCX library tidak tersedia. Semak sambungan internet.', 'error'); return; }
       const { Document, Packer, Paragraph, Table, TableRow, TableCell,
               TextRun, AlignmentType, BorderStyle, WidthType, ShadingType,
@@ -21057,7 +21129,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(page.value === 'laporan') { await nextTick(); initLaporanCharts(); }
     });
 
-    function initLaporanCharts() {
+    async function initLaporanCharts() {
+      await _ensureChartjs();
       _destroyCharts();
       const recs = laporanFiltered.value;
       const months = _getLaporanMonthRange(laporanTempoh.value);
@@ -21880,8 +21953,9 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       }
       return 'https://www.google.com/search?q=' + encodeURIComponent(`${r.brand} ${r.model} warranty check ${serial}`);
     }
-    function exportAssetRegister() {
+    async function exportAssetRegister() {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      await _ensureXLSX();
       const rows = assetRegister.value.map((r,i) => ({
         '#': i+1, Site: r.site, Projek: r.proj, Kategori: r.cat, 'Nama/Jenis': r.name,
         Brand: r.brand, Model: r.model, 'No. Siri': r.serial, 'Maklumat Tambahan': r.extra,
@@ -22524,10 +22598,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return { years, pmByYear, cmByYear };
     });
     let _chartYearTrend = null;
-    function _initYearTrendChart() {
+    async function _initYearTrendChart() {
       if(_chartYearTrend) { _chartYearTrend.destroy(); _chartYearTrend = null; }
       const el = document.getElementById('chart-year-trend');
       if(!el) return;
+      await _ensureChartjs();
       const { years, pmByYear, cmByYear } = yearTrendData.value;
       _chartYearTrend = new Chart(el, { type:'bar', data:{
         labels: years,
@@ -22564,10 +22639,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return Object.entries(map).sort((a,b) => b[1]-a[1]).map(([label,count]) => ({ label, count }));
     });
     let _chartTindakan = null;
-    function _initTindakanChart() {
+    async function _initTindakanChart() {
       if(_chartTindakan) { _chartTindakan.destroy(); _chartTindakan = null; }
       const el = document.getElementById('chart-tindakan');
       if(!el) return;
+      await _ensureChartjs();
       const data = tindakanBreakdown.value;
       const palette = ['#003366','#c62828','#e65100','#1b5e20','#4a148c','#888'];
       _chartTindakan = new Chart(el, { type:'doughnut', data:{
@@ -22611,10 +22687,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // and would clobber overallAvg's 1-decimal precision (e.g. 3.5 days).
     const resolutionResolvedCount = countUpFrom(computed(() => resolutionTimeData.value.resolvedCount));
     let _chartResolution = null;
-    function _initResolutionChart() {
+    async function _initResolutionChart() {
       if(_chartResolution) { _chartResolution.destroy(); _chartResolution = null; }
       const el = document.getElementById('chart-resolution');
       if(!el) return;
+      await _ensureChartjs();
       const rows = resolutionTimeData.value.rows.slice(0, 10);
       _chartResolution = new Chart(el, { type:'bar', data:{
         labels: rows.map(r=>r.site),
@@ -22631,10 +22708,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return Object.entries(map).sort((a,b) => b[1]-a[1]).map(([label,count]) => ({ label, count }));
     });
     let _chartRootCause = null;
-    function _initRootCauseChart() {
+    async function _initRootCauseChart() {
       if(_chartRootCause) { _chartRootCause.destroy(); _chartRootCause = null; }
       const el = document.getElementById('chart-root-cause');
       if(!el) return;
+      await _ensureChartjs();
       const data = rootCauseBreakdown.value;
       const palette = ['#c62828','#e65100','#003366','#4a148c','#1b5e20','#00838f','#888'];
       _chartRootCause = new Chart(el, { type:'pie', data:{
@@ -22754,6 +22832,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     }
     async function exportFailureReportExcel() {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      await _ensureXLSX();
       const rows = failureReport.value.map((r,i) => ({
         '#': i+1, Site: r.siteName, Projek: r.project.toUpperCase(), Kategori: r.category,
         'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Lain-lain': r.lain, 'Jumlah': r.total,
