@@ -4515,7 +4515,7 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Nota?</th><th>Disubmit Oleh</th><th>CM Status</th><th>Tindakan</th>
+                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Nota?</th><th>Dicipta Oleh</th><th>Kemaskini Terakhir Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in pmListPagedList" :key="r.id">
@@ -4529,6 +4529,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <td>{{fmtDateDashDay(r.visitDate)}}</td>
                   <td class="ctr"><span v-if="pmHasNota(r)" style="color:#198754;font-weight:700" title="Kotak Nota/Catatan Tambahan ada isi">✓</span><span v-else class="text-muted" title="Kotak Nota/Catatan Tambahan kosong">—</span></td>
                   <td>{{submittedByDisplayName(r)}}</td>
+                  <td>{{r.updatedAt ? updatedByDisplayName(r) : '—'}}</td>
                   <td>
                     <template v-if="r.maintType==='CM'">
                       <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')" style="display:block;margin-bottom:4px">
@@ -4549,12 +4550,12 @@ details.form-control[open] summary::after{content:'▴'}
                     <button :disabled="loading" v-if="canEditPmRecord(r)" class="btn btn-sm btn-danger" @click="deleteRecord(r.id)">🗑</button>
                   </td>
                 </tr>
-                <tr v-if="initialLoading"><td colspan="11" style="padding:14px 20px">
+                <tr v-if="initialLoading"><td colspan="12" style="padding:14px 20px">
                   <div class="skel skel-line" style="width:95%"></div>
                   <div class="skel skel-line" style="width:80%"></div>
                   <div class="skel skel-line" style="width:88%;margin-bottom:0"></div>
                 </td></tr>
-                <tr v-else-if="!filteredPM.length"><td colspan="11" class="empty">Tiada rekod.</td></tr>
+                <tr v-else-if="!filteredPM.length"><td colspan="12" class="empty">Tiada rekod.</td></tr>
               </tbody>
             </table>
           </div>
@@ -4577,6 +4578,9 @@ details.form-control[open] summary::after{content:'▴'}
                 <span>📤 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleDateString('ms-MY') : '-'}}</span>
                 <span>🕒 {{r.submittedAt?.toDate ? r.submittedAt.toDate().toLocaleTimeString('ms-MY',{hour:'2-digit',minute:'2-digit'}) : '-'}}</span>
                 <span>👤 {{submittedByDisplayName(r)}}</span>
+              </div>
+              <div v-if="r.updatedAt" class="pmc-meta">
+                <span>✏️ Kemaskini terakhir: {{updatedByDisplayName(r)}}</span>
               </div>
               <div v-if="r.maintType==='CM'" class="pmc-cm">
                 <span :class="'badge badge-'+(r.cmStatus==='resolved'?'green':r.cmStatus==='in-progress'?'blue':'red')">
@@ -15372,6 +15376,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const match = usersByEmail.value.get(r.submittedBy);
       return match?.username || r.submittedBy;
     }
+    // "Kemaskini Terakhir Oleh" — updatedBy/updatedAt were already stamped
+    // on every edit (savePM(), for the stale-edit-conflict check) but never
+    // shown anywhere; this just surfaces the existing data. Unlike
+    // submittedBy, updatedBy is always an email (never migrated to
+    // username), so no "already a username" shortcut is needed here.
+    function updatedByDisplayName(r) {
+      if(!r.updatedBy) return '-';
+      const match = usersByEmail.value.get(r.updatedBy);
+      return match?.username || r.updatedBy;
+    }
     // Role-based visibility: superadmin sees everything; admin sees
     // everything except superadmin's own actions; staff only sees actions
     // performed by fellow staff (not admin/superadmin activity).
@@ -23572,7 +23586,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
       todayAttentionRows, handleTodayAttentionClick, smartInsights,
-      filteredPM, yearList, submittedByDisplayName,
+      filteredPM, yearList, submittedByDisplayName, updatedByDisplayName,
       pmListPage, pmListTotalPages, pmListPagedList, pmListGoToPage, pmListPageNumbers,
       PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, MAP_NEGERI_OPTIONS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule, calHolidayYearMissing,
       isToday, isWeekend, shortSite, dateStr,
