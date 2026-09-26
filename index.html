@@ -306,8 +306,12 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .tbl-wrap tbody tr:nth-child(10){animation-delay:.2s}
 table{width:100%;border-collapse:collapse;font-size:.85rem}
 th{background:#003366;color:#fff;padding:10px 12px;text-align:left;white-space:nowrap;transition:background-color .3s ease,color .3s ease}
-td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-variant-numeric:tabular-nums;transition:background-color .3s ease,color .3s ease,border-color .3s ease}
-tr:hover td{background:#f9fbff}
+td{padding:9px 12px;border-bottom:1px solid #f0f0f0;vertical-align:middle;font-variant-numeric:tabular-nums;transition:background-color .3s ease,color .3s ease,border-color .3s ease,box-shadow .15s ease}
+/* Shadow (not transform) — box-shadow on <tr> itself is unreliable across
+   browsers in table layout mode, so the "lift" is applied per-<td> like
+   the existing background-tint rule already does, avoiding any risk of
+   row misalignment. */
+tr:hover td{background:#f9fbff;box-shadow:0 1px 6px rgba(0,40,100,.1)}
 .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
 .badge-green,.badge-red,.badge-blue,.badge-gray{transition:background-color .3s ease,color .3s ease}
 .badge-green{background:#e6f4ea;color:#1e7e34}
@@ -650,8 +654,13 @@ details.form-control[open] summary::after{content:'▴'}
 .status-no{color:#c62828;font-weight:600}
 
 /* SKELETON LOADING */
-@keyframes skelPulse{0%,100%{opacity:.55}50%{opacity:1}}
-.skel{background:linear-gradient(90deg,#e8edf5 25%,#f2f5fa 37%,#e8edf5 63%);background-size:400% 100%;border-radius:8px;animation:skelPulse 1.4s ease-in-out infinite}
+/* Was an opacity pulse (uniform fade in/out) despite the gradient already
+   being shaped for a proper shimmer sweep — background-size:400% was set
+   but nothing ever animated background-position, so the gradient band
+   just sat still while the whole element faded. Animating position
+   instead turns it into an actual moving highlight sweep. */
+@keyframes skelShimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
+.skel{background:linear-gradient(90deg,#e8edf5 25%,#f2f5fa 37%,#e8edf5 63%);background-size:400% 100%;border-radius:8px;animation:skelShimmer 1.6s ease-in-out infinite}
 .skel-stat{height:76px;border-radius:10px}
 .skel-line{height:14px;width:100%;border-radius:4px;margin-bottom:10px}
 .skel-line:last-child{margin-bottom:0}
@@ -801,6 +810,20 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes opsZoneBlink{0%,100%{opacity:1}50%{opacity:.35}}
 @media (prefers-reduced-motion: reduce){.ops-hero-scanline,.ops-pulse-pct,.ops-stat-warn .ops-stat-num,.ops-zone-warn{animation:none}}
 @media (max-width:640px){.ops-hero-content{gap:18px}.ops-zone-row{margin-left:0;width:100%;justify-content:center}}
+/* Extends the ops-hero's "glowing live metric" language to the Status
+   Pematuhan cards below it — same tabular-nums/font-display/gradient-text
+   recipe as .stat-card .num, just tinted per-card instead of the ops-
+   hero's dark-background neon green (which would look muddy on these
+   light #f0f4ff/#fff6ee backgrounds). health-pct-warn reuses the pulse
+   IDEA (not the literal color) for a site-completion % under 50%, using
+   drop-shadow instead of text-shadow so the glow still shows correctly
+   around background-clip:text's transparent fill. */
+.health-pct-num{font-family:var(--font-display);font-variant-numeric:tabular-nums}
+.health-pct-cctv{background:linear-gradient(135deg,#003366,#0090c8);-webkit-background-clip:text;background-clip:text;color:transparent}
+.health-pct-vir{background:linear-gradient(135deg,#7a2e00,#e65100);-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes healthPctWarnPulse{0%,100%{filter:drop-shadow(0 0 2px rgba(220,53,69,.4))}50%{filter:drop-shadow(0 0 9px rgba(220,53,69,.75))}}
+.health-pct-warn{animation:healthPctWarnPulse 2.2s ease-in-out infinite}
+@media (prefers-reduced-motion: reduce){.health-pct-warn{animation:none}}
 /* Blanket reduced-motion fallback — the 4 rules above only cover a few
    named animations picked off one at a time; everything else in this file
    (page fade-in, modal pop-in, card stagger-in, dropdown panel, button
@@ -880,6 +903,33 @@ details.form-control[open] summary::after{content:'▴'}
 .search-bar{padding:8px 14px;border:1px solid #d0d0d0;border-radius:6px;font-size:.87rem;width:260px}
 .flex{display:flex}.items-center{align-items:center}.justify-between{justify-content:space-between}.gap-8{gap:8px}.gap-12{gap:12px}.mb-12{margin-bottom:12px}.mb-16{margin-bottom:16px}.mb-20{margin-bottom:20px}
 .text-sm{font-size:.82rem}.text-muted{color:#888}.fw-600{font-weight:600}
+/* Visually distinguishes reference codes/serials from prose text — same
+   idea as the login clock/OCR tokens already using monospace, extended to
+   the No. Rujukan column specifically since it's the most-repeated
+   "technical code" value on screen. System monospace stack (no webfont
+   fetch) to avoid re-adding the exact network cost this session's lazy-
+   loading fix just removed. */
+.mono-data{font-family:'SF Mono','Consolas','Monaco',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+/* Replaces the native title="" tooltip (see the mouseover/focusin
+   listeners in onMounted()) — position is set inline via JS (fixed
+   viewport coords), only visual styling lives here. Hidden entirely on
+   touch/narrow viewports since hover doesn't really exist there and a
+   lingering tap-triggered tooltip with no clean dismiss would be worse
+   than just not showing one. */
+/* z-index:100001, not 100000 — the custom confirm dialog (confirmModal)
+   also uses z-index:100000, so equal values would leave stacking order
+   dependent on DOM position (whichever is appended to <body> most
+   recently wins) instead of a guaranteed outcome. A tooltip triggered on
+   an element inside/behind an open confirm dialog must always show above
+   it, not sometimes-behind depending on append order. */
+.custom-tooltip{position:fixed;z-index:100001;background:#1a2333;color:#fff;font-size:.72rem;font-weight:500;padding:6px 10px;border-radius:6px;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .15s ease,transform .15s ease;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:240px;line-height:1.35}
+.custom-tooltip::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1a2333}
+.custom-tooltip.custom-tooltip-arrow-below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#1a2333}
+.custom-tooltip-show{opacity:1;transform:translateY(0)}
+.dark-mode .custom-tooltip{background:#30363d;color:#e6edf3}
+.dark-mode .custom-tooltip::after{border-top-color:#30363d}
+.dark-mode .custom-tooltip.custom-tooltip-arrow-below::after{border-bottom-color:#30363d}
+@media (max-width:640px){.custom-tooltip{display:none}}
 .highlight-row td{background:#fff9e6!important}
 
 /* USER MANAGEMENT */
@@ -1264,7 +1314,7 @@ details.form-control[open] summary::after{content:'▴'}
 .dark-mode .btn:focus-visible{box-shadow:0 0 0 3px rgba(88,166,255,.4)}
 .dark-mode table thead th{background:#21262d!important;color:#90caf9}
 .dark-mode table tbody td{border-bottom-color:#21262d;color:#e0e0e0}
-.dark-mode table tbody tr:hover td{background:#161b22}
+.dark-mode table tbody tr:hover td{background:#161b22;box-shadow:0 1px 6px rgba(0,0,0,.4)}
 .dark-mode .badge-green{background:#1a3a2a;color:#56d364}
 .dark-mode .badge-red{background:#3a1a1a;color:#f85149}
 .dark-mode .badge-blue{background:#1a2a3a;color:#79c0ff}
@@ -2220,35 +2270,38 @@ details.form-control[open] summary::after{content:'▴'}
              bucketed — each site's cycle is auto-detected from its own PM
              record dates (see _cctvSiteCycleStatus/_virSiteCycleStatus),
              so it isn't tied to the dashboardYear filter above. -->
-        <div class="card">
+        <div class="card no-print">
           <div class="card-title">📋 Status Pematuhan PM Ikut Site <span style="font-weight:400;color:#888;font-size:.75rem">(kitaran semasa setiap site)</span></div>
           <div class="form-row form-row-2">
             <div class="health-summary-card" style="background:#f0f4ff">
-              <div style="font-size:.75rem;font-weight:700;color:#003366;text-transform:uppercase;margin-bottom:8px">📹 CCTV — {{siteCompletionCctv.filter(s=>s.complete).length}}/{{siteCompletionCctv.length}} site siap</div>
-              <div style="font-size:1.5rem;font-weight:800;color:#003366">{{siteCompletionPctCctv}}%</div>
+              <div style="font-size:.75rem;font-weight:700;color:#003366;text-transform:uppercase;margin-bottom:8px">📹 CCTV — {{siteCompletionCctv.filter(s=>s.complete).length}}/{{siteCompletionCctv.length}} site tidak lampau</div>
+              <div class="health-pct-num health-pct-cctv" :class="{'health-pct-warn': siteCompletionPctCctv<50}" style="font-size:1.5rem;font-weight:800">{{siteCompletionPctCctv}}%</div>
               <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" :style="{width:siteCompletionPctCctv+'%', background: siteCompletionPctCctv>=100?'#198754':siteCompletionPctCctv>=60?'#003366':'#e65100'}"></div></div>
             </div>
             <div class="health-summary-card" style="background:#fff6ee">
               <div style="font-size:.75rem;font-weight:700;color:#7a2e00;text-transform:uppercase;margin-bottom:8px">🖥️ VIR — {{siteCompletionVir.filter(s=>s.complete).length}}/{{siteCompletionVir.length}} site siap</div>
-              <div style="font-size:1.5rem;font-weight:800;color:#7a2e00">{{siteCompletionPctVir}}%</div>
+              <div class="health-pct-num health-pct-vir" :class="{'health-pct-warn': siteCompletionPctVir<50}" style="font-size:1.5rem;font-weight:800">{{siteCompletionPctVir}}%</div>
               <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" :style="{width:siteCompletionPctVir+'%', background: siteCompletionPctVir>=100?'#198754':siteCompletionPctVir>=60?'#003366':'#e65100'}"></div></div>
             </div>
           </div>
           <button class="btn btn-outline btn-sm" style="margin-top:12px" @click="showSiteCompletionDetail=!showSiteCompletionDetail">
             {{showSiteCompletionDetail?'▲ Sembunyi butiran ikut site':'▼ Papar butiran ikut site'}}
           </button>
+          <transition :css="false" @enter="onExpandEnter" @after-enter="onExpandAfterEnter" @leave="onExpandLeave">
           <div v-if="showSiteCompletionDetail" style="margin-top:12px">
             <div style="font-size:.78rem;font-weight:700;color:#003366;margin-bottom:6px">📹 CCTV — kitaran 3 PM, mula auto-kesan dari PM pertama site</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Site</th><th style="text-align:center;width:70px">Kitaran</th><th style="text-align:center;width:70px">PM Siap</th><th>Tarikh PM (kitaran semasa)</th><th style="text-align:center;width:90px">Status</th></tr></thead>
+                <thead><tr><th>Site</th><th style="text-align:center;width:70px">Kitaran</th><th style="text-align:center;width:90px">PM Siap</th><th>Tarikh PM (kitaran semasa)</th><th style="text-align:center;width:90px">Status</th></tr></thead>
                 <tbody>
                   <tr v-for="s in siteCompletionCctv" :key="s.id">
                     <td>{{s.name}}</td>
                     <td style="text-align:center">#{{s.cycleNum}}</td>
-                    <td style="text-align:center">{{s.done}}/{{s.expected}}</td>
+                    <td style="text-align:center;white-space:nowrap">
+                      <svg viewBox="0 0 36 36" width="20" height="20" style="vertical-align:middle;margin-right:5px"><circle cx="18" cy="18" r="15" fill="none" stroke="#e5e5e5" stroke-width="4"></circle><circle cx="18" cy="18" r="15" fill="none" :stroke="s.complete?'#198754':'#e65100'" stroke-width="4" stroke-linecap="round" stroke-dasharray="94.2" :stroke-dashoffset="94.2 - (94.2 * Math.min(s.done/s.expected,1))" transform="rotate(-90 18 18)"></circle></svg>{{s.done}}/{{s.expected}}
+                    </td>
                     <td style="font-size:.78rem;color:#666">{{s.dates.join(', ')||'-'}}</td>
-                    <td style="text-align:center"><span :class="['badge', s.complete?'badge-green':'badge-red']">{{s.complete?'✅ Siap':'⏳ Belum'}}</span></td>
+                    <td style="text-align:center"><span :class="['badge', s.complete?'badge-green':'badge-red']">{{s.complete?'✅ Tidak Lampau':'⚠️ Lampau'}}</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -2256,12 +2309,14 @@ details.form-control[open] summary::after{content:'▴'}
             <div style="font-size:.78rem;font-weight:700;color:#7a2e00;margin:14px 0 6px">🖥️ VIR — tingkap kontrak keseluruhan (4 tingkap sepanjang tempoh kontrak)</div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Site</th><th style="text-align:center;width:80px">Tingkap</th><th style="text-align:center;width:90px">Tingkap Lengkap</th><th>Tarikh PM</th><th style="text-align:center;width:90px">Status</th></tr></thead>
+                <thead><tr><th>Site</th><th style="text-align:center;width:80px">Tingkap</th><th style="text-align:center;width:100px">Tingkap Lengkap</th><th>Tarikh PM</th><th style="text-align:center;width:90px">Status</th></tr></thead>
                 <tbody>
                   <tr v-for="s in siteCompletionVir" :key="s.id">
                     <td>{{s.name}}</td>
                     <td style="text-align:center">#{{s.windowNum}}{{s.windowYear?' ('+s.windowYear+')':''}}</td>
-                    <td style="text-align:center">{{s.done}}/{{s.expected}}</td>
+                    <td style="text-align:center;white-space:nowrap">
+                      <svg viewBox="0 0 36 36" width="20" height="20" style="vertical-align:middle;margin-right:5px"><circle cx="18" cy="18" r="15" fill="none" stroke="#e5e5e5" stroke-width="4"></circle><circle cx="18" cy="18" r="15" fill="none" :stroke="s.complete?'#198754':'#e65100'" stroke-width="4" stroke-linecap="round" stroke-dasharray="94.2" :stroke-dashoffset="94.2 - (94.2 * Math.min(s.done/s.expected,1))" transform="rotate(-90 18 18)"></circle></svg>{{s.done}}/{{s.expected}}
+                    </td>
                     <td style="font-size:.78rem;color:#666">{{s.dates.join(', ')||'-'}}</td>
                     <td style="text-align:center"><span :class="['badge', s.complete?'badge-green':'badge-red']">{{s.complete?'✅ Siap':'⏳ Belum'}}</span></td>
                   </tr>
@@ -2269,6 +2324,7 @@ details.form-control[open] summary::after{content:'▴'}
               </table>
             </div>
           </div>
+          </transition>
         </div>
 
         <!-- SITE HEALTH SCORE SUMMARY -->
@@ -4520,7 +4576,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="r in pmListPagedList" :key="r.id">
                   <td><input type="checkbox" :value="r.id" v-model="batchSelected"></td>
-                  <td><b>{{r.refNo||'-'}}</b></td>
+                  <td><b class="mono-data">{{r.refNo||'-'}}</b></td>
                   <td><span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span></td>
                   <td>{{r.siteName}}</td>
                   <td v-if="currentProject!=='vir'">{{cctvSystemBrands(r.cameras) || '—'}}</td>
@@ -4565,7 +4621,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div v-for="r in pmListPagedList" :key="r.id" class="pm-mobile-card">
               <div class="pmc-top">
                 <input type="checkbox" :value="r.id" v-model="batchSelected">
-                <b class="pmc-ref">{{r.refNo||'-'}}</b>
+                <b class="pmc-ref mono-data">{{r.refNo||'-'}}</b>
                 <span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span>
               </div>
               <div class="pmc-site">{{r.siteName}} <span v-if="currentProject==='vir'" class="badge badge-gray" style="font-size:.65rem">{{virSystemShortLabel(r.virSystem)}}</span><span v-else class="badge badge-gray" style="font-size:.65rem">{{cctvSystemBrands(r.cameras) || '—'}}</span></div>
@@ -8405,6 +8461,48 @@ function _ensureD3() {
   return _d3Ready;
 }
 
+// ---- Custom tooltip (replaces native title="" tooltips — see the
+// mouseover/focusin listeners in onMounted()) ----
+let _tooltipEl = null, _tooltipTarget = null;
+function _positionTooltip(target) {
+  if(!_tooltipEl) return;
+  const r = target.getBoundingClientRect();
+  const tw = _tooltipEl.offsetWidth, th = _tooltipEl.offsetHeight;
+  let left = r.left + r.width/2 - tw/2;
+  left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+  let top = r.top - th - 8, arrowBelow = false;
+  if(top < 6) { top = r.bottom + 8; arrowBelow = true; }
+  _tooltipEl.style.left = left + 'px';
+  _tooltipEl.style.top = top + 'px';
+  _tooltipEl.classList.toggle('custom-tooltip-arrow-below', arrowBelow);
+}
+function _showCustomTooltip(target) {
+  const text = target.getAttribute('title');
+  if(!text) return;
+  target.dataset.ttText = text;
+  target.removeAttribute('title'); // suppress the native tooltip
+  if(!_tooltipEl) {
+    _tooltipEl = document.createElement('div');
+    _tooltipEl.className = 'custom-tooltip';
+    _tooltipEl.setAttribute('role', 'tooltip');
+    document.body.appendChild(_tooltipEl);
+  }
+  _tooltipEl.textContent = text;
+  _tooltipTarget = target;
+  _positionTooltip(target);
+  requestAnimationFrame(() => _tooltipEl.classList.add('custom-tooltip-show'));
+}
+function _hideCustomTooltip() {
+  if(_tooltipTarget) {
+    // Restores the real title attribute so the delegated mouseover
+    // listener's [title] selector can find this element again next hover —
+    // without this it'd only ever show once per page load.
+    if(_tooltipTarget.dataset.ttText) { _tooltipTarget.setAttribute('title', _tooltipTarget.dataset.ttText); delete _tooltipTarget.dataset.ttText; }
+    _tooltipTarget = null;
+  }
+  if(_tooltipEl) _tooltipEl.classList.remove('custom-tooltip-show');
+}
+
 // Isolated into its own component specifically so its 30s tick doesn't
 // touch the root component's render function at all — the root has no
 // child components anywhere else, so every reactive change (including this
@@ -10644,6 +10742,12 @@ createApp({
     // dashboard, regardless of restoreLastPage()'s outcome or any error
     // elsewhere in that unrelated chain.
     watch([page, initialLoading], ([p, il]) => { if (p === 'dashboard' && !il) nextTick(() => initMapWidget()); }, { immediate: true });
+    // A hovered element's tooltip has no way to hear about page navigation
+    // on its own — v-if unmounting the hovered element doesn't fire a real
+    // mouseout event, so without this the floating tooltip (and its stale
+    // text) would keep showing on top of the NEW page until the user
+    // happens to move their mouse over something else with a title.
+    watch(page, () => _hideCustomTooltip());
     watch(mapStateAssignments, () => { mapDetailState.value = null; renderMapPins(); });
     // renderMapStateFills()/its watcher are declared further down, right
     // next to mapStateHealth's own const — see there for why (a watch()
@@ -14685,7 +14789,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const cycleRecs = recs.slice(groupIndex*cycleSize, groupIndex*cycleSize+cycleSize);
       return {
         cycleNum: groupIndex+1, done: cycleRecs.length, expected: cycleSize,
-        complete: cycleRecs.length === cycleSize,
+        // "Complete" means NOT OVERDUE (reuses the same overdueMap the
+        // dashboard's "X site PM lampau tempoh" widget already trusts) —
+        // matching VIR's "caught up with what's due so far" philosophy,
+        // NOT "just finished an exact multiple of 3" (the old definition,
+        // which meant a site read as incomplete for the ENTIRE rest of its
+        // cycle except the single instant right after visit #3 — making
+        // the site-wide % structurally near-0% almost all the time
+        // regardless of actual on-time performance).
+        complete: !overdueMap.value[siteId],
         dates: cycleRecs.map(_fmtRecDate).filter(Boolean),
       };
     }
@@ -23423,6 +23535,56 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       document.querySelector('.main')?.scrollTo({ top:0, behavior:'smooth' });
     }
 
+    // Generic expand/collapse <transition> hooks — CSS alone can't animate
+    // to/from height:auto, so this measures scrollHeight and animates a
+    // concrete pixel value instead. Kept generic (not tied to one specific
+    // section) so any other v-if toggle can reuse the same 3 hooks later.
+    // Reusable rather than reinventing this the app didn't have a single
+    // Vue <Transition> anywhere except the toast stack before this.
+    // :css="false" on the <transition> (see template) is required here —
+    // without it, Vue ALSO tries to auto-detect completion via its own
+    // name-based CSS classes (expand-enter-active etc.), which have no
+    // matching stylesheet rules/duration of their own and conflict with
+    // this inline-style/JS-driven animation, leaving the transition stuck
+    // in enter-active forever (after-enter never fires, height never
+    // clears back to auto). With css:false, Vue instead waits solely for
+    // the done() callback below.
+    // setTimeout matching the CSS duration (not a transitionend listener) —
+    // simpler and avoids edge cases where the event fails to fire (multiple
+    // overlapping property transitions, the element being reflowed by an
+    // unrelated concurrent re-render, etc.). A transitionend-based version
+    // of this got visibly stuck once during testing; this is the more
+    // robust, widely-used pattern for the same JS height-transition need.
+    const EXPAND_MS = 250;
+    function onExpandEnter(el, done) {
+      el.style.height = '0px';
+      el.style.overflow = 'hidden';
+      // Force layout so the browser registers the 0px start before the
+      // height:auto-equivalent target is set — without this the browser
+      // can coalesce both style writes into one frame and skip the
+      // animation (element just pops straight to full height).
+      void el.offsetHeight;
+      el.style.transition = 'height ' + EXPAND_MS + 'ms ease';
+      el.style.height = el.scrollHeight + 'px';
+      setTimeout(done, EXPAND_MS);
+    }
+    function onExpandAfterEnter(el) {
+      // Clears the fixed pixel height back to auto once settled, so later
+      // content changes inside (e.g. more sites loading in) aren't stuck
+      // clipped to whatever height was measured at open-time.
+      el.style.height = '';
+      el.style.overflow = '';
+      el.style.transition = '';
+    }
+    function onExpandLeave(el, done) {
+      el.style.height = el.scrollHeight + 'px';
+      el.style.overflow = 'hidden';
+      void el.offsetHeight;
+      el.style.transition = 'height ' + EXPAND_MS + 'ms ease';
+      el.style.height = '0px';
+      setTimeout(done, EXPAND_MS);
+    }
+
     // Login page cursor-follow spotlight — cheap CSS-var update, no-op once
     // .login-wrap is gone (post-login) since the element just won't be found.
     function setupLoginSpotlight() {
@@ -23496,6 +23658,43 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           setTimeout(() => ripple.remove(), 650);
         }
       });
+
+      // Custom-styled tooltip — delegated (one set of listeners, same
+      // reasoning as the ripple handler above) rather than touching each of
+      // the 133+ existing title="..." attributes across the file. The
+      // native browser tooltip can't be restyled via CSS at all, so this
+      // temporarily swaps the real title out (suppressing the native one)
+      // while a styled floating element shows in its place, then restores
+      // it on mouseout/blur so a later hover can trigger it again.
+      document.addEventListener('mouseover', (e) => {
+        // Checked by DOM containment, not the [title] attribute — showing a
+        // tooltip strips the real title attribute (see _showCustomTooltip),
+        // so re-querying closest('[title]') on every mouseover fired while
+        // still inside the SAME element (browsers fire many as the cursor
+        // moves across sub-pixels/children) would find nothing and
+        // immediately hide-then-can't-reshow, flickering the tooltip shut
+        // right after it appears.
+        if(_tooltipTarget && _tooltipTarget.contains(e.target)) return;
+        const el = e.target.closest?.('[title]');
+        if(el === _tooltipTarget) return;
+        if(_tooltipTarget) _hideCustomTooltip();
+        if(el) _showCustomTooltip(el);
+      });
+      document.addEventListener('mouseout', (e) => {
+        if(!_tooltipTarget) return;
+        const to = e.relatedTarget;
+        if(!to || !_tooltipTarget.contains(to)) _hideCustomTooltip();
+      });
+      document.addEventListener('focusin', (e) => {
+        const el = e.target.closest?.('[title]');
+        if(!el || el === _tooltipTarget) return;
+        if(_tooltipTarget) _hideCustomTooltip();
+        _showCustomTooltip(el);
+      });
+      document.addEventListener('focusout', (e) => {
+        if(e.target === _tooltipTarget) _hideCustomTooltip();
+      });
+      window.addEventListener('scroll', () => { if(_tooltipTarget) _positionTooltip(_tooltipTarget); }, true);
 
       auth.onAuthStateChanged(async user=>{
         authUser.value = user;
@@ -23700,6 +23899,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       kontraktorLuar, kontraktorLuarLoading, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
       kontraktorLuarList, kontraktorLuarPagedList, kontraktorLuarPage, kontraktorLuarTotalPages, kontraktorLuarGoToPage, kontraktorLuarPageNumbers,
       mobileNavOpen, sidebarIndicatorStyle, savedCheckmark, ptrState, showScrollTop, scrollToTop, topbarCompact,
+      onExpandEnter, onExpandAfterEnter, onExpandLeave,
       confirmModal, askConfirm, respondConfirmModal, copyToClipboard, runToastUndo,
       darkMode, themeIconSpin,
       setTimeout
