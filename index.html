@@ -491,13 +491,15 @@ details.form-control[open] summary::after{content:'▴'}
 .achievement-badge{background:#fff;border:1px solid #ddd;color:inherit}
 .dark-mode .achievement-badge{background:#21262d;border-color:#30363d;color:#e0e0e0}
 
-/* PAGE TRANSITION — re-triggered by a watch(page) handler that removes then
-   re-adds this class (forcing a reflow in between) on the single .main
-   container, rather than wrapping every v-if="page==='x'" section
-   individually — same "CSS animation replays on class re-add" trick used
-   by .bar-grow/.timelapse-reveal elsewhere in this file, just applied to
-   one stable element instead of many. */
-.page-transition-active{animation:pageFadeIn .32s cubic-bezier(.22,1,.36,1) both}
+/* PAGE TRANSITION note: a second .main-level fade (re-triggered from JS via
+   a watch(page) handler) used to run here ALONGSIDE .page-view's own
+   pageFadeIn above — every page-view already gets a fresh DOM node (and
+   thus its own fade-in) on navigation via v-if, so the .main-level one was
+   pure duplication: two overlapping fade+rise animations at different
+   durations (.22s vs .32s) on nested elements, reading as a slight
+   stutter/overshoot instead of one clean motion. Removed; .page-view's
+   fade (plus the View Transitions rule below, which was already designed
+   to complement it, not replace it) is the sole page-transition effect now. */
 
 /* SIDEBAR ACTIVE INDICATOR — a thin bar that slides (via top/height
    transition) to track whichever .nav-item currently has .active, updated
@@ -1267,6 +1269,33 @@ details.form-control[open] summary::after{content:'▴'}
 .dark-mode .badge-red{background:#3a1a1a;color:#f85149}
 .dark-mode .badge-blue{background:#1a2a3a;color:#79c0ff}
 .dark-mode .badge-gray{background:#21262d;color:#8b949e}
+/* EXPIRY BADGES / WARRANTY STAT CARDS / misc pastel-status classes — these
+   use hardcoded light pastel backgrounds (unlike .badge-* above, already
+   covered) and had no dark-mode override at all, so they stayed washed-out
+   light pills/cards floating inside an otherwise dark UI. Same colors as
+   the existing .dark-mode [style*="background:#..."] rules above, since
+   these classes use the identical light-mode palette (#fdecea/#fff8e1/
+   #e8f5e9/#fff3e0), just applied via CSS class instead of inline style. */
+.dark-mode .expiry-badge.expired{background:#3d1f1f;color:#ff8a80;border-color:#5a2e2e}
+.dark-mode .expiry-badge.soon,.dark-mode .expiry-badge.expiring{background:#3d3418;color:#ffcc80;border-color:#5a4a20}
+.dark-mode .expiry-badge.active{background:#1a2e1c;color:#81c995;border-color:#2a4a2e}
+.dark-mode .warranty-stat-card{background:#161b22}
+.dark-mode .warranty-stat-card .wsc-label{color:#8b949e}
+.dark-mode .warranty-stat-card.expired{background:#3d1f1f}
+.dark-mode .warranty-stat-card.expired .wsc-value{color:#ff8a80}
+.dark-mode .warranty-stat-card.expiring{background:#3d3418}
+.dark-mode .warranty-stat-card.expiring .wsc-value{color:#ffcc80}
+.dark-mode .warranty-stat-card.active{background:#1a2e1c}
+.dark-mode .warranty-stat-card.active .wsc-value{color:#81c995}
+.dark-mode .warranty-vendor-header{background:#161b22;color:#90caf9}
+.dark-mode .role-internship{background:#3d3418;color:#ffcc80}
+.dark-mode .cm-entry-editing{background:#3d3418}
+.dark-mode .h-public{background:#3d1f1f;color:#ff8a80}
+.dark-mode .h-school{background:#3d3418;color:#ffcc80}
+.dark-mode .cal-cell.ph-day{background:#3d1f1f!important}
+.dark-mode .cal-cell.school-day{background:#3d3418!important}
+.dark-mode .compare-diff{background:#3d3418}
+.dark-mode .cp-empty-row td{background:#3d3418}
 .dark-mode .progress-bar{background:#30363d}
 .dark-mode .btn-outline{background:rgba(255,255,255,.05);color:#90caf9;border-color:#30363d}
 .dark-mode .btn-outline:hover{background:rgba(88,166,255,.1)}
@@ -3120,7 +3149,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- CAMERAS TAB -->
-        <div v-if="eqTab==='cameras'">
+        <div v-show="eqTab==='cameras'">
           <div class="card" id="equip-form-cameras">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Kamera</div>
@@ -3252,7 +3281,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- NVR TAB -->
-        <div v-if="eqTab==='nvr'">
+        <div v-show="eqTab==='nvr'">
           <div class="card" id="equip-form-nvr">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah NVR / Extension</div>
@@ -3339,7 +3368,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- HDD TAB -->
-        <div v-if="eqTab==='hdd'">
+        <div v-show="eqTab==='hdd'">
           <div class="card" id="equip-form-hdd">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Hard Disk</div>
@@ -3422,7 +3451,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- SWITCH TAB -->
-        <div v-if="eqTab==='switch'">
+        <div v-show="eqTab==='switch'">
           <div class="card" id="equip-form-switches">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Network Switch</div>
@@ -3495,7 +3524,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- ALARM TAB -->
-        <div v-if="eqTab==='alarm'">
+        <div v-show="eqTab==='alarm'">
           <div class="card" id="equip-form-alarms">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Alarm SMS System</div>
@@ -3579,7 +3608,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- SERVER/APPLIANCE TAB (VIR Optager HD4000 only) -->
-        <div v-if="eqTab==='servers'">
+        <div v-show="eqTab==='servers'">
           <div class="card" id="equip-form-servers">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Appliance {{equipVirSystem==='VCS'?'VCS':'Optager HD4000'}}</div>
@@ -3710,7 +3739,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TABLET TAB (VIR Optager HD4000 only) -->
-        <div v-if="eqTab==='tablets'">
+        <div v-show="eqTab==='tablets'">
           <div class="card" id="equip-form-tablets">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Android Tablet</div>
@@ -3782,7 +3811,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- LAIN-LAIN PERALATAN TAB (CCTV only — Monitor/TV/PC/UPS/POE dll.) -->
-        <div v-if="eqTab==='misc'">
+        <div v-show="eqTab==='misc'">
           <div class="card" id="equip-form-misc">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Peralatan Lain-lain</div>
@@ -3872,7 +3901,7 @@ details.form-control[open] summary::after{content:'▴'}
         <!-- VIR: Bilik & Sistem (BCD / Optager HD4000) — a room's system tag
              is what drives which checklist a PM borang uses for that room,
              since a single VIR site can have rooms on different systems. -->
-        <div v-if="eqTab==='rooms' && currentProject==='vir'">
+        <div v-show="eqTab==='rooms' && currentProject==='vir'">
           <div class="card" id="equip-form-rooms">
             <div class="flex justify-between items-center mb-16">
               <div class="card-title" style="margin:0;border:none;padding:0">Tambah Bilik</div>
@@ -5053,6 +5082,7 @@ details.form-control[open] summary::after{content:'▴'}
             <span class="cal-month-title">{{MONTHS[calMonth]}} {{calYear}}</span>
             <button class="btn btn-outline btn-sm" @click="calNext">Seterusnya →</button>
           </div>
+          <div v-if="calHolidayYearMissing" class="badge badge-gray" style="display:block;margin-bottom:10px;padding:6px 10px;font-size:.75rem">⚠️ Data cuti umum/sekolah untuk tahun {{calYear}} belum dikemaskini dalam sistem — kalendar ini TIDAK menunjukkan cuti sebenar untuk tahun ini.</div>
           <div class="cal-legend">
             <div class="leg"><div class="leg-dot" style="background:#185FA5"></div>SPRM - CCTV</div>
             <div class="leg"><div class="leg-dot" style="background:#BA7517"></div>SPRM - VIR</div>
@@ -5547,6 +5577,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">-- Pilih Brand --</option>
                 <option v-for="b in customEquipCleanupBrandList" :key="b">{{b}}</option>
               </select>
+              <button v-if="customEquipCleanupBrandIsCustom" class="btn btn-outline btn-sm" style="margin-top:8px;color:#c62828;border-color:#c62828" @click="removeCustomBrand" title="Padam brand custom ini">🗑 Padam Brand Ini</button>
             </div>
           </div>
         </div>
@@ -6702,8 +6733,8 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr><th>#</th><th>No. Rujukan</th><th>Site</th><th>Bilik</th><th>Tarikh</th><th>Jenis</th><th>Projek</th><th>Status</th></tr></thead>
               <tbody>
-                <tr v-for="(r,i) in laporanFiltered" :key="r.id">
-                  <td>{{i+1}}</td>
+                <tr v-for="(r,i) in laporanFilteredPaged" :key="r.id">
+                  <td>{{(laporanRecordsPage-1)*LAPORAN_PAGE_SIZE + i + 1}}</td>
                   <td><b>{{r.refNo||'—'}}</b></td>
                   <td>{{r.siteName}}</td>
                   <td>{{r.virRoomNo||'—'}}</td>
@@ -6715,6 +6746,14 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-if="!laporanFiltered.length"><td colspan="8" style="text-align:center;color:#aaa;padding:24px">Tiada rekod untuk tempoh/filter ini.</td></tr>
               </tbody>
             </table>
+          </div>
+          <div v-if="laporanRecordsPageCount>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
+            <span class="text-sm text-muted">Halaman {{laporanRecordsPage}} / {{laporanRecordsPageCount}} &nbsp;·&nbsp; {{laporanFiltered.length}} rekod</span>
+            <div class="flex gap-8">
+              <button class="btn btn-outline btn-sm" :disabled="laporanRecordsPage===1" @click="laporanRecordsGoToPage(laporanRecordsPage-1)">‹ Sebelum</button>
+              <button v-for="p in laporanRecordsPageNumbers" :key="p" class="btn btn-sm" :class="p===laporanRecordsPage?'btn-primary':'btn-outline'" @click="laporanRecordsGoToPage(p)">{{p}}</button>
+              <button class="btn btn-outline btn-sm" :disabled="laporanRecordsPage===laporanRecordsPageCount" @click="laporanRecordsGoToPage(laporanRecordsPage+1)">Seterus ›</button>
+            </div>
           </div>
         </div>
 
@@ -6752,8 +6791,8 @@ details.form-control[open] summary::after{content:'▴'}
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(row,i) in laporanNotaItems" :key="i">
-                  <td style="color:#999;font-size:.8rem">{{i+1}}</td>
+                <tr v-for="(row,i) in laporanNotaItemsPaged" :key="i">
+                  <td style="color:#999;font-size:.8rem">{{(laporanNotaPage-1)*LAPORAN_PAGE_SIZE + i + 1}}</td>
                   <td style="font-size:.82rem">{{row.siteName}}</td>
                   <td style="font-size:.82rem">{{row.virRoomNo||'—'}}</td>
                   <td style="text-align:center"><span :class="['proj-badge', row.project==='vir'?'proj-vir':'proj-cctv']" style="font-size:.68rem;padding:2px 7px">{{row.project==='vir'?'VIR':'CCTV'}}</span></td>
@@ -6768,6 +6807,14 @@ details.form-control[open] summary::after{content:'▴'}
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div v-if="laporanNotaPageCount>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
+            <span class="text-sm text-muted">Halaman {{laporanNotaPage}} / {{laporanNotaPageCount}} &nbsp;·&nbsp; {{laporanNotaItems.length}} baris</span>
+            <div class="flex gap-8">
+              <button class="btn btn-outline btn-sm" :disabled="laporanNotaPage===1" @click="laporanNotaGoToPage(laporanNotaPage-1)">‹ Sebelum</button>
+              <button v-for="p in laporanNotaPageNumbers" :key="p" class="btn btn-sm" :class="p===laporanNotaPage?'btn-primary':'btn-outline'" @click="laporanNotaGoToPage(p)">{{p}}</button>
+              <button class="btn btn-outline btn-sm" :disabled="laporanNotaPage===laporanNotaPageCount" @click="laporanNotaGoToPage(laporanNotaPage+1)">Seterus ›</button>
+            </div>
           </div>
           <div v-else style="padding:24px;text-align:center;color:#aaa;font-size:.85rem">
             <div style="font-size:2rem;margin-bottom:8px">📭</div>
@@ -10035,6 +10082,22 @@ createApp({
       if(await askConfirm(`Ada borang PM belum siap dari sesi lepas (${siteLabel}, disimpan ${when}) — kemungkinan tak sempat disubmit sebab sambungan/tab terputus.\n\nNak sambung borang ni semula?`, {danger:false})) {
         currentProject.value = draft.project || 'cctv';
         Object.assign(pm, draft.pm);
+        // Same localStorage-round-trip issue already handled for _createdAt
+        // in savePM() (JSON strips the Timestamp class down to a plain
+        // {seconds,nanoseconds} object) — but here it silently breaks the
+        // concurrent-edit staleness check instead of corrupting a saved
+        // field: the comparable-check safely evaluates false (no crash), so
+        // no one would ever notice the safety net had gone quiet. Re-derive
+        // a real baseline from a fresh read instead of trusting the
+        // round-tripped value — treats "whatever's on the server right now"
+        // as the new baseline for this resumed session, which still
+        // protects against conflicts from THIS point forward even though it
+        // can't retroactively detect one that happened during the crash gap.
+        if(pm._isEdit && pm._draftId) {
+          db.collection('pmRecords').doc(pm._draftId).get().then(d => {
+            if(d.exists) pm._loadedUpdatedAt = d.data().updatedAt || d.data().createdAt || null;
+          }).catch(()=>{});
+        }
         pmStep.value = draft.pmStep || 1;
         page.value = 'new-pm';
         showToast('Draft borang dipulihkan.');
@@ -10977,6 +11040,29 @@ createApp({
 
       loading.value = true;
       try {
+        // Concurrent-edit guard — same reasoning/pattern as savePM()'s own
+        // check: this write is a full .set(data,{merge:true}) rebuilt
+        // entirely from teamModal's local state (loaded once when the
+        // modal opened), so if someone else saved a change to this SAME
+        // assignment in between, this save would otherwise silently
+        // overwrite theirs with no warning. teamModal.current is the exact
+        // object last loaded from teamAssignments.value by openEditTeam()
+        // — its own updatedAt is the "as loaded" snapshot to compare
+        // against. Only warns (never blocks) on an inconclusive comparison.
+        if(teamModal.editing && teamModal.current?.id) {
+          const liveSnap = await db.collection('teamAssignments').doc(teamModal.current.id).get();
+          if(liveSnap.exists) {
+            const liveVersion = liveSnap.data().updatedAt || null;
+            const loadedVersion = teamModal.current.updatedAt || null;
+            const comparable = liveVersion && loadedVersion && liveVersion.isEqual && loadedVersion.isEqual;
+            if(comparable && !liveVersion.isEqual(loadedVersion)) {
+              if(!await askConfirm(`Penugasan "Team ${teamModal.data.team}" telah diubah oleh orang lain sejak anda buka borang ini.\n\nTeruskan simpan? (Perubahan mereka akan digantikan dengan versi anda.)`)) {
+                loading.value = false;
+                return;
+              }
+            }
+          }
+        }
         const members = allStaff.value
           .filter(u => teamModal.selectedUids.includes(u.id))
           .map(u => ({ uid: u.id, name: u.name||u.username }));
@@ -11381,6 +11467,14 @@ createApp({
     }
     const calYear  = ref(new Date().getFullYear());
     const calMonth = ref(new Date().getMonth());
+    // MY_PUBLIC_HOLIDAYS/schoolHolidays20xx are hardcoded per-year (only
+    // 2025/2026 entered as of writing) — a year with no entry doesn't crash
+    // (publicHolidaysForDay/schoolHolidaysForDay both fall back to []), it
+    // just silently renders as if that year has NO public/school holidays
+    // at all, indistinguishable from "genuinely no holidays" without
+    // checking the source. Surfaces that gap in the UI instead of leaving
+    // it silent, so it reads as "data needs updating" not "clean calendar".
+    const calHolidayYearMissing = computed(() => !MY_PUBLIC_HOLIDAYS[calYear.value]);
     // Jadual Penyelenggaraan is normally superadmin/admin-only, but Izwan
     // (staff-level) was given a one-off exception to edit it too — everyone
     // else at 'staff'/'internship' level stays view-only.
@@ -11886,13 +11980,13 @@ createApp({
         const data = { ...contractModal.data, reminderDays: contractModal.data.reminderDays || 60 };
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!contractModal.editing) {
-          const ref = await db.collection('contracts').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          const ref = await _fw(db.collection('contracts').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
           _localUpsert(contracts, ref.id, { project:'cctv', ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('CONTRACT_CREATE', data.title);
           showToast('Kontrak berjaya ditambah!');
           flashSavedCheckmark();
         } else {
-          await db.collection('contracts').doc(contractModal._editId).update(data);
+          await _fw(db.collection('contracts').doc(contractModal._editId).update(data));
           _localUpsert(contracts, contractModal._editId, data, sortByEnd);
           logAudit('CONTRACT_EDIT', data.title);
           showToast('Kontrak dikemas kini!');
@@ -12209,13 +12303,13 @@ createApp({
         const data = { ...rest, vendor, reminderDays: d.reminderDays || 60 };
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!warrantyModal.editing) {
-          const ref = await db.collection('equipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          const ref = await _fw(db.collection('equipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
           _localUpsert(warranty, ref.id, { ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan berjaya ditambah!');
           flashSavedCheckmark();
         } else {
-          await db.collection('equipmentWarranty').doc(warrantyModal._editId).update(data);
+          await _fw(db.collection('equipmentWarranty').doc(warrantyModal._editId).update(data));
           _localUpsert(warranty, warrantyModal._editId, data, sortByEnd);
           logAudit('WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan dikemaskini!');
@@ -12331,12 +12425,12 @@ createApp({
         const data = { ...d, category };
         const sortByLetterDateDesc = (a,b) => (b.letterDate||'').localeCompare(a.letterDate||'');
         if(!letterMemoModal.editing) {
-          const ref = await db.collection('suratMemo').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' });
+          const ref = await _fw(db.collection('suratMemo').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' }));
           _localUpsert(letterMemos, ref.id, { ...data, createdAt: _fakeServerTimestamp(), createdBy: authUser.value?.email || '' }, sortByLetterDateDesc);
           logAudit('LETTER_MEMO_ADD', `${letterMemoCategoryLabel(category)} — ${d.letterDate}`);
           showToast('Surat/memo berjaya ditambah!');
         } else {
-          await db.collection('suratMemo').doc(letterMemoModal._editId).update(data);
+          await _fw(db.collection('suratMemo').doc(letterMemoModal._editId).update(data));
           _localUpsert(letterMemos, letterMemoModal._editId, data, sortByLetterDateDesc);
           logAudit('LETTER_MEMO_EDIT', `${letterMemoCategoryLabel(category)} — ${d.letterDate}`);
           showToast('Surat/memo dikemaskini!');
@@ -12436,16 +12530,16 @@ createApp({
             status:'pending', openedDate:d.openedDate, resolvedDate:'',
             entries:[firstEntry],
           };
-          const ref = await db.collection('cmCases').add({
+          const ref = await _fw(db.collection('cmCases').add({
             ...newCase,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '',
-          });
+          }));
           _localUpsert(cmCases, ref.id, { ...newCase, createdAt: _fakeServerTimestamp(), createdBy: authUser.value?.email || '' }, sortByOpenedDesc);
           logAudit('CM_CASE_ADD', `${d.title.trim()} — ${d.siteName}`);
           showToast('Kes CM berjaya dibuka!');
         } else {
           const patch = { project:d.project, siteId:d.siteId, siteName:d.siteName, title:d.title.trim(), openedDate:d.openedDate };
-          await db.collection('cmCases').doc(cmCaseModal._editId).update(patch);
+          await _fw(db.collection('cmCases').doc(cmCaseModal._editId).update(patch));
           _localUpsert(cmCases, cmCaseModal._editId, patch, sortByOpenedDesc);
           logAudit('CM_CASE_EDIT', `${d.title.trim()} — ${d.siteName}`);
           showToast('Kes CM dikemaskini!');
@@ -12471,7 +12565,7 @@ createApp({
       loading.value = true;
       try {
         const patch = resolving ? { status:'selesai', resolvedDate:_localDateStr() } : { status:'pending', resolvedDate:'' };
-        await db.collection('cmCases').doc(k.id).update(patch);
+        await _fw(db.collection('cmCases').doc(k.id).update(patch));
         Object.assign(k, patch);
         await logAudit(resolving?'CM_CASE_RESOLVE':'CM_CASE_REOPEN', `${k.title} — ${k.siteName}`);
         showToast(resolving ? 'Kes ditandakan selesai!' : 'Kes dibuka semula.');
@@ -12504,7 +12598,7 @@ createApp({
       loading.value = true;
       try {
         const entry = { id:'e'+Date.now()+Math.random().toString(36).slice(2,7), date:cmCaseDetail.newEntryDate, status:cmCaseDetail.newEntryStatus.trim(), note:cmCaseDetail.newEntryNote.trim(), ts:Date.now(), author:authProfile.value?.username || authUser.value?.email || '' };
-        await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayUnion(entry) });
+        await _fw(db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayUnion(entry) }));
         k.entries = [...(k.entries||[]), entry];
         cmCaseDetail.newEntryStatus = '';
         cmCaseDetail.newEntryNote = '';
@@ -12551,7 +12645,7 @@ createApp({
         const newEntries = (k.entries||[]).map(e => e.id === cmCaseDetail.editingEntryId
           ? { ...e, date:cmCaseDetail.newEntryDate, status:cmCaseDetail.newEntryStatus.trim(), note:cmCaseDetail.newEntryNote.trim() }
           : e);
-        await db.collection('cmCases').doc(k.id).update({ entries: newEntries });
+        await _fw(db.collection('cmCases').doc(k.id).update({ entries: newEntries }));
         k.entries = newEntries;
         await logAudit('CM_CASE_EDIT_ENTRY', `${k.title} — ${cmCaseDetail.newEntryDate}`);
         showToast('Catatan dikemaskini!');
@@ -12566,7 +12660,7 @@ createApp({
       const entry = (k.entries||[]).find(e=>e.id===entryId);
       if(!entry || !await askConfirm('Padam catatan ini?')) return;
       try {
-        await db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayRemove(entry) });
+        await _fw(db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayRemove(entry) }));
         k.entries = (k.entries||[]).filter(e=>e.id!==entryId);
         // If the entry being deleted was mid-edit, the edit form would keep
         // referencing a now-nonexistent id — fall back to "add" mode.
@@ -12971,12 +13065,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         };
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!virWarrantyModal.editing) {
-          const ref = await db.collection('virEquipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+          const ref = await _fw(db.collection('virEquipmentWarranty').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
           _localUpsert(virWarranty, ref.id, { ...data, createdAt: _fakeServerTimestamp() }, sortByEnd);
           logAudit('VIR_WARRANTY_ADD', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan VIR berjaya ditambah!');
         } else {
-          await db.collection('virEquipmentWarranty').doc(virWarrantyModal._editId).update(data);
+          await _fw(db.collection('virEquipmentWarranty').doc(virWarrantyModal._editId).update(data));
           _localUpsert(virWarranty, virWarrantyModal._editId, data, sortByEnd);
           logAudit('VIR_WARRANTY_EDIT', `${data.equipmentName} — ${data.siteName}`);
           showToast('Waranti peralatan VIR dikemaskini!');
@@ -13390,6 +13484,39 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const listKey = CLEANUP_BRAND_LIST_KEY[customEquipCleanup.equipType];
       return brandOptionsFor(listKey).filter(b => b !== 'Lain-lain');
     });
+    // removeCustomModel/clearAllCustomModels below had no equivalent for
+    // BRANDS themselves — a mistyped custom brand (e.g. "Hikvison") had no
+    // removal path anywhere in the app, permanent in every user's dropdown
+    // forever. Only offered for brands actually IN customBrands (never a
+    // built-in dictionary entry) — same "hardcoded list can't be deleted
+    // here" rule this page already states for models, extended to brands.
+    const customEquipCleanupBrandIsCustom = computed(() => {
+      const listKey = CLEANUP_BRAND_LIST_KEY[customEquipCleanup.equipType];
+      const b = customEquipCleanup.brand;
+      if(!b) return false;
+      return (customBrands[listKey]||[]).some(x => x.trim().toLowerCase() === b.trim().toLowerCase());
+    });
+    async function removeCustomBrand() {
+      const { equipType, brand } = customEquipCleanup;
+      const listKey = CLEANUP_BRAND_LIST_KEY[equipType];
+      if(!isAdminRole() || authProfile.value?.role !== 'superadmin') return;
+      if(!brand || !customEquipCleanupBrandIsCustom.value) return;
+      if(!await askConfirm(`Padam brand custom "${brand}" (${listKey})? Ini akan buang brand ini daripada dropdown untuk SEMUA jenis peralatan/projek yang guna senarai brand yang sama — model custom sedia ada di bawah brand ini tidak dipadam serentak, padam berasingan jika perlu.`)) return;
+      const list = customBrands[listKey] || [];
+      const idx = list.findIndex(x => x.trim().toLowerCase() === brand.trim().toLowerCase());
+      if(idx === -1) return;
+      list.splice(idx, 1);
+      try {
+        await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('brand__'+listKey).set({
+          kind: 'brand', listKey,
+          items: firebase.firestore.FieldValue.arrayRemove(brand),
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        }, { merge: true });
+        await logAudit('CUSTOM_BRAND_DELETE', `${listKey}: ${brand}`);
+        showToast('Brand custom dipadam.');
+        customEquipCleanup.brand = '';
+      } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
+    }
     const customEquipCleanupList = computed(() => {
       const { equipType, project, brand } = customEquipCleanup;
       if(!brand) return [];
@@ -13494,10 +13621,21 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // open on this one page. Previously that traversal cost was paid for the
     // entire login session (dashboard, reports, everywhere), scaling with
     // total equipment across every site, not just the one being edited.
+    //
+    // Source is a getter (not the 5 refs directly) resolving to just the
+    // CURRENTLY OPEN site's own equipment slice via activeEquip() — this was
+    // still watching all 5 multi-site stores wholesale even after being
+    // scoped to only run on the site-equip page, so every keystroke in any
+    // equipment field was still forcing Vue to deep-traverse ALL ~52 sites'
+    // equipment (both projects) to register dependencies, not just the one
+    // site actually being edited — the exact cost the comment above already
+    // describes wanting to avoid, just not fully closed. This narrows the
+    // deep-traversal to one site's data, the only thing the callback (an
+    // autosave debounce trigger) actually needs to react to.
     let _stopEquipDeepWatch = null;
     function _startEquipDeepWatch() {
       if(_stopEquipDeepWatch) return;
-      _stopEquipDeepWatch = watch([siteEquip, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, virSiteEquipVCS], () => {
+      _stopEquipDeepWatch = watch(() => selSite.value ? activeEquip()[selSite.value.id] : null, () => {
         if(!selSite.value) return;
         clearTimeout(_equipDraftTimer);
         _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
@@ -14871,7 +15009,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       ctx.strokeStyle = 'rgba(255,255,255,.25)';
       ctx.beginPath(); ctx.moveTo(40,64); ctx.lineTo(760,64); ctx.stroke();
 
-      ctx.font = '700 30px Arial';
+      // Auto-shrink long site names instead of letting them overflow into
+      // the score ring (drawn below at cx=650,r=70 — left edge at x=580).
+      // No effect for normal-length names (loop just never runs); only
+      // kicks in past roughly 25-28 characters at the default 30px.
+      let nameFontSize = 30;
+      ctx.font = `700 ${nameFontSize}px Arial`;
+      while(nameFontSize > 16 && ctx.measureText(site.name).width > 520) {
+        nameFontSize -= 2;
+        ctx.font = `700 ${nameFontSize}px Arial`;
+      }
       ctx.fillText(site.name, 40, 115);
       ctx.font = '600 14px Arial';
       ctx.fillStyle = 'rgba(255,255,255,.7)';
@@ -17232,7 +17379,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // saved before some equipment category existed in the schema (e.g.
         // "misc" for older records) would otherwise load with that field
         // missing entirely, and pushing onto `undefined` later throws.
-        if(snap) snap.forEach(doc=>{ eq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[], ...doc.data()}; });
+        if(snap) snap.forEach(doc=>{
+          eq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[], ...doc.data()};
+          // Firestore's own doc-level write timestamp — see _equipDocUpdateTime's
+          // own comment (near saveSiteEquip) for why this piggybacks on that
+          // instead of a new schema field.
+          _equipDocUpdateTime['siteEquipment:'+doc.id] = doc.updateTime || null;
+        });
         // Auto-tidy any site whose list was saved out of order before the
         // auto-sort-on-add/edit existed — this fixes it in local state on
         // every load; it'll persist back to Firestore the next time that
@@ -17252,6 +17405,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // 'Optager HD4000' (their physical asset types don't overlap).
         if(vsnap) vsnap.forEach(doc=>{
           const d = doc.data();
+          _equipDocUpdateTime['virSiteEquipment:'+doc.id] = doc.updateTime || null;
           veqRooms[doc.id] = { rooms: d.rooms || [] };
           // Legacy docs saved before the BCD/Optager split kept
           // cameras/nvr/hdd/switches/alarms at the top level — treat those
@@ -18989,7 +19143,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           if(!match && item.serial) match = list.find(x => x.serial && x.serial === item.serial);
           if(!match) return null;
           return {
-            rawDate: r.visitDate || '',
+            // A record with no visitDate (only month/year) used to fall back
+            // to '' here — since '' sorts before every real 'YYYY-MM-DD'
+            // string, every such record was pushed to the very FRONT of the
+            // timeline regardless of its actual year, corrupting the
+            // chronological order. Falls back to a 'YYYY-MM-01' shaped
+            // string instead so it sorts correctly alongside real dates.
+            rawDate: r.visitDate || (r.year && r.month ? `${r.year}-${String(r.month).padStart(2,'0')}-01` : ''),
             dateLabel: r.visitDate ? fmtDateDash(r.visitDate) : (r.month ? `${MONTHS[r.month-1]} ${r.year}` : '-'),
             refNo: r.refNo || '',
             maintType: r.maintType || 'PM',
@@ -19463,6 +19623,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         }
       }
     }
+    // Tracks each equipment doc's Firestore-native updateTime as of the last
+    // time we either LOADED it (loadAll()) or WROTE it ourselves (refreshed
+    // below) — piggybacks on Firestore's own doc metadata instead of adding
+    // a new schema field just for this. Keyed 'collection:siteId' since
+    // siteEquipment/virSiteEquipment are separate collections. Used by
+    // saveSiteEquip() (the EXPLICIT "Simpan Semua" click only, never the
+    // silent debounced autosave — see that function's own comment for why)
+    // to detect someone else having saved equipment changes to this same
+    // site in between, before silently overwriting them.
+    let _equipDocUpdateTime = {};
     // Shared write path for both the manual "Simpan Semua" button and the
     // debounced auto-save — captures the target site/label up front since
     // the user isn't blocked from navigating away while this write is in
@@ -19512,6 +19682,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         await _fw(batch.commit());
         logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
+        // Refresh the tracked updateTime to reflect OUR OWN write (the
+        // client SDK's batch.commit() doesn't return server write-times the
+        // way the admin SDK does, so a fresh read is the only way to get
+        // it) — without this, saveSiteEquip()'s staleness check would flag
+        // our own just-completed autosave as "someone else changed this"
+        // the very next time "Simpan Semua" is clicked. Fire-and-forget:
+        // never blocks the save itself or the toast/checkmark below on it.
+        db.collection(col).doc(siteId).get().then(d => { _equipDocUpdateTime[col+':'+siteId] = d.updateTime || null; }).catch(()=>{});
         // Checkmark only alongside the toast (i.e. never for the silent
         // {toast:false} auto-save tick) — flashing it every ~2s while
         // someone's actively typing would be constant visual noise, not delight.
@@ -19522,7 +19700,31 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
 
     async function saveSiteEquip() {
+      if(!selSite.value) return;
       loading.value=true;
+      // Concurrent-edit guard — EXPLICIT "Simpan Semua" click only, never
+      // the silent debounced autosave (which fires ~every 2s during normal
+      // editing — a confirm() prompt popping up unprompted mid-typing would
+      // be disruptive, and the autosave itself already limits how much any
+      // one person's own gap of unsaved work can grow). _writeSiteEquipToFirestore
+      // always does a full document overwrite (equipment arrays aren't
+      // merged item-by-item), so if someone else saved a change to this
+      // SAME site's equipment since we loaded/last-saved it, this would
+      // otherwise silently discard theirs. Only warns on the specific
+      // deliberate "I'm done editing" action, not on every autosave tick.
+      const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
+      const key = col+':'+selSite.value.id;
+      const loadedVersion = _equipDocUpdateTime[key] || null;
+      if(loadedVersion) {
+        const liveSnap = await db.collection(col).doc(selSite.value.id).get();
+        const liveVersion = liveSnap.updateTime || null;
+        if(liveVersion && liveVersion.isEqual && loadedVersion.isEqual && !liveVersion.isEqual(loadedVersion)) {
+          if(!await askConfirm(`Peralatan site "${selSite.value.name}" telah diubah oleh orang lain sejak anda buka/simpan halaman ini.\n\nTeruskan simpan? (Perubahan mereka akan digantikan dengan versi anda.)`)) {
+            loading.value=false;
+            return;
+          }
+        }
+      }
       await _writeSiteEquipToFirestore();
       loading.value=false;
     }
@@ -19761,6 +19963,32 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             return;
           }
         }
+        // Concurrent-edit guard — savePM() always does a full .set(data)
+        // overwrite (no merge), so if someone else saved a change to this
+        // SAME record after this session loaded it for editing (two people
+        // opening the same PM/CM record around the same time), whoever
+        // saves second would otherwise silently discard the first person's
+        // changes with no warning at all. Only relevant when editing an
+        // existing record — a brand new one has nothing to conflict with.
+        // Only warns (doesn't block) so this can never trap a legitimate
+        // solo edit behind a false positive — if the comparison is
+        // inconclusive (missing/malformed timestamp on either side) it
+        // deliberately does NOT warn, same fail-open choice already made
+        // for other best-effort checks in this file.
+        if(pm._isEdit && pm._draftId) {
+          const liveSnap = await db.collection('pmRecords').doc(pm._draftId).get();
+          if(liveSnap.exists) {
+            const liveVersion = liveSnap.data().updatedAt || liveSnap.data().createdAt || null;
+            const loadedVersion = pm._loadedUpdatedAt || null;
+            const comparable = liveVersion && loadedVersion && liveVersion.isEqual && loadedVersion.isEqual;
+            if(comparable && !liveVersion.isEqual(loadedVersion)) {
+              if(!await askConfirm(`Rekod "${pm.refNo||pm._draftId}" telah diubah oleh orang lain sejak anda membuka borang ini.\n\nTeruskan simpan? (Perubahan mereka akan digantikan dengan versi anda — reload borang ini dahulu jika anda mahu semak perubahan mereka sebelum menimpanya.)`)) {
+                loading.value=false;
+                return;
+              }
+            }
+          }
+        }
         const isVir = currentProject.value === 'vir';
         const data = {
           project: isVir ? 'vir' : 'cctv',
@@ -19924,6 +20152,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       currentProject.value = r.project||'cctv';
       pm._draftId = r.id;
       pm._createdAt = r.createdAt || null;
+      // Snapshot of the record's own version-marker AS LOADED — savePM()
+      // compares this against the live server value right before writing,
+      // to detect someone else having saved a change to this same record
+      // in between (see that check for why). Falls back to createdAt for a
+      // record that's never been edited before (no updatedAt yet).
+      pm._loadedUpdatedAt = r.updatedAt || r.createdAt || null;
       pm._isEdit = true;
       // Preserve the ORIGINAL submission timestamp/submitter across edits —
       // savePM() only stamps these fresh when a record has never been
@@ -20830,7 +21064,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             ['No.','Perkara','Status','Nota'],
             r.support.map((s,i)=>[i+1,s.label,s.status,s.nota||''])
           ));
-        }
+        } else { children.push(emptyNote('Tiada rekod Perkara Lain-lain.')); }
         children.push(spacer());
 
       } else {
@@ -21132,6 +21366,29 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         return (db?.getTime()||0) - (da?.getTime()||0);
       });
     });
+    // Display-only pagination for the "Senarai Rekod" table — laporanFiltered
+    // itself stays whatever it always was (the full matching set), still
+    // used unchanged by the stat cards, charts, and printLaporan()'s PDF
+    // export (which should include every matching record, not just the
+    // currently-viewed page). This only slices what actually renders as
+    // <tr> elements on screen, since a wide Tempoh/site filter could
+    // otherwise put thousands of rows in one unvirtualized table.
+    const LAPORAN_PAGE_SIZE = 50;
+    const laporanRecordsPage = ref(1);
+    const laporanFilteredPaged = computed(() =>
+      laporanFiltered.value.slice((laporanRecordsPage.value-1)*LAPORAN_PAGE_SIZE, laporanRecordsPage.value*LAPORAN_PAGE_SIZE)
+    );
+    const laporanRecordsPageCount = computed(() => Math.max(1, Math.ceil(laporanFiltered.value.length / LAPORAN_PAGE_SIZE)));
+    function laporanRecordsGoToPage(p) {
+      laporanRecordsPage.value = Math.min(Math.max(1, p), laporanRecordsPageCount.value);
+    }
+    // Same "cap visible page buttons at 7" windowing as auditLogPageNumbers.
+    const laporanRecordsPageNumbers = computed(() => {
+      const total = laporanRecordsPageCount.value, cur = laporanRecordsPage.value, span = 3;
+      const from = Math.max(1, cur - span), to = Math.min(total, cur + span);
+      const nums = []; for(let i = from; i <= to; i++) nums.push(i);
+      return nums;
+    });
     // Live count-up on the Laporan stat cards — reuses the existing
     // countUpFrom() composable (already powers the Dashboard's site/record
     // counts), so changing Tempoh/Projek/Site morphs the numbers to their
@@ -21149,6 +21406,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     watch([laporanTempoh, laporanProject, laporanSite], async () => {
       if(page.value === 'laporan') { await nextTick(); initLaporanCharts(); }
     });
+    // Without this, changing a filter to a narrower result set could leave
+    // laporanRecordsPage sitting on a page number that no longer exists —
+    // the table would render empty even though matching records exist on
+    // an earlier page, with nothing on screen explaining why.
+    watch([laporanTempoh, laporanProject, laporanSite], () => { laporanRecordsPage.value = 1; });
 
     async function initLaporanCharts() {
       await _ensureChartjs();
@@ -21443,6 +21705,24 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         return true;
       });
     });
+    // Display-only pagination — same reasoning/pattern as laporanFilteredPaged
+    // above (Senarai Rekod): laporanNotaItems itself stays the full matching
+    // set, unchanged, still used as-is by printLaporan()'s PDF export.
+    const laporanNotaPage = ref(1);
+    const laporanNotaItemsPaged = computed(() =>
+      laporanNotaItems.value.slice((laporanNotaPage.value-1)*LAPORAN_PAGE_SIZE, laporanNotaPage.value*LAPORAN_PAGE_SIZE)
+    );
+    const laporanNotaPageCount = computed(() => Math.max(1, Math.ceil(laporanNotaItems.value.length / LAPORAN_PAGE_SIZE)));
+    function laporanNotaGoToPage(p) {
+      laporanNotaPage.value = Math.min(Math.max(1, p), laporanNotaPageCount.value);
+    }
+    const laporanNotaPageNumbers = computed(() => {
+      const total = laporanNotaPageCount.value, cur = laporanNotaPage.value, span = 3;
+      const from = Math.max(1, cur - span), to = Math.min(total, cur + span);
+      const nums = []; for(let i = from; i <= to; i++) nums.push(i);
+      return nums;
+    });
+    watch([laporanNotaSearch, laporanNotaStatus, laporanTempoh, laporanProject, laporanSite], () => { laporanNotaPage.value = 1; });
 
     // ── Laporan Bulanan ──
     const lbMonth = ref(new Date().getMonth() + 1);
@@ -22224,13 +22504,22 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       // kept consistent so the narrative never contradicts the KPI colours.
       return score >= 75 ? 'baik' : score >= 45 ? 'sederhana' : 'kritikal';
     }
-    function _buildExecutiveNarrative({ yr, cctvCompliance, virCompliance, totalOverdue, openCm, worst, topIssues }) {
+    function _buildExecutiveNarrative({ yr, genDate, cctvCompliance, virCompliance, totalOverdue, openCm, worst, topIssues }) {
       const cctvLabel = _executiveScoreLabel(cctvCompliance);
       const virLabel = _executiveScoreLabel(virCompliance);
       const overallAvg = Math.round((cctvCompliance + virCompliance) / 2);
       const overallLabel = _executiveScoreLabel(overallAvg);
       const sentences = [];
-      sentences.push(`Bagi tahun ${yr}, prestasi keseluruhan penyelenggaraan sistem CCTV dan VIR SPRM berada pada tahap <b>${overallLabel}</b> dengan skor purata gabungan ${overallAvg}%.`);
+      // Was "Bagi tahun ${yr}, ..." — misleading: cctvCompliance/virCompliance/
+      // totalOverdue/openCm/worst/topIssues are ALL current-snapshot/all-time
+      // computeds (siteHealthScores, slaTrend, recurringIssues, overdueSorted*),
+      // none of them actually filtered to just `yr`. Claiming this is "for
+      // year {yr}" would misrepresent cumulative/all-time figures (e.g. total
+      // open CM cases across every year) as if they were that year's alone —
+      // in an executive-level report for a govt client, worth getting right.
+      // Rewritten to accurately describe what's shown: a current snapshot as
+      // of generation date, not a year-scoped summary.
+      sentences.push(`Sehingga ${genDate}, prestasi keseluruhan penyelenggaraan sistem CCTV dan VIR SPRM berada pada tahap <b>${overallLabel}</b> dengan skor purata gabungan ${overallAvg}%.`);
       sentences.push(`Sistem CCTV mencatatkan skor pematuhan ${cctvCompliance}% (${cctvLabel}), manakala sistem VIR mencatatkan ${virCompliance}% (${virLabel}).`);
       sentences.push(totalOverdue > 0
         ? `Sebanyak <b>${totalOverdue} site</b> kini melepasi jadual penyelenggaraan berjadual dan memerlukan tindakan segera.`
@@ -22265,7 +22554,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const worst = slaTrend.value.slice(0,3);
       const topIssues = recurringIssues.value.slice(0,3);
       const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
-      const narrative = _buildExecutiveNarrative({ yr, cctvCompliance, virCompliance, totalOverdue, openCm, worst, topIssues });
+      const narrative = _buildExecutiveNarrative({ yr, genDate, cctvCompliance, virCompliance, totalOverdue, openCm, worst, topIssues });
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Ringkasan Eksekutif ${yr}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -22331,7 +22620,25 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const siteCount = new Set(qRecs.map(r=>r.siteId)).size;
       const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
       const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
-      const topIssues = recurringIssues.value.slice(0,5);
+      // Was `recurringIssues.value.slice(0,5)` — that computed scans ALL
+      // CM records ever (all-time), not just this quarter's, so the "Isu
+      // Paling Kerap Berulang" section silently showed the same top issues
+      // regardless of which quarter was being reported on (same bug class
+      // already fixed in the Executive Summary report). Rebuilt here scoped
+      // to qRecs (already correctly quarter-filtered above) instead of
+      // reusing the shared all-time computed.
+      const qIssueMap = {};
+      qRecs.filter(r => r.maintType === 'CM').forEach(r => {
+        _getNotaItems(r).forEach(item => {
+          const key = (item.masalah||'').trim().toLowerCase();
+          if(!key || key.length < 4 || NO_ISSUE_PHRASES.includes(key)) return;
+          if(!qIssueMap[key]) qIssueMap[key] = { text: item.masalah.trim(), count:0, sites:new Set() };
+          qIssueMap[key].count++;
+          if(r.siteName) qIssueMap[key].sites.add(r.siteName);
+        });
+      });
+      const topIssues = Object.values(qIssueMap).filter(x=>x.count>1).sort((a,b)=>b.count-a.count)
+        .map(x => ({ ...x, sites:[...x.sites] })).slice(0,5);
       const monthlyRows = qMonths.map(m => {
         const mRecs = qRecs.filter(r => _recDate(r)?.getMonth()===m);
         return { month: MONTHS[m], pm: mRecs.filter(r=>(r.maintType||'PM')!=='CM').length, cm: mRecs.filter(r=>r.maintType==='CM').length };
@@ -22958,6 +23265,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     }
 
     function startCompare() { compareMode.value = true; page.value = 'compare'; }
+    // compareList holds raw record ids with no project tag of its own —
+    // pmRecords is a single shared array for BOTH projects (distinguished
+    // only by r.project), and nothing was clearing a selection made under
+    // one project before switching to the other. Selecting one CCTV record,
+    // switching to VIR, and selecting one VIR record let "Bandingkan
+    // Sekarang" diff them together — VIR records have no cameras/hdd
+    // arrays, so those rows silently showed 0 instead of "not applicable,"
+    // and virItems isn't in compareFields at all, so the diff was
+    // meaningless with no warning it was even a cross-project comparison.
+    watch(currentProject, () => { compareList.value = []; compareMode.value = false; });
 
     // ── Feature 7: Mobile nav ──
     const mobileNavOpen = ref(false);
@@ -22966,19 +23283,6 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // of it, so the user has to manually tap the hamburger again to see
     // what they just navigated to.
     watch(page, () => { mobileNavOpen.value = false; });
-
-    // Re-triggers the .page-transition-active fade-in on every page change —
-    // see the CSS comment on that class for why this targets one stable
-    // .main element instead of wrapping every v-if="page==='x'" section.
-    watch(page, () => {
-      nextTick(() => {
-        const el = document.querySelector('.main');
-        if(!el) return;
-        el.classList.remove('page-transition-active');
-        void el.offsetWidth; // force reflow so the animation replays
-        el.classList.add('page-transition-active');
-      });
-    });
 
     // Sliding sidebar active-item indicator — recomputed from the actual
     // DOM position of whichever .nav-item has .active, since nav items are
@@ -23270,7 +23574,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       todayAttentionRows, handleTodayAttentionClick, smartInsights,
       filteredPM, yearList, submittedByDisplayName,
       pmListPage, pmListTotalPages, pmListPagedList, pmListGoToPage, pmListPageNumbers,
-      PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, MAP_NEGERI_OPTIONS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule,
+      PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, MAP_NEGERI_OPTIONS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule, calHolidayYearMissing,
       isToday, isWeekend, shortSite, dateStr,
       calPrev, calNext, openJadual, printJadual,
       teamAssignments, teamModal, allStaff, teamsForDay, teamsForDayGrouped, projShortLabel, teamsForMonth,
@@ -23326,6 +23630,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       removeReasonModal, confirmRemoveItem,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
+      customEquipCleanupBrandIsCustom, removeCustomBrand,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isEquipGroupAllSelected, toggleEquipGroupSelectAll, bulkDeleteEquip,
       equipHistoryModal, openEquipHistory, playEquipHistoryTimelapse, closeEquipHistory,
       revealedPw, togglePwReveal,
@@ -23359,6 +23664,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       laporanTempoh, laporanProject, laporanSite, laporanFiltered, printLaporan,
       laporanCountTotal, laporanCountPm, laporanCountCm, laporanCountSites,
       laporanNotaSearch, laporanNotaStatus, laporanNotaItems,
+      LAPORAN_PAGE_SIZE, laporanRecordsPage, laporanFilteredPaged, laporanRecordsPageCount, laporanRecordsGoToPage, laporanRecordsPageNumbers,
+      laporanNotaPage, laporanNotaItemsPaged, laporanNotaPageCount, laporanNotaGoToPage, laporanNotaPageNumbers,
       lbMonth, lbYear, lbProject, lbPreview, printLaporanBulanan,
       yirYear, printYearInReview,
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
