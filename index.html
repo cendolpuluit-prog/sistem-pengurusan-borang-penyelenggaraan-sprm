@@ -6777,7 +6777,8 @@ details.form-control[open] summary::after{content:'▴'}
         <!-- Charts row 2 -->
         <div class="laporan-chart-row" style="grid-template-columns:1fr 1fr">
           <div class="card">
-            <div style="font-weight:700;font-size:.88rem;color:#003366;margin-bottom:12px">🏢 Top Site — Paling Banyak CM</div>
+            <div style="font-weight:700;font-size:.88rem;color:#003366;margin-bottom:2px">🏢 Top Site — Paling Banyak CM</div>
+            <div class="text-sm text-muted mb-12">Klik bar untuk terus tapis "Senarai Rekod" di bawah ikut site tu (klik sekali lagi untuk batal tapis).</div>
             <div class="chart-wrap" style="height:240px"><canvas id="chart-site-cm"></canvas></div>
           </div>
           <div class="card">
@@ -7038,6 +7039,20 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-primary" @click="printExecutiveSummary">🖨️ Cetak Ringkasan Eksekutif</button>
           </div>
+          <p class="text-sm no-print" style="margin-top:12px;padding-top:12px;border-top:1px solid rgba(0,51,102,.1);line-height:1.6" v-html="liveNarrativeSummary"></p>
+        </div>
+
+        <!-- Anomaly alert — always visible (not tied to any one tab), same
+             reasoning as the Executive Summary card above it: this is a
+             "go look at this now" signal, not something that should only
+             surface if the user happens to click into a specific tab. -->
+        <div v-if="siteAnomalies.length" class="card no-print" style="background:#fff5f5;border:1.5px solid #ef9a9a">
+          <div style="font-weight:700;color:#b71c1c;font-size:.92rem">🚨 Anomali Dikesan Bulan Ini</div>
+          <div class="text-sm text-muted mb-12">Site dengan bilangan CM bulan ini jauh melebihi purata sejarah site itu sendiri — bukan sekadar site paling teruk secara keseluruhan (tu dah ada di tab Isu Berulang), tapi site yang <b>tiba-tiba</b> menyimpang dari corak biasa dia.</div>
+          <div v-for="a in siteAnomalies" :key="a.site+a.project" style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#fff;border-radius:6px;margin-bottom:6px;border:1px solid #ffcdd2;flex-wrap:wrap;gap:6px">
+            <span><b>{{a.site}}</b> <span :class="'proj-badge proj-'+a.project.toLowerCase()">{{a.project}}</span></span>
+            <span style="font-size:.85rem"><span class="badge badge-red">{{a.thisCount}} CM bulan ini</span> <span class="text-muted">(purata biasa: {{a.histAvg}}/bulan)</span></span>
+          </div>
         </div>
 
         <!-- TAB: INVENTORI PERALATAN -->
@@ -7193,14 +7208,15 @@ details.form-control[open] summary::after{content:'▴'}
             <p class="text-sm text-muted mb-12">Dikira dari selang hari antara setiap PM berturutan berbanding interval kontrak (CCTV {{PM_INTERVAL.cctv}} bulan / VIR ikut jadual kontrak semasa — lihat VIR_PM_WINDOWS). "Bil. Lewat" = bilangan kitaran PM yang melebihi interval tersebut.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Site</th><th>Projek</th><th>Jumlah PM</th><th>Bil. Lewat</th><th>Purata Selang (hari)</th><th>Selang Terburuk (hari)</th></tr></thead>
+                <thead><tr><th>Site</th><th>Projek</th><th>Jumlah PM</th><th>Bil. Lewat</th><th>Purata Selang (hari)</th><th>Selang Terburuk (hari)</th><th style="width:80px" title="Bilangan PM sebulan, 6 bulan lepas hingga bulan ini">6 Bulan Lepas</th></tr></thead>
                 <tbody>
                   <tr v-for="s in slaTrend" :key="s.name" :class="{'highlight-row':s.breachCount>0}">
                     <td><b>{{s.name}}</b></td><td>{{s.proj}}</td><td>{{s.pmCount}}</td>
                     <td><span :class="'badge badge-'+(s.breachCount>0?'red':'green')">{{s.breachCount}}</span></td>
                     <td>{{s.avgGap??'—'}}</td><td>{{s.worstGap??'—'}}</td>
+                    <td><svg width="60" height="20" viewBox="0 0 60 20"><polyline :points="sparklinePoints(s.sparkline)" fill="none" :stroke="s.breachCount>0?'#dc3545':'#198754'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg></td>
                   </tr>
-                  <tr v-if="!slaTrend.length"><td colspan="6" class="empty">Tiada data.</td></tr>
+                  <tr v-if="!slaTrend.length"><td colspan="7" class="empty">Tiada data.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -7376,17 +7392,18 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="reportTab==='jangkahayat'">
           <div class="card">
             <div class="card-title">Peralatan Hampir/Lepas Jangka Hayat (&gt;{{EQUIPMENT_LIFESPAN_YEARS}} Tahun)</div>
-            <p class="text-sm text-muted mb-12">Dikira dari "Tarikh Pasang" yang direkodkan semasa tambah peralatan. Peralatan tanpa tarikh pasang direkod tidak akan muncul di sini — cadangan proaktif ganti peralatan sebelum ia betul-betul rosak.</p>
+            <p class="text-sm text-muted mb-12">Dikira dari "Tarikh Pasang" yang direkodkan semasa tambah peralatan. Peralatan tanpa tarikh pasang direkod tidak akan muncul di sini — cadangan proaktif ganti peralatan sebelum ia betul-betul rosak. Column "Risiko Kegagalan" silang-rujuk umur peralatan ni dengan brand/model yang sama yang paling kerap gagal (tab Analisis Kegagalan) — kombinasi tua + model bermasalah adalah calon paling kuat untuk gagal akan datang.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>Tarikh Pasang</th><th>Umur (Tahun)</th></tr></thead>
+                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>Tarikh Pasang</th><th>Umur (Tahun)</th><th>Risiko Kegagalan</th></tr></thead>
                 <tbody>
                   <tr v-for="(r,i) in equipmentLifespan" :key="i" class="highlight-row">
                     <td>{{i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
                     <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.installDate}}</td>
                     <td><span class="badge badge-red">{{r.ageYears}} tahun</span></td>
+                    <td><span v-if="isHighRiskEquip(r.brand,r.model)" class="badge badge-red" title="Model ni antara punca kegagalan paling kerap direkod">⚠️ Tinggi ({{highRiskEquipPct(r.brand,r.model)}}%)</span><span v-else class="text-muted">—</span></td>
                   </tr>
-                  <tr v-if="!equipmentLifespan.length"><td colspan="9" class="empty">Tiada peralatan lepas {{EQUIPMENT_LIFESPAN_YEARS}} tahun (atau tarikh pasang belum direkodkan untuk peralatan sedia ada).</td></tr>
+                  <tr v-if="!equipmentLifespan.length"><td colspan="10" class="empty">Tiada peralatan lepas {{EQUIPMENT_LIFESPAN_YEARS}} tahun (atau tarikh pasang belum direkodkan untuk peralatan sedia ada).</td></tr>
                 </tbody>
               </table>
             </div>
@@ -7521,7 +7538,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="reportTab==='heatmap'">
           <div class="card">
             <div class="card-title">Heatmap Kalendar Pematuhan PM</div>
-            <p class="text-sm text-muted mb-12">Pilih satu site — grid tunjuk bulan mana PM disiapkan (hijau) merentasi tahun, senang nampak "gap" secara visual berbanding scroll table.</p>
+            <p class="text-sm text-muted mb-12">Pilih satu site — grid tunjuk bulan mana PM disiapkan merentasi tahun, senang nampak "gap" secara visual berbanding scroll table. Kepekatan hijau makin gelap ikut bilangan PM bulan tersebut (cth: pelbagai bilik VIR di-PM bulan sama).</p>
             <div class="form-group" style="max-width:320px">
               <label>Site</label>
               <select class="form-control" v-model="heatmapSiteId">
@@ -7536,8 +7553,8 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="row in heatmapData.grid" :key="row.year">
                     <td><b>{{row.year}}</b></td>
-                    <td v-for="(done,i) in row.months" :key="i" style="text-align:center;padding:4px">
-                      <div :style="'width:18px;height:18px;border-radius:4px;margin:0 auto;background:'+(done?'#198754':'#f0f0f0')" :title="done?'PM disiapkan':'Tiada PM'"></div>
+                    <td v-for="(count,i) in row.months" :key="i" style="text-align:center;padding:4px">
+                      <div :style="'width:18px;height:18px;border-radius:4px;margin:0 auto;background:'+heatmapCellColor(count)" :title="count?count+' PM disiapkan':'Tiada PM'"></div>
                     </td>
                   </tr>
                 </tbody>
@@ -21571,15 +21588,47 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         datasets:[{ data:[pmTotal,cmTotal], backgroundColor:['rgba(122,132,26,0.9)','rgba(183,28,28,0.8)'], borderWidth:2 }]
       }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom'}, tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed} (${recs.length?Math.round(ctx.parsed/recs.length*100):0}%)`}} } }});
 
-      // Chart 3: Top sites by CM
+      // Chart 3: Top sites by CM — keyed by siteId (not name) so a bar
+      // click can set laporanSite directly (that filter compares against
+      // r.siteId, same as the site dropdown's own :value="s.id").
+      // Deliberately NOT sourced from `recs` (laporanFiltered, which already
+      // applies laporanSite) — clicking a bar sets laporanSite, which the
+      // watch() below re-triggers this exact function from, and if this
+      // chart's own data were already site-filtered it would immediately
+      // collapse to a single bar on that very re-render, defeating the
+      // "click to filter the TABLE, chart stays as your comparison
+      // reference" interaction the click handler is for. Same
+      // tempoh+project+date-cutoff logic as laporanFiltered, just without
+      // its site clause.
+      const cutoff3 = new Date();
+      cutoff3.setMonth(cutoff3.getMonth() - laporanTempoh.value);
+      cutoff3.setDate(1); cutoff3.setHours(0,0,0,0);
+      const recsForSiteChart = pmRecords.value.filter(r => {
+        if(laporanProject.value !== 'all' && (r.project||'cctv') !== laporanProject.value) return false;
+        let d = null;
+        if(r.visitDate) d = new Date(r.visitDate);
+        else if(r.year && r.month) d = new Date(r.year, r.month-1, 1);
+        return d && d >= cutoff3;
+      });
       const siteCM = {};
-      recs.filter(r=>r.maintType==='CM').forEach(r => { const k=r.siteName||r.siteId||'Unknown'; siteCM[k]=(siteCM[k]||0)+1; });
-      const topSites = Object.entries(siteCM).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      recsForSiteChart.filter(r=>r.maintType==='CM').forEach(r => {
+        const key = r.siteId || r.siteName || 'Unknown';
+        if(!siteCM[key]) siteCM[key] = { name: r.siteName||r.siteId||'Unknown', count: 0 };
+        siteCM[key].count++;
+      });
+      const topSites = Object.entries(siteCM).sort((a,b)=>b[1].count-a[1].count).slice(0,8);
       const el3 = document.getElementById('chart-site-cm');
       if(el3) _chartSiteCm = new Chart(el3, { type:'bar', data:{
-        labels: topSites.map(s=>s[0]),
-        datasets:[{ label:'Bil. CM', data:topSites.map(s=>s[1]), backgroundColor:'rgba(74,20,140,0.75)', borderRadius:4 }]
-      }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,ticks:{stepSize:1}}} }});
+        labels: topSites.map(s=>s[1].name),
+        datasets:[{ label:'Bil. CM', data:topSites.map(s=>s[1].count), backgroundColor:'rgba(74,20,140,0.75)', borderRadius:4 }]
+      }, options:{ indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,ticks:{stepSize:1}}},
+        onClick: (evt, elements) => {
+          if(!elements.length) return;
+          const siteId = topSites[elements[0].index][0];
+          laporanSite.value = laporanSite.value === siteId ? 'all' : siteId;
+        },
+        onHover: (evt, elements) => { evt.native.target.style.cursor = elements.length ? 'pointer' : 'default'; }
+      }});
 
       // Chart 4: Equipment failures
       const failMap = { Kamera:0, NVR:0, HDD:0, Switch:0, Penggera:0, Sokongan:0 };
@@ -22607,6 +22656,32 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       openPMList(row.project, { site: row.siteId });
     }
 
+    // Last-6-months PM-per-month counts — powers the sparkline column in
+    // slaTrend below. PM-only (excludes CM), matching _slaGapsForSite's own
+    // scope, so the sparkline shows the same "scheduled visit cadence" the
+    // rest of the row is about, not conflated with unplanned CM callouts.
+    function _monthlySparkCounts(siteId, months) {
+      const now = new Date();
+      const counts = new Array(months).fill(0);
+      (pmRecordsBySite.value[siteId] || []).forEach(r => {
+        if((r.maintType||'PM')==='CM') return;
+        const d = _recDate(r);
+        if(!d) return;
+        const diff = (now.getFullYear()-d.getFullYear())*12 + (now.getMonth()-d.getMonth());
+        if(diff >= 0 && diff < months) counts[months-1-diff]++;
+      });
+      return counts;
+    }
+    // Renders any count array as an SVG polyline points string — scales to
+    // the array's own max so a quiet site (max 1/month) and a busy one
+    // (max 4/month) both fill the same small box meaningfully, instead of
+    // one looking flat relative to a shared fixed scale.
+    function sparklinePoints(counts, w, h) {
+      w = w||60; h = h||20;
+      const max = Math.max(...counts, 1);
+      const step = w / (counts.length - 1 || 1);
+      return counts.map((c,i) => (i*step).toFixed(1)+','+(h - (c/max)*(h-3) - 1.5).toFixed(1)).join(' ');
+    }
     const slaTrend = computed(() => {
       const build = (list, proj) => list.map(s => {
         const { count, gaps } = _slaGapsForSite(s, proj);
@@ -22616,6 +22691,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
           breachCount: breaches.length,
           avgGap: gaps.length ? Math.round(gaps.reduce((s,g)=>s+g.days,0)/gaps.length) : null,
           worstGap: gaps.length ? Math.max(...gaps.map(g=>g.days)) : null,
+          sparkline: _monthlySparkCounts(s.id, 6),
         };
       });
       return [...build(SITES,'cctv'), ...build(VIR_SITES,'vir')].sort((a,b) => b.breachCount - a.breachCount);
@@ -22668,6 +22744,22 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
           : 'Prestasi ini disyorkan dikekalkan melalui pemantauan berkala dan tindakan pantas terhadap sebarang isu baharu.');
       return sentences.join(' ');
     }
+
+    // Same _buildExecutiveNarrative() the PDF export uses, but computed live
+    // for on-screen display — previously the narrative only existed inside
+    // a generated PDF popup, so reading it meant printing/downloading a
+    // file just to see a paragraph of text that's otherwise sitting right
+    // there in already-loaded reactive data.
+    const liveNarrativeSummary = computed(() => {
+      const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
+      const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
+      const totalOverdue = overdueSortedCctv.value.length + overdueSortedVir.value.length;
+      const openCm = pmRecords.value.filter(r=>r.maintType==='CM' && (r.cmStatus==='open'||!r.cmStatus)).length;
+      const worst = slaTrend.value.slice(0,3);
+      const topIssues = recurringIssues.value.slice(0,3);
+      const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
+      return _buildExecutiveNarrative({ genDate, cctvCompliance, virCompliance, totalOverdue, openCm, worst, topIssues });
+    });
 
     // ── 3. Ringkasan Eksekutif (1 halaman, print) ──
     async function printExecutiveSummary() {
@@ -22927,11 +23019,56 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       recs.forEach(r => { const d=_recDate(r); if(d) years.add(d.getFullYear()); });
       const yearList = [...years].sort((a,b) => b-a);
       const grid = yearList.map(y => {
-        const months = new Array(12).fill(false);
-        recs.forEach(r => { const d=_recDate(r); if(d && d.getFullYear()===y) months[d.getMonth()]=true; });
+        // Count, not boolean — a month with 3 visits (e.g. multiple VIR
+        // rooms PM'd same month) reads identically to a month with 1 under
+        // a plain done/not-done flag, losing real signal about how much
+        // activity actually happened. heatmapCellColor() below grades the
+        // cell shade by this count instead of a flat two-tone green/gray.
+        const months = new Array(12).fill(0);
+        recs.forEach(r => { const d=_recDate(r); if(d && d.getFullYear()===y) months[d.getMonth()]++; });
         return { year:y, months };
       });
       return { site, grid };
+    });
+    function heatmapCellColor(count) {
+      if(!count) return '#f0f0f0';
+      if(count === 1) return '#a8d5b5';
+      if(count === 2) return '#4caf7d';
+      return '#198754';
+    }
+    // Anomaly detection — flags a site whose CURRENT month's CM count is
+    // way above that SAME site's own historical average, not a top-N
+    // ranking against other sites (recurringIssues/kegagalan already cover
+    // that). A site that's normally quiet suddenly having 3 CM cases is a
+    // much stronger "go look at this" signal than a site that's always
+    // busy having its usual 3 — comparing against the fleet or a fixed
+    // threshold would miss that distinction entirely.
+    const siteAnomalies = computed(() => {
+      const now = new Date();
+      const thisKey = now.getFullYear()+'-'+now.getMonth();
+      const all = [...SITES.map(s=>({...s,project:'cctv'})), ...VIR_SITES.map(s=>({...s,project:'vir'}))];
+      const results = [];
+      all.forEach(site => {
+        const byMonth = {};
+        (pmRecordsBySite.value[site.id]||[]).filter(r=>r.maintType==='CM').forEach(r => {
+          const d = _recDate(r);
+          if(!d) return;
+          const key = d.getFullYear()+'-'+d.getMonth();
+          byMonth[key] = (byMonth[key]||0)+1;
+        });
+        const thisCount = byMonth[thisKey] || 0;
+        if(thisCount < 2) return; // too little volume for "anomaly" to mean anything
+        const hist = [];
+        for(let i=1; i<=11; i++) {
+          const d2 = new Date(now.getFullYear(), now.getMonth()-i, 1);
+          hist.push(byMonth[d2.getFullYear()+'-'+d2.getMonth()] || 0);
+        }
+        const histAvg = hist.reduce((a,b)=>a+b,0) / hist.length;
+        if(thisCount > histAvg && thisCount >= Math.max(2, histAvg*2)) {
+          results.push({ site: site.name, project: site.project.toUpperCase(), thisCount, histAvg: Math.round(histAvg*10)/10 });
+        }
+      });
+      return results.sort((a,b) => (b.thisCount-b.histAvg) - (a.thisCount-a.histAvg));
     });
 
     // ── Peratusan Perubahan Tahun-ke-Tahun — jumlah PM/CM tahun semasa vs
@@ -23058,11 +23195,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       if(!el) return;
       await _ensureChartjs();
       const { years, pmByYear, cmByYear } = yearTrendData.value;
-      _chartYearTrend = new Chart(el, { type:'bar', data:{
+      // Line+area (was a grouped bar chart) — a multi-year trend is a
+      // continuous series, and a bar-per-year makes the actual trajectory
+      // (improving vs worsening year-on-year) harder to read at a glance
+      // than a line does. Area fill keeps it from looking too sparse with
+      // only a handful of years plotted.
+      _chartYearTrend = new Chart(el, { type:'line', data:{
         labels: years,
         datasets:[
-          { label:'PM', data:pmByYear, backgroundColor:'rgba(122,132,26,0.85)', borderRadius:4 },
-          { label:'CM', data:cmByYear, backgroundColor:'rgba(183,28,28,0.75)', borderRadius:4 },
+          { label:'PM', data:pmByYear, borderColor:'rgba(122,132,26,1)', backgroundColor:'rgba(122,132,26,0.15)', fill:true, tension:.3, pointRadius:4, pointBackgroundColor:'rgba(122,132,26,1)', borderWidth:2 },
+          { label:'CM', data:cmByYear, borderColor:'rgba(183,28,28,1)', backgroundColor:'rgba(183,28,28,0.15)', fill:true, tension:.3, pointRadius:4, pointBackgroundColor:'rgba(183,28,28,1)', borderWidth:2 },
         ]
       }, options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false}, animation:{duration:1100,easing:'easeOutQuart'}, plugins:{ legend:{position:'top'}, tooltip:{enabled:true} }, scales:{ y:{beginAtZero:true,ticks:{stepSize:1}} } }});
     }
@@ -23887,10 +24029,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
-      slaTrend, printExecutiveSummary, printQuarterlyReport, failureByModel, isHighRiskEquip, highRiskEquipPct, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
+      slaTrend, sparklinePoints, liveNarrativeSummary, printExecutiveSummary, printQuarterlyReport, failureByModel, isHighRiskEquip, highRiskEquipPct, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
       customRangeStart, customRangeEnd, customRangeSetPreset, customRangeStats, openCustomRangeSite,
       customRangeCountTotal, customRangeCountPm, customRangeCountCm, customRangeCountCctv, customRangeCountVir, customRangeCountSites,
-      siteCompareSelected, toggleSiteCompare, siteCompareRows, seasonalCmByMonth, heatmapSiteId, heatmapData, yoyStats,
+      siteCompareSelected, toggleSiteCompare, siteCompareRows, seasonalCmByMonth, heatmapSiteId, heatmapData, heatmapCellColor, siteAnomalies, yoyStats,
       yearTrendData, tindakanBreakdown, resolutionTimeData, resolutionResolvedCount, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
       equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureFilterSite, failureFilterSiteOptions, failureReport, exportFailureReportExcel, exportFailureReportPdf,
