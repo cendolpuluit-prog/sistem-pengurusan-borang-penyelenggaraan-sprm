@@ -306,6 +306,10 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    inside that frame, same reasoning. */
 .tbl-wrap{overflow:auto;max-height:65vh}
 .tbl-wrap th{position:sticky;top:0;z-index:1}
+.sortable-th{cursor:pointer;user-select:none;transition:background-color .15s}
+.sortable-th:hover{background:#00457a}
+.dark-mode .sortable-th:hover{background:#1f6feb}
+.sort-arrow{font-size:.7rem;display:inline-block;margin-left:2px}
 /* Row stagger-in — plays whenever a <tr> is newly inserted into the DOM
    (first render of a list page, or rows reappearing after a filter that
    removed them), cascading via nth-child so it reads as "rows arriving
@@ -463,6 +467,22 @@ details.form-control[open] summary::after{content:'▴'}
 .search-clear-btn:hover{background:rgba(0,51,102,.16);color:#003366}
 .dark-mode .search-clear-btn{background:rgba(255,255,255,.1);color:#aaa}
 .dark-mode .search-clear-btn:hover{background:rgba(255,255,255,.18);color:#e0e0e0}
+/* Ctrl+K hint — only shown while the field is empty (v-if="!globalSearch"
+   in the template), the same mutually-exclusive slot .search-clear-btn
+   occupies once there's text, so the two never need to coexist or fight
+   over the same corner of the input. */
+.search-kbd-hint{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:monospace;font-size:.68rem;color:#8a95a5;background:rgba(0,51,102,.06);border:1px solid rgba(0,51,102,.12);border-radius:4px;padding:2px 6px;pointer-events:none;line-height:1.3}
+.dark-mode .search-kbd-hint{color:#8b949e;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+.filter-chips-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-6px 0 12px}
+.filter-chip{display:inline-flex;align-items:center;gap:5px;background:#e8f0ff;color:#003366;font-size:.76rem;font-weight:600;padding:4px 6px 4px 10px;border-radius:14px;animation:searchClearIn .15s ease-out both}
+.filter-chip button{background:rgba(0,51,102,.12);border:none;color:#003366;width:16px;height:16px;border-radius:50%;font-size:.62rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background-color .15s}
+.filter-chip button:hover{background:rgba(0,51,102,.24)}
+.filter-chip-clear-all{background:none;border:none;color:#888;font-size:.76rem;text-decoration:underline;cursor:pointer;padding:4px 2px}
+.filter-chip-clear-all:hover{color:#c62828}
+.dark-mode .filter-chip{background:rgba(88,166,255,.15);color:#79c0ff}
+.dark-mode .filter-chip button{background:rgba(121,192,255,.18);color:#79c0ff}
+.dark-mode .filter-chip button:hover{background:rgba(121,192,255,.3)}
+.dark-mode .filter-chip-clear-all{color:#8b949e}
 /* Dark/light toggle icon flips+shrinks through its midpoint (where the ☀️/🌙
    swap via Vue re-render actually happens) rather than an instant, jarring
    1-frame swap — same "reads as one continuous motion" trick as a card-flip,
@@ -1996,11 +2016,15 @@ details.form-control[open] summary::after{content:'▴'}
     <div class="topbar no-print" :class="{'topbar-compact':topbarCompact}" :style="topbarAccentColor ? {borderBottomColor: topbarAccentColor, borderBottomWidth: '3px'} : {}">
       <h3>{{pageTitle}}</h3>
       <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
-        <input class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." :style="'font-size:.83rem;padding:7px '+(globalSearch?'30px':'12px')+' 7px 12px'">
+        <input ref="globalSearchInputRef" class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." :style="'font-size:.83rem;padding:7px '+(globalSearch?'30px':'54px')+' 7px 12px'">
+        <kbd v-if="!globalSearch" class="search-kbd-hint" aria-hidden="true">{{isMacPlatform?'⌘':'Ctrl'}} K</kbd>
         <button v-if="globalSearch" type="button" class="search-clear-btn" @mousedown.prevent="globalSearch=''" title="Kosongkan carian" aria-label="Kosongkan carian">✕</button>
         <div v-if="showSearchResults && searchResults.length" class="dropdown-panel" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
           <div v-for="r in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
-            <template v-if="r._kind==='site'">
+            <template v-if="r._kind==='command'">
+              <div style="font-weight:700;font-size:.85rem;color:#003366">{{r.label}}</div>
+            </template>
+            <template v-else-if="r._kind==='site'">
               <div style="font-weight:700;font-size:.85rem;color:#002244">🏢 {{r.name}}</div>
               <div style="font-size:.75rem;color:#666">Site {{r.proj==='vir'?'VIR':'CCTV'}} — klik untuk urus peralatan</div>
             </template>
@@ -2118,15 +2142,15 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="ops-stat-row">
               <div class="ops-stat">
-                <div class="ops-stat-num">{{cctvSitesCount + virSitesCount}}</div>
+                <div class="ops-stat-num">{{fmtNum(cctvSitesCount + virSitesCount)}}</div>
                 <div class="ops-stat-lbl">Jumlah Site</div>
               </div>
               <div class="ops-stat" :class="{'ops-stat-warn': (overdueSortedCctv.length + overdueSortedVir.length) > 0}">
-                <div class="ops-stat-num">{{overdueSortedCctv.length + overdueSortedVir.length}}</div>
+                <div class="ops-stat-num">{{fmtNum(overdueSortedCctv.length + overdueSortedVir.length)}}</div>
                 <div class="ops-stat-lbl">Site Overdue</div>
               </div>
               <div class="ops-stat">
-                <div class="ops-stat-num">{{cctvRecordsCount + virRecordsCount}}</div>
+                <div class="ops-stat-num">{{fmtNum(cctvRecordsCount + virRecordsCount)}}</div>
                 <div class="ops-stat-lbl">Jumlah Rekod PM</div>
               </div>
             </div>
@@ -2730,7 +2754,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="skel skel-line" style="width:78%"></div>
           <div class="skel skel-line" style="width:85%;margin-bottom:0"></div>
         </div>
-        <div v-else-if="!contractsFiltered.length" class="empty">Tiada kontrak direkodkan lagi.</div>
+        <div v-else-if="!contractsFiltered.length" class="empty">Tiada kontrak direkodkan lagi.<br><button v-if="canEditContract" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddContract">+ Tambah Kontrak</button></div>
         <div v-for="c in contractsFiltered" :key="c.id" class="backup-card" style="align-items:flex-start">
           <div class="bc-icon">{{contractStatus(c)==='expired'?'🔴':contractStatus(c)==='expiring'?'🟡':'🟢'}}</div>
           <div class="bc-info" style="flex:1">
@@ -2860,7 +2884,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="skel skel-line" style="width:78%"></div>
           <div class="skel skel-line" style="width:85%;margin-bottom:0"></div>
         </div>
-        <div v-else-if="!warrantyFiltered.length" class="empty">Tiada rekod waranti peralatan lagi.</div>
+        <div v-else-if="!warrantyFiltered.length" class="empty">Tiada rekod waranti peralatan lagi.<br><button v-if="canAddWarranty" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddWarranty">+ Tambah Peralatan</button></div>
         <div v-for="grp in warrantyByVendor" :key="grp.vendor" class="warranty-vendor-group">
           <div class="warranty-vendor-header">🏢 {{grp.vendor}}
             <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} peralatan · {{grp.sites.length}} site)</span>
@@ -2942,7 +2966,7 @@ details.form-control[open] summary::after{content:'▴'}
           </select>
         </div>
 
-        <div v-if="!letterMemosFiltered.length" class="empty">Tiada rekod surat/memo lagi.</div>
+        <div v-if="!letterMemosFiltered.length" class="empty">Tiada rekod surat/memo lagi.<br><button v-if="canAddLetterMemo" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddLetterMemo">+ Tambah Surat/Memo</button></div>
         <div v-else class="tbl-wrap">
           <table>
             <thead><tr><th>Kategori</th><th>Tarikh</th><th>Projek/Site</th><th>Dari → Kepada</th><th>Perihal</th><th>Lampiran</th><th>Tindakan</th></tr></thead>
@@ -3000,7 +3024,7 @@ details.form-control[open] summary::after{content:'▴'}
           </select>
         </div>
 
-        <div v-if="!cmCasesFiltered.length" class="empty">Tiada kes CM lagi.</div>
+        <div v-if="!cmCasesFiltered.length" class="empty">Tiada kes CM lagi.<br><button v-if="canAddCmCase" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddCmCase">+ Buka Kes Baru</button></div>
         <div v-else class="tbl-wrap">
           <table>
             <thead><tr><th>Tajuk Kes</th><th>Projek/Site</th><th>Status</th><th>Dibuka</th><th>Catatan</th><th>Tindakan</th></tr></thead>
@@ -3050,7 +3074,7 @@ details.form-control[open] summary::after{content:'▴'}
           </select>
         </div>
 
-        <div v-if="!virWarrantyFiltered.length" class="empty">Tiada rekod waranti peralatan VIR lagi.</div>
+        <div v-if="!virWarrantyFiltered.length" class="empty">Tiada rekod waranti peralatan VIR lagi.<br><button v-if="canEditVirWarranty" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddVirWarranty">+ Tambah Part</button></div>
         <div v-for="grp in virWarrantyBySite" :key="grp.siteId" class="warranty-vendor-group">
           <div class="warranty-vendor-header">📍 {{grp.siteName}}
             <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} part)</span>
@@ -4155,6 +4179,7 @@ details.form-control[open] summary::after{content:'▴'}
               </div>
               <small v-if="refNoDuplicate" style="color:#c62828;font-size:.75rem;font-weight:600">⚠️ No. rujukan <b>{{pm.refNo}}</b> sudah wujud dalam rekod. Sila guna nombor lain.</small>
               <small v-else-if="refNoGapWarning" style="color:#e65100;font-size:.75rem;font-weight:600">⚠️ No. <b>{{nextRefNoSuggestion}}</b> untuk site ini belum digunakan — guna <b>{{refNoSuffix}}</b> akan tinggalkan gap. Cadangan seterusnya: <b>{{nextRefNoSuggestion}}</b>.</small>
+              <small v-else-if="refNoReuseWarning" style="color:#e65100;font-size:.75rem;font-weight:600">⚠️ No. <b>{{refNoSuffix}}</b> lebih rendah dari rekod sedia ada untuk site ini — mungkin nombor lama yang telah dipadam. Sah ke nak guna semula? Cadangan semasa: <b>{{nextRefNoSuggestion}}</b>.</small>
               <small v-else-if="pm.refNo" style="color:#1A2332;font-size:.75rem">No. Rujukan: <b>{{pm.refNo}}</b></small>
               <small v-else-if="!pm.siteId" style="color:#888;font-size:.75rem">Pilih site dahulu untuk jana no. rujukan</small>
               <small v-else-if="currentProject==='vir' && !pm.virRoomNo" style="color:#888;font-size:.75rem">Pilih bilik dahulu untuk jana no. rujukan (setiap bilik ada nombor sendiri)</small>
@@ -4599,6 +4624,10 @@ details.form-control[open] summary::after{content:'▴'}
               <button :disabled="loading" v-if="batchSelected.length" class="btn btn-success btn-sm" @click="exportBatchExcel">📊 Excel ({{batchSelected.length}})</button>
             </div>
           </div>
+          <div v-if="pmActiveFilterChips.length" class="filter-chips-row">
+            <span v-for="chip in pmActiveFilterChips" :key="chip.key" class="filter-chip">{{chip.label}} <button type="button" @click="chip.clear()" :aria-label="'Buang tapisan '+chip.label">✕</button></span>
+            <button v-if="pmActiveFilterChips.length>1" type="button" class="filter-chip-clear-all" @click="clearAllPmFilters">Kosongkan Semua</button>
+          </div>
           <!-- Bulk CM action bar -->
           <div v-if="bulkCmSelected.length" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff8e1;border:1.5px solid #ffcc80;border-radius:8px;padding:10px 14px;margin-bottom:10px">
             <span style="font-size:.83rem;font-weight:700;color:#e65100">⚡ {{bulkCmSelected.length}} rekod CM dipilih</span>
@@ -4619,7 +4648,13 @@ details.form-control[open] summary::after{content:'▴'}
             <table>
               <thead><tr>
                 <th><input type="checkbox" @change="e=>{ batchSelected = e.target.checked ? filteredPM.map(r=>r.id) : [] }"></th>
-                <th>No. Rujukan</th><th>Jenis</th><th>Site</th><th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th><th>Bulan/Tahun</th><th>Tarikh Penyelenggaraan</th><th>Nota?</th><th>Dicipta Oleh</th><th>Kemaskini Terakhir Oleh</th><th>CM Status</th><th>Tindakan</th>
+                <th class="sortable-th" @click="togglePmSort('refNo')" title="Klik untuk susun">No. Rujukan <span v-if="pmSortColumn==='refNo'" class="sort-arrow">{{pmSortDir==='asc'?'▲':'▼'}}</span></th>
+                <th class="sortable-th" @click="togglePmSort('maintType')" title="Klik untuk susun">Jenis <span v-if="pmSortColumn==='maintType'" class="sort-arrow">{{pmSortDir==='asc'?'▲':'▼'}}</span></th>
+                <th class="sortable-th" @click="togglePmSort('siteName')" title="Klik untuk susun">Site <span v-if="pmSortColumn==='siteName'" class="sort-arrow">{{pmSortDir==='asc'?'▲':'▼'}}</span></th>
+                <th v-if="currentProject!=='vir'">Sistem</th><th v-if="currentProject==='vir'">Sistem</th>
+                <th class="sortable-th" @click="togglePmSort('monthYear')" title="Klik untuk susun">Bulan/Tahun <span v-if="pmSortColumn==='monthYear'" class="sort-arrow">{{pmSortDir==='asc'?'▲':'▼'}}</span></th>
+                <th class="sortable-th" @click="togglePmSort('visitDate')" title="Klik untuk susun">Tarikh Penyelenggaraan <span v-if="pmSortColumn==='visitDate'" class="sort-arrow">{{pmSortDir==='asc'?'▲':'▼'}}</span></th>
+                <th>Nota?</th><th>Dicipta Oleh</th><th>Kemaskini Terakhir Oleh</th><th>CM Status</th><th>Tindakan</th>
               </tr></thead>
               <tbody>
                 <tr v-for="r in pmListPagedList" :key="r.id">
@@ -4659,7 +4694,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <div class="skel skel-line" style="width:80%"></div>
                   <div class="skel skel-line" style="width:88%;margin-bottom:0"></div>
                 </td></tr>
-                <tr v-else-if="!filteredPM.length"><td colspan="12" class="empty">Tiada rekod.</td></tr>
+                <tr v-else-if="!filteredPM.length"><td colspan="12" class="empty">Tiada rekod.<br><button class="btn btn-primary btn-sm" style="margin-top:10px" @click="startNewPM(currentProject)">+ Borang Baru</button></td></tr>
               </tbody>
             </table>
           </div>
@@ -4708,7 +4743,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="skel skel-line" style="width:78%"></div>
               <div class="skel skel-line" style="width:85%;margin-bottom:0"></div>
             </div>
-            <div v-else-if="!filteredPM.length" class="empty">Tiada rekod.</div>
+            <div v-else-if="!filteredPM.length" class="empty">Tiada rekod.<br><button class="btn btn-primary btn-sm" style="margin-top:10px" @click="startNewPM(currentProject)">+ Borang Baru</button></div>
           </div>
 
           <div v-if="pmListTotalPages>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
@@ -5652,7 +5687,7 @@ details.form-control[open] summary::after{content:'▴'}
             <button class="btn btn-sm btn-danger" @click="deleteUser(u)" :disabled="u.role==='superadmin'">🗑</button>
           </div>
         </div>
-        <div v-if="!filteredSortedUsers.length" class="empty">{{allUsers.length ? 'Tiada pengguna sepadan dengan carian/filter.' : 'Tiada pengguna lain. Tambah pengguna baru.'}}</div>
+        <div v-if="!filteredSortedUsers.length" class="empty">{{allUsers.length ? 'Tiada pengguna sepadan dengan carian/filter.' : 'Tiada pengguna lain. Tambah pengguna baru.'}}<br><button v-if="!allUsers.length" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddUser">+ Tambah Pengguna</button></div>
       </div>
 
       <!-- ====== URUS MODEL CUSTOM (crowdsourced brand/model cleanup) ====== -->
@@ -7112,7 +7147,7 @@ details.form-control[open] summary::after{content:'▴'}
 
           <div v-if="inventorySubView==='list'" class="card">
             <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
-              <div class="card-title" style="margin:0;border:none;padding:0">Inventori Peralatan Konsolidasi ({{assetRegister.length}} item)</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Inventori Peralatan Konsolidasi ({{fmtNum(assetRegister.length)}} item)</div>
               <div class="flex gap-8" style="flex-wrap:wrap">
                 <select class="form-control" style="width:auto;min-width:130px" v-model="assetFilterProj">
                   <option value="all">Semua Projek</option>
@@ -7149,7 +7184,7 @@ details.form-control[open] summary::after{content:'▴'}
               </table>
             </div>
             <div v-if="assetRegisterTotalPages>1" class="flex items-center justify-between" style="margin-top:14px;flex-wrap:wrap;gap:8px">
-              <span class="text-sm text-muted">Halaman {{assetRegisterPage}} / {{assetRegisterTotalPages}} &nbsp;·&nbsp; {{assetRegister.length}} rekod</span>
+              <span class="text-sm text-muted">Halaman {{assetRegisterPage}} / {{assetRegisterTotalPages}} &nbsp;·&nbsp; {{fmtNum(assetRegister.length)}} rekod</span>
               <div class="flex gap-8" style="flex-wrap:wrap">
                 <button class="btn btn-outline btn-sm" :disabled="assetRegisterPage===1" @click="assetRegisterGoToPage(assetRegisterPage-1)">‹ Sebelum</button>
                 <button v-for="p in assetRegisterPageNumbers" :key="p" class="btn btn-sm" :class="p===assetRegisterPage?'btn-primary':'btn-outline'" @click="assetRegisterGoToPage(p)">{{p}}</button>
@@ -7162,7 +7197,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
               <div>
                 <div class="card-title" style="margin:0;border:none;padding:0">Ringkasan Jumlah Inventori Peralatan CCTV</div>
-                <div class="text-sm text-muted">{{inventoryGrandTotal}} unit keseluruhan merentasi {{SITES.length}} site</div>
+                <div class="text-sm text-muted">{{fmtNum(inventoryGrandTotal)}} unit keseluruhan merentasi {{SITES.length}} site</div>
               </div>
               <div class="flex gap-8" style="flex-wrap:wrap">
                 <button class="btn btn-sm" :class="inventoryReportMode==='total'?'btn-primary':'btn-outline'" @click="inventoryReportMode='total'">Jumlah Keseluruhan</button>
@@ -7193,7 +7228,7 @@ details.form-control[open] summary::after{content:'▴'}
                          mixed types (e.g. Kamera + NVR together) into one
                          number isn't a useful total, so it's skipped then. -->
                     <tr v-if="inventoryJenisFilter.length===1 && inventoryTotalRows.length" style="background:#F4F7DC;font-weight:800;color:#5a6114">
-                      <td colspan="3">JUMLAH BESAR</td><td style="text-align:right">{{inventoryGrandTotal}}</td>
+                      <td colspan="3">JUMLAH BESAR</td><td style="text-align:right">{{fmtNum(inventoryGrandTotal)}}</td>
                     </tr>
                     <tr v-if="!inventoryTotalRows.length"><td colspan="4" class="empty">Tiada peralatan CCTV direkodkan lagi.</td></tr>
                   </tbody>
@@ -10202,6 +10237,27 @@ createApp({
       if(isNaN(entered) || isNaN(expected)) return false;
       return entered > expected;
     });
+    // Warns when the entered number is LOWER than the highest currently-
+    // active number for this site+type — almost certainly either a typo
+    // or reusing a number that belonged to a deleted record. The app has
+    // no memory of "this number was used and deleted" (deletedPmRecords
+    // isn't loaded eagerly, unlike pmRecords), so without this the reuse
+    // would otherwise be accepted completely silently. Derived from
+    // nextRefNoSuggestion (next = max+1, so max = next-1) rather than
+    // re-filtering pmRecords itself, so there's one source of truth for
+    // "what's the highest active number" instead of two copies that could
+    // drift apart. Skipped entirely while editing an existing record —
+    // that record's own number naturally sits behind newer ones and isn't
+    // a "reuse", just normal editing of an older entry.
+    const refNoReuseWarning = computed(() => {
+      if(pm._isEdit || !refNoSuffix.value || refNoDuplicate.value) return false;
+      const base = refNoBasePrefix.value;
+      if(!base || !pm.maintType) return false;
+      const entered = parseInt(refNoSuffix.value, 10);
+      const maxActive = parseInt(nextRefNoSuggestion.value, 10) - 1;
+      if(isNaN(entered) || maxActive < 1) return false;
+      return entered < maxActive;
+    });
 
     // ---- Local draft-recovery autosave for the in-progress PM form ----
     // The multi-step wizard (cameras/nvr/hdd/switches/alarms/support etc.)
@@ -11768,6 +11824,12 @@ createApp({
     // viewed, for no data reason).
     function _parseLocalDate(dateStr){ if(!dateStr) return null; const [y,m,d]=dateStr.split('-').map(Number); return new Date(y, m-1, d); }
     function fmtDate(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}/${m}/${y}`; }
+    // Thousands-separator for cumulative counts that can genuinely reach
+    // 4+ digits over years of operation (total PM/CM records especially —
+    // site counts stay in the dozens so this rarely changes anything
+    // there, but costs nothing to apply uniformly since toLocaleString on
+    // a 2-digit number just returns it unchanged).
+    function fmtNum(n){ return (n||0).toLocaleString('ms-MY'); }
     // Dash-separated variant (dd-mm-yyyy) — used specifically for
     // "Tarikh Penyelenggaraan" in the main borang info block, per client
     // request. fmtDate() above (slash-separated) stays the default
@@ -14447,6 +14509,28 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // options change since a value valid for CCTV brands makes no sense
     // once switched to VIR's BCD/Optager pair, and vice versa.
     const filterSystem = ref('');
+    // Human-readable summary of whichever of the 6 Rekod Borang filters are
+    // currently non-empty — shown as removable chips above the table so
+    // "what am I filtered by right now" is visible at a glance instead of
+    // needing to scan every dropdown's own selected value. Doesn't touch
+    // filteredPM's own filter LOGIC above (still reads the same 6 refs) —
+    // this is purely a display/removal layer on top of it.
+    const pmActiveFilterChips = computed(() => {
+      const chips = [];
+      if(filterSite.value) {
+        const site = (currentProject.value==='vir'?VIR_SITES:SITES).find(s=>s.id===filterSite.value);
+        chips.push({ key:'site', label:'Site: '+(site?.name||filterSite.value), clear:()=>{filterSite.value='';} });
+      }
+      if(filterYear.value) chips.push({ key:'year', label:'Tahun: '+filterYear.value, clear:()=>{filterYear.value='';} });
+      if(filterMonth.value) chips.push({ key:'month', label:'Bulan: '+MONTHS[filterMonth.value-1], clear:()=>{filterMonth.value='';} });
+      if(filterMaintType.value) chips.push({ key:'maintType', label:'Jenis: '+(filterMaintType.value==='PM'?'PM Sahaja':'CM Sahaja'), clear:()=>{filterMaintType.value='';} });
+      if(filterPmNo.value) chips.push({ key:'pmNo', label:'PM Ke-'+filterPmNo.value, clear:()=>{filterPmNo.value='';} });
+      if(filterSystem.value) chips.push({ key:'system', label:'Sistem: '+filterSystem.value, clear:()=>{filterSystem.value='';} });
+      return chips;
+    });
+    function clearAllPmFilters() {
+      filterSite.value=''; filterYear.value=''; filterMonth.value=''; filterMaintType.value=''; filterPmNo.value=''; filterSystem.value='';
+    }
 
     // ---- Computed ----
     // Topbar accent border — CCTV blue / VIR orange, matching the colour
@@ -14600,6 +14684,33 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
       return true;
     }).sort((a,b) => {
+      // User-picked column sort (see togglePmSort()/the sortable <th>s)
+      // takes over when active; falls through to the original default
+      // below the moment pmSortColumn is cleared, so nothing about the
+      // existing "reads by visit date, newest first" behavior changes
+      // unless the user has actually clicked a header.
+      if(pmSortColumn.value) {
+        const dir = pmSortDir.value === 'asc' ? 1 : -1;
+        if(pmSortColumn.value === 'monthYear') {
+          const av = (a.year||0)*100+(a.month||0), bv = (b.year||0)*100+(b.month||0);
+          return (av-bv) * dir;
+        }
+        if(pmSortColumn.value === 'visitDate') {
+          const da = _recDate(a), db = _recDate(b);
+          const at = da ? da.getTime() : -Infinity, bt = db ? db.getTime() : -Infinity;
+          return (at-bt) * dir;
+        }
+        if(pmSortColumn.value === 'maintType') {
+          // Same ||'PM' fallback convention used everywhere else in this
+          // file — without it, legacy records with no maintType field
+          // sort as blank (before both 'CM' and 'PM' alphabetically)
+          // instead of grouping correctly with the explicit 'PM' ones.
+          return (a.maintType||'PM').localeCompare(b.maintType||'PM') * dir;
+        }
+        // refNo, siteName — plain string columns
+        const av = String(a[pmSortColumn.value]||''), bv = String(b[pmSortColumn.value]||'');
+        return av.localeCompare(bv) * dir;
+      }
       // Rekod Borang reads by TARIKH PENYELENGGARAAN (visit date), newest
       // first — not the underlying pmRecords query's createdAt/submission-
       // time order, which doesn't match when a record for an earlier visit
@@ -14610,6 +14721,22 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!db) return -1;
       return db - da;
     }));
+    // Column-sort state for the Rekod Borang table — null column means
+    // "use the default (visit date, newest first)" sort above.
+    const pmSortColumn = ref(null);
+    const pmSortDir = ref('asc');
+    function togglePmSort(col) {
+      if(pmSortColumn.value === col) {
+        // Third click on the same column clears it back to the default
+        // sort, rather than being stuck toggling asc/desc forever with no
+        // way back to "just show me newest first" without a page reload.
+        if(pmSortDir.value === 'desc') { pmSortColumn.value = null; return; }
+        pmSortDir.value = 'desc';
+      } else {
+        pmSortColumn.value = col;
+        pmSortDir.value = 'asc';
+      }
+    }
 
     // Paginated view of filteredPM — same fix as Log Audit (AUDIT_LOG_PAGE_SIZE
     // above): the raw list grows long over the years, which made Rekod Borang
@@ -14644,6 +14771,21 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     // ---- Global Search (sites + PM records + equipment + kontraktor, mixed results) ----
     const globalSearch = ref('');
+    const globalSearchInputRef = ref(null);
+    const isMacPlatform = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    // Ctrl+K/Cmd+K to focus search — standard modern-app convention, was
+    // mouse-only before. preventDefault stops the browser's own address-bar
+    // search shortcut from firing at the same time. Capture-phase isn't
+    // needed here (unlike the tooltip/ripple listeners) since this only
+    // needs to act once per press, not observe every element under the
+    // cursor — a normal bubble-phase document listener is enough and one
+    // fewer thing to reason about.
+    document.addEventListener('keydown', (e) => {
+      if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        globalSearchInputRef.value?.focus();
+      }
+    });
     // searchResults below does a full scan across pmRecords + every site's
     // equipment (cameras/nvr/hdd/switches/alarms/misc/servers/tablets,
     // CCTV+VIR) — expensive enough on an installation with years of PM
@@ -14666,6 +14808,26 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // VIR's equipment UI is room/system-gated so a direct tab jump isn't
     // meaningful there (see openSiteEquip's mode routing).
     const EQUIP_KIND_TO_TAB = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switches:'switch', alarms:'alarm', misc:'misc', servers:'servers', tablets:'tablets' };
+    // Quick-action commands mixed into the same search box (Ctrl+K) —
+    // matched by keyword, not requiring an exact command name. `run` uses
+    // page.value='x' the same way the real nav-item @click bindings do
+    // (see _usePageTransitionRef) — NOT a plain ref write from outside a
+    // real click handler, which is a different, unreliable path. `visible`
+    // is optional — commands without one are available to any
+    // authenticated user; commands gated the same as their nav item (e.g.
+    // Laporan behind canViewCredentials) declare it explicitly so the
+    // palette never offers a shortcut past that page's own access rule.
+    const QUICK_COMMANDS = [
+      { id:'cmd-dashboard', label:()=>'📊 Ke Dashboard', kw:'dashboard papan pemuka', run: () => { page.value = 'dashboard'; } },
+      { id:'cmd-new-pm-cctv', label:()=>'📝 Borang Baru (CCTV)', kw:'borang baru new pm submit cctv', run: () => startNewPM('cctv') },
+      { id:'cmd-new-pm-vir', label:()=>'📝 Borang Baru (VIR)', kw:'borang baru new pm submit vir', run: () => startNewPM('vir') },
+      { id:'cmd-rekod-cctv', label:()=>'📋 Rekod Borang (CCTV)', kw:'rekod borang senarai records cctv', run: () => openPMList('cctv') },
+      { id:'cmd-rekod-vir', label:()=>'📋 Rekod Borang (VIR)', kw:'rekod borang senarai records vir', run: () => openPMList('vir') },
+      { id:'cmd-laporan', label:()=>'📋 Laporan', kw:'laporan report', visible: () => canViewCredentials.value, run: () => { page.value = 'laporan'; } },
+      { id:'cmd-laporan-lanjutan', label:()=>'📈 Laporan Lanjutan', kw:'laporan lanjutan analitik statistik advanced', visible: () => canViewCredentials.value, run: () => { page.value = 'laporan-lanjutan'; } },
+      { id:'cmd-dark-mode', label:()=>darkMode.value?'☀️ Tukar ke Mod Cerah':'🌙 Tukar ke Mod Gelap', kw:'dark mode gelap cerah tema theme', run: () => { darkMode.value = !darkMode.value; } },
+      { id:'cmd-profile', label:()=>'👤 Profil Saya', kw:'profil profile saya', run: () => { initProfile(); page.value = 'profile'; } },
+    ];
     const searchResults = computed(() => {
       const q = globalSearchDebounced.value.trim().toLowerCase();
       if(q.length < 2) return [];
@@ -14740,12 +14902,22 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         });
       });
 
-      return [...siteMatches, ...recordMatches, ...equipMatches, ...kontraktorMatches];
+      // Commands first — someone typing "dark mode" or "borang baru" is
+      // trying to DO something, not look up a record, so the action they
+      // want should be the first thing they see, not buried under
+      // whatever record/site happens to also contain that text.
+      const commandMatches = QUICK_COMMANDS
+        .filter(c => (!c.visible || c.visible()) && c.kw.includes(q))
+        .map(c => ({ _kind:'command', id:c.id, label:c.label(), run:c.run }));
+
+      return [...commandMatches, ...siteMatches, ...recordMatches, ...equipMatches, ...kontraktorMatches];
     });
 
     function handleSearchResultClick(item) {
       globalSearch.value = ''; showSearchResults.value = false;
-      if(item._kind === 'site') {
+      if(item._kind === 'command') {
+        item.run();
+      } else if(item._kind === 'site') {
         currentProject.value = item.proj;
         const site = (item.proj==='vir'?VIR_SITES:SITES).find(s=>s.id===item.siteId);
         if(site) openSiteEquip(site);
@@ -20578,7 +20750,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const data = await _softDeleteToTrash('pmRecords', 'deletedPmRecords', id);
         pmRecords.value = pmRecords.value.filter(r=>r.id!==id);
         await logAudit('BORANG_DELETE', rec?.refNo||id);
-        showUndoToast('Rekod dipindah ke Tong Sampah.', () => _undoSoftDelete('pmRecords', 'deletedPmRecords', id, data, pmRecords));
+        showUndoToast('Rekod dipindah ke Tong Sampah.', () => {
+          // Same collision risk as restoreDeletedRecord()'s check — a new
+          // record could reuse this refNo during the brief window the undo
+          // toast is visible. Narrower window than the Trash page, but the
+          // same underlying risk, so the same guard belongs here too.
+          if(data?.refNo && pmRecords.value.some(r => r.refNo === data.refNo && r.id !== id)) {
+            showToast(`Tidak boleh buat asal — No. Rujukan "${data.refNo}" kini digunakan oleh rekod aktif lain.`, 'error');
+            return;
+          }
+          _undoSoftDelete('pmRecords', 'deletedPmRecords', id, data, pmRecords);
+        });
         if(page.value==='pm-view') page.value='pm-list';
       } catch(e) { showToast('Gagal padam rekod: ' + e.message, 'error'); }
     }
@@ -20630,6 +20812,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(authProfile.value?.role !== 'superadmin') { showToast('Hanya superadmin boleh memulihkan rekod.', 'error'); return; }
       const rec = trashedPmRecords.value.find(r=>r.id===id);
       if(!rec) return;
+      // A NEW active record could have reused this record's No. Rujukan
+      // while it sat in the trash — nothing at create-time checks a typed
+      // refNo against trashed records (deletedPmRecords isn't loaded
+      // eagerly, see refNoReuseWarning's own comment on the same
+      // tradeoff). Restoring on top of that would silently create two
+      // active records sharing one reference number, so this is the one
+      // point both ever get compared — must catch it here.
+      if(rec.refNo && pmRecords.value.some(r => r.refNo === rec.refNo && r.id !== id)) {
+        showToast(`Tidak boleh pulihkan — No. Rujukan "${rec.refNo}" kini digunakan oleh rekod aktif lain. Selesaikan pertindihan itu dahulu.`, 'error');
+        return;
+      }
       if(!await askConfirm(`Pulihkan rekod "${rec.refNo||id}"?`)) return;
       try {
         const { deletedAt, deletedBy, id:_id, ...data } = rec;
@@ -23983,8 +24176,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
-      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
-      pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV,
+      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
+      pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV, pmActiveFilterChips, clearAllPmFilters,
       addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine, pmHasNota,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
       pageTitle, topbarAccentColor, pageAccentClass, today, totalCameras, totalVirCameras, pmThisYear,
@@ -23996,7 +24189,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       upcomingAssignments, zoneSiteCounts, zoneOverdueCounts, zoneHeatColor,
       next7DaysItems, handleNext7Click,
       todayAttentionRows, handleTodayAttentionClick, smartInsights,
-      filteredPM, yearList, submittedByDisplayName, updatedByDisplayName,
+      filteredPM, yearList, submittedByDisplayName, updatedByDisplayName, pmSortColumn, pmSortDir, togglePmSort,
       pmListPage, pmListTotalPages, pmListPagedList, pmListGoToPage, pmListPageNumbers,
       PROJECT_TYPES, NON_SPRM_PROJECTS, NON_SPRM_SUBPROJECTS, MAP_NEGERI_OPTIONS, dosmOfficesByZone, projectLabel, calYear, calMonth, calCells, canEditSchedule, calHolidayYearMissing,
       isToday, isWeekend, shortSite, dateStr,
@@ -24011,7 +24204,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamModalStateHoliday, assignmentStateHoliday, stateHolidaysForDay,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday, holidayRowStyle, holidayTypeColor,
-      fmtDate, fmtDateDash, fmtDateDashDay, cctvSystemBrands,
+      fmtDate, fmtDateDash, fmtDateDashDay, fmtNum, cctvSystemBrands,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
@@ -24075,7 +24268,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       trashedCmCases, loadTrashCmCases, restoreTrashCmCases, purgeTrashCmCases,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF, exportUnderMaintenance,
-      globalSearch, showSearchResults, searchResults, handleSearchResultClick,
+      globalSearch, globalSearchInputRef, isMacPlatform, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
       auditLogs, auditLogsLoading, visibleAuditLogs, recentAuditLogs, logActorDisplayName, auditActionColor, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
