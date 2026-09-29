@@ -3165,6 +3165,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <button class="btn btn-sm btn-primary" @click="openSiteEquip(s,'BCD')">BCD</button>
                     <button class="btn btn-sm btn-primary" @click="openSiteEquip(s,'Optager HD4000')">Optager HD4000</button>
                     <button class="btn btn-sm btn-primary" @click="openSiteEquip(s,'VCS')">VCS</button>
+                    <button class="btn btn-sm btn-primary" @click="openSiteEquip(s,'SONY')">SONY</button>
                   </td>
                 </tr>
               </tbody>
@@ -3254,10 +3255,11 @@ details.form-control[open] summary::after{content:'▴'}
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
             <span class="fw-600" style="margin-left:4px">{{selSite?.name}}</span>
             <span v-if="currentProject==='vir' && eqTab!=='rooms'" class="badge" style="background:#e8f0ff;color:#003366;font-size:.75rem">Sistem: {{equipVirSystem}}</span>
-            <span v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS') && eqTab!=='rooms'" class="badge" style="background:#fff3e0;color:#7a2e00;font-size:.75rem">🚪 {{currentOptagerRoomName}}</span>
-            <button v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS') && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="openSiteEquip(selSite,equipVirSystem)">🔁 Tukar Bilik</button>
+            <span v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY') && eqTab!=='rooms'" class="badge" style="background:#fff3e0;color:#7a2e00;font-size:.75rem">🚪 {{currentOptagerRoomName}}</span>
+            <button v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY') && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="openSiteEquip(selSite,equipVirSystem)">🔁 Tukar Bilik</button>
             <button v-if="currentProject==='vir' && equipVirSystem==='Optager HD4000'" class="btn btn-outline btn-sm btn-icon" @click="showInfo('optager')" title="Tentang sistem Optager HD4000">ℹ️</button>
             <button v-if="currentProject==='vir' && equipVirSystem==='VCS'" class="btn btn-outline btn-sm btn-icon" @click="showInfo('vcs')" title="Tentang sistem VCS">ℹ️</button>
+            <button v-if="currentProject==='vir' && equipVirSystem==='SONY'" class="btn btn-outline btn-sm btn-icon" @click="showInfo('sony')" title="Tentang sistem SONY">ℹ️</button>
             <button class="btn btn-outline btn-sm btn-icon" @click="showInfo('importOcr')" title="Tentang Import Fail & Scan OCR">ℹ️ Import/OCR</button>
           </div>
           <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
@@ -3267,10 +3269,10 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="tabs">
           <div v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS')" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Appliance ({{(selSiteEquip.servers||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
-          <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'))" class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ {{currentProject==='vir'?'NVR':'Server/NVR/SAN'}} ({{(selSiteEquip.nvr||[]).length}})</div>
-          <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'))" class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
+          <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY'))" class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ {{currentProject==='vir'?'NVR':'Server/NVR/SAN'}} ({{(selSiteEquip.nvr||[]).length}})</div>
+          <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY'))" class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='switch'}" @click="eqTab='switch'">🔌 POE/Network Switch ({{(selSiteEquip.switches||[]).length}})</div>
-          <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'))" class="tab" :class="{active:eqTab==='alarm'}" @click="eqTab='alarm'">🔔 Alarm SMS ({{(selSiteEquip.alarms||[]).length}})</div>
+          <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY'))" class="tab" :class="{active:eqTab==='alarm'}" @click="eqTab='alarm'">🔔 Alarm SMS ({{(selSiteEquip.alarms||[]).length}})</div>
           <div v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS')" class="tab" :class="{active:eqTab==='tablets'}" @click="eqTab='tablets'">📱 Tablet ({{(selSiteEquip.tablets||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='misc'}" @click="eqTab='misc'">📦 Lain-lain ({{(selSiteEquip.misc||[]).length}})</div>
           <div v-if="currentProject==='vir'" class="tab" :class="{active:eqTab==='rooms'}" @click="eqTab='rooms'">🚪 Bilik &amp; Sistem ({{(selSiteEquip.rooms||[]).length}})</div>
@@ -4853,10 +4855,12 @@ details.form-control[open] summary::after{content:'▴'}
                 <span class="pm-cam-total">JUMLAH KAMERA: {{viewPM?.cameras?.length||0}} unit</span>
               </div>
             </div>
-            <!-- Rumusan Peralatan VIR — Optager HD4000 only, mirrors "Rumusan
-                 Kamera" above (CCTV) so the borang shows an at-a-glance
-                 equipment count before the detail tables further down. -->
-            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project==='vir' && (viewPM?.virSystem==='Optager HD4000'||viewPM?.virSystem==='VCS')">
+            <!-- Rumusan Peralatan VIR — Optager HD4000/VCS/SONY (room-scoped
+                 systems only, mirrors "Rumusan Kamera" above (CCTV) so the
+                 borang shows an at-a-glance equipment count before the
+                 detail tables further down. SONY's Appliance/Tablet chips
+                 just show 0 (it has no such equipment kinds), harmless. -->
+            <div class="pm-info-cell pm-info-full" v-if="viewPM?.project==='vir' && (viewPM?.virSystem==='Optager HD4000'||viewPM?.virSystem==='VCS'||viewPM?.virSystem==='SONY')">
               <b>Rumusan Peralatan:</b>
               <div class="pm-cam-summary">
                 <span class="pm-cam-chip">Appliance: <b>{{viewPM?.servers?.length||0}}</b></span>
@@ -4869,13 +4873,13 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
           </div>
 
-          <!-- PROFIL PERALATAN — Optager HD4000 only. Split by equipment
-               category (Appliance/Kamera/POE-Switch/Tablet/Lain-lain),
-               mirroring the CCTV borang's per-category sections (#1-#7),
-               instead of the single combined "Senarai Lengkap Perkakasan"
-               table this used to be. Shown BEFORE the checklist per client's
-               reference layout. -->
-          <template v-if="viewPM?.project==='vir' && (viewPM?.virSystem==='Optager HD4000'||viewPM?.virSystem==='VCS')">
+          <!-- PROFIL PERALATAN — Optager HD4000/VCS/SONY (room-scoped
+               systems only). Split by equipment category (Appliance/Kamera/
+               POE-Switch/Tablet/Lain-lain), mirroring the CCTV borang's
+               per-category sections (#1-#7), instead of the single combined
+               "Senarai Lengkap Perkakasan" table this used to be. Shown
+               BEFORE the checklist per client's reference layout. -->
+          <template v-if="viewPM?.project==='vir' && (viewPM?.virSystem==='Optager HD4000'||viewPM?.virSystem==='VCS'||viewPM?.virSystem==='SONY')">
             <div class="pm-section-hdr">1. &nbsp;APPLIANCE <span>({{viewPM?.servers?.length||0}} unit)</span></div>
             <table class="pm-tbl">
               <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
@@ -4996,7 +5000,7 @@ details.form-control[open] summary::after{content:'▴'}
                individually, matching the client's reference borang (not
                grouped) — its Setting row reads "Web Access" rather than
                "IP Address" (the column header), per client request. -->
-          <template v-if="viewPM?.project==='vir' && (viewPM?.virSystem==='Optager HD4000'||viewPM?.virSystem==='VCS') && virDefaultSettingUnits.length">
+          <template v-if="viewPM?.project==='vir' && (viewPM?.virSystem==='Optager HD4000'||viewPM?.virSystem==='VCS'||viewPM?.virSystem==='SONY') && virDefaultSettingUnits.length">
             <div class="pm-section-hdr">Default Setting Perkakasan</div>
             <div :class="['pm-vir-2col', virDefaultSettingUnits.length===1 ? 'pm-vir-2col-single' : '']">
               <table class="pm-tbl" v-for="(u,ui) in virDefaultSettingUnits" :key="ui">
@@ -5926,6 +5930,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <span>🚪 {{singleSiteRestorePreview.rooms}} bilik</span>
                   <span>🖥️ {{singleSiteRestorePreview.optagerItems}} item Optager</span>
                   <span>🖥️ {{singleSiteRestorePreview.vcsItems}} item VCS</span>
+                  <span>🖥️ {{singleSiteRestorePreview.sonyItems}} item SONY</span>
                 </template>
               </div>
             </div>
@@ -6765,25 +6770,28 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
       </div>
 
-      <!-- ====== VIR ROOM-SCOPED SYSTEM (OPTAGER HD4000 / VCS) — WHICH
-           ROOM? PICKER ======
-           Optager/VCS equipment is room-scoped (identical gear per room,
-           but each room has its own serial numbers) — this popup is shown
-           instead of jumping straight into the equipment tabs, so the
+      <!-- ====== VIR ROOM-SCOPED SYSTEM (OPTAGER HD4000 / VCS / SONY) —
+           WHICH ROOM? PICKER ======
+           Optager/VCS/SONY equipment is room-scoped (identical gear per
+           room, but each room has its own serial numbers) — this popup is
+           shown instead of jumping straight into the equipment tabs, so the
            technician explicitly picks which room they're keying data in
-           for. Shared modal for both systems, switched on
+           for. Shared modal for all three systems, switched on
            virRoomPickerModal.system — see openSiteEquip/
-           _openOptagerRoomPicker/_openVcsRoomPicker. -->
+           _openOptagerRoomPicker/_openVcsRoomPicker/_openSonyRoomPicker,
+           and the roomChoicesForModal/pickRoomForModal dispatch helpers
+           (a 3-way ternary chain directly in the template got unwieldy once
+           SONY was added as a 3rd room-scoped system). -->
       <div v-if="virRoomPickerModal.show" class="modal-bg" @click.self="virRoomPickerModal.show=false">
         <div class="modal">
           <h3>🚪 Urus Peralatan — Bilik Mana? <span class="text-muted text-sm">({{virRoomPickerModal.site?.name}} — {{virRoomPickerModal.system}})</span></h3>
-          <p v-if="!(virRoomPickerModal.system==='VCS' ? vcsRoomChoicesForSite(virRoomPickerModal.site?.id||'') : optagerRoomChoicesForSite(virRoomPickerModal.site?.id||'')).length" class="text-sm text-muted" style="margin-bottom:14px">
+          <p v-if="!roomChoicesForModal(virRoomPickerModal.site?.id||'').length" class="text-sm text-muted" style="margin-bottom:14px">
             Tiada bilik bertag "{{virRoomPickerModal.system}}" didaftarkan untuk site ini lagi. Sila daftar dahulu di "🚪 Bilik &amp; Sistem" sebelum urus peralatan.
           </p>
           <div v-else class="flex" style="flex-direction:column;gap:8px;margin-bottom:14px">
-            <button v-for="r in (virRoomPickerModal.system==='VCS' ? vcsRoomChoicesForSite(virRoomPickerModal.site?.id||'') : optagerRoomChoicesForSite(virRoomPickerModal.site?.id||''))" :key="r.uid"
+            <button v-for="r in roomChoicesForModal(virRoomPickerModal.site?.id||'')" :key="r.uid"
               class="btn btn-outline" style="text-align:left;justify-content:flex-start"
-              @click="virRoomPickerModal.system==='VCS' ? pickVcsRoom(r.uid) : pickOptagerRoom(r.uid)">{{r.name}}</button>
+              @click="pickRoomForModal(r.uid)">{{r.name}}</button>
           </div>
           <div class="flex gap-8 justify-end">
             <button class="btn btn-outline" @click="virRoomPickerModal.show=false">Batal</button>
@@ -8925,7 +8933,11 @@ createApp({
     };
     const ALARM_BRANDS = Object.keys(ALARM_BRAND_MODELS);
     const nMISC = reactive({name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
-    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable (HDMI)','Digital Clock'];
+    // 'Deck'/'DVR Centrix'/'Mixer' added for VIR's SONY system (SPRM Perak
+    // only) — no brand/model dict entries below for these (narrow one-off
+    // niche gear), so they fall back to free-text brand/model instead of a
+    // dropdown, same as e.g. 'Rack' already does.
+    const MISC_CATEGORIES = ['Monitor','TV','PC','UPS','POE Injector','POE Extender','POE Media Converter','Microphone','Mic/Line Preamplifier','Rack','AP/Router','Display Cable (HDMI)','Digital Clock','Deck','DVR Centrix','Mixer'];
     // Workstation-level PC brand/model dropdowns — only shown when Kategori
     // is "PC" (other categories keep the free-text brand/model inputs since
     // they cover too wide a range of devices for a fixed dropdown to help).
@@ -9025,7 +9037,7 @@ createApp({
     // for that context only, VIR/BCD keeps the full list unchanged.
     const miscCategoriesShown = computed(() => {
       if(currentProject.value !== 'vir') return MISC_CATEGORIES_CCTV;
-      return (equipVirSystem.value === 'Optager HD4000' || equipVirSystem.value === 'VCS')
+      return (equipVirSystem.value === 'Optager HD4000' || equipVirSystem.value === 'VCS' || equipVirSystem.value === 'SONY')
         ? MISC_CATEGORIES.filter(c => !c.startsWith('POE'))
         : MISC_CATEGORIES;
     });
@@ -9059,7 +9071,7 @@ createApp({
     // the physical components differ; which one applies is determined by
     // the room selected in Step 1 (rooms are tagged BCD/Optager per-site in
     // Urus Peralatan Site, since a single site can have mixed rooms).
-    const VIR_SYSTEMS = ['BCD', 'Optager HD4000', 'VCS'];
+    const VIR_SYSTEMS = ['BCD', 'Optager HD4000', 'VCS', 'SONY'];
     // Standardized room naming across all VIR sites — "Bilik 1".."Bilik 20"
     // covers every real room, so this is a dropdown (not free text) to keep
     // naming consistent; "Lain-lain" is kept as an escape hatch matching
@@ -9076,6 +9088,11 @@ createApp({
       // this object literal evaluates immediately at this point in the
       // script and those constants aren't declared until further down.
       'VCS': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem','Default Konfigurasi Appliance Optager HD4000','Default Konfigurasi Kamera Axis P3265-LV (CAM1 & CAM2)','Default Konfigurasi Kamera Axis M4218-LV (CAM3)'],
+      // SONY — SPRM Perak only (Bilik 1 & 2), Sony Deck/DVR-based recording
+      // system (TV/Monitor/3x Deck/DVR Centrix/Mixer/Kamera), no PC-appliance
+      // config concept like Optager/VCS — just the 2 generic sections, no
+      // "Default Konfigurasi" technical-only sections needed.
+      'SONY': ['Perkakasan dan Perisian (Hardware & Software)','Status Operasi Sistem'],
     };
     // Expanded from the real "Senarai Pemeriksaan dan Penyelenggaraan VIR"
     // paper form (SPRM/KUL/VIR/25/004) — every numbered item's individual
@@ -9765,12 +9782,46 @@ createApp({
       {key:'vcs_cam3_dyngop',      label:'Dynamic GOP — Set to: Off', section:SEC_CAM3_CONFIG_VCS},
       {key:'vcs_cam3_note_hardcode', label:'Nota: FPS rakaman sebenar di-hardcode 5 fps dalam aplikasi Optager HD4000 (berasingan daripada Frame Rate stream profile kamera di atas)', section:SEC_CAM3_CONFIG_VCS, isHeader:true},
     ];
+    // SONY — SPRM Perak only (Bilik 1 & 2). Sony Deck/DVR-based recording
+    // system: 3x Deck (RDR-GX380) + DVR Centrix + Mixer + TV/Monitor + 2
+    // Kamera, unlike Optager/VCS's single-PC-appliance model. No "Default
+    // Konfigurasi" technical section — just the 2 generic sections, matching
+    // the client's own request to follow Optager/VCS's simpler
+    // "Status Operasi Sistem" format rather than BCD's deep per-wiring
+    // breakdown (BCD's checklist is written around BCD USA's own specific
+    // hardware/wiring, which doesn't transfer to this different hardware).
+    const VIR_CHECKLIST_TEMPLATE_SONY = [
+      {key:'sony_tv',      label:'TV',                               section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_monitor', label:'Monitor',                          section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_deck1',   label:'Deck 1',                           section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_deck2',   label:'Deck 2',                           section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_deck3',   label:'Deck 3',                           section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_dvr',     label:'DVR Centrix',                      section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_mixer',   label:'Mixer',                            section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_camera',  label:'Kamera Rakaman',                   section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_network', label:'Rangkaian / Network Switch',       section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_cable_network', label:'Pendawaian & Kabel Rangkaian (Network Cabling)', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_cable_av',      label:'Pendawaian & Kabel Audio/HDMI', section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_storage', label:'Storan Data (Storage)',            section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_backup',  label:'Backup Data',                      section:'Perkakasan dan Perisian (Hardware & Software)'},
+      {key:'sony_op_boot',      label:'Sistem Dihidupkan (Power On System)', section:'Status Operasi Sistem'},
+      {key:'sony_op_deck1_rec', label:'Deck 1 — Ujian Rakaman',      section:'Status Operasi Sistem'},
+      {key:'sony_op_deck2_rec', label:'Deck 2 — Ujian Rakaman',      section:'Status Operasi Sistem'},
+      {key:'sony_op_deck3_rec', label:'Deck 3 — Ujian Rakaman',      section:'Status Operasi Sistem'},
+      {key:'sony_op_playback',  label:'Ujian Playback / Semakan Rakaman', section:'Status Operasi Sistem'},
+      {key:'sony_op_dvr_rec',   label:'DVR Centrix — Ujian Rakaman', section:'Status Operasi Sistem'},
+      {key:'sony_op_mixer',     label:'Mixer — Ujian Audio',         section:'Status Operasi Sistem'},
+      {key:'sony_op_camera',    label:'Kamera — Ujian Rakaman',      section:'Status Operasi Sistem'},
+      {key:'sony_op_timestamp', label:'Ketepatan Tarikh & Masa Rakaman (Timestamp)', section:'Status Operasi Sistem'},
+      {key:'sony_op_shutdown',  label:'Sistem Dimatikan (Shutdown System)', section:'Status Operasi Sistem'},
+    ];
     // Picks the right checklist array for a given system tag — falls back
     // to BCD if the system is unset/unrecognised (e.g. legacy records saved
     // before this BCD/Optager split existed).
     function virChecklistFor(system) {
       if (system === 'Optager HD4000') return VIR_CHECKLIST_TEMPLATE_OPTAGER;
       if (system === 'VCS') return VIR_CHECKLIST_TEMPLATE_VCS;
+      if (system === 'SONY') return VIR_CHECKLIST_TEMPLATE_SONY;
       return VIR_CHECKLIST_TEMPLATE_BCD;
     }
     function virSectionsFor(system) {
@@ -10358,11 +10409,11 @@ createApp({
         localStorage.setItem(EQUIP_DRAFT_KEY, JSON.stringify({
           siteId: selSite.value.id, project: currentProject.value,
           // system/roomUid let recovery restore into the EXACT same slot —
-          // critical for Optager/VCS, both room-scoped: without knowing
+          // critical for Optager/VCS/SONY, all room-scoped: without knowing
           // which room this draft came from, recovery would have no way to
           // know where to put it back.
           system: currentProject.value === 'vir' ? equipVirSystem.value : null,
-          roomUid: (currentProject.value === 'vir' && (equipVirSystem.value === 'Optager HD4000' || equipVirSystem.value === 'VCS')) ? equipVirRoomUid.value : null,
+          roomUid: (currentProject.value === 'vir' && (equipVirSystem.value === 'Optager HD4000' || equipVirSystem.value === 'VCS' || equipVirSystem.value === 'SONY')) ? equipVirRoomUid.value : null,
           data: activeEquip()[selSite.value.id], savedAt: Date.now(),
         }));
       } catch(e) {}
@@ -10392,15 +10443,15 @@ createApp({
       if(await askConfirm(`Ada perubahan peralatan belum disimpan untuk site "${siteLabel}" dari sesi lepas (${when}) — kemungkinan tak sempat klik "Simpan" sebelum sambungan/tab terputus.\n\nNak pulihkan perubahan ni?`, {danger:false})) {
         currentProject.value = draft.project;
         if(!site) { clearEquipDraftLocal(); return; }
-        if(draft.project === 'vir' && (draft.system === 'Optager HD4000' || draft.system === 'VCS')) {
-          // Room-scoped (Optager or VCS) — only safe to restore directly if
-          // that exact room still exists (or it's the legacy unassigned
+        if(draft.project === 'vir' && (draft.system === 'Optager HD4000' || draft.system === 'VCS' || draft.system === 'SONY')) {
+          // Room-scoped (Optager/VCS/SONY) — only safe to restore directly
+          // if that exact room still exists (or it's the legacy unassigned
           // bucket, which always exists as a valid target). If the room was
           // renamed/deleted since the crash, we can't safely guess which
           // OTHER room it belongs to, so skip rather than risk misfiling
           // real recorded equipment into the wrong room. Room existence is
-          // checked against the shared virSiteEquip list, same for both
-          // systems — only which room-opener/facade gets used differs.
+          // checked against the shared virSiteEquip list, same for all
+          // three systems — only which room-opener/facade gets used differs.
           const roomStillExists = draft.roomUid === 'legacyUnassigned' ||
             (virSiteEquip.value[site.id]?.rooms || []).some(r => r._uid === draft.roomUid);
           if(!roomStillExists) {
@@ -10409,7 +10460,8 @@ createApp({
             return;
           }
           if(draft.system === 'Optager HD4000') openOptagerRoomEquip(site, draft.roomUid);
-          else openVcsRoomEquip(site, draft.roomUid);
+          else if(draft.system === 'VCS') openVcsRoomEquip(site, draft.roomUid);
+          else openSonyRoomEquip(site, draft.roomUid);
           ensureSite(site.id);
           activeEquip()[site.id] = draft.data;
         } else {
@@ -11879,6 +11931,7 @@ createApp({
       const sys = virSystem || 'BCD';
       if(sys === 'Optager HD4000') return 'OPT';
       if(sys === 'VCS') return 'VCS';
+      if(sys === 'SONY') return 'SONY';
       return 'BCD';
     }
     function shortSite(name){
@@ -13834,6 +13887,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // — a deliberate parallel structure (not a shared/refactored one) so
     // nothing here can ever touch Optager's or BCD's own behavior.
     const virSiteEquipVCS = ref({});
+    // SONY — SPRM Perak only (Bilik 1 & 2). Deck/DVR-based, same per-room
+    // hardware model as Optager/VCS (each room has its OWN Deck/DVR/Mixer
+    // serial numbers) — same room-scoped storage shape, deliberate parallel
+    // structure (not shared/refactored) so nothing here can ever touch
+    // Optager's/VCS's/BCD's own behavior.
+    const virSiteEquipSony = ref({});
     const VIR_ROOM_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
     // Which system's equipment the "Urus Peralatan Site" page is currently
     // showing/editing for VIR — set by the BCD/Optager/VCS buttons on the
@@ -13850,8 +13909,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // asks which of that site's registered Optager rooms to edit equipment
     // for, since Optager equipment is room-scoped (see virSiteEquipOptager).
     // `system` picks which room-scoped system this instance of the shared
-    // picker modal is for (Optager HD4000 or VCS — see _openOptagerRoomPicker
-    // / _openVcsRoomPicker) — the modal UI itself stays one shared block,
+    // picker modal is for (Optager HD4000, VCS, or SONY — see
+    // _openOptagerRoomPicker / _openVcsRoomPicker / _openSonyRoomPicker,
+    // dispatched via roomChoicesForModal/pickRoomForModal in the template)
+    // — the modal UI itself stays one shared block,
     // only the room-choices function and click handler switch on it.
     const virRoomPickerModal = reactive({ show:false, site:null, system:'Optager HD4000' });
     // Room name badge on the site-equip page header, for the currently
@@ -13934,12 +13995,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         _loadPmOptagerEquipSnapshot();
       }
     }
-    // Room-scoped-system (Optager HD4000 / VCS) equipment snapshot for the
-    // printed borang — pulled from the SAME reactive store that system's
-    // "Urus Peralatan Site" screen edits (virSiteEquipOptager / VCS), never
-    // virSiteEquipBCD, so BCD's PM/CM borang can never end up with these
-    // tables. Both are room-scoped, so the snapshot must resolve the EXACT
-    // room selected in the form (by name → _uid), not just the site. Covers
+    // Room-scoped-system (Optager HD4000 / VCS / SONY) equipment snapshot
+    // for the printed borang — pulled from the SAME reactive store that
+    // system's "Urus Peralatan Site" screen edits (virSiteEquipOptager /
+    // VCS / Sony), never virSiteEquipBCD, so BCD's PM/CM borang can never
+    // end up with these tables. All three are room-scoped, so the snapshot
+    // must resolve the EXACT room selected in the form (by name → _uid),
+    // not just the site. Covers
     // every equipment kind actually available under these systems (servers,
     // cameras, POE/network switches, tablets, lain-lain/misc) — NVR/HDD/
     // Alarm have no equivalent there (those tabs are hidden for both
@@ -13949,6 +14011,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function _loadPmOptagerEquipSnapshot() {
       const roomScopedStore = pm.virSystem === 'Optager HD4000' ? virSiteEquipOptager.value
         : pm.virSystem === 'VCS' ? virSiteEquipVCS.value
+        : pm.virSystem === 'SONY' ? virSiteEquipSony.value
         : null;
       if(currentProject.value !== 'vir' || !roomScopedStore) {
         pm.servers = []; pm.cameras = []; pm.switches = []; pm.tablets = []; pm.misc = [];
@@ -14257,7 +14320,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
         const EQUIP_SHAPE_VIR  = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
         const restoredSiteEquip = {};
-        const restoredVirRooms = {}, restoredVirBcd = {}, restoredVirOptager = {}, restoredVirVcs = {};
+        const restoredVirRooms = {}, restoredVirBcd = {}, restoredVirOptager = {}, restoredVirVcs = {}, restoredVirSony = {};
         // Chunked the same way _batchRestoreCollection below already does
         // (Firestore's 500-ops-per-batch cap) — this was a single unchunked
         // batch (2 ops per CCTV site + 2 per VIR site). Safe today at this
@@ -14288,12 +14351,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // under distinct keys — merge:true so restoring one doesn't wipe
         // the others out (a backup taken before this split existed, or one
         // missing one of the systems, must not blank the rest).
-        if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS) {
+        if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS || data.virSiteEquipSony) {
           const ids = new Set([
             ...Object.keys(data.virSiteEquip||{}),
             ...Object.keys(data.virSiteEquipBCD||{}),
             ...Object.keys(data.virSiteEquipOptager||{}),
             ...Object.keys(data.virSiteEquipVCS||{}),
+            ...Object.keys(data.virSiteEquipSony||{}),
           ]);
           ids.forEach(id => {
             const rooms = data.virSiteEquip?.[id]?.rooms || [];
@@ -14304,15 +14368,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             const optager = _normalizeOptagerRec(data.virSiteEquipOptager?.[id]);
             // VCS — same room-scoped normalization as Optager, own key.
             const vcs = _normalizeVcsRec(data.virSiteEquipVCS?.[id]);
+            // SONY — same room-scoped normalization, own key.
+            const sony = _normalizeSonyRec(data.virSiteEquipSony?.[id]);
             restoredVirRooms[id] = { rooms };
             restoredVirBcd[id] = bcd;
             restoredVirOptager[id] = optager;
             restoredVirVcs[id] = vcs;
+            restoredVirSony[id] = sony;
             const bcdSplit = _splitCredentials(bcd);
             const optagerSplit = _splitOptagerByRoom(optager);
             const vcsSplit = _splitVcsByRoom(vcs);
-            _batchSetChunked(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped }, { merge: true });
-            _batchSetChunked(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds }, { merge: true });
+            const sonySplit = _splitSonyByRoom(sony);
+            _batchSetChunked(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped }, { merge: true });
+            _batchSetChunked(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds, SONY: sonySplit.creds }, { merge: true });
           });
         }
         _pendingBatches.push(batch);
@@ -14324,16 +14392,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // _uid), a restore can legitimately not contain that item at all
         // (different backup snapshot). Clearing here avoids "Kemaskini"
         // silently overwriting whatever now sits at that stale index.
-        if(data.siteEquip || data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS) {
+        if(data.siteEquip || data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS || data.virSiteEquipSony) {
           Object.keys(equipEditIdx).forEach(k => { if(equipEditIdx[k] !== null) cancelEditEquip(k); });
         }
         // Only mutate local state after Firestore write confirmed
         if(data.siteEquip) siteEquip.value = restoredSiteEquip;
-        if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS) {
+        if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS || data.virSiteEquipSony) {
           virSiteEquip.value = restoredVirRooms;
           virSiteEquipBCD.value = restoredVirBcd;
           virSiteEquipOptager.value = restoredVirOptager;
           virSiteEquipVCS.value = restoredVirVcs;
+          virSiteEquipSony.value = restoredVirSony;
         }
 
         if(data.pmRecords?.length) {
@@ -14418,6 +14487,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           ...Object.keys(singleSiteRestore.data.virSiteEquipBCD||{}),
           ...Object.keys(singleSiteRestore.data.virSiteEquipOptager||{}),
           ...Object.keys(singleSiteRestore.data.virSiteEquipVCS||{}),
+          ...Object.keys(singleSiteRestore.data.virSiteEquipSony||{}),
         ]);
         return VIR_SITES.filter(s => ids.has(s.id));
       }
@@ -14438,10 +14508,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const vcsByRoom = vcsRaw ? _normalizeVcsRec(vcsRaw).byRoom : {};
         const vcsItems = Object.values(vcsByRoom||{}).reduce((sum,r) =>
           sum + (r.cameras?.length||0) + (r.servers?.length||0) + (r.tablets?.length||0) + (r.misc?.length||0), 0);
+        const sonyRaw = singleSiteRestore.data.virSiteEquipSony?.[id];
+        const sonyByRoom = sonyRaw ? _normalizeSonyRec(sonyRaw).byRoom : {};
+        const sonyItems = Object.values(sonyByRoom||{}).reduce((sum,r) =>
+          sum + (r.cameras?.length||0) + (r.servers?.length||0) + (r.tablets?.length||0) + (r.misc?.length||0), 0);
         return {
           cameras:(bcd.cameras||[]).length, nvr:(bcd.nvr||[]).length, hdd:(bcd.hdd||[]).length,
           switches:(bcd.switches||[]).length, alarms:(bcd.alarms||[]).length, misc:(bcd.misc||[]).length,
-          rooms: rooms.length, optagerItems, vcsItems,
+          rooms: rooms.length, optagerItems, vcsItems, sonyItems,
         };
       }
       const eq = singleSiteRestore.data.siteEquip?.[id] || {};
@@ -14471,15 +14545,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const bcd = {...EQUIP_SHAPE_VIR, ...(singleSiteRestore.data.virSiteEquipBCD?.[id] || {})};
           const optager = _normalizeOptagerRec(singleSiteRestore.data.virSiteEquipOptager?.[id]);
           const vcs = _normalizeVcsRec(singleSiteRestore.data.virSiteEquipVCS?.[id]);
+          const sony = _normalizeSonyRec(singleSiteRestore.data.virSiteEquipSony?.[id]);
           const bcdSplit = _splitCredentials(bcd);
           const optagerSplit = _splitOptagerByRoom(optager);
           const vcsSplit = _splitVcsByRoom(vcs);
-          await _fw(db.collection('virSiteEquipment').doc(id).set({ rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped }, { merge: true }));
-          await _fw(db.collection('virSiteEquipmentCredentials').doc(id).set({ BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds }, { merge: true }));
+          const sonySplit = _splitSonyByRoom(sony);
+          await _fw(db.collection('virSiteEquipment').doc(id).set({ rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped }, { merge: true }));
+          await _fw(db.collection('virSiteEquipmentCredentials').doc(id).set({ BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds, SONY: sonySplit.creds }, { merge: true }));
           virSiteEquip.value = { ...virSiteEquip.value, [id]: { rooms } };
           virSiteEquipBCD.value = { ...virSiteEquipBCD.value, [id]: bcd };
           virSiteEquipOptager.value = { ...virSiteEquipOptager.value, [id]: optager };
           virSiteEquipVCS.value = { ...virSiteEquipVCS.value, [id]: vcs };
+          virSiteEquipSony.value = { ...virSiteEquipSony.value, [id]: sony };
         } else {
           const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
           const merged = {...EQUIP_SHAPE_CCTV, ...(singleSiteRestore.data.siteEquip?.[id] || {})};
@@ -14583,7 +14660,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // level. Same shape for both, so one helper covers both refs.
       const countFromOptager = (obj) => Object.values(obj).reduce((sum,site) =>
         sum + Object.values(site?.byRoom||{}).reduce((s2,room)=>s2+(room?.cameras?.length||0),0), 0);
-      return countFromBCD(virSiteEquipBCD.value) + countFromOptager(virSiteEquipOptager.value) + countFromOptager(virSiteEquipVCS.value);
+      return countFromBCD(virSiteEquipBCD.value) + countFromOptager(virSiteEquipOptager.value) + countFromOptager(virSiteEquipVCS.value) + countFromOptager(virSiteEquipSony.value);
     });
 
     const pmThisYear = computed(() => pmRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
@@ -14865,6 +14942,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         ['vir', virSiteEquipBCD.value, VIR_SITES, 'BCD'],
         ['vir', virSiteEquipOptager.value, VIR_SITES, 'Optager HD4000'],
         ['vir', virSiteEquipVCS.value, VIR_SITES, 'VCS'],
+        ['vir', virSiteEquipSony.value, VIR_SITES, 'SONY'],
       ]) {
         for(const siteId of Object.keys(store||{})) {
           const site = sites.find(s => s.id === siteId);
@@ -14925,7 +15003,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         currentProject.value = item.proj;
         const site = (item.proj==='vir'?VIR_SITES:SITES).find(s=>s.id===item.siteId);
         if(site) {
-          // VIR needs its system passed through (BCD/Optager HD4000/VCS) —
+          // VIR needs its system passed through (BCD/Optager HD4000/VCS/SONY) —
           // openSiteEquip() routes Optager/VCS to their room picker instead
           // of opening the equipment page directly, same as clicking that
           // system's button on the site list manually.
@@ -17703,6 +17781,56 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       delete siteRec.byRoom[roomUid];
     }
 
+    // ── SONY room-scoped equipment helpers ───────────────────────────────
+    // Deliberate parallel copy of the 5 VCS helpers directly above — SONY
+    // is the same per-room hardware model (SPRM Perak, Bilik 1 & 2), kept as
+    // fully separate functions/state (virSiteEquipSony, never
+    // virSiteEquipVCS/Optager/BCD) so adding SONY support can never alter
+    // any other system's own behavior.
+    function _normalizeSonyRec(raw) {
+      if(!raw) return { byRoom: {} };
+      if(raw.byRoom) {
+        const byRoom = {};
+        Object.keys(raw.byRoom).forEach(uid => { byRoom[uid] = {...VIR_ROOM_EQUIP_SHAPE, ...raw.byRoom[uid]}; });
+        return { byRoom };
+      }
+      if(Object.keys(raw).length) {
+        return { byRoom: { legacyUnassigned: {...VIR_ROOM_EQUIP_SHAPE, ...raw} } };
+      }
+      return { byRoom: {} };
+    }
+    function _splitSonyByRoom(sonyRec) {
+      const byRoom = {}, credsByRoom = {};
+      Object.keys(sonyRec?.byRoom || {}).forEach(uid => {
+        const { stripped, creds } = _splitCredentials(sonyRec.byRoom[uid]);
+        byRoom[uid] = stripped;
+        credsByRoom[uid] = creds;
+      });
+      return { stripped: { byRoom }, creds: { byRoom: credsByRoom } };
+    }
+    function sonyRoomChoicesForSite(siteId) {
+      const rooms = (virSiteEquip.value[siteId]?.rooms || []).filter(r => r.system === 'SONY');
+      const choices = rooms.map(r => ({ uid: r._uid, name: r.name }));
+      const unassigned = virSiteEquipSony.value[siteId]?.byRoom?.legacyUnassigned;
+      const hasUnassignedData = unassigned && EQUIP_KINDS.some(k => (unassigned[k]||[]).length);
+      if(hasUnassignedData) choices.push({ uid: 'legacyUnassigned', name: '⚠️ Data Lama (Belum Diagihkan Ikut Bilik)' });
+      return choices;
+    }
+    function _roomHasSonyEquipment(siteId, roomUid) {
+      const bucket = virSiteEquipSony.value[siteId]?.byRoom?.[roomUid];
+      return !!bucket && EQUIP_KINDS.some(k => (bucket[k]||[]).length);
+    }
+    function _migrateSonyRoomToUnassigned(siteId, roomUid) {
+      if(roomUid === 'legacyUnassigned') return; // already there
+      const siteRec = virSiteEquipSony.value[siteId];
+      const bucket = siteRec?.byRoom?.[roomUid];
+      if(!bucket) return;
+      if(!siteRec.byRoom.legacyUnassigned) siteRec.byRoom.legacyUnassigned = {...VIR_ROOM_EQUIP_SHAPE};
+      const unassigned = siteRec.byRoom.legacyUnassigned;
+      EQUIP_KINDS.forEach(k => { unassigned[k] = [...(unassigned[k]||[]), ...(bucket[k]||[])]; });
+      delete siteRec.byRoom[roomUid];
+    }
+
     function confirmImportRows() {
       const kind = importState.kind;
       const rows = importState.rows.filter(r => r._include);
@@ -17721,8 +17849,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const eq = {};
         SITES.forEach(s=>{ eq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; });
         const VIR_EQUIP_SHAPE = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
-        const veqRooms = {}, veqBcd = {}, veqOptager = {}, veqVcs = {};
-        VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={byRoom:{}}; veqVcs[s.id]={byRoom:{}}; });
+        const veqRooms = {}, veqBcd = {}, veqOptager = {}, veqVcs = {}, veqSony = {};
+        VIR_SITES.forEach(s=>{ veqRooms[s.id]={rooms:[]}; veqBcd[s.id]={...VIR_EQUIP_SHAPE}; veqOptager[s.id]={byRoom:{}}; veqVcs[s.id]={byRoom:{}}; veqSony[s.id]={byRoom:{}}; });
 
         // All of these reads are independent of each other — firing them
         // together (instead of one `await` at a time) cuts login load time
@@ -17806,10 +17934,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           // VCS — same room-scoped shape as Optager, stored under its own
           // 'VCS' top-level key in the same doc (see _writeSiteEquipToFirestore).
           veqVcs[doc.id] = _normalizeVcsRec(d['VCS']);
+          // SONY — same room-scoped shape, own 'SONY' top-level key.
+          veqSony[doc.id] = _normalizeSonyRec(d['SONY']);
         });
         Object.values(veqBcd).forEach(_sortAllEquipLists);
         Object.values(veqOptager).forEach(rec => Object.values(rec.byRoom).forEach(_sortAllEquipLists));
         Object.values(veqVcs).forEach(rec => Object.values(rec.byRoom).forEach(_sortAllEquipLists));
+        Object.values(veqSony).forEach(rec => Object.values(rec.byRoom).forEach(_sortAllEquipLists));
         if(vCredSnap) vCredSnap.forEach(doc => {
           const d = doc.data();
           if(veqBcd[doc.id]) _mergeCredentials(veqBcd[doc.id], d['BCD']);
@@ -17825,11 +17956,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
               _mergeCredentials(veqVcs[doc.id].byRoom[uid], vcsCredsByRoom[uid]);
             });
           }
+          const sonyCredsByRoom = d['SONY']?.byRoom || {};
+          if(veqSony[doc.id]) {
+            Object.keys(veqSony[doc.id].byRoom).forEach(uid => {
+              _mergeCredentials(veqSony[doc.id].byRoom[uid], sonyCredsByRoom[uid]);
+            });
+          }
         });
         virSiteEquip.value = veqRooms;
         virSiteEquipBCD.value = veqBcd;
         virSiteEquipOptager.value = veqOptager;
         virSiteEquipVCS.value = veqVcs;
+        virSiteEquipSony.value = veqSony;
 
         if(pmSnap) pmRecords.value = pmSnap.docs.map(d=>({id:d.id,...d.data()}));
         if(tSnap) teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()}));
@@ -18789,6 +18927,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         _openVcsRoomPicker(site);
         return;
       }
+      if(currentProject.value === 'vir' && resolvedSystem === 'SONY') {
+        _openSonyRoomPicker(site);
+        return;
+      }
       _flushEquipAutoSave(); // persist any pending edits for the site we're leaving
       selSite.value = site;
       if(currentProject.value === 'vir') {
@@ -18914,6 +19056,46 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       eqTab.value = 'servers';
       _finishOpenSiteEquipPage(site);
     }
+    // Parallel copy of the 3 VCS room-picker functions above, for SONY —
+    // same shared virRoomPickerModal UI. Kept fully separate (not a shared/
+    // parametrized function) so SONY support can never alter Optager's/
+    // VCS's own behavior.
+    function _openSonyRoomPicker(site) {
+      virRoomPickerModal.site = site;
+      virRoomPickerModal.system = 'SONY';
+      virRoomPickerModal.show = true;
+    }
+    function pickSonyRoom(roomUid) {
+      const site = virRoomPickerModal.site;
+      virRoomPickerModal.show = false;
+      virRoomPickerModal.site = null;
+      openSonyRoomEquip(site, roomUid);
+    }
+    // Lands on 'cameras' (not 'servers' like Optager/VCS above) — SONY has
+    // no Appliance/PC-appliance concept, so that tab is hidden for it (see
+    // the eqTab template conditions); landing there would show a blank tab.
+    function openSonyRoomEquip(site, roomUid) {
+      _flushEquipAutoSave();
+      selSite.value = site;
+      currentProject.value = 'vir';
+      equipVirSystem.value = 'SONY';
+      equipVirRoomUid.value = roomUid;
+      eqTab.value = 'cameras';
+      _finishOpenSiteEquipPage(site);
+    }
+    // Dispatch helpers for the shared room-picker modal template — a 3-way
+    // ternary chain directly in the template got unwieldy once SONY joined
+    // Optager/VCS as a 3rd room-scoped system.
+    function roomChoicesForModal(siteId) {
+      if(virRoomPickerModal.system === 'VCS') return vcsRoomChoicesForSite(siteId);
+      if(virRoomPickerModal.system === 'SONY') return sonyRoomChoicesForSite(siteId);
+      return optagerRoomChoicesForSite(siteId);
+    }
+    function pickRoomForModal(roomUid) {
+      if(virRoomPickerModal.system === 'VCS') return pickVcsRoom(roomUid);
+      if(virRoomPickerModal.system === 'SONY') return pickSonyRoom(roomUid);
+      return pickOptagerRoom(roomUid);
+    }
 
     // ---- Remember last-visited page across browser refresh ----
     // Pages that need no extra reconstructed context (a specific record,
@@ -19029,10 +19211,31 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         },
       });
     }
+    // Same Proxy-facade trick as _optagerRoomFacade/_vcsRoomFacade above,
+    // parallel copy for SONY (also room-scoped).
+    function _sonyRoomFacade() {
+      return new Proxy({}, {
+        get(_, siteId) {
+          if(typeof siteId !== 'string') return undefined;
+          const roomUid = equipVirRoomUid.value;
+          if(!roomUid) return undefined;
+          return virSiteEquipSony.value[siteId]?.byRoom?.[roomUid];
+        },
+        set(_, siteId, value) {
+          const roomUid = equipVirRoomUid.value;
+          if(!roomUid) return true; // no room context yet — no-op rather than throw
+          if(!virSiteEquipSony.value[siteId]) virSiteEquipSony.value[siteId] = { byRoom: {} };
+          if(!virSiteEquipSony.value[siteId].byRoom) virSiteEquipSony.value[siteId].byRoom = {};
+          virSiteEquipSony.value[siteId].byRoom[roomUid] = value;
+          return true;
+        },
+      });
+    }
     function activeEquip() {
       if(currentProject.value !== 'vir') return siteEquip.value;
       if(equipVirSystem.value === 'Optager HD4000') return _optagerRoomFacade();
       if(equipVirSystem.value === 'VCS') return _vcsRoomFacade();
+      if(equipVirSystem.value === 'SONY') return _sonyRoomFacade();
       return virSiteEquipBCD.value;
     }
     const selSiteEquip = computed(() => {
@@ -19207,6 +19410,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       vcs: {
         title: '🖥️ Sistem VCS',
         body: 'Peralatan untuk sistem VCS (Video Capture System) diurus mengikut BILIK juga (sama macam Optager HD4000) — setiap bilik VIR yang bertag "VCS" ada set peralatan sendiri (Appliance/SVR, Tablet, Kamera Rakaman, dll).\n\nSebelum urus peralatan, sistem akan minta korang pilih bilik dahulu. Bilik perlu didaftarkan dulu di halaman "🚪 Bilik & Sistem" sebelum boleh urus peralatan untuknya.',
+      },
+      sony: {
+        title: '📼 Sistem SONY',
+        body: 'Sistem SONY (Deck/DVR-based) — hanya di site SPRM Perak (Bilik 1 & 2). Peralatan diurus mengikut BILIK juga (sama macam Optager/VCS) — setiap bilik ada set peralatan sendiri (Kamera, dan Lain-lain untuk TV/Monitor/Deck/DVR Centrix/Mixer).\n\nSebelum urus peralatan, sistem akan minta korang pilih bilik dahulu. Bilik perlu didaftarkan dulu di halaman "🚪 Bilik & Sistem" sebelum boleh urus peralatan untuknya.',
       },
       kontraktorArea: {
         title: '📍 Area Service',
@@ -19699,6 +19906,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           }
           _migrateVcsRoomToUnassigned(selSite.value.id, roomUid);
         }
+        // Same re-tagging-away-loses-reachability risk as Optager/VCS above,
+        // parallel check for SONY (its own separate room-scoped store).
+        if(existing.system === 'SONY' && resolved.system !== 'SONY' && _roomHasSonyEquipment(selSite.value.id, roomUid)) {
+          if(!(await askConfirm(`Bilik "${existing.name}" masih ada peralatan SONY direkodkan (kamera/deck/dll). Menukar sistem bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan?`))) {
+            return;
+          }
+          _migrateSonyRoomToUnassigned(selSite.value.id, roomUid);
+        }
         list[equipEditIdx.rooms] = {...resolved, _uid:roomUid, _ts:Date.now()};
         equipEditIdx.rooms = null; showToast('Bilik dikemaskini!');
       }
@@ -19910,6 +20125,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             return;
           }
           _migrateVcsRoomToUnassigned(siteId, room._uid);
+        } else if(room?.system === 'SONY' && _roomHasSonyEquipment(siteId, room._uid)) {
+          // Same orphan-equipment risk as Optager/VCS above, parallel check for SONY.
+          if(!(await askConfirm(`Bilik "${room.name}" masih ada peralatan SONY direkodkan (kamera/deck/dll). Memadam bilik ini akan sembunyikan peralatan tersebut daripada senarai pilihan bilik.\n\nPeralatan itu akan dipindahkan ke bucket "Data Lama (Belum Diagihkan Ikut Bilik)" supaya tidak hilang. Teruskan padam bilik ini?`))) {
+            return;
+          }
+          _migrateSonyRoomToUnassigned(siteId, room._uid);
         } else if(!(await askConfirm('Padam rekod ini?'))) return;
         const list = virSiteEquip.value[siteId].rooms;
         const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
@@ -20039,14 +20260,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // VCS is the same room-scoped deal as Optager (see virSiteEquipVCS) —
       // separate check/store, never touches the Optager branch above.
       const isVcs = currentProject.value === 'vir' && equipVirSystem.value === 'VCS';
+      // SONY — same room-scoped deal, own separate check/store.
+      const isSony = currentProject.value === 'vir' && equipVirSystem.value === 'SONY';
       const { stripped, creds } = isOptager
         ? _splitOptagerByRoom(virSiteEquipOptager.value[siteId])
         : isVcs
         ? _splitVcsByRoom(virSiteEquipVCS.value[siteId])
+        : isSony
+        ? _splitSonyByRoom(virSiteEquipSony.value[siteId])
         : _splitCredentials(activeEquip()[siteId]);
       // VIR keeps rooms + all systems' equipment in ONE doc, under distinct
       // top-level keys (merge:true so writing one doesn't clobber the
-      // others): { rooms:[...], BCD:{...}, 'Optager HD4000':{...}, VCS:{...} }.
+      // others): { rooms:[...], BCD:{...}, 'Optager HD4000':{...}, VCS:{...}, SONY:{...} }.
       const data = currentProject.value === 'vir'
         ? { rooms: virSiteEquip.value[siteId]?.rooms || [], [equipVirSystem.value]: stripped }
         : stripped;
@@ -20230,7 +20455,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // even though the technician is actually visiting an Optager room.
         if(!pm.virRoomNo){ showToast('Sila pilih No. Bilik VIR', 'error'); return; }
         if(pm.virRoomNo === 'Lain-lain' && !pm.virRoomNoCustom.trim()){ showToast('Sila nyatakan no. bilik', 'error'); return; }
-        if(!pm.virSystem){ showToast('Sila pilih Jenis Sistem (BCD / Optager HD4000 / VCS)', 'error'); return; }
+        if(!pm.virSystem){ showToast('Sila pilih Jenis Sistem (BCD / Optager HD4000 / VCS / SONY)', 'error'); return; }
         const site = VIR_SITES.find(s=>s.id===pm.siteId);
         pm.siteName = site?.name||'';
         pmStep.value = 2;
@@ -24170,7 +24395,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, pmVirItemsBySection, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
-      currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, virSiteEquipVCS, equipVirSystem, virSystemShortLabel,
+      currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, virSiteEquipVCS, virSiteEquipSony, equipVirSystem, virSystemShortLabel,
       siteEquip, selSite, eqTab,
       nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown, miscBrandOptions, miscModelOptions, ALARM_BRANDS, ALARM_BRAND_MODELS,
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
@@ -24243,6 +24468,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openSiteEquip, selSiteEquip, hddGroupedByNvr, camerasGroupedByNvr, addCamera, addNVR, addHDD, addSwitch, addAlarm, addMisc, onMiscCategoryChange,
       equipVirRoomUid, virRoomPickerModal, currentOptagerRoomName, optagerRoomChoicesForSite, pickOptagerRoom, openOptagerRoomEquip,
       vcsRoomChoicesForSite, pickVcsRoom, openVcsRoomEquip,
+      sonyRoomChoicesForSite, pickSonyRoom, openSonyRoomEquip, roomChoicesForModal, pickRoomForModal,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       removeReasonModal, confirmRemoveItem,
       brandOptionsFor, modelOptionsFor, isRecentEquip,
