@@ -218,6 +218,13 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    small 8px rise so navigating still feels immediate, not slow. */
 @keyframes pageFadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .page-view{animation:pageFadeIn .22s ease both}
+/* Sub-tab content switches (e.g. Laporan Lanjutan's 16 report tabs) are each
+   a separate v-if block, so Vue already mounts a fresh DOM node per switch —
+   this just gives that fresh node a quick fade instead of popping in
+   instantly. Deliberately plainer/faster than pageFadeIn (no vertical rise,
+   shorter) so rapid tab-clicking doesn't feel sluggish. */
+@keyframes tabContentFadeIn{from{opacity:0}to{opacity:1}}
+.tab-content-fade{animation:tabContentFadeIn .16s ease both}
 /* Native View Transitions API cross-fade (see _usePageTransitionRef in
    setup()) — these pseudo-elements only exist in browsers that support
    document.startViewTransition and only during an active transition, so
@@ -420,6 +427,16 @@ details.form-control[open] summary::after{content:'▴'}
 .step.done .step-circle{border-color:#003366;background:#003366;color:#fff}
 .step-label{font-size:.75rem;color:#888}
 .step.active .step-label{color:#003366;font-weight:600}
+/* Step circles+connector above already show done/not-done per segment, but
+   that's a discrete signal — this adds a continuous fill so advancing one
+   step visibly moves the bar instead of just flipping one circle's color.
+   Pulses twice (pmProgressPulse ref, set briefly in savePM) right before the
+   existing flashSavedCheckmark overlay fires on final submit. */
+.pm-progress-bar{height:4px;background:#e8edf5;border-radius:2px;overflow:hidden;margin-bottom:14px}
+.pm-progress-fill{height:100%;background:linear-gradient(90deg,#0056b3,#00c86a);border-radius:2px;transition:width .4s cubic-bezier(.22,1,.36,1)}
+@keyframes pmProgressPulseFx{0%,100%{box-shadow:0 0 0 0 rgba(25,135,84,.55)}50%{box-shadow:0 0 0 6px rgba(25,135,84,0)}}
+.pm-progress-fill.pulse{animation:pmProgressPulseFx .35s ease-out 2}
+.dark-mode .pm-progress-bar{background:#2a3038}
 
 /* EQUIPMENT TABLE */
 .equip-table{font-size:.82rem}
@@ -429,6 +446,11 @@ details.form-control[open] summary::after{content:'▴'}
 /* MODAL */
 @keyframes modalBgIn{from{opacity:0}to{opacity:1}}
 @keyframes modalPopIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+/* Mobile modals are already docked to the bottom edge as a sheet
+   (.modal-bg{align-items:flex-end} + rounded top corners, see mobile media
+   query below) but previously reused this same subtle center-pop animation
+   — a proper sheet should slide up from fully off-screen instead. */
+@keyframes modalSlideUp{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
 /* Topbar dropdowns (search results / online users / notifications) — same
    idea as the modal pop-in above but smaller travel distance since these
    are compact panels anchored right under a button, not centered overlays. */
@@ -520,6 +542,14 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes historyReveal{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
 @keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .bar-grow{transform-origin:left;animation:barGrow 1s cubic-bezier(.22,1,.36,1) both}
+/* Shared track background for the various horizontal bar-gauges (staff
+   workload, contract timeline, CM resolution velocity, warranty urgency) —
+   a class so dark mode can override it; these were previously a literal
+   #f0f0f0 baked into each element's own :style binding, which a .dark-mode
+   CSS rule can never win against (inline styles always beat class rules),
+   so every one of those bars kept a light-gray track even in dark mode. */
+.progress-track{background:#f0f0f0}
+.dark-mode .progress-track{background:#2a3038}
 .equip-history-item.timelapse-reveal{animation:historyReveal .35s ease-out both}
 .equip-history-item.timelapse-current .equip-history-dot{box-shadow:0 0 0 5px rgba(25,135,84,.25)}
 .equip-history-item.timelapse-current.no .equip-history-dot{box-shadow:0 0 0 5px rgba(220,53,69,.25)}
@@ -722,12 +752,28 @@ details.form-control[open] summary::after{content:'▴'}
    just sat still while the whole element faded. Animating position
    instead turns it into an actual moving highlight sweep. */
 @keyframes skelShimmer{0%{background-position:100% 0}100%{background-position:-100% 0}}
-.skel{background:linear-gradient(90deg,#e8edf5 25%,#f2f5fa 37%,#e8edf5 63%);background-size:400% 100%;border-radius:8px;animation:skelShimmer 1.6s ease-in-out infinite}
+.skel{background:linear-gradient(90deg,#e8edf5 25%,#f2f5fa 37%,#e8edf5 63%);background-size:400% 100%;border-radius:8px;animation:skelShimmer 1.6s ease-in-out infinite,rowFadeUp .3s ease-out both}
 .skel-stat{height:76px;border-radius:10px}
 .skel-line{height:14px;width:100%;border-radius:4px;margin-bottom:10px}
 .skel-line:last-child{margin-bottom:0}
 .skel-block{width:100%;border-radius:10px}
 .dark-mode .skel{background:linear-gradient(90deg,#21262d 25%,#2a3038 37%,#21262d 63%);background-size:400% 100%}
+/* Cascade skeleton rows in on mount (same rowFadeUp keyframe the real table
+   rows below already use once loaded) instead of every placeholder line/
+   block in a card popping in flat together — reads as "content building up"
+   rather than "page stalled". Scoped to .skeleton-wrap so it doesn't catch
+   unrelated .skel usages; capped at 8 since no skeleton block in this app
+   loops past that. Each selector needs 2 delay values (shimmer, then the
+   entrance) since .skel declares 2 animations above — shimmer always starts
+   at 0s, only the entrance stagger offset changes per row. */
+.skeleton-wrap .skel:nth-child(1){animation-delay:0s,.02s}
+.skeleton-wrap .skel:nth-child(2){animation-delay:0s,.05s}
+.skeleton-wrap .skel:nth-child(3){animation-delay:0s,.08s}
+.skeleton-wrap .skel:nth-child(4){animation-delay:0s,.11s}
+.skeleton-wrap .skel:nth-child(5){animation-delay:0s,.14s}
+.skeleton-wrap .skel:nth-child(6){animation-delay:0s,.17s}
+.skeleton-wrap .skel:nth-child(7){animation-delay:0s,.2s}
+.skeleton-wrap .skel:nth-child(8){animation-delay:0s,.23s}
 
 /* TOAST — stacked queue so rapid successive actions don't clobber each
    other's message before it's readable */
@@ -984,7 +1030,7 @@ details.form-control[open] summary::after{content:'▴'}
    recently wins) instead of a guaranteed outcome. A tooltip triggered on
    an element inside/behind an open confirm dialog must always show above
    it, not sometimes-behind depending on append order. */
-.custom-tooltip{position:fixed;z-index:100001;background:#1a2333;color:#fff;font-size:.72rem;font-weight:500;padding:6px 10px;border-radius:6px;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .15s ease,transform .15s ease;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:240px;line-height:1.35}
+.custom-tooltip{position:fixed;z-index:100001;background:#1a2333;color:#fff;font-size:.72rem;font-weight:500;padding:6px 10px;border-radius:6px;pointer-events:none;opacity:0;transform:translateY(4px);transition:opacity .15s ease,transform .15s ease;box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:240px;line-height:1.35;white-space:pre-line}
 .custom-tooltip::after{content:'';position:absolute;left:50%;top:100%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#1a2333}
 .custom-tooltip.custom-tooltip-arrow-below::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:#1a2333}
 .custom-tooltip-show{opacity:1;transform:translateY(0)}
@@ -1097,7 +1143,8 @@ details.form-control[open] summary::after{content:'▴'}
 .hol-tooltip:hover::after{content:attr(data-tip);position:absolute;bottom:110%;left:0;background:#333;color:#fff;font-size:.7rem;padding:3px 8px;border-radius:4px;white-space:nowrap;z-index:99;pointer-events:none}
 
 /* TEAM BADGES */
-.team-pill{border-radius:4px;padding:2px 5px;font-size:.68rem;margin-bottom:2px;line-height:1.35;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.team-pill{border-radius:4px;padding:2px 5px;font-size:.68rem;margin-bottom:2px;line-height:1.35;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:transform .12s ease,box-shadow .12s ease}
+.team-pill:hover{transform:translateY(-1px);box-shadow:0 2px 6px rgba(0,0,0,.18)}
 /* Project badge on each team-pill — the team-* colors above only say WHO
    (which team), this says WHAT (CCTV/VIR/both), fixing the calendar's
    previous "Team A shown twice with no way to tell CCTV from VIR apart"
@@ -1530,8 +1577,8 @@ details.form-control[open] summary::after{content:'▴'}
 
   /* Modal */
   .modal-bg{align-items:flex-end}
-  .modal{width:100%;max-width:100%;margin:0;border-radius:16px 16px 0 0;max-height:90vh;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
-  .modal-card{margin:0;width:100%;border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom)}
+  .modal{width:100%;max-width:100%;margin:0;border-radius:16px 16px 0 0;max-height:90vh;padding:20px 16px calc(20px + env(safe-area-inset-bottom));animation:modalSlideUp .28s cubic-bezier(.22,1,.36,1) both}
+  .modal-card{margin:0;width:100%;border-radius:16px 16px 0 0;padding-bottom:env(safe-area-inset-bottom);animation:modalSlideUp .28s cubic-bezier(.22,1,.36,1) both}
 
   /* Steps wizard */
   .steps{gap:0}
@@ -2086,7 +2133,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div v-for="n in notifications" :key="n.id" @click="handleNotifClick(n)" :style="'padding:12px 16px;border-bottom:1px solid #f8f8f8;cursor:pointer;display:flex;gap:10px;align-items:flex-start;background:'+(n.read?'#fff':'#f0f7ff')">
                 <span style="font-size:1.1rem;margin-top:2px">{{n.icon}}</span>
                 <div style="flex:1;min-width:0">
-                  <div style="font-size:.83rem;font-weight:600;color:#222">{{n.title}}</div>
+                  <div style="font-size:.83rem;font-weight:600;color:#222">{{n.title}} <span v-if="n.project" :class="['proj-badge', n.project==='vir'?'proj-vir':'proj-cctv']" style="font-size:.6rem;padding:1px 6px;font-weight:700;vertical-align:middle">{{n.project==='vir'?'VIR':'CCTV'}}</span></div>
                   <div style="font-size:.76rem;color:#666;margin-top:2px">{{n.body}}</div>
                 </div>
                 <div v-if="!n.read" style="width:8px;height:8px;background:#dc3545;border-radius:50%;flex-shrink:0;margin-top:5px"></div>
@@ -2664,6 +2711,23 @@ details.form-control[open] summary::after{content:'▴'}
               <button :disabled="loading" class="btn btn-danger btn-sm" @click="exportAuditLogPdf">🖨️ PDF</button>
             </div>
           </div>
+          <div v-if="auditActivityHeatmap.rows.length" style="margin-bottom:14px;overflow-x:auto">
+            <div class="text-sm text-muted" style="margin-bottom:8px">📊 Corak Aktiviti Ikut Jam — kepekatan warna makin tinggi ikut kekerapan tindakan pada jam tersebut.</div>
+            <table style="border-collapse:collapse;font-size:.68rem">
+              <thead><tr>
+                <th style="text-align:left;padding:2px 8px 2px 0;font-weight:600;color:inherit;background:none"></th>
+                <th v-for="h in 24" :key="h" style="text-align:center;padding:1px;font-weight:400;color:#888;background:none;width:16px">{{(h-1)%4===0?(h-1):''}}</th>
+              </tr></thead>
+              <tbody>
+                <tr v-for="row in auditActivityHeatmap.rows" :key="row.label">
+                  <td style="white-space:nowrap;padding:2px 8px 2px 0;font-size:.72rem">{{row.label}} <span class="text-muted">({{row.total}})</span></td>
+                  <td v-for="(count,h) in row.counts" :key="h" style="padding:1px" :title="row.label+' jam '+h+':00 — '+count+' tindakan'">
+                    <div :style="'width:14px;height:14px;border-radius:3px;'+auditHeatCellStyle(row.label,count,auditActivityHeatmap.max)"></div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <!-- Filter panel — superadmin only, per explicit request; admin/
                staff keep seeing their scoped list unfiltered as before. -->
           <div v-if="authProfile?.role==='superadmin'" class="flex gap-8" style="flex-wrap:wrap;margin-bottom:14px;padding:12px;background:#f8faff;border:1px solid #dde4ef;border-radius:8px">
@@ -2753,6 +2817,18 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="skel skel-line" style="width:92%"></div>
           <div class="skel skel-line" style="width:78%"></div>
           <div class="skel skel-line" style="width:85%;margin-bottom:0"></div>
+        </div>
+        <div v-else-if="contractsTimelineRows.length" class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem">📅 Garis Masa Tamat Tempoh (Paling Hampir Dahulu)</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div v-for="row in contractsTimelineRows" :key="row.id" class="flex items-center gap-8">
+              <span style="width:160px;font-size:.78rem;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="row.title">{{row.title}}</span>
+              <div class="progress-track" style="flex:1;height:12px;border-radius:4px;overflow:hidden">
+                <div class="bar-grow" :style="'height:100%;width:'+contractTimelineBarPct(row.daysLeft)+'%;background:'+(row.status==='expired'?'#c62828':row.status==='expiring'?'#f57c00':'#2e7d32')"></div>
+              </div>
+              <span style="width:90px;text-align:right;font-size:.76rem;flex-shrink:0" :style="{color: row.status==='expired'?'#c62828':row.status==='expiring'?'#f57c00':'#2e7d32'}">{{row.daysLeft<0 ? (-row.daysLeft)+' hari lepas' : row.daysLeft+' hari lagi'}}</span>
+            </div>
+          </div>
         </div>
         <div v-else-if="!contractsFiltered.length" class="empty">Tiada kontrak direkodkan lagi.<br><button v-if="canEditContract" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddContract">+ Tambah Kontrak</button></div>
         <div v-for="c in contractsFiltered" :key="c.id" class="backup-card" style="align-items:flex-start">
@@ -2855,6 +2931,21 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="warranty-stat-card expired">
             <div class="wsc-label">🔴 Tamat Tempoh</div>
             <div class="wsc-value">{{warrantyStatExpiredCount}}</div>
+          </div>
+        </div>
+
+        <div v-if="warrantyUrgencyBySite.length" class="card" style="margin-bottom:18px">
+          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem">📍 Ringkasan Urgency Ikut Site</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div v-for="s in warrantyUrgencyBySite" :key="s.siteId" class="flex items-center gap-8">
+              <span style="width:170px;font-size:.78rem;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="s.siteName">{{s.siteName}}</span>
+              <div class="progress-track" style="flex:1;height:14px;border-radius:4px;overflow:hidden;display:flex">
+                <div :style="'width:'+(s.expired/s.total*100)+'%;background:#c62828'" :title="s.expired+' tamat tempoh'"></div>
+                <div :style="'width:'+(s.expiring/s.total*100)+'%;background:#f57c00'" :title="s.expiring+' hampir tamat'"></div>
+                <div :style="'width:'+(s.active/s.total*100)+'%;background:#2e7d32'" :title="s.active+' aktif'"></div>
+              </div>
+              <span style="width:34px;text-align:right;font-size:.78rem;font-weight:700;flex-shrink:0">{{s.total}}</span>
+            </div>
           </div>
         </div>
 
@@ -3006,6 +3097,24 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
         <p class="text-sm text-muted mb-16">Jejak progress kes CM yang belum selesai (cth: peralatan dibawa balik untuk claim waranti, menunggu vendor) — tambah catatan setiap kali ada perkembangan, tanpa perlu copy-paste mesej WhatsApp lama. Export PDF untuk share progress terkini.</p>
 
+        <div v-if="cmCasesFiltered.length" class="card" style="margin-bottom:16px">
+          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem">⏱️ Kelajuan Penyelesaian Kes (Purata Hari)</div>
+          <div v-if="cmCaseResolutionStats.avgCctv!==null || cmCaseResolutionStats.avgVir!==null" style="display:flex;flex-direction:column;gap:8px">
+            <div v-if="cmCaseResolutionStats.avgCctv!==null" class="flex items-center gap-8">
+              <span class="proj-badge proj-cctv" style="flex-shrink:0;width:56px;text-align:center;justify-content:center">CCTV</span>
+              <div class="progress-track" style="flex:1;height:14px;border-radius:4px;overflow:hidden"><div class="bar-grow" :style="'height:100%;background:#0056b3;width:'+(cmCaseResolutionStats.avgCctv/cmCaseResolutionStats.maxAvg*100)+'%'"></div></div>
+              <span style="width:120px;text-align:right;font-size:.78rem;flex-shrink:0">{{cmCaseResolutionStats.avgCctv}} hari ({{cmCaseResolutionStats.countCctv}} kes)</span>
+            </div>
+            <div v-if="cmCaseResolutionStats.avgVir!==null" class="flex items-center gap-8">
+              <span class="proj-badge proj-vir" style="flex-shrink:0;width:56px;text-align:center;justify-content:center">VIR</span>
+              <div class="progress-track" style="flex:1;height:14px;border-radius:4px;overflow:hidden"><div class="bar-grow" :style="'height:100%;background:#e65100;width:'+(cmCaseResolutionStats.avgVir/cmCaseResolutionStats.maxAvg*100)+'%'"></div></div>
+              <span style="width:120px;text-align:right;font-size:.78rem;flex-shrink:0">{{cmCaseResolutionStats.avgVir}} hari ({{cmCaseResolutionStats.countVir}} kes)</span>
+            </div>
+          </div>
+          <div v-else class="text-sm text-muted">Belum ada kes ditandakan selesai untuk dikira purata.</div>
+          <div class="text-sm text-muted" style="margin-top:8px">🟡 {{cmCaseResolutionStats.openCount}} kes masih terbuka (pending)</div>
+        </div>
+
         <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
           <select class="form-control" style="width:auto;min-width:160px" v-model="cmCaseFilterStatus">
             <option value="">Semua Status</option>
@@ -3072,6 +3181,21 @@ details.form-control[open] summary::after{content:'▴'}
             <option value="expiring">🟡 Hampir Tamat</option>
             <option value="expired">🔴 Tamat Tempoh</option>
           </select>
+        </div>
+
+        <div v-if="virWarrantyUrgencyBySite.length" class="card" style="margin-bottom:18px">
+          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem">📍 Ringkasan Urgency Ikut Site</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div v-for="s in virWarrantyUrgencyBySite" :key="s.siteId" class="flex items-center gap-8">
+              <span style="width:170px;font-size:.78rem;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="s.siteName">{{s.siteName}}</span>
+              <div class="progress-track" style="flex:1;height:14px;border-radius:4px;overflow:hidden;display:flex">
+                <div :style="'width:'+(s.expired/s.total*100)+'%;background:#c62828'" :title="s.expired+' tamat tempoh'"></div>
+                <div :style="'width:'+(s.expiring/s.total*100)+'%;background:#f57c00'" :title="s.expiring+' hampir tamat'"></div>
+                <div :style="'width:'+(s.active/s.total*100)+'%;background:#2e7d32'" :title="s.active+' aktif'"></div>
+              </div>
+              <span style="width:34px;text-align:right;font-size:.78rem;font-weight:700;flex-shrink:0">{{s.total}}</span>
+            </div>
+          </div>
         </div>
 
         <div v-if="!virWarrantyFiltered.length" class="empty">Tiada rekod waranti peralatan VIR lagi.<br><button v-if="canEditVirWarranty" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddVirWarranty">+ Tambah Part</button></div>
@@ -4103,6 +4227,9 @@ details.form-control[open] summary::after{content:'▴'}
       <!-- ====== NEW PM (multi-step) ====== -->
       <div v-if="page==='new-pm'" class="page-view">
         <!-- Steps -->
+        <div class="pm-progress-bar no-print">
+          <div class="pm-progress-fill" :class="{pulse: pmProgressPulse}" :style="'width:'+((pmStep-1)/(pmStepLabels.length-1)*100)+'%'"></div>
+        </div>
         <div class="steps no-print mb-20">
           <div v-for="(s,i) in pmStepLabels" :key="i" class="step" :class="{active:pmStep===i+1,done:pmStep>i+1}">
             <div class="step-circle">{{pmStep>i+1?'✓':i+1}}</div>
@@ -5268,7 +5395,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <template v-for="g in teamsForDayGrouped(cell)" :key="'g'+g.entries.map(e=>e.id).join('-')">
                     <div :class="['team-pill','team-'+g.team]"
                       @click.stop="canEditSchedule?(g.entries.length>1?openDayDetail(dateStr(cell)):openEditTeam(g.entries[0])):null"
-                      :title="'Team '+g.team+': '+g.entries[0].members.map(m=>m.name).join(', ')+(rotationDueMembers(g.entries[0]).length?' | ⚠ Perlu rotasi: '+rotationDueMembers(g.entries[0]).join(', '):'')+(assignmentStateHoliday(g.entries[0])?' | 🎉 '+assignmentStateHoliday(g.entries[0]).name+' (cuti negeri ini sahaja)':'')+(g.entries.length>1?' | '+g.entries.length+' penugasan (klik untuk lihat semua)':'')+(g.stopCount>1?' | Team '+g.team+' ada '+g.stopCount+' lawatan berlainan site hari ini':'')">
+                      :title="'Team '+g.team+': '+g.entries[0].members.map(m=>m.name).join(', ')+(rotationDueMembers(g.entries[0]).length?'\n⚠ Perlu rotasi: '+rotationDueMembers(g.entries[0]).join(', '):'')+(assignmentStateHoliday(g.entries[0])?'\n🎉 '+assignmentStateHoliday(g.entries[0]).name+' (cuti negeri ini sahaja)':'')+(g.entries.length>1?'\n'+g.entries.length+' penugasan (klik untuk lihat semua)':'')+(g.stopCount>1?'\nTeam '+g.team+' ada '+g.stopCount+' lawatan berlainan site hari ini':'')">
                       <span :class="['team-badge','badge-'+g.team]">{{g.team}}</span>
                       {{shortSite(g.siteName)}}
                       <span v-if="g.projLabel" :class="['team-pill-proj', g.projLabel==='CCTV+VIR'?'proj-both':(g.projLabel==='VIR'?'proj-vir':'proj-cctv')]">{{g.projLabel}}</span>
@@ -7147,7 +7274,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: INVENTORI PERALATAN -->
-        <div v-if="reportTab==='inventori'">
+        <div v-if="reportTab==='inventori'" class="tab-content-fade">
           <div class="tabs no-print" style="margin-bottom:14px">
             <div class="tab" :class="{active:inventorySubView==='list'}" @click="inventorySubView='list'">📋 Senarai Item</div>
             <div class="tab" :class="{active:inventorySubView==='ringkasan'}" @click="inventorySubView='ringkasan'">📊 Ringkasan Jumlah (CCTV)</div>
@@ -7293,7 +7420,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: TREND KETERLAMBATAN -->
-        <div v-if="reportTab==='sla'">
+        <div v-if="reportTab==='sla'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Trend Keterlambatan PM Ikut Site</div>
             <p class="text-sm text-muted mb-12">Dikira dari selang hari antara setiap PM berturutan berbanding interval kontrak (CCTV {{PM_INTERVAL.cctv}} bulan / VIR ikut jadual kontrak semasa — lihat VIR_PM_WINDOWS). "Bil. Lewat" = bilangan kitaran PM yang melebihi interval tersebut.</p>
@@ -7315,7 +7442,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: ANALISIS KEGAGALAN (BRAND/MODEL) -->
-        <div v-if="reportTab==='kegagalan'">
+        <div v-if="reportTab==='kegagalan'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Analisis Kegagalan Ikut Brand &amp; Model</div>
             <p class="text-sm text-muted mb-12">Dikira dari rekod CM (Corrective Maintenance) — bilangan peralatan brand/model tertentu yang direkodkan rosak. Berguna untuk keputusan procurement (elak brand/model kerap gagal).</p>
@@ -7337,10 +7464,29 @@ details.form-control[open] summary::after{content:'▴'}
               </table>
             </div>
           </div>
+          <div class="card" style="margin-top:14px">
+            <div class="card-title">Peta Panas Kegagalan — Site × Kategori Peralatan</div>
+            <p class="text-sm text-muted mb-12">Bilangan kegagalan CM setiap site, dipecah ikut kategori peralatan. Kepekatan merah makin gelap ikut bilangan kegagalan — senang kesan jika satu site ada masalah tertumpu pada satu kategori sahaja (cth: HDD je selalu rosak, kamera tak pernah).</p>
+            <div v-if="failureBySiteCategory.length" class="tbl-wrap">
+              <table>
+                <thead><tr><th>Site</th><th v-for="c in FAILURE_CATEGORIES" :key="c" style="text-align:center">{{c}}</th><th style="text-align:center">Jumlah</th></tr></thead>
+                <tbody>
+                  <tr v-for="row in failureBySiteCategory" :key="row.siteId">
+                    <td style="font-size:.82rem">{{row.siteName}}</td>
+                    <td v-for="c in FAILURE_CATEGORIES" :key="c" style="text-align:center;padding:4px">
+                      <div :style="'width:28px;height:22px;border-radius:4px;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;color:'+(row[c]>=2?'#fff':'#a71d2a')+';background:'+failureHeatColor(row[c])" :title="row[c]+' kegagalan '+c">{{row[c]||''}}</div>
+                    </td>
+                    <td style="text-align:center"><b>{{row.total}}</b></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div v-else class="empty" style="padding:20px">Tiada kegagalan direkodkan.</div>
+          </div>
         </div>
 
         <!-- TAB: ISU BERULANG -->
-        <div v-if="reportTab==='isu'">
+        <div v-if="reportTab==='isu'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Analisis Isu Berulang</div>
             <p class="text-sm text-muted mb-12">Diekstrak dari medan Nota/Catatan rekod CM sahaja, dikumpul ikut teks masalah yang serupa. Hanya isu yang muncul &gt;1 kali dipaparkan; teks "tiada masalah" (Tiada, N/A, -, dll.) tidak dikira.</p>
@@ -7360,21 +7506,28 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: PRESTASI TEAM -->
-        <div v-if="reportTab==='team'">
+        <div v-if="reportTab==='team'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Laporan Prestasi Team</div>
             <p class="text-sm text-muted mb-12">"Kadar Siap" = peratus penugasan yang ada rekod PM/CM sepadan (dalam lingkungan 7 hari dari tarikh jadual) berbanding jumlah penugasan.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Team</th><th>Anggota</th><th>Jumlah Penugasan</th><th>Siap</th><th>Kadar Siap</th></tr></thead>
+                <thead><tr><th>Team</th><th>Anggota</th><th>Jumlah Penugasan</th><th>Siap</th><th>Kadar Siap</th><th>Trend (6 Bulan)</th></tr></thead>
                 <tbody>
                   <tr v-for="t in teamPerformance" :key="t.team">
                     <td><span :class="['team-badge','badge-'+t.team]">{{t.team}}</span></td>
                     <td style="font-size:.78rem">{{t.members.join(', ')||'—'}}</td>
                     <td>{{t.assigned}}</td><td>{{t.completed}}</td>
                     <td><span :class="'badge badge-'+(t.rate>=80?'green':t.rate>=50?'blue':'red')">{{t.rate}}%</span></td>
+                    <td>
+                      <div v-if="teamPerformanceTrend[t.team]" style="display:flex;align-items:center;gap:6px">
+                        <svg width="60" height="20" viewBox="0 0 60 20"><polyline :points="sparklinePoints(teamPerformanceTrend[t.team].rates)" fill="none" :stroke="teamPerformanceTrend[t.team].direction==='up'?'#198754':teamPerformanceTrend[t.team].direction==='down'?'#dc3545':'#888'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+                        <span :title="teamPerformanceTrend[t.team].direction==='up'?'Bertambah baik':teamPerformanceTrend[t.team].direction==='down'?'Merosot':'Stabil'">{{teamPerformanceTrend[t.team].direction==='up'?'📈':teamPerformanceTrend[t.team].direction==='down'?'📉':'➖'}}</span>
+                      </div>
+                      <span v-else class="text-muted text-sm">-</span>
+                    </td>
                   </tr>
-                  <tr v-if="!teamPerformance.length"><td colspan="5" class="empty">Tiada penugasan direkodkan.</td></tr>
+                  <tr v-if="!teamPerformance.length"><td colspan="6" class="empty">Tiada penugasan direkodkan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -7382,16 +7535,23 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: BEBAN KERJA STAFF -->
-        <div v-if="reportTab==='beban'">
+        <div v-if="reportTab==='beban'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Beban Kerja Individu Staff</div>
             <p class="text-sm text-muted mb-12">Kiraan penugasan PM/CM setiap staff (dari Jadual Penyelenggaraan), termasuk kadar siap individu — lebih tepat berbanding kadar siap Team, sebab ahli dalam satu label Team (A/B/C) berubah-ubah ikut penugasan.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Staff</th><th>Jumlah Penugasan</th><th>PM</th><th>CM</th><th>Kadar Siap</th><th>Bil. Site Berbeza</th><th>Streak</th></tr></thead>
+                <thead><tr><th>#</th><th>Staff</th><th>Beban (PM/CM)</th><th>Jumlah Penugasan</th><th>PM</th><th>CM</th><th>Kadar Siap</th><th>Bil. Site Berbeza</th><th>Streak</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in staffWorkload" :key="s.uid">
-                    <td>{{i+1}}</td><td><b>{{s.name}}</b></td><td>{{s.total}}</td>
+                    <td>{{i+1}}</td><td><b>{{s.name}}</b></td>
+                    <td style="min-width:130px">
+                      <div class="progress-track" style="display:flex;height:10px;border-radius:5px;overflow:hidden;width:120px" :title="'PM: '+s.pm+' / CM: '+s.cm">
+                        <div :style="'width:'+(s.pm/staffWorkloadMax*100)+'%;background:#0056b3'"></div>
+                        <div :style="'width:'+(s.cm/staffWorkloadMax*100)+'%;background:#dc3545'"></div>
+                      </div>
+                    </td>
+                    <td>{{s.total}}</td>
                     <td><span class="badge badge-blue">{{s.pm}}</span></td>
                     <td><span class="badge badge-red">{{s.cm}}</span></td>
                     <td><span :class="'badge badge-'+(s.rate>=80?'green':s.rate>=50?'gray':'red')">{{s.completed}}/{{s.total}} ({{s.rate}}%)</span></td>
@@ -7401,7 +7561,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
                   </tr>
-                  <tr v-if="!staffWorkload.length"><td colspan="8" class="empty">Tiada penugasan direkodkan.</td></tr>
+                  <tr v-if="!staffWorkload.length"><td colspan="9" class="empty">Tiada penugasan direkodkan.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -7409,7 +7569,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: TREND TAHUNAN -->
-        <div v-if="reportTab==='trend'">
+        <div v-if="reportTab==='trend'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Trend Tahunan PM vs CM</div>
             <p class="text-sm text-muted mb-12">Merentasi semua tahun dalam rekod (bukan setakat beberapa bulan terkini) — nisbah CM yang meningkat dari tahun ke tahun boleh jadi signal infrastruktur makin uzur.</p>
@@ -7418,7 +7578,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: JENIS TINDAKAN -->
-        <div v-if="reportTab==='tindakan'">
+        <div v-if="reportTab==='tindakan'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Analisis Jenis Tindakan</div>
             <p class="text-sm text-muted mb-12">Dikelaskan secara automatik dari teks TINDAKAN dalam nota (kata kunci: ganti/tukar, crimp/kabel, reset/konfigurasi, bersih/cuci, firmware/software). Jawapan terus untuk soalan "apa jenis kerja paling kerap dibuat".</p>
@@ -7438,7 +7598,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: MASA SELESAI (TIME-TO-RESOLUTION) -->
-        <div v-if="reportTab==='resolusi'">
+        <div v-if="reportTab==='resolusi'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Masa Purata Selesaikan Isu (CM)</div>
             <p class="text-sm text-muted mb-12">Dikira dari tarikh rekod CM dibuka sehingga status ditukar ke "Selesai". Hanya rekod yang dah ditandakan selesai LEPAS ciri ini ditambah akan ada data (rekod lama tiada timestamp "selesai").</p>
@@ -7460,7 +7620,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: PUNCA KEROSAKAN -->
-        <div v-if="reportTab==='punca'">
+        <div v-if="reportTab==='punca'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Analisis Punca Kerosakan (CM)</div>
             <p class="text-sm text-muted mb-12">Dari medan "Punca Kerosakan" yang dipilih semasa borang CM diisi. Hanya rekod yang dibuat LEPAS ciri ini ditambah akan ada data.</p>
@@ -7480,7 +7640,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: JANGKA HAYAT PERALATAN -->
-        <div v-if="reportTab==='jangkahayat'">
+        <div v-if="reportTab==='jangkahayat'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Peralatan Hampir/Lepas Jangka Hayat (&gt;{{EQUIPMENT_LIFESPAN_YEARS}} Tahun)</div>
             <p class="text-sm text-muted mb-12">Dikira dari "Tarikh Pasang" yang direkodkan semasa tambah peralatan. Peralatan tanpa tarikh pasang direkod tidak akan muncul di sini — cadangan proaktif ganti peralatan sebelum ia betul-betul rosak. Column "Risiko Kegagalan" silang-rujuk umur peralatan ni dengan brand/model yang sama yang paling kerap gagal (tab Analisis Kegagalan) — kombinasi tua + model bermasalah adalah calon paling kuat untuk gagal akan datang.</p>
@@ -7502,7 +7662,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: SEJARAH GANTI/ROSAK PERALATAN -->
-        <div v-if="reportTab==='gantirosak'">
+        <div v-if="reportTab==='gantirosak'" class="tab-content-fade">
           <div class="card">
             <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
               <div class="card-title" style="margin:0;border:none;padding:0">Sejarah Ganti/Rosak Peralatan</div>
@@ -7566,7 +7726,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: PERBANDINGAN SITE -->
-        <div v-if="reportTab==='perbandingan'">
+        <div v-if="reportTab==='perbandingan'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Perbandingan Site (sehingga 3)</div>
             <p class="text-sm text-muted mb-12">Pilih sehingga 3 site untuk bandingkan PM/CM kitaran semasa dan skor kesihatan sebelah-menyebelah.</p>
@@ -7611,7 +7771,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: CORAK MUSIM -->
-        <div v-if="reportTab==='musim'">
+        <div v-if="reportTab==='musim'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Corak Musim — Kekerapan CM Ikut Bulan</div>
             <p class="text-sm text-muted mb-12">Jumlah rekod CM merentasi SEMUA tahun dalam data, dikumpul ikut bulan — berguna untuk kesan corak bermusim (cth: kerosakan kamera outdoor lebih kerap musim hujan) supaya PM boleh dirancang proaktif.</p>
@@ -7626,7 +7786,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- TAB: HEATMAP PEMATUHAN -->
-        <div v-if="reportTab==='heatmap'">
+        <div v-if="reportTab==='heatmap'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Heatmap Kalendar Pematuhan PM</div>
             <p class="text-sm text-muted mb-12">Pilih satu site — grid tunjuk bulan mana PM disiapkan merentasi tahun, senang nampak "gap" secara visual berbanding scroll table. Kepekatan hijau makin gelap ikut bilangan PM bulan tersebut (cth: pelbagai bilik VIR di-PM bulan sama).</p>
@@ -7656,7 +7816,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- ====== TEMPOH CUSTOM ====== -->
-        <div v-if="reportTab==='tempohcustom'">
+        <div v-if="reportTab==='tempohcustom'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">📆 Tempoh Custom</div>
             <p class="text-sm text-muted mb-12">Pilih sebarang julat tarikh untuk analisis ad-hoc — tidak terikat kepada tahun/suku/bulan tetap seperti laporan lain.</p>
@@ -10183,6 +10343,7 @@ createApp({
       client2Name:'', client2Jawatan:'', client2Tarikh:''
     });
     const pmStep = ref(1);
+    const pmProgressPulse = ref(false);
     const pmStepLabels = computed(() =>
       currentProject.value === 'vir'
         ? ['Maklumat Asas','Senarai Semak','Tandatangan']
@@ -12231,6 +12392,25 @@ createApp({
     const contractsFiltered = computed(() =>
       contracts.value.filter(c => (c.project||'cctv') === currentProject.value)
     );
+    // Soonest-expiring-first visual timeline for the current project's
+    // contracts — contractsFiltered's card list above is already sorted by
+    // however Firestore returned it, so judging "which contract needs
+    // attention first" meant reading every card's end date individually.
+    // Capped at 8 rows (page is per-project, rarely has more active
+    // contracts than that) and at a 180-day bar scale so a contract 2+
+    // years out doesn't flatten every other bar to invisible.
+    const CONTRACT_TIMELINE_DAY_CAP = 180;
+    const contractsTimelineRows = computed(() => {
+      const today = new Date(_localDateStr());
+      return contractsFiltered.value
+        .filter(c => c.endDate)
+        .map(c => ({ id:c.id, title:c.title, daysLeft: Math.round((new Date(c.endDate)-today)/86400000), status: contractStatus(c) }))
+        .sort((a,b) => a.daysLeft - b.daysLeft)
+        .slice(0, 8);
+    });
+    function contractTimelineBarPct(daysLeft) {
+      return Math.round(Math.max(0, Math.min(CONTRACT_TIMELINE_DAY_CAP, daysLeft)) / CONTRACT_TIMELINE_DAY_CAP * 100);
+    }
 
     function contractStatus(c) {
       if(!c.endDate) return 'active';
@@ -12551,6 +12731,22 @@ createApp({
         return { vendor:v, items, sites };
       });
     });
+    // Site-level urgency rollup — warrantyByVendor above nests vendor > site >
+    // item, so seeing "which SITE has the worst warranty exposure" means
+    // expanding every vendor group and eyeballing ring gauges one by one.
+    // This flattens straight to one row per site with active/expiring/expired
+    // counts, sorted so the most urgent sites surface first.
+    const warrantyUrgencyBySite = computed(() => {
+      const bySite = {};
+      warrantyFiltered.value.forEach(w => {
+        const key = w.siteId || w.siteName || '—';
+        if(!bySite[key]) bySite[key] = { siteId:key, siteName:w.siteName||'—', active:0, expiring:0, expired:0 };
+        bySite[key][warrantyStatus(w)]++;
+      });
+      return Object.values(bySite)
+        .map(s => ({ ...s, total: s.active+s.expiring+s.expired }))
+        .sort((a,b) => (b.expired*2+b.expiring) - (a.expired*2+a.expiring));
+    });
     function onWarrantySiteChange() {
       const s = SITES.find(x => x.id === warrantyModal.data.siteId);
       warrantyModal.data.siteName = s?.name || '';
@@ -12785,6 +12981,27 @@ createApp({
       (!cmCaseFilterProject.value || k.project === cmCaseFilterProject.value) &&
       (!cmCaseFilterStatus.value || k.status === cmCaseFilterStatus.value)
     ));
+    // Cases carry no "root category" field (just a free-typed title) — the
+    // only reliable resolution-velocity split available is by project, using
+    // resolvedDate (set once, in toggleCmCaseStatus below, the moment status
+    // flips to 'selesai') minus openedDate. Scoped to cmCasesFiltered so
+    // this responds to the same site/project/status filters as the table.
+    const cmCaseResolutionStats = computed(() => {
+      const days = { cctv:[], vir:[] };
+      cmCasesFiltered.value.forEach(k => {
+        if(k.status==='selesai' && k.openedDate && k.resolvedDate) {
+          const d = Math.round((new Date(k.resolvedDate) - new Date(k.openedDate)) / 86400000);
+          if(d >= 0) days[k.project==='vir'?'vir':'cctv'].push(d);
+        }
+      });
+      const avg = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+      const avgCctv = avg(days.cctv), avgVir = avg(days.vir);
+      return {
+        avgCctv, avgVir, countCctv: days.cctv.length, countVir: days.vir.length,
+        maxAvg: Math.max(1, avgCctv||0, avgVir||0),
+        openCount: cmCasesFiltered.value.filter(k => k.status!=='selesai').length,
+      };
+    });
     // The currently-open case in the detail modal, resolved live from
     // cmCases (not a snapshot copy) so a newly-added/removed entry shows
     // up immediately without a full reload.
@@ -13316,6 +13533,20 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         groups[key].push(w);
       });
       return order.map(key => ({ siteId:key, siteName: groups[key][0].siteName || '—', items: groups[key] }));
+    });
+    // Same site-urgency rollup as warrantyUrgencyBySite (CCTV) — virWarrantyBySite
+    // above groups raw items per site, which still means scanning every item's
+    // ring gauge to judge a site's overall exposure; this gives the counts directly.
+    const virWarrantyUrgencyBySite = computed(() => {
+      const bySite = {};
+      virWarrantyFiltered.value.forEach(w => {
+        const key = w.siteId || w.siteName || '—';
+        if(!bySite[key]) bySite[key] = { siteId:key, siteName:w.siteName||'—', active:0, expiring:0, expired:0 };
+        bySite[key][virWarrantyStatus(w)]++;
+      });
+      return Object.values(bySite)
+        .map(s => ({ ...s, total: s.active+s.expiring+s.expired }))
+        .sort((a,b) => (b.expired*2+b.expiring) - (a.expired*2+a.expiring));
     });
     function onVirWarrantySiteChange() {
       const s = VIR_SITES.find(x => x.id === virWarrantyModal.data.siteId);
@@ -15789,6 +16020,49 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(a.includes('EDIT') || a.includes('UPDATE')) return '#e65100';
       if(a.includes('EXPORT')) return '#6a1b9a';
       return '#888';
+    }
+    // Same keyword buckets + priority order as auditActionColor above (kept
+    // in sync deliberately — one action string must land in exactly one
+    // bucket here, matching the same color it already shows in the table
+    // row's dot/border), just grouped into a category label instead of a
+    // raw color, for the activity-by-hour heatmap below.
+    function _auditActionCategory(action) {
+      const a = (action||'').toUpperCase();
+      if(a.includes('DELETE') || a.includes('PADAM')) return 'Padam';
+      if(a.includes('LOGIN')) return 'Log Masuk';
+      if(a.includes('LOGOUT')) return 'Log Keluar';
+      if(a.includes('CREATE') || a.includes('ADD')) return 'Cipta/Tambah';
+      if(a.includes('EDIT') || a.includes('UPDATE')) return 'Edit/Kemaskini';
+      if(a.includes('EXPORT')) return 'Eksport';
+      return 'Lain-lain';
+    }
+    const AUDIT_HEATMAP_ROWS = ['Log Masuk','Log Keluar','Cipta/Tambah','Edit/Kemaskini','Padam','Eksport','Lain-lain'];
+    const AUDIT_HEATMAP_ROW_COLOR = { 'Log Masuk':'#2e7d32', 'Log Keluar':'#757575', 'Cipta/Tambah':'#0056b3', 'Edit/Kemaskini':'#e65100', 'Padam':'#c62828', 'Eksport':'#6a1b9a', 'Lain-lain':'#888' };
+    function _hexToRgb(hex) {
+      const h = hex.replace('#','');
+      return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+    }
+    // Scanning visibleAuditLogs (not the raw auditLogs collection) so a
+    // staff/admin viewer only ever sees a heatmap of activity they're
+    // already permitted to see in the table below it — never a superadmin-
+    // only entry leaking into an aggregate count for a lower role.
+    const auditActivityHeatmap = computed(() => {
+      const grid = {};
+      AUDIT_HEATMAP_ROWS.forEach(r => { grid[r] = new Array(24).fill(0); });
+      visibleAuditLogs.value.forEach(l => {
+        const d = l.timestamp?.toDate ? l.timestamp.toDate() : null;
+        if(!d) return;
+        grid[_auditActionCategory(l.action)][d.getHours()]++;
+      });
+      const max = Math.max(1, ...Object.values(grid).flat());
+      const rows = AUDIT_HEATMAP_ROWS.filter(r => grid[r].some(c=>c>0)).map(r => ({ label:r, counts:grid[r], total:grid[r].reduce((a,b)=>a+b,0) }));
+      return { rows, max };
+    });
+    function auditHeatCellStyle(label, count, max) {
+      if(!count) return 'background:'+(darkMode.value ? '#2a3038' : '#f2f2f2');
+      const [r,g,b] = _hexToRgb(AUDIT_HEATMAP_ROW_COLOR[label]||'#888');
+      const alpha = Math.max(.18, count/max);
+      return `background:rgba(${r},${g},${b},${alpha})`;
     }
     function logActorDisplayName(log) {
       if(log.userId && log.userId === authUser.value?.uid) {
@@ -20666,7 +20940,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // wait on a 3rd round-trip just to see the "saved" toast.
         logAudit(pm._isEdit ? 'BORANG_EDIT' : (status==='submitted'?'BORANG_SUBMIT':'BORANG_DRAFT'), pm.refNo||pm._draftId);
         showToast(pm._isEdit ? 'Perubahan borang berjaya disimpan!' : (status==='submitted'?'Borang PM berjaya disubmit!':'Draft disimpan!'));
-        if(status === 'submitted') flashSavedCheckmark();
+        if(status === 'submitted') {
+          pmProgressPulse.value = true;
+          setTimeout(() => { pmProgressPulse.value = false; }, 700);
+          flashSavedCheckmark();
+        }
         clearPmDraftLocal(); // Firestore now holds the authoritative copy — local recovery draft no longer needed
         // Was `await loadAll()` — a full reload of pmRecords + BOTH
         // projects' site equipment + credentials + teamAssignments + users
@@ -21834,14 +22112,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       overdueList.value.forEach(s => {
         const isVir = VIR_SITES.some(v => v.id === s.id);
         const body = isVir ? 'Jadual PM kontrak tertunggak — klik untuk mula PM' : `Lebih ${PM_INTERVAL.cctv} bulan tiada penyelenggaraan — klik untuk mula PM`;
-        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body, time: now, read:false, action:'sites', siteId: s.id });
+        list.push({ id:'overdue-'+s.id, icon:'⚠️', type:'overdue', title:'Site Lampau: '+s.name, body, time: now, read:false, action:'sites', siteId: s.id, project: isVir?'vir':'cctv' });
       });
       // CM records open >14 days
       pmRecords.value.forEach(r => {
         if(r.maintType==='CM' && (r.cmStatus==='open'||!r.cmStatus) && r.createdAt) {
           const created = r.createdAt.toDate ? r.createdAt.toDate().getTime() : (r.createdAt.seconds ? r.createdAt.seconds*1000 : 0);
           if(created && (now - created) > 14*24*3600*1000) {
-            list.push({ id:'cm-'+r.id, icon:'🔧', type:'cm', title:'CM Terbuka: '+r.siteName, body:'No. Rujukan: '+(r.refNo||'-')+' — sudah lebih 14 hari', time: now, read:false, action:'pm-list' });
+            list.push({ id:'cm-'+r.id, icon:'🔧', type:'cm', title:'CM Terbuka: '+r.siteName, body:'No. Rujukan: '+(r.refNo||'-')+' — sudah lebih 14 hari', time: now, read:false, action:'pm-list', project: r.project||'cctv' });
           }
         }
       });
@@ -21850,7 +22128,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(r.status==='draft' && r.createdAt) {
           const created = r.createdAt.toDate ? r.createdAt.toDate().getTime() : (r.createdAt.seconds ? r.createdAt.seconds*1000 : 0);
           if(created && (now - created) > 7*24*3600*1000) {
-            list.push({ id:'draft-'+r.id, icon:'📝', type:'draft', title:'Draft Belum Hantar: '+(r.refNo||r.siteName), body:'Borang draft lebih 7 hari belum dihantar', time: now, read:false, action:'pm-list' });
+            list.push({ id:'draft-'+r.id, icon:'📝', type:'draft', title:'Draft Belum Hantar: '+(r.refNo||r.siteName), body:'Borang draft lebih 7 hari belum dihantar', time: now, read:false, action:'pm-list', project: r.project||'cctv' });
           }
         }
       });
@@ -21858,7 +22136,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       contracts.value.forEach(c => {
         const status = contractStatus(c);
         if(status !== 'active') {
-          list.push({ id:'contract-'+c.id, icon: status==='expired'?'🔴':'🟡', type:'contract', title:(status==='expired'?'Kontrak Tamat: ':'Kontrak Hampir Tamat: ')+c.title, body:'Tamat pada '+fmtDate(c.endDate)+' ('+((c.project||'cctv')==='vir'?'VIR':'CCTV')+')', time: now, read:false, action:'contracts', project: c.project||'cctv' });
+          list.push({ id:'contract-'+c.id, icon: status==='expired'?'🔴':'🟡', type:'contract', title:(status==='expired'?'Kontrak Tamat: ':'Kontrak Hampir Tamat: ')+c.title, body:'Tamat pada '+fmtDate(c.endDate), time: now, read:false, action:'contracts', project: c.project||'cctv' });
         }
       });
       // Team assignments (Jadual Penyelenggaraan) where the CURRENT user is
@@ -21871,7 +22149,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const todayStr = _localDateStr();
         teamAssignments.value.forEach(a => {
           if(a.date >= todayStr && (a.members||[]).some(m => m.uid === authProfile.value.id)) {
-            list.push({ id:'assign-'+a.id, icon:'📌', type:'assignment', title:'Penugasan: '+(a.siteName||'-'), body:'Team '+a.team+' — '+fmtDate(a.date)+(a.maintType?' ('+a.maintType+')':''), time: now, read:false, action:'jadual' });
+            list.push({ id:'assign-'+a.id, icon:'📌', type:'assignment', title:'Penugasan: '+(a.siteName||'-'), body:'Team '+a.team+' — '+fmtDate(a.date)+(a.maintType?' ('+a.maintType+')':''), time: now, read:false, action:'jadual', project: projShortLabel(a.project).toLowerCase() });
           }
         });
       }
@@ -23415,6 +23693,36 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const total = entries.reduce((s,e)=>s+e.count,0);
       return entries.map(e => ({ ...e, pct: total ? Math.round(e.count/total*100) : 0 }));
     });
+    // Site × Kategori heatmap — same CM failure scan as failureByModel above,
+    // but grouped by site instead of brand/model, so a site with disproportionate
+    // failures concentrated in one equipment category (e.g. all HDD, never cameras)
+    // stands out visually instead of being buried across many brand/model rows.
+    const FAILURE_CATEGORIES = ['Kamera','NVR','HDD','Switch'];
+    const failureBySiteCategory = computed(() => {
+      const bySite = {};
+      pmRecords.value.filter(r=>r.maintType==='CM').forEach(r => {
+        if(!r.siteId) return;
+        if(!bySite[r.siteId]) bySite[r.siteId] = { siteId:r.siteId, siteName:r.siteName||'-', Kamera:0, NVR:0, HDD:0, Switch:0 };
+        const row = bySite[r.siteId];
+        (r.cameras||[]).forEach(c => { if(c.icam==='Tidak'||c.display==='Rosak') row.Kamera++; });
+        (r.nvr||[]).forEach(n => { if(n.asmOp==='Tidak'||n.status==='Tidak') row.NVR++; });
+        (r.hdd||[]).forEach(h => { if(h.status==='Tidak') row.HDD++; });
+        (r.switches||[]).forEach(s => { if(s.portStatus==='Tidak'||s.status==='Tidak') row.Switch++; });
+      });
+      return Object.values(bySite)
+        .map(row => ({ ...row, total: row.Kamera+row.NVR+row.HDD+row.Switch }))
+        .filter(row => row.total > 0)
+        .sort((a,b) => b.total-a.total);
+    });
+    // Red-scale (not heatmapCellColor's green scale, which signals "more PM
+    // done = good") since a failure count climbing is a bad signal here.
+    function failureHeatColor(count) {
+      if(!count) return darkMode.value ? '#2a3038' : '#f2f2f2';
+      if(count === 1) return '#f5c6cb';
+      if(count === 2) return '#e4707d';
+      if(count <= 4) return '#dc3545';
+      return '#a71d2a';
+    }
     // "⚠️ Risiko Tinggi" badge on the Urus Peralatan Site equipment tables —
     // surfaces failureByModel's already-computed CM failure pattern right
     // where a technician is actually looking at/adding that brand/model,
@@ -23601,6 +23909,42 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         .map(x => ({ ...x, members:[...x.members], rate: x.assigned ? Math.round(x.completed/x.assigned*100) : 0 }))
         .sort((a,b) => b.assigned - a.assigned);
     });
+    // Last-6-calendar-months completion rate per team — teamPerformance above
+    // is an all-time snapshot, which can't show whether a team is improving
+    // or sliding. Same hasRecord matching logic as teamPerformance, just
+    // bucketed by month instead of summed across all history.
+    function _monthKeyOf(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+    const teamPerformanceTrend = computed(() => {
+      const now = new Date();
+      const months = [];
+      for(let i=5;i>=0;i--) months.push(_monthKeyOf(new Date(now.getFullYear(), now.getMonth()-i, 1)));
+      const perTeamMonth = {};
+      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.team && t.date).forEach(t => {
+        const tDate = new Date(t.date);
+        const mk = _monthKeyOf(tDate);
+        if(!months.includes(mk)) return;
+        if(!perTeamMonth[t.team]) perTeamMonth[t.team] = {};
+        if(!perTeamMonth[t.team][mk]) perTeamMonth[t.team][mk] = { assigned:0, completed:0 };
+        perTeamMonth[t.team][mk].assigned++;
+        const hasRecord = pmRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        if(hasRecord) perTeamMonth[t.team][mk].completed++;
+      });
+      const result = {};
+      Object.keys(perTeamMonth).forEach(team => {
+        const rates = months.map(mk => { const m = perTeamMonth[team][mk]; return m && m.assigned ? Math.round(m.completed/m.assigned*100) : null; });
+        const withData = rates.filter(r => r !== null);
+        let direction = 'stable';
+        if(withData.length >= 2) {
+          const mid = Math.ceil(withData.length/2);
+          const avgFirst = withData.slice(0, mid).reduce((a,b)=>a+b,0) / mid;
+          const avgSecond = withData.slice(mid).reduce((a,b)=>a+b,0) / (withData.length-mid || 1);
+          if(avgSecond - avgFirst >= 10) direction = 'up';
+          else if(avgFirst - avgSecond >= 10) direction = 'down';
+        }
+        result[team] = { rates: rates.map(r => r===null?0:r), direction };
+      });
+      return result;
+    });
 
     // ── 6b. Beban Kerja per Staff (bukan setakat Team) — kiraan penugasan
     // PM/CM individu, untuk agihan kerja lebih adil selain rotation tracking.
@@ -23636,6 +23980,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         .map(x => ({ ...x, siteCount: x.sites.size, rate: x.total ? Math.round(x.completed/x.total*100) : 0 }))
         .sort((a,b) => b.total - a.total);
     });
+    // Bar width denominator for the workload gauge below — scaled against the
+    // single busiest staff member (not a fixed number) so the visual always
+    // shows RELATIVE imbalance regardless of how big the team or date range is.
+    const staffWorkloadMax = computed(() => Math.max(1, ...staffWorkload.value.map(s=>s.total)));
 
     // ── 6c. Streak — bilangan PM berturut-turut (paling terkini dahulu)
     // seorang staff hantar tanpa CM susulan. Dikira dari pmRecords.submittedBy
@@ -24401,7 +24749,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
-      pm, pmStep, pmStepLabels, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
+      pm, pmStep, pmStepLabels, pmProgressPulse, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV, pmActiveFilterChips, clearAllPmFilters,
       addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine, pmHasNota,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
@@ -24437,20 +24785,20 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS, PERMISSION_OVERRIDE_CAPABILITIES,
       userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
       contracts, contractsLoading, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
-      virWarranty, virWarrantyModal, virWarrantyFilterStatus, loadVirWarranty, virWarrantyStatus, virWarrantyExpiringCount, virWarrantyFiltered, virWarrantyBySite,
+      virWarranty, virWarrantyModal, virWarrantyFilterStatus, loadVirWarranty, virWarrantyStatus, virWarrantyExpiringCount, virWarrantyFiltered, virWarrantyBySite, virWarrantyUrgencyBySite,
       onVirWarrantySiteChange, openAddVirWarranty, openEditVirWarranty, submitVirWarranty, deleteVirWarranty, canEditVirWarranty, canAddWarrantyReportFor, canEditWarrantyReportFor,
       exportContractsExcel, exportContractsPdf,
-      contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir,
+      contractsFiltered, contractsExpiringCountCctv, contractsExpiringCountVir, contractsTimelineRows, contractTimelineBarPct,
       openAddContract, openEditContract, submitContract, deleteContract,
       CCTV_WARRANTY_VENDORS, warranty, warrantyLoading, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors, expiryRingPct,
       warrantyStatTotalCount, warrantyStatActiveCount, warrantyStatExpiringCount, warrantyStatExpiredCount,
-      warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, onWarrantySiteChange,
+      warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, warrantyUrgencyBySite, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCustomCategories,
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
       onLetterMemoSiteChange, onLetterMemoProjectChange, openAddLetterMemo, openEditLetterMemo, submitLetterMemo, deleteLetterMemo,
       canEditLetterMemo, canAddLetterMemo,
-      cmCases, cmCaseFilterSite, cmCaseFilterProject, cmCaseFilterStatus, cmCasesFiltered, cmCaseModal, cmCaseDetail, cmCaseDetailCase,
+      cmCases, cmCaseFilterSite, cmCaseFilterProject, cmCaseFilterStatus, cmCasesFiltered, cmCaseResolutionStats, cmCaseModal, cmCaseDetail, cmCaseDetailCase,
       loadCmCases, onCmCaseProjectChange, onCmCaseSiteChange, openAddCmCase, openEditCmCase, submitCmCase, deleteCmCase, toggleCmCaseStatus,
       openCmCaseDetail, addCmCaseEntry, deleteCmCaseEntry, startEditCmCaseEntry, cancelEditCmCaseEntry, saveEditCmCaseEntry, exportCmCasePdf, canEditCmCase, canAddCmCase,
       serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
@@ -24497,7 +24845,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       globalSearch, globalSearchInputRef, isMacPlatform, showSearchResults, searchResults, handleSearchResultClick,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
-      auditLogs, auditLogsLoading, visibleAuditLogs, recentAuditLogs, logActorDisplayName, auditActionColor, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
+      auditLogs, auditLogsLoading, visibleAuditLogs, recentAuditLogs, logActorDisplayName, auditActionColor, auditActivityHeatmap, auditHeatCellStyle, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
       auditLogFilter, resetAuditLogFilter, auditLogUserOptions, auditLogActionOptions, auditLogFilteredList,
       auditLogPage, auditLogTotalPages, auditLogPagedList, auditLogGoToPage, auditLogPageNumbers,
       auditLogSelected, toggleAuditLogRow, isAuditLogAllSelected, toggleAuditLogSelectAll, bulkDeleteAuditLogs,
@@ -24517,7 +24865,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
-      slaTrend, sparklinePoints, liveNarrativeSummary, printExecutiveSummary, printQuarterlyReport, failureByModel, isHighRiskEquip, highRiskEquipPct, recurringIssues, teamPerformance, staffWorkload, staffStreaks,
+      slaTrend, sparklinePoints, liveNarrativeSummary, printExecutiveSummary, printQuarterlyReport, failureByModel, isHighRiskEquip, highRiskEquipPct, recurringIssues, teamPerformance, teamPerformanceTrend, staffWorkload, staffWorkloadMax, staffStreaks,
+      FAILURE_CATEGORIES, failureBySiteCategory, failureHeatColor,
       customRangeStart, customRangeEnd, customRangeSetPreset, customRangeStats, openCustomRangeSite,
       customRangeCountTotal, customRangeCountPm, customRangeCountCm, customRangeCountCctv, customRangeCountVir, customRangeCountSites,
       siteCompareSelected, toggleSiteCompare, siteCompareRows, seasonalCmByMonth, heatmapSiteId, heatmapData, heatmapCellColor, siteAnomalies, yoyStats,
