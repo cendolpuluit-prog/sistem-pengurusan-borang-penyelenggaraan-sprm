@@ -104,10 +104,40 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .login-input{width:100%;background:rgba(0,15,30,.65)!important;color:#e2e8f0!important;border:1px solid rgba(60,100,60,.55)!important;border-radius:10px;padding:11px 16px;font-size:.88rem;font-family:monospace;outline:none;transition:.18s;box-sizing:border-box}
 .login-input:focus{border-color:#00c864!important;box-shadow:0 0 0 3px rgba(0,200,100,.18)!important}
 .login-input::placeholder{color:#3a5040}
-.login-btn-main{width:100%;background:linear-gradient(135deg,#006633,#004d26);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.9rem;letter-spacing:.08em;padding:13px;cursor:pointer;transition:.2s;box-shadow:0 4px 16px rgba(0,150,70,.35)}
+/* Browser autofill (saved credentials) otherwise paints these inputs with
+   its own opaque white/pale-yellow background + black text, which shatters
+   the dark glass aesthetic on every return visit. Chromium ignores a plain
+   `background` override on :-webkit-autofill, so the real fix is a huge
+   inset box-shadow to repaint the fill area in our dark color, plus
+   -webkit-text-fill-color for the text (color alone is also ignored) and a
+   long transition so the browser's momentary yellow flash never shows.
+   Firefox uses its own non-standard property. */
+.login-input:-webkit-autofill,
+.login-input:-webkit-autofill:hover,
+.login-input:-webkit-autofill:focus{
+  -webkit-text-fill-color:#e2e8f0;
+  -webkit-box-shadow:0 0 0 1000px rgba(0,15,30,.92) inset;
+  box-shadow:0 0 0 1000px rgba(0,15,30,.92) inset;
+  caret-color:#e2e8f0;
+  transition:background-color 9999s ease-out 0s;
+  font-family:monospace;
+}
+.login-input:-webkit-autofill:focus{-webkit-box-shadow:0 0 0 1000px rgba(0,15,30,.92) inset,0 0 0 3px rgba(0,200,100,.18);box-shadow:0 0 0 1000px rgba(0,15,30,.92) inset,0 0 0 3px rgba(0,200,100,.18)}
+.login-input:autofill{background:rgba(0,15,30,.92);color:#e2e8f0}
+.login-btn-main{position:relative;overflow:hidden;width:100%;background:linear-gradient(135deg,#006633,#004d26);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.9rem;letter-spacing:.08em;padding:13px;cursor:pointer;transition:.2s;box-shadow:0 4px 16px rgba(0,150,70,.35)}
 .login-btn-main:hover:not(:disabled){background:linear-gradient(135deg,#008040,#005c30);box-shadow:0 6px 22px rgba(0,180,80,.45);transform:translateY(-1px)}
 .login-btn-main:active:not(:disabled){transform:translateY(0) scale(.97);box-shadow:0 2px 10px rgba(0,150,70,.35)}
 .login-btn-main:disabled{opacity:.7;cursor:not-allowed}
+/* Occasional light sheen sweeping across the primary CTA — held off-screen
+   for most of each cycle (0%-72%) then sweeps once, so it reads as an
+   intermittent glint, not constant motion that would compete with the
+   card's loginBorderPulse. Suppressed while loading (:disabled) so the
+   spinner state stays calm. Text spans sit above it (z-index) so the sheen
+   passes behind the label, keeping it crisp. */
+@keyframes loginBtnSheen{0%,72%{left:-60%}100%{left:140%}}
+.login-btn-main::after{content:'';position:absolute;top:0;left:-60%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent);transform:skewX(-20deg);pointer-events:none;animation:loginBtnSheen 5s ease-in-out 1.5s infinite}
+.login-btn-main:disabled::after{display:none}
+.login-btn-main>span{position:relative;z-index:1}
 @keyframes spin{to{transform:rotate(360deg)}}
 .login-spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#7A841A;border-radius:50%;display:inline-block;animation:spin .7s linear infinite}
 .pw-wrap{position:relative}
@@ -130,6 +160,16 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 @keyframes loginErrIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 .login-capslock-warn{font-size:.72rem;color:#ffb74d;margin:6px 0 0;animation:loginErrIn .2s ease-out}
 .login-err{color:#f87171;font-size:.8rem;margin:0;animation:loginErrIn .25s ease-out}
+/* Caps-lock warning and login error live in a collapsible slot instead of a
+   v-if that pops in/out — the button used to jump when either appeared or
+   cleared. A grid-template-rows 0fr->1fr transition animates the slot's
+   height smoothly to and from zero (so no permanent reserved dead space
+   either), and the inner overflow:hidden+min-height:0 lets the row actually
+   collapse. The message's own loginErrIn fade still plays on its <p>. */
+.login-msg-slot{display:grid;grid-template-rows:0fr;transition:grid-template-rows .22s ease}
+.login-msg-slot.open{grid-template-rows:1fr}
+.login-msg-slot>div{overflow:hidden;min-height:0}
+.login-msg-slot-err .login-err{margin:0 0 10px}
 .login-label{display:block;font-size:.72rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#5aaf7a;margin-bottom:7px}
 .login-divider{display:flex;align-items:center;gap:10px;margin:4px 0}
 .login-divider span{font-size:.7rem;font-family:monospace;color:#006633;white-space:nowrap}
@@ -143,6 +183,23 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .login-clock-sep{color:#3a6650;font-size:.8rem}
 .login-clock-date{font-size:.76rem;color:#8ac9a0}
 .login-clock-greeting{font-size:.8rem;color:#5aaf7a;font-weight:600;margin-top:6px}
+/* Staggered entrance for the card's 6 direct sections (logos, clock, title,
+   form, tip, footer) — the card itself still springs in as one unit via
+   loginCardIn (.6s), and these cascade in just as that spring settles, so
+   the panel reads as "assembling" rather than every element snapping in at
+   once. Specificity (0,1,1) intentionally outranks .login-clock-block's own
+   loginClockIn (0,1,0) so the clock joins this one unified cascade instead
+   of running a second, differently-timed animation. Covered by the global
+   prefers-reduced-motion rule (which zeroes animation durations) like every
+   other CSS animation here. */
+@keyframes loginSectionIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.login-card-anim>div{animation:loginSectionIn .5s ease-out both}
+.login-card-anim>div:nth-child(1){animation-delay:.35s}
+.login-card-anim>div:nth-child(2){animation-delay:.44s}
+.login-card-anim>div:nth-child(3){animation-delay:.53s}
+.login-card-anim>div:nth-child(4){animation-delay:.62s}
+.login-card-anim>div:nth-child(5){animation-delay:.71s}
+.login-card-anim>div:nth-child(6){animation-delay:.80s}
 
 /* LAYOUT */
 .app-wrap{display:flex;min-height:100vh;min-height:100dvh;max-width:100vw}
@@ -236,7 +293,7 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 .app-footer b{color:#5a6a85}
 
 /* CARDS */
-.card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 4px 20px rgba(0,40,100,.07);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s,transform .2s,background-color .3s ease,border-color .3s ease,color .3s ease}
+.card{background:rgba(255,255,255,.92);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:14px;padding:20px;box-shadow:0 1px 2px rgba(0,40,100,.06),0 10px 28px rgba(0,40,100,.08);margin-bottom:20px;border:1px solid rgba(0,51,102,.06);transition:box-shadow .2s,transform .2s,background-color .3s ease,border-color .3s ease,color .3s ease}
 /* Scroll-reveal (see _observeRevealCards) — starts faded+offset, animates
    to normal once the card scrolls into view (or after the 1.5s safety-net
    timeout regardless). opacity/transform transition is separate from
@@ -399,12 +456,12 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes btnLoadingSpin{to{transform:rotate(360deg)}}
 .btn-primary{background:linear-gradient(135deg,#003366,#004d8c);color:#fff;box-shadow:0 2px 10px rgba(0,51,102,.25)}
 .btn-primary:hover:not(:disabled){background:linear-gradient(135deg,#004488,#0060b3);box-shadow:0 4px 14px rgba(0,51,102,.35);transform:translateY(-1px)}
-.btn-success{background:#198754;color:#fff;box-shadow:0 2px 10px rgba(25,135,84,.25)}
-.btn-success:hover:not(:disabled){background:#157347;box-shadow:0 4px 14px rgba(25,135,84,.4);transform:translateY(-1px)}
-.btn-danger{background:#dc3545;color:#fff;box-shadow:0 2px 10px rgba(220,53,69,.25)}
-.btn-danger:hover:not(:disabled){background:#bb2d3b;box-shadow:0 4px 14px rgba(220,53,69,.4);transform:translateY(-1px)}
-.btn-warning{background:#fd7e14;color:#fff;box-shadow:0 2px 10px rgba(253,126,20,.25)}
-.btn-warning:hover:not(:disabled){background:#e8680a;box-shadow:0 4px 14px rgba(253,126,20,.4);transform:translateY(-1px)}
+.btn-success{background:linear-gradient(135deg,#198754,#146c43);color:#fff;box-shadow:0 2px 10px rgba(25,135,84,.25)}
+.btn-success:hover:not(:disabled){background:linear-gradient(135deg,#1a945c,#157d4e);box-shadow:0 4px 14px rgba(25,135,84,.4);transform:translateY(-1px)}
+.btn-danger{background:linear-gradient(135deg,#dc3545,#b02a37);color:#fff;box-shadow:0 2px 10px rgba(220,53,69,.25)}
+.btn-danger:hover:not(:disabled){background:linear-gradient(135deg,#e24150,#c02e3c);box-shadow:0 4px 14px rgba(220,53,69,.4);transform:translateY(-1px)}
+.btn-warning{background:linear-gradient(135deg,#fd7e14,#e8590c);color:#fff;box-shadow:0 2px 10px rgba(253,126,20,.25)}
+.btn-warning:hover:not(:disabled){background:linear-gradient(135deg,#ff8c2b,#f5620f);box-shadow:0 4px 14px rgba(253,126,20,.4);transform:translateY(-1px)}
 .btn-outline{background:#fff;color:#003366;border:1.5px solid #003366}
 .btn-outline:hover{background:#f0f4ff;transform:translateY(-1px)}
 .btn-sm{padding:5px 12px;font-size:.8rem}
@@ -495,6 +552,9 @@ details.form-control[open] summary::after{content:'▴'}
    over the same corner of the input. */
 .search-kbd-hint{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:monospace;font-size:.68rem;color:#8a95a5;background:rgba(0,51,102,.06);border:1px solid rgba(0,51,102,.12);border-radius:4px;padding:2px 6px;pointer-events:none;line-height:1.3}
 .dark-mode .search-kbd-hint{color:#8b949e;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+.search-highlight{background:#fff3a3;color:#1a1a1a;border-radius:2px;padding:0 1px;font-weight:700}
+.dark-mode .search-highlight{background:#8a6d00;color:#fff}
+.equip-age-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle;flex-shrink:0}
 .filter-chips-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:-6px 0 12px}
 .filter-chip{display:inline-flex;align-items:center;gap:5px;background:#e8f0ff;color:#003366;font-size:.76rem;font-weight:600;padding:4px 6px 4px 10px;border-radius:14px;animation:searchClearIn .15s ease-out both}
 .filter-chip button{background:rgba(0,51,102,.12);border:none;color:#003366;width:16px;height:16px;border-radius:50%;font-size:.62rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;transition:background-color .15s}
@@ -599,7 +659,7 @@ details.form-control[open] summary::after{content:'▴'}
 /* CARD HOVER LIFT — .card already declares transition:box-shadow .2s,
    transform .2s (see its base rule above); this just adds the :hover
    state that transition animates into. */
-.card:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(0,40,100,.13)}
+.card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(0,40,100,.08),0 18px 42px rgba(0,40,100,.14)}
 
 /* SAVE CHECKMARK — brief full-screen overlay shown on a successful final
    PM/CM submit (not drafts), on top of the existing toast, not replacing
@@ -1816,13 +1876,15 @@ details.form-control[open] summary::after{content:'▴'}
             <svg v-else width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/></svg>
           </button>
         </div>
-        <p v-if="capsLockOn" class="login-capslock-warn">⇪ Caps Lock aktif</p>
+        <div class="login-msg-slot" :class="{open:capsLockOn}" aria-live="polite"><div><p class="login-capslock-warn">⇪ Caps Lock aktif</p></div></div>
       </div>
-      <p v-if="loginErr" class="login-err">⚠ {{loginErr}}</p>
-      <button class="login-btn-main" @click="doLogin" :disabled="loading">
-        <span v-if="loading" class="login-spin"></span>
-        <span v-else>LOG MASUK</span>
-      </button>
+      <div>
+        <div class="login-msg-slot login-msg-slot-err" :class="{open:loginErr}" aria-live="assertive"><div><p class="login-err">⚠ {{loginErr}}</p></div></div>
+        <button class="login-btn-main" @click="doLogin" :disabled="loading">
+          <span v-if="loading" class="login-spin"></span>
+          <span v-else>LOG MASUK</span>
+        </button>
+      </div>
       <div v-if="loginHandshake.active" class="login-handshake no-print" aria-live="polite">
         <div v-for="(s,i) in loginHandshake.steps" :key="i" class="login-handshake-step" :class="{done:s.done}">
           <span class="login-handshake-check">{{s.done?'✓':'…'}}</span> {{s.label}}
@@ -2072,19 +2134,19 @@ details.form-control[open] summary::after{content:'▴'}
               <div style="font-weight:700;font-size:.85rem;color:#003366">{{r.label}}</div>
             </template>
             <template v-else-if="r._kind==='site'">
-              <div style="font-weight:700;font-size:.85rem;color:#002244">🏢 {{r.name}}</div>
+              <div style="font-weight:700;font-size:.85rem;color:#002244">🏢 <span v-html="highlightQuery(r.name, globalSearch)"></span></div>
               <div style="font-size:.75rem;color:#666">Site {{r.proj==='vir'?'VIR':'CCTV'}} — klik untuk urus peralatan</div>
             </template>
             <template v-else-if="r._kind==='equipment'">
-              <div style="font-weight:700;font-size:.85rem;color:#002244">🔧 {{r.label}}</div>
+              <div style="font-weight:700;font-size:.85rem;color:#002244">🔧 <span v-html="highlightQuery(r.label, globalSearch)"></span></div>
               <div style="font-size:.75rem;color:#666">{{r.siteName}} ({{r.proj==='vir'?'VIR':'CCTV'}}) &nbsp;·&nbsp; {{r.detail || 'klik untuk urus peralatan'}}</div>
             </template>
             <template v-else-if="r._kind==='kontraktor'">
-              <div style="font-weight:700;font-size:.85rem;color:#002244">🛠️ {{r.name}}</div>
+              <div style="font-weight:700;font-size:.85rem;color:#002244">🛠️ <span v-html="highlightQuery(r.name, globalSearch)"></span></div>
               <div style="font-size:.75rem;color:#666">{{r.bidangKerja||'Kontraktor/Kedai'}} ({{r.proj==='vir'?'VIR':'CCTV'}}) &nbsp;·&nbsp; {{r.areaService||'—'}}</div>
             </template>
             <template v-else>
-              <div style="font-weight:700;font-size:.85rem;color:#002244">📋 {{r.refNo||'-'}}</div>
+              <div style="font-weight:700;font-size:.85rem;color:#002244">📋 <span v-html="highlightQuery(r.refNo||'-', globalSearch)"></span></div>
               <div style="font-size:.75rem;color:#666">{{r.siteName}} &nbsp;·&nbsp; {{r.visitDate||(r.month?MONTHS[r.month-1]:'—')+' '+r.year}}</div>
             </template>
           </div>
@@ -2990,7 +3052,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <tr v-for="w in site.items" :key="w.id">
                     <td>{{w.equipmentName||'-'}}</td>
                     <td>{{w.brand}} {{w.model}}</td>
-                    <td>{{w.serial||'-'}}</td>
+                    <td class="mono-data">{{w.serial||'-'}}</td>
                     <td style="font-size:.8rem">{{w.warrantyType||'-'}}</td>
                     <td style="font-size:.8rem">{{fmtDate(w.startDate)}} — {{fmtDate(w.endDate)}}</td>
                     <td style="display:flex;align-items:center;gap:6px">
@@ -3063,7 +3125,7 @@ details.form-control[open] summary::after{content:'▴'}
             <thead><tr><th>Kategori</th><th>Tarikh</th><th>Projek/Site</th><th>Dari → Kepada</th><th>Perihal</th><th>Lampiran</th><th>Tindakan</th></tr></thead>
             <tbody>
               <tr v-for="m in letterMemosFiltered" :key="m.id">
-                <td style="white-space:nowrap;font-size:.8rem">{{letterMemoCategoryLabel(m.category)}}</td>
+                <td style="white-space:nowrap"><span class="badge" :style="{fontSize:'.72rem',background:letterMemoCategoryColor(m.category)+'22',color:letterMemoCategoryColor(m.category)}">{{letterMemoCategoryLabel(m.category)}}</span></td>
                 <td style="white-space:nowrap">{{fmtDate(m.letterDate)}}</td>
                 <td style="font-size:.82rem">
                   <span v-if="m.project==='cctv'" class="proj-badge proj-cctv">CCTV</span>
@@ -3210,7 +3272,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="w in grp.items" :key="w.id">
                   <td>{{w.equipmentName||'-'}}</td>
                   <td>{{w.brand}} {{w.model}}</td>
-                  <td>{{w.serial||'-'}}</td>
+                  <td class="mono-data">{{w.serial||'-'}}</td>
                   <td style="font-size:.8rem">{{w.system||'-'}}<span v-if="w.room"> — {{w.room}}</span></td>
                   <td style="font-size:.8rem">{{w.purchasedFrom||'-'}}</td>
                   <td style="font-size:.8rem">{{fmtDate(w.purchaseDate)}}</td>
@@ -3514,7 +3576,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="{'highlight-row':equipEditIdx.cameras===c._idx}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{gi+1}}</td><td>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td>{{c.serial}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -3602,7 +3664,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="{'highlight-row':equipEditIdx.nvr===i}">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}}</td><td>{{n.serial}}</td><td>{{n.ip}}</td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}}</td><td class="mono-data">{{n.serial}}</td><td class="mono-data">{{n.ip}}</td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -3690,7 +3752,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="{'highlight-row':equipEditIdx.hdd===h._idx}">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
-                    <td>{{gi+1}}</td><td>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
@@ -3758,7 +3820,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{s.serial}}</td><td>{{s.ip}}</td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data">{{s.ip}}</td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -7308,7 +7370,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(r,i) in assetRegisterPagedList" :key="(assetRegisterPage-1)*20+i">
                     <td>{{(assetRegisterPage-1)*20+i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
-                    <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.serial}}</td><td>{{r.extra}}</td>
+                    <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td class="mono-data">{{r.serial}}</td><td>{{r.extra}}</td>
                     <td>
                       <a v-if="warrantyCheckUrl(r)" :href="warrantyCheckUrl(r)" target="_blank" rel="noopener" class="btn btn-outline btn-sm">🔗 Semak Waranti</a>
                       <span v-else class="text-muted text-sm">-</span>
@@ -8713,9 +8775,26 @@ function _ensureDocx() {
   return _docxReady;
 }
 let _chartjsReady = null;
+// None of the ~10 Chart.js instances in this file set their own tick/grid
+// colors, so every one of them used Chart.js's library default (designed
+// for a white page) even after dark mode shipped — ticks/axis labels read
+// as near-invisible dark-gray-on-dark-card. Setting these two global
+// defaults once covers every chart without editing each one's own options.
+// Reads localStorage directly (not the `darkMode` ref) since this function
+// lives outside setup() as part of the lazy-load infrastructure, and
+// localStorage is kept in sync with darkMode on every toggle (see its
+// watcher below). Re-applied on every call (not just first load) via the
+// .then() below, so a chart (re)initialized after a dark-mode toggle still
+// picks up the current state.
+function _applyChartDarkDefaults() {
+  if(typeof Chart === 'undefined') return;
+  const dark = localStorage.getItem('pm_darkmode') === '1';
+  Chart.defaults.color = dark ? '#c9d1d9' : '#666';
+  Chart.defaults.scale.grid.color = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+}
 function _ensureChartjs() {
   if(!_chartjsReady) _chartjsReady = _loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js');
-  return _chartjsReady;
+  return _chartjsReady.then(_applyChartDarkDefaults);
 }
 let _mammothReady = null;
 function _ensureMammoth() {
@@ -8929,18 +9008,30 @@ createApp({
         // inside the card feel off/annoying), still keeping the existing
         // hover lift (translateY(-2px)) since this inline style overrides
         // that CSS :hover rule's transform.
-        const card = e.target.closest ? e.target.closest('.card') : null;
+        // Also matches .login-card — it isn't a .card, but it's a large glass
+        // panel sitting on a cursor-tracking spotlight, so the same tilt
+        // completes that interaction. The login card gets NO translateY lift
+        // (that's the .card:hover cue, which .login-card has no equivalent
+        // for) and a wider perspective so the mild angle reads at its larger
+        // size. Setting inline transform here overrides .login-card-anim's
+        // loginCardIn end-state (harmless — that entrance has settled by the
+        // time any hover happens), while loginBorderPulse keeps running since
+        // it only animates box-shadow, not transform.
+        const card = e.target.closest ? e.target.closest('.card, .login-card') : null;
         document.querySelectorAll('.card-tilting').forEach(c => {
           if(c !== card) { c.style.transform = ''; c.classList.remove('card-tilting'); }
         });
         if(card) {
+          const isLoginCard = card.classList.contains('login-card');
           const r = card.getBoundingClientRect();
           const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
           // Cut down twice now (was *5, then *2) — still felt like too much,
           // so this is deliberately near-threshold-of-perceptible (~0.35deg
           // max) rather than picking another "still noticeable" middle value.
           const rx = (0.5 - py) * 0.7, ry = (px - 0.5) * 0.7;
-          card.style.transform = `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-2px)`;
+          card.style.transform = isLoginCard
+            ? `perspective(1200px) rotateX(${rx}deg) rotateY(${ry}deg)`
+            : `perspective(900px) rotateX(${rx}deg) rotateY(${ry}deg) translateY(-2px)`;
           card.classList.add('card-tilting');
         }
         // Magnetic pull: every visible .btn-primary nudges a few px toward
@@ -11023,6 +11114,7 @@ createApp({
         svg.selectAll('path.mp-state').data(geo.features).join('path')
           .attr('class', d => 'mp-state' + (mapStateHealth.value[d.properties.Name]?.overdue ? ' mp-state-warn' : ''))
           .attr('d', mapPath)
+          .attr('title', d => _mapStateTooltipText(d.properties.Name))
           .style('fill', d => mapStateFillColor(d.properties.Name)).style('stroke', '#c3cfe0').style('stroke-width', 1);
         svg.append('g').attr('class', 'mp-pins');
         mapCentroids = geo.features.map(f => ({ name: f.properties.Name, c: mapPath.centroid(f) }));
@@ -11062,6 +11154,7 @@ createApp({
         }
         g.append('circle')
           .attr('cx', d.c[0]).attr('cy', d.c[1]).attr('r', has ? 7 : 3)
+          .attr('title', _mapStateTooltipText(d.name) + (has ? ' | Ada penugasan hari ini — klik untuk butiran' : ''))
           .style('fill', has ? '#0056b3' : '#c3cfe0').style('cursor', 'pointer')
           .on('click', () => mapPinClick(d.name, d.c[0], d.c[1]));
         if (has) {
@@ -12114,6 +12207,22 @@ createApp({
         '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
       }[ch]));
     }
+    // Wraps the first match of `query` in `text` with a <mark> — used for the
+    // Ctrl+K search dropdown so a hit is visually obvious at a glance (serial
+    // numbers / No. Rujukan strings are long enough that it's not always
+    // obvious WHY a result matched). Slices the ORIGINAL text into before/
+    // match/after and escapes each piece separately before concatenating —
+    // escaping the whole string first and then trying to splice markup in by
+    // character index would break the moment the text contains an escaped
+    // char (&, <, etc.), since escaping changes string length.
+    function highlightQuery(text, query) {
+      const str = String(text==null?'':text);
+      const q = (query||'').trim();
+      if(!q) return esc(str);
+      const idx = str.toLowerCase().indexOf(q.toLowerCase());
+      if(idx === -1) return esc(str);
+      return esc(str.slice(0,idx)) + '<mark class="search-highlight">' + esc(str.slice(idx, idx+q.length)) + '</mark>' + esc(str.slice(idx+q.length));
+    }
 
     // Auto-fits column widths + fills the header row on a json_to_sheet-
     // built worksheet, based on the longest value (or header) in each
@@ -12844,6 +12953,14 @@ createApp({
     ];
     function letterMemoCategoryLabel(cat) {
       return LETTER_MEMO_CATEGORIES.find(c => c.value === cat)?.label || cat || '-';
+    }
+    // Color per category for the table badge — same "background+'22' alpha,
+    // solid text color" convention auditActionColor's badges already use.
+    // Falls back to gray for any free-typed custom "Lain-lain" category
+    // (see letterMemoCustomCategories below) that isn't one of these 5 keys.
+    const LETTER_MEMO_CATEGORY_COLOR = { 'serahan-peralatan':'#0056b3', 'permit-kerja':'#e65100', 'memo-am':'#6a1b9a', 'surat-hq':'#00695c', 'lain':'#757575' };
+    function letterMemoCategoryColor(cat) {
+      return LETTER_MEMO_CATEGORY_COLOR[cat] || '#757575';
     }
     const letterMemos = ref([]);
     // Custom "Lain-lain" category names (free-typed, see submitLetterMemo)
@@ -15485,6 +15602,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const ratio = st.overdue / st.total;
       return ratio < 0.5 ? '#ef9f27' : '#e24b4a'; // amber then red as overdue share grows
     }
+    // Hover text for the map's state shapes/pins — the fill color above
+    // already signals health at a glance, but doesn't say the actual
+    // numbers. Plain `title` attribute (works on SVG elements too) so this
+    // rides the app's existing global custom-tooltip system (the delegated
+    // mouseover listener that replaces every native title= with the styled
+    // dark tooltip) instead of needing a separate tooltip implementation.
+    function _mapStateTooltipText(stateName) {
+      const st = mapStateHealth.value[stateName];
+      if(!st || !st.total) return stateName + ' — tiada site direkod';
+      if(st.overdue === 0) return stateName + ': ' + st.total + ' site, semua tidak lampau ✅';
+      return stateName + ': ' + st.overdue + ' drpd ' + st.total + ' site lampau ⚠️';
+    }
     // Re-tints existing state <path> fills/classes in place (no SVG rebuild)
     // whenever health/overdue data changes — e.g. after submitting a PM that
     // clears a site's overdue flag, the map should visibly recolor without
@@ -15503,6 +15632,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         .style('fill', function() {
           const name = d3.select(this).datum()?.properties?.Name;
           return mapStateFillColor(name);
+        })
+        .attr('title', function() {
+          const name = d3.select(this).datum()?.properties?.Name;
+          return _mapStateTooltipText(name);
         });
     }
     watch(mapStateHealth, () => renderMapStateFills());
@@ -19961,6 +20094,26 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const RECENT_EQUIP_MS = 24*60*60*1000;
     function isRecentEquip(item) {
       return !!item._ts && (Date.now() - item._ts) < RECENT_EQUIP_MS;
+    }
+    // Equipment age dot — distinct from isRecentEquip above (which tracks
+    // when the RECORD was added to this system, not when the physical unit
+    // was actually installed). Uses the same "Tarikh Pasang" field the
+    // Jangka Hayat report already reads from, so technicians scanning the
+    // equipment list table can spot aging units at a glance without opening
+    // Laporan Lanjutan. Items with no install date recorded show neutral
+    // gray rather than guessing an age.
+    function equipAgeColor(installDate) {
+      if(!installDate) return '#bbb';
+      const years = (Date.now() - new Date(installDate).getTime()) / (365.25*86400000);
+      if(years < 1) return '#2e7d32';
+      if(years < 2) return '#8bc34a';
+      if(years < 3) return '#f57c00';
+      return '#c62828';
+    }
+    function equipAgeTitle(installDate) {
+      if(!installDate) return 'Tarikh pasang tidak direkod';
+      const years = (Date.now() - new Date(installDate).getTime()) / (365.25*86400000);
+      return 'Dipasang ' + fmtDate(installDate) + ' — ' + (years<1 ? 'kurang drpd 1 tahun' : years.toFixed(1)+' tahun') + ' lepas';
     }
     // Equipment history timeline — reconstructs one item's PM/CM history
     // entirely from data already snapshotted into pmRecords at submit time
@@ -24622,7 +24775,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         if(mapDetailState.value && !e.target.closest('.map-pin-popup') && !e.target.closest('svg')) mapDetailState.value = null;
         // Button ripple — delegated here (one listener) rather than a
         // per-button @click handler on every single .btn in the file.
-        const btn = e.target.closest('.btn');
+        // Also matches .login-btn-main (the login CTA isn't a .btn, but now
+        // has position:relative;overflow:hidden so the same ripple works).
+        const btn = e.target.closest('.btn, .login-btn-main');
         if(btn) {
           const rect = btn.getBoundingClientRect();
           const size = Math.max(rect.width, rect.height);
@@ -24794,7 +24949,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       warrantyStatTotalCount, warrantyStatActiveCount, warrantyStatExpiringCount, warrantyStatExpiredCount,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, warrantyUrgencyBySite, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
-      LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCustomCategories,
+      LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCategoryColor, letterMemoCustomCategories,
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
       onLetterMemoSiteChange, onLetterMemoProjectChange, openAddLetterMemo, openEditLetterMemo, submitLetterMemo, deleteLetterMemo,
       canEditLetterMemo, canAddLetterMemo,
@@ -24819,7 +24974,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       sonyRoomChoicesForSite, pickSonyRoom, openSonyRoomEquip, roomChoicesForModal, pickRoomForModal,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       removeReasonModal, confirmRemoveItem,
-      brandOptionsFor, modelOptionsFor, isRecentEquip,
+      brandOptionsFor, modelOptionsFor, isRecentEquip, equipAgeColor, equipAgeTitle,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       customEquipCleanupBrandIsCustom, removeCustomBrand,
       equipSelected, toggleEquipRow, isEquipAllSelected, toggleEquipSelectAll, isEquipGroupAllSelected, toggleEquipGroupSelectAll, bulkDeleteEquip,
@@ -24842,7 +24997,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       trashedCmCases, loadTrashCmCases, restoreTrashCmCases, purgeTrashCmCases,
       pmPreviewScale, pmPreviewNaturalHeight, PM_PREVIEW_DESIGN_WIDTH, pmReadMode,
       exportExcel, exportExcelVIR, exportDOCX, exportPDF, exportUnderMaintenance,
-      globalSearch, globalSearchInputRef, isMacPlatform, showSearchResults, searchResults, handleSearchResultClick,
+      globalSearch, globalSearchInputRef, isMacPlatform, showSearchResults, searchResults, handleSearchResultClick, highlightQuery,
       overdueMap, overdueList,
       batchSelected, batchPrintMode, batchPrintRecords, printBatch, exportBatchExcel,
       auditLogs, auditLogsLoading, visibleAuditLogs, recentAuditLogs, logActorDisplayName, auditActionColor, auditActivityHeatmap, auditHeatCellStyle, deleteAuditLog, loadAuditLogs, exportAuditLogExcel, exportAuditLogPdf,
