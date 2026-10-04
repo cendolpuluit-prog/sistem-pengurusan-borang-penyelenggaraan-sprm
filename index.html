@@ -137,7 +137,11 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
 @keyframes loginBtnSheen{0%,72%{left:-60%}100%{left:140%}}
 .login-btn-main::after{content:'';position:absolute;top:0;left:-60%;width:45%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent);transform:skewX(-20deg);pointer-events:none;animation:loginBtnSheen 5s ease-in-out 1.5s infinite}
 .login-btn-main:disabled::after{display:none}
-.login-btn-main>span{position:relative;z-index:1}
+/* Lift the label/spinner above the sheen — but NOT the dynamically-appended
+   .btn-ripple span (it needs .btn-ripple's own position:absolute; a bare
+   >span rule here outranks that and forced the ripple to position:relative,
+   breaking it on this button). :not(.btn-ripple) leaves the ripple alone. */
+.login-btn-main>span:not(.btn-ripple){position:relative;z-index:1}
 @keyframes spin{to{transform:rotate(360deg)}}
 .login-spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#7A841A;border-radius:50%;display:inline-block;animation:spin .7s linear infinite}
 .pw-wrap{position:relative}
@@ -21234,14 +21238,24 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         pm.rootCause = r.rootCause||'';
         pm.rootCauseCustom = '';
       }
-      // Rebuild the structured Masalah/Tindakan/Status boxes. A record
-      // saved by this builder carries notaStruct — an exact round-trip, no
-      // guessing needed. An older record (typed free-text, or predating
-      // this feature) has none, so fall back to best-effort: _parseNota()
-      // if the text happens to match the old MASALAH:/TINDAKAN:/STATUS:
-      // convention, otherwise the whole text lands in the first Masalah box.
-      if(r.notaStruct?.items?.length) {
-        pm.notaItems = r.notaStruct.items.map(p => ({ masalah:p.masalah||'', tindakan:p.tindakan||'', status:p.status||'' }));
+      // Rebuild the structured Masalah/Tindakan/Status boxes. The PRESENCE of
+      // a notaStruct field (not whether its items are non-empty) is what marks
+      // a record as saved by this builder — so trust it even when items is an
+      // empty array. Gating on `.items.length` instead was a real bug: a
+      // borang submitted with the whole Nota box left blank still stores
+      // notaCatatan = "PREVENTIVE MAINTENANCE (PM)" (the auto header line
+      // _buildNotaCatatan always prepends) with notaStruct.items = []. That
+      // empty-items array made this fall through to the legacy else-branch,
+      // whose final fallback dumped the ENTIRE notaCatatan — i.e. just that
+      // header — straight into "Masalah 1" on edit. The header belongs only
+      // to the compiled/printed output, never to an input box. Empty items
+      // now correctly load as one blank Masalah row. Genuinely old records
+      // (typed free-text, or predating this feature) have NO notaStruct field
+      // at all and still fall to the best-effort _parseNota() path below.
+      if(r.notaStruct) {
+        pm.notaItems = r.notaStruct.items?.length
+          ? r.notaStruct.items.map(p => ({ masalah:p.masalah||'', tindakan:p.tindakan||'', status:p.status||'' }))
+          : [{ masalah:'', tindakan:'', status:'' }];
         pm.notaOverallStatus = r.notaStruct.overallStatus||'';
         pm.notaPendingEnabled = (r.notaStruct.pending||[]).length > 0;
         pm.notaPending = (r.notaStruct.pending||[]).length ? [...r.notaStruct.pending] : [''];
@@ -22570,15 +22584,35 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const recs = laporanFiltered.value;
       const months = _getLaporanMonthRange(laporanTempoh.value);
-      // Capture chart canvases as base64 images
+      // Capture chart canvases as base64 images. toDataURL grabs the canvas
+      // exactly as currently rendered — and in dark mode the global Chart
+      // defaults (_applyChartDarkDefaults) paint light-gray text + faint
+      // white gridlines, which are invisible on this white printed report.
+      // So force the charts back to light-theme colors just for the capture,
+      // then restore the dark colors so the on-screen charts aren't left
+      // changed. No-op when already in light mode.
       const c1 = document.getElementById('chart-bar-pmcm');
       const c2 = document.getElementById('chart-doughnut');
       const c3 = document.getElementById('chart-site-cm');
       const c4 = document.getElementById('chart-equip-fail');
+      const _printCharts = [c1,c2,c3,c4];
+      let _restoreChartTheme = null;
+      if(darkMode.value && typeof Chart !== 'undefined') {
+        const prevColor = Chart.defaults.color, prevGrid = Chart.defaults.scale.grid.color;
+        Chart.defaults.color = '#666';
+        Chart.defaults.scale.grid.color = 'rgba(0,0,0,0.08)';
+        _printCharts.forEach(cv => { const inst = cv && Chart.getChart(cv); if(inst) inst.update('none'); });
+        _restoreChartTheme = () => {
+          Chart.defaults.color = prevColor;
+          Chart.defaults.scale.grid.color = prevGrid;
+          _printCharts.forEach(cv => { const inst = cv && Chart.getChart(cv); if(inst) inst.update('none'); });
+        };
+      }
       const img1 = c1 ? c1.toDataURL('image/png') : '';
       const img2 = c2 ? c2.toDataURL('image/png') : '';
       const img3 = c3 ? c3.toDataURL('image/png') : '';
       const img4 = c4 ? c4.toDataURL('image/png') : '';
+      if(_restoreChartTheme) _restoreChartTheme();
       const pmCount = recs.filter(r=>(r.maintType||'PM')!=='CM').length;
       const cmCount = recs.filter(r=>r.maintType==='CM').length;
       const siteCount = new Set(recs.map(r=>r.siteId)).size;
