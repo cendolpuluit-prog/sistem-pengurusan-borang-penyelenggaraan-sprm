@@ -293,6 +293,132 @@ body{font-family:'Inter','Segoe UI',sans-serif;background-color:#eef2f8;backgrou
    Safari). Short duration to complement, not fight, .page-view's own
    220ms fade-in above. */
 ::view-transition-old(root),::view-transition-new(root){animation-duration:.2s;animation-timing-function:ease}
+/* Theme-switch circular reveal (toggleDarkMode) — no default cross-fade;
+   the new snapshot is clip-path-animated from JS instead, on top. */
+html.theme-vt::view-transition-old(root),html.theme-vt::view-transition-new(root){animation:none;mix-blend-mode:normal}
+html.theme-vt::view-transition-new(root){z-index:2}
+/* Site-name morph (Senarai Site ↔ Urus Peralatan, see morphSiteId).
+   inline-block so the snapshot hugs the text instead of a whole table cell.
+   Suppressed during the theme reveal so the header isn't lifted out of
+   the circle effect (!important beats the inline :style binding). */
+.site-morph-name{display:inline-block}
+::view-transition-group(site-hero){animation-duration:.45s;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+html.theme-vt .site-morph-name{view-transition-name:none!important}
+/* ── 📺 Mod TV / Pusat Kawalan ── same neon-green-on-navy language as the
+   dashboard's ops-hero. Sized with clamp()/vw so one layout reads well from
+   a laptop up to a 1080p/4K wall TV. z-index sits under the confirm dialog
+   (100000) and the logout wipe, above everything else. */
+.tv-wall{position:fixed;inset:0;z-index:99990;display:flex;flex-direction:column;overflow:hidden;color:#e2e8f0;font-variant-numeric:tabular-nums;background:radial-gradient(1200px 620px at 12% -10%,rgba(0,150,255,.16),transparent 60%),radial-gradient(900px 520px at 108% 110%,rgba(77,255,153,.12),transparent 60%),#050b16;animation:tvIn .5s ease both}
+@keyframes tvIn{from{opacity:0;transform:scale(1.015)}to{opacity:1;transform:none}}
+.tv-grid-bg{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(77,255,153,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(77,255,153,.045) 1px,transparent 1px);background-size:48px 48px;-webkit-mask-image:radial-gradient(ellipse at center,#000 35%,transparent 85%);mask-image:radial-gradient(ellipse at center,#000 35%,transparent 85%)}
+.tv-head{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:clamp(12px,1.5vw,28px) clamp(16px,2vw,40px) clamp(8px,1vw,18px)}
+.tv-brand{display:flex;align-items:center;gap:clamp(10px,1vw,18px);min-width:0}
+.tv-logo{height:clamp(30px,3.2vw,58px);width:auto;filter:drop-shadow(0 0 14px rgba(77,255,153,.25))}
+.tv-title{font-weight:800;letter-spacing:.18em;font-size:clamp(13px,1.45vw,28px);color:#fff;text-shadow:0 0 22px rgba(77,255,153,.25)}
+.tv-sub{font-size:clamp(9px,.78vw,15px);color:#94a3b8;letter-spacing:.05em;margin-top:3px}
+.tv-proj-switch{display:flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.tv-proj-switch button{font:inherit;font-size:clamp(10px,.8vw,15px);font-weight:700;letter-spacing:.06em;color:#94a3b8;background:none;border:none;border-radius:999px;padding:clamp(5px,.5vw,9px) clamp(12px,1.2vw,22px);cursor:pointer;transition:background .3s,color .3s,box-shadow .3s}
+.tv-proj-switch button.on{color:#050b16;background:#4dff99;box-shadow:0 0 18px rgba(77,255,153,.45)}
+.tv-clock{text-align:right}
+.tv-time{font-size:clamp(22px,3vw,60px);font-weight:800;line-height:1;letter-spacing:.04em;color:#4dff99;text-shadow:0 0 18px rgba(77,255,153,.45)}
+.tv-date{font-size:clamp(9px,.82vw,16px);color:#94a3b8;margin-top:5px}
+.tv-rotate-bar{position:relative;height:3px;margin:0 clamp(16px,2vw,40px);border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+.tv-rotate-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#00b4ff,#4dff99);box-shadow:0 0 10px rgba(77,255,153,.6);animation:tvRotate 30s linear forwards}
+@keyframes tvRotate{to{width:100%}}
+.tv-body{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:minmax(250px,24%) 1fr minmax(320px,31%);gap:clamp(10px,1.2vw,24px);padding:clamp(10px,1.2vw,24px) clamp(16px,2vw,40px)}
+.tv-panel{position:relative;display:flex;flex-direction:column;min-height:0;padding:clamp(12px,1.2vw,24px);border-radius:16px;background:linear-gradient(180deg,rgba(15,30,55,.78),rgba(8,18,35,.78));border:1px solid rgba(77,255,153,.12);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 40px rgba(0,0,0,.35)}
+.tv-panel::before{content:'';position:absolute;inset:-1px;border-radius:16px;padding:1px;pointer-events:none;background:linear-gradient(135deg,rgba(77,255,153,.55),transparent 28%,transparent 72%,rgba(0,180,255,.45));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.tv-panel-title{font-size:clamp(9px,.72vw,14px);font-weight:700;letter-spacing:.2em;color:#4dff99;margin-bottom:clamp(8px,1vw,18px)}
+.tv-panel-title span{color:#64748b;font-weight:500;letter-spacing:.04em}
+.tv-ring-wrap{position:relative;width:min(100%,clamp(130px,13vw,260px));aspect-ratio:1;margin:0 auto}
+.tv-ring{width:100%;height:100%;transform:rotate(-90deg)}
+.tv-ring-track{fill:none;stroke:rgba(255,255,255,.08);stroke-width:9}
+.tv-ring-fill{fill:none;stroke-width:9;stroke-linecap:round;stroke-dasharray:326.7;transition:stroke-dashoffset 1.2s cubic-bezier(.22,1,.36,1),stroke .6s}
+.tv-ring-fill.lvl-green{stroke:#4dff99;filter:drop-shadow(0 0 6px rgba(77,255,153,.7))}
+.tv-ring-fill.lvl-yellow{stroke:#fbbf24;filter:drop-shadow(0 0 6px rgba(251,191,36,.6))}
+.tv-ring-fill.lvl-red{stroke:#f87171;filter:drop-shadow(0 0 6px rgba(248,113,113,.7))}
+.tv-ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.tv-ring-label b{font-size:clamp(30px,4vw,80px);font-weight:800;line-height:1;color:#fff}
+.tv-ring-label span{font-size:clamp(7px,.58vw,12px);letter-spacing:.18em;color:#94a3b8;margin-top:5px}
+.tv-levels{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:clamp(10px,1.2vw,22px) 0}
+.tv-levels div{text-align:center;font-size:clamp(9px,.68vw,13px);color:#94a3b8;background:rgba(255,255,255,.03);border-radius:10px;padding:clamp(6px,.6vw,10px) 4px}
+.tv-levels b{display:block;font-size:clamp(17px,1.8vw,36px);font-weight:800;line-height:1.1}
+.tv-wall .lvl-green b,.tv-legend .lvl-green{color:#4dff99}
+.tv-wall .lvl-yellow b,.tv-legend .lvl-yellow{color:#fbbf24}
+.tv-wall .lvl-red b,.tv-legend .lvl-red{color:#f87171}
+.tv-kpis{display:flex;flex-direction:column;gap:clamp(6px,.7vw,12px);margin-top:auto}
+.tv-kpi{display:grid;grid-template-columns:1fr auto;align-items:center;padding:clamp(6px,.6vw,12px) clamp(8px,.8vw,14px);border-radius:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.05)}
+.tv-kpi span{font-size:clamp(9px,.72vw,14px);color:#94a3b8;letter-spacing:.04em}
+.tv-kpi b{font-size:clamp(15px,1.5vw,30px);font-weight:800;color:#fff}
+.tv-kpi small{font-size:.55em;font-weight:600;color:#64748b}
+.tv-kpi-bar{grid-column:1/-1;height:4px;margin-top:6px;border-radius:2px;background:rgba(255,255,255,.08);overflow:hidden}
+.tv-kpi-bar em{display:block;height:100%;border-radius:2px;background:linear-gradient(90deg,#00b4ff,#4dff99);transition:width 1.2s cubic-bezier(.22,1,.36,1)}
+.tv-kpi.alert{border-color:rgba(248,113,113,.4);background:rgba(248,113,113,.08)}
+.tv-kpi.alert b{color:#f87171;animation:tvAlertGlow 1.6s ease-in-out infinite}
+@keyframes tvAlertGlow{50%{text-shadow:0 0 14px rgba(248,113,113,.85)}}
+.tv-map{flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+.tv-map-err{color:#94a3b8;font-size:.9rem}
+.tv-state{stroke:rgba(77,255,153,.35);stroke-width:.8;transition:fill .6s}
+.tv-state-none{fill:rgba(148,163,184,.07)}
+.tv-state-green{fill:rgba(77,255,153,.2)}
+.tv-state-yellow{fill:rgba(251,191,36,.28)}
+.tv-state-red{fill:rgba(248,113,113,.34)}
+.tv-pin{stroke:#050b16;stroke-width:1.5}
+.tv-pin-green{fill:#4dff99}.tv-pin-yellow{fill:#fbbf24}.tv-pin-red{fill:#f87171}
+.tv-pin-ping{fill:none!important;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:tvPing 2s cubic-bezier(0,0,.2,1) infinite}
+.tv-pin-ping.tv-pin-green{stroke:#4dff99}.tv-pin-ping.tv-pin-yellow{stroke:#fbbf24}.tv-pin-ping.tv-pin-red{stroke:#f87171}
+@keyframes tvPing{0%{transform:scale(1);opacity:.9}100%{transform:scale(3.2);opacity:0}}
+.tv-pin-label{fill:#050b16;font-size:9px;font-weight:800;text-anchor:middle;pointer-events:none}
+.tv-legend{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-top:8px;font-size:clamp(9px,.7vw,13px);color:#94a3b8}
+.tv-legend-note{color:#64748b}
+.tv-site-list{display:grid;grid-template-columns:1fr 1fr;align-content:start;gap:6px;min-height:0;overflow-y:auto;scrollbar-width:none}
+.tv-site-list::-webkit-scrollbar{display:none}
+.tv-site{display:flex;align-items:center;gap:8px;min-width:0;padding:clamp(5px,.45vw,9px) clamp(6px,.6vw,10px);border-radius:8px;border-left:3px solid;background:rgba(255,255,255,.035);font-size:clamp(9px,.66vw,13px);animation:tvSiteIn .45s ease both}
+@keyframes tvSiteIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.tv-site.lvl-green{border-color:#4dff99}
+.tv-site.lvl-yellow{border-color:#fbbf24}
+.tv-site.lvl-red{border-color:#f87171;background:rgba(248,113,113,.08)}
+.tv-site-dot{width:7px;height:7px;flex-shrink:0;border-radius:50%}
+.tv-site.lvl-green .tv-site-dot{background:#4dff99}
+.tv-site.lvl-yellow .tv-site-dot{background:#fbbf24}
+.tv-site.lvl-red .tv-site-dot{background:#f87171;animation:tvDotBlink 1.2s ease-in-out infinite}
+@keyframes tvDotBlink{50%{opacity:.25}}
+.tv-site-name{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#cbd5e1}
+.tv-site-flag{flex-shrink:0;font-size:.72em;font-weight:800;letter-spacing:.08em;color:#f87171;border:1px solid rgba(248,113,113,.5);border-radius:4px;padding:1px 4px}
+.tv-site-score{flex-shrink:0;min-width:2ch;text-align:right;font-weight:800;color:#fff}
+.tv-ticker{position:relative;display:flex;align-items:center;height:clamp(36px,3.4vw,60px);border-top:1px solid rgba(77,255,153,.15);background:rgba(0,0,0,.35)}
+.tv-ticker-label{display:flex;align-items:center;height:100%;padding:0 clamp(12px,1.4vw,28px);font-size:clamp(10px,.8vw,15px);font-weight:800;letter-spacing:.2em;color:#050b16;background:#4dff99;box-shadow:0 0 22px rgba(77,255,153,.4)}
+.tv-ticker-viewport{flex:1;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent);mask-image:linear-gradient(90deg,transparent,#000 3%,#000 97%,transparent)}
+.tv-ticker-track{display:inline-flex;white-space:nowrap;will-change:transform;animation:tvTicker 40s linear infinite}
+.tv-ticker-track span{padding:0 2.4em;font-size:clamp(11px,.95vw,18px);color:#e2e8f0}
+.tv-ticker-track span::before{content:'◆';margin-right:1em;font-size:.7em;color:#4dff99}
+@keyframes tvTicker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tv-exit{position:absolute;left:50%;bottom:clamp(46px,4.2vw,72px);transform:translateX(-50%);z-index:2;font:inherit;font-size:.8rem;font-weight:700;color:#e2e8f0;background:rgba(15,23,42,.85);border:1px solid rgba(148,163,184,.3);border-radius:999px;padding:8px 18px;cursor:pointer;transition:opacity .4s,background .2s}
+.tv-exit:hover{background:rgba(248,113,113,.25);border-color:rgba(248,113,113,.6)}
+.tv-idle{cursor:none}
+.tv-idle .tv-exit{opacity:0;pointer-events:none}
+@media (max-width:900px){.tv-body{grid-template-columns:1fr;overflow-y:auto}.tv-map{min-height:240px}.tv-proj-switch{display:none}}
+@media (prefers-reduced-motion: reduce){.tv-wall,.tv-site,.tv-pin-ping,.tv-kpi.alert b,.tv-site.lvl-red .tv-site-dot{animation:none}.tv-ticker-track{animation:none!important}}
+/* Topbar sync-status pill — green ping = online, amber fast ping = saving,
+   red still = offline. Text collapses to just the dot on narrow screens. */
+.sync-pill{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(0,51,102,.14);background:rgba(255,255,255,.65);font-family:inherit;font-size:.66rem;font-weight:700;letter-spacing:.08em;color:#1a2332;cursor:pointer;white-space:nowrap;transition:background .2s,border-color .2s,box-shadow .2s}
+.sync-pill:hover:not(:disabled){background:#fff;border-color:rgba(0,51,102,.3);box-shadow:0 2px 10px rgba(0,51,102,.1)}
+.sync-pill:disabled{cursor:progress}
+.sync-dot{position:relative;width:8px;height:8px;border-radius:50%;flex-shrink:0;background:#22c55e}
+.sync-dot::after{content:'';position:absolute;inset:0;border-radius:50%;background:inherit;animation:syncPing 2.2s cubic-bezier(0,0,.2,1) infinite}
+@keyframes syncPing{0%{transform:scale(1);opacity:.75}80%,100%{transform:scale(2.8);opacity:0}}
+.sync-saving .sync-dot{background:#f59e0b}
+.sync-saving .sync-dot::after{animation-duration:.9s}
+.sync-offline .sync-dot{background:#ef4444}
+.sync-offline .sync-dot::after{animation:none}
+.sync-offline{color:#b91c1c}
+.sync-ago{font-weight:500;letter-spacing:0;color:#5a6a85}
+.dark-mode .sync-pill{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:#e2e8f0}
+.dark-mode .sync-pill:hover:not(:disabled){background:rgba(255,255,255,.1)}
+.dark-mode .sync-ago{color:#94a3b8}
+.dark-mode .sync-offline{color:#fca5a5}
+@media (max-width:768px){.sync-pill .sync-label,.sync-pill .sync-ago{display:none}.sync-pill{padding:0 10px}}
+@media (prefers-reduced-motion: reduce){.sync-dot::after{animation:none}}
 .app-footer{text-align:center;padding:16px 24px;font-size:.76rem;color:#8a95a8;border-top:1px solid rgba(0,51,102,.08)}
 .app-footer b{color:#5a6a85}
 
@@ -1103,6 +1229,26 @@ details.form-control[open] summary::after{content:'▴'}
 .dark-mode .custom-tooltip.custom-tooltip-arrow-below::after{border-bottom-color:#30363d}
 @media (max-width:640px){.custom-tooltip{display:none}}
 .highlight-row td{background:#fff9e6!important}
+/* Equipment tables — a just-added/edited row briefly glows (no 100%
+   keyframe, so it fades back to whatever the row's own background is,
+   striped or dark mode, instead of snapping); a row being deleted fades
+   out for ~0.2s before it's removed. Colour/opacity only, no movement, so
+   it's fine under prefers-reduced-motion too. */
+@keyframes equipRowFlash{0%,35%{background-color:#fff1b8}}
+@keyframes equipRowFlashDark{0%,35%{background-color:#4a3f12}}
+.equip-table tr.row-flash td{animation:equipRowFlash 1.6s ease-out}
+.dark-mode .equip-table tr.row-flash td{animation-name:equipRowFlashDark}
+.equip-table tr{transition:opacity .22s ease}
+.equip-table tr.row-fade-out{opacity:0;pointer-events:none}
+/* PM/CM borang steps — direction-aware entrance (see pmStepAnimClass). No
+   fill-mode, so the transform is gone once it finishes and can't become a
+   containing block for any position:fixed child afterwards. */
+@keyframes pmStepInFwd{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes pmStepInBack{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@keyframes pmStepInFade{from{opacity:0}to{opacity:1}}
+.pm-step-in-fwd{animation:pmStepInFwd .3s cubic-bezier(.2,.7,.2,1)}
+.pm-step-in-back{animation:pmStepInBack .3s cubic-bezier(.2,.7,.2,1)}
+@media (prefers-reduced-motion: reduce){.pm-step-in-fwd,.pm-step-in-back{animation:pmStepInFade .2s ease}}
 
 /* USER MANAGEMENT */
 .role-super{background:#fff0f0;color:#b00020;font-weight:700}
@@ -2234,8 +2380,14 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
           </div>
         </div>
+        <!-- Data sync status pill (see lastDataSyncAt in setup) -->
+        <button class="sync-pill no-print" :class="'sync-'+syncStatus.state" @click="refreshDataFromPill" :disabled="loading" :title="syncPillTitle" :aria-label="syncPillTitle">
+          <span class="sync-dot" aria-hidden="true"></span>
+          <span class="sync-label">{{syncStatus.label}}</span>
+          <span v-if="syncStatus.state==='online' && syncAgoLabel" class="sync-ago">· Data {{syncAgoLabel}}</span>
+        </button>
         <!-- Dark mode toggle -->
-        <button @click="darkMode=!darkMode;themeIconSpin=true;setTimeout(()=>themeIconSpin=false,400)" class="btn btn-outline btn-sm topbar-icon-btn" :aria-label="darkMode?'Tukar ke mod terang':'Tukar ke mod gelap'"><span :class="{'theme-icon-spin':themeIconSpin}" style="display:inline-block">{{darkMode?'☀️':'🌙'}}</span></button>
+        <button @click="toggleDarkMode($event);themeIconSpin=true;setTimeout(()=>themeIconSpin=false,400)" class="btn btn-outline btn-sm topbar-icon-btn" :aria-label="darkMode?'Tukar ke mod terang':'Tukar ke mod gelap'"><span :class="{'theme-icon-spin':themeIconSpin}" style="display:inline-block">{{darkMode?'☀️':'🌙'}}</span></button>
         <button @click="openTutorial" class="btn btn-outline btn-sm topbar-icon-btn" title="Bantuan / Panduan" aria-label="Bantuan / Panduan">❓</button>
         <!-- Log Keluar — mobile only -->
         <div v-if="authUser" class="mobile-logout-btn" style="display:none;align-items:center;gap:6px">
@@ -2406,6 +2558,7 @@ details.form-control[open] summary::after{content:'▴'}
             <span style="color:#999">— menapis bilangan rekod PM &amp; carta di bawah sahaja. Skor kesihatan &amp; amaran sentiasa terkini.</span>
           </div>
           <div class="flex gap-8">
+            <button class="btn btn-outline btn-sm" @click="openTvMode" title="Paparan skrin penuh untuk TV / mesyuarat — auto-giliran CCTV & VIR">📺 Mod TV</button>
             <button class="btn btn-outline btn-sm" @click="toggleDashboardCompact">{{dashboardCompact?'🔽 Papar Penuh':'🔼 Papar Ringkas'}}</button>
             <button :disabled="loading" class="btn btn-outline btn-sm" @click="yirYear=dashboardYear; printYearInReview()">📋 Jana Laporan Tahunan ({{dashboardYear}})</button>
           </div>
@@ -3353,7 +3506,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="(s,i) in SITES" :key="s.id">
                   <td>{{i+1}}</td>
-                  <td>{{s.name}} <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
+                  <td><span class="site-morph-name" :style="morphSiteId===s.id ? 'view-transition-name:site-hero' : ''">{{s.name}}</span> <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
                   <td>{{(siteEquip[s.id]?.cameras||[]).length}} unit</td>
                   <td>{{(siteEquip[s.id]?.nvr||[]).length}} unit</td>
@@ -3375,7 +3528,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tbody>
                 <tr v-for="(s,i) in VIR_SITES" :key="s.id">
                   <td>{{i+1}}</td>
-                  <td>{{s.name}} <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
+                  <td><span class="site-morph-name" :style="morphSiteId===s.id ? 'view-transition-name:site-hero' : ''">{{s.name}}</span> <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
                   <td class="flex gap-8">
                     <button class="btn btn-sm btn-outline" @click="openSiteEquip(s,'rooms')" title="Urus senarai bilik & tag sistem">🚪 Bilik &amp; Sistem</button>
@@ -3470,7 +3623,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div class="flex justify-between items-center mb-20">
           <div class="flex items-center gap-8">
             <button class="btn btn-outline btn-sm" @click="openSites(currentProject)">← Balik</button>
-            <span class="fw-600" style="margin-left:4px">{{selSite?.name}}</span>
+            <span class="fw-600 site-morph-name" style="margin-left:4px" :style="morphSiteId && morphSiteId===selSite?.id ? 'view-transition-name:site-hero' : ''">{{selSite?.name}}</span>
             <span v-if="currentProject==='vir' && eqTab!=='rooms'" class="badge" style="background:#e8f0ff;color:#003366;font-size:.75rem">Sistem: {{equipVirSystem}}</span>
             <span v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY') && eqTab!=='rooms'" class="badge" style="background:#fff3e0;color:#7a2e00;font-size:.75rem">🚪 {{currentOptagerRoomName}}</span>
             <button v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY') && eqTab!=='rooms'" class="btn btn-outline btn-sm" @click="openSiteEquip(selSite,equipVirSystem)">🔁 Tukar Bilik</button>
@@ -3606,7 +3759,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="{'highlight-row':equipEditIdx.cameras===c._idx}">
+                  <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="[{'highlight-row':equipEditIdx.cameras===c._idx}, equipRowFx(c)]" :data-equip-uid="c._uid">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
                     <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
@@ -3695,7 +3848,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Peranan</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="{'highlight-row':equipEditIdx.nvr===i}">
+                  <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="[{'highlight-row':equipEditIdx.nvr===i}, equipRowFx(n)]" :data-equip-uid="n._uid">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
                     <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}}</td><td class="mono-data">{{n.serial}}</td><td class="mono-data">{{n.ip}}</td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
@@ -3783,7 +3936,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('hdd',grp.items)" @change="toggleEquipGroupSelectAll('hdd',grp.items)"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="{'highlight-row':equipEditIdx.hdd===h._idx}">
+                  <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="[{'highlight-row':equipEditIdx.hdd===h._idx}, equipRowFx(h)]" :data-equip-uid="h._uid">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
                     <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
@@ -3851,7 +4004,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.switches===i}">
+                  <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="[{'highlight-row':equipEditIdx.switches===i}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
                     <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data">{{s.ip}}</td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
@@ -3935,7 +4088,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="{'highlight-row':equipEditIdx.alarms===i}">
+                  <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="[{'highlight-row':equipEditIdx.alarms===i}, equipRowFx(a)]" :data-equip-uid="a._uid">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
                     <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td><td>{{a.ip}}</td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
@@ -4065,7 +4218,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="{'highlight-row':equipEditIdx.servers===i}">
+                  <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="[{'highlight-row':equipEditIdx.servers===i}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
                     <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}}</td><td>{{s.serial}}</td>
@@ -4139,7 +4292,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(t,i) in selSiteEquip.tablets||[]" :key="t._uid||i" :class="{'highlight-row':equipEditIdx.tablets===i}">
+                  <tr v-for="(t,i) in selSiteEquip.tablets||[]" :key="t._uid||i" :class="[{'highlight-row':equipEditIdx.tablets===i}, equipRowFx(t)]" :data-equip-uid="t._uid">
                     <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
                     <td>{{i+1}}</td><td>{{t.name}} <span v-if="isRecentEquip(t)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
                     <td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td><td>{{t.controlAppMachineId}}</td>
@@ -4227,7 +4380,7 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="{'highlight-row':equipEditIdx.misc===i}">
+                  <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="[{'highlight-row':equipEditIdx.misc===i}, equipRowFx(m)]" :data-equip-uid="m._uid">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
                     <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td><td>{{m.ip}}</td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
@@ -4335,7 +4488,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- STEP 1: Info -->
-        <div v-if="pmStep===1" class="card">
+        <div v-if="pmStep===1" class="card" :class="pmStepAnimClass">
           <div class="card-title">Maklumat Asas</div>
           <div class="form-row form-row-2">
             <div class="form-group">
@@ -4434,7 +4587,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- STEP 2: VIR Checklist -->
-        <div v-if="pmStep===2 && currentProject==='vir'" class="card">
+        <div v-if="pmStep===2 && currentProject==='vir'" class="card" :class="pmStepAnimClass">
           <div class="card-title">✅ Senarai Semak Peralatan VIR <span v-if="pm.virSystem" style="font-weight:400;color:#888;font-size:.8rem">({{pm.virSystem}})</span></div>
           <template v-for="section in virSectionsFor(pm.virSystem)" :key="section">
             <div style="font-weight:700;color:#1A2332;font-size:.85rem;padding:10px 0 6px;border-bottom:2px solid #1A2332;margin-bottom:8px;margin-top:14px">
@@ -4473,7 +4626,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- STEP 3: VIR Signatures -->
-        <div v-if="pmStep===3 && currentProject==='vir'">
+        <div v-if="pmStep===3 && currentProject==='vir'" :class="pmStepAnimClass">
           <div class="card">
             <div class="card-title">📝 Nota / Catatan Tambahan</div>
             <p class="text-muted" style="font-size:.75rem;margin:-6px 0 14px">Tajuk pada borang: <b>{{pm.maintType==='CM'?'CORRECTIVE MAINTENANCE (CM)':'PREVENTIVE MAINTENANCE (PM)'}}</b> — ikut "Jenis Penyelenggaraan" yang dipilih di atas.</p>
@@ -4544,7 +4697,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div><!-- /step3 vir wrapper -->
 
         <!-- STEP 2: CCTV Cameras -->
-        <div v-if="pmStep===2 && currentProject!=='vir'" class="card">
+        <div v-if="pmStep===2 && currentProject!=='vir'" class="card" :class="pmStepAnimClass">
           <div class="card-title">📷 Pemeriksaan Kamera</div>
           <p class="text-sm text-muted mb-12">Semak status setiap kamera. Klik field untuk edit jika ada perubahan serial/brand.</p>
           <div class="tbl-wrap" v-for="grp in pmCamerasGrouped" :key="grp.name" style="margin-bottom:20px">
@@ -4592,7 +4745,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- STEP 3: NVR + HDD -->
-        <div v-if="pmStep===3 && currentProject!=='vir'">
+        <div v-if="pmStep===3 && currentProject!=='vir'" :class="pmStepAnimClass">
           <div class="card">
             <div class="card-title">🖥️ Pemeriksaan NVR</div>
             <div class="tbl-wrap">
@@ -4649,7 +4802,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- STEP 4: Network + Server + Alarm -->
-        <div v-if="pmStep===4 && currentProject!=='vir'">
+        <div v-if="pmStep===4 && currentProject!=='vir'" :class="pmStepAnimClass">
           <div class="card">
             <div class="card-title">🔌 Pemeriksaan POE/Network Switch</div>
             <div class="tbl-wrap">
@@ -4716,7 +4869,7 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <!-- STEP 5: Support + Signatures + Submit -->
-        <div v-if="pmStep===5 && currentProject!=='vir'">
+        <div v-if="pmStep===5 && currentProject!=='vir'" :class="pmStepAnimClass">
           <div class="card">
             <div class="card-title">🧹 Perkara Lain-Lain</div>
             <div class="tbl-wrap">
@@ -8123,6 +8276,78 @@ details.form-control[open] summary::after{content:'▴'}
     </div>
   </div>
 
+  <!-- 📺 MOD TV / PUSAT KAWALAN (see tvMode in setup) — read-only wall display -->
+  <div v-if="tvMode" ref="tvRootEl" class="tv-wall no-print" :class="{'tv-idle':tvIdle}" @mousemove="tvPoke" @touchstart.passive="tvPoke" role="dialog" aria-label="Mod TV — Pusat Kawalan">
+    <div class="tv-grid-bg" aria-hidden="true"></div>
+    <header class="tv-head">
+      <div class="tv-brand">
+        <img src="LogoD1.svg" alt="Daya One" class="tv-logo">
+        <div>
+          <div class="tv-title">PUSAT KAWALAN PENYELENGGARAAN</div>
+          <div class="tv-sub">Sistem PM CCTV &amp; VIR · SPRM · Daya One Resources Sdn Bhd</div>
+        </div>
+      </div>
+      <div class="tv-proj-switch" role="tablist" aria-label="Projek">
+        <button :class="{on:tvProject==='cctv'}" @click="tvSwitchProject('cctv')">📹 CCTV</button>
+        <button :class="{on:tvProject==='vir'}" @click="tvSwitchProject('vir')">🖥️ VIR</button>
+      </div>
+      <div class="tv-clock">
+        <div class="tv-time">{{tvClockStr}}</div>
+        <div class="tv-date">{{tvDateStr}}</div>
+      </div>
+    </header>
+    <div class="tv-rotate-bar" aria-hidden="true"><span :key="tvRotateKey"></span></div>
+    <main class="tv-body">
+      <section class="tv-panel tv-left">
+        <div class="tv-panel-title">STATUS KESELURUHAN · {{tvProject==='vir'?'VIR':'CCTV'}}</div>
+        <div class="tv-ring-wrap">
+          <svg viewBox="0 0 120 120" class="tv-ring" aria-hidden="true">
+            <circle cx="60" cy="60" r="52" class="tv-ring-track"/>
+            <circle cx="60" cy="60" r="52" class="tv-ring-fill" :class="'lvl-'+tvLevel(tvSummary.score)" :style="{strokeDashoffset: 326.7*(1-tvSummary.score/100)}"/>
+          </svg>
+          <div class="tv-ring-label"><b>{{tvSummary.score}}</b><span>SKOR KESIHATAN</span></div>
+        </div>
+        <div class="tv-levels">
+          <div class="lvl-green"><b>{{tvSummary.green}}</b>Baik</div>
+          <div class="lvl-yellow"><b>{{tvSummary.yellow}}</b>Sederhana</div>
+          <div class="lvl-red"><b>{{tvSummary.red}}</b>Kritikal</div>
+        </div>
+        <div class="tv-kpis">
+          <div class="tv-kpi"><span>Jumlah Site</span><b>{{tvSummary.sites}}</b></div>
+          <div class="tv-kpi"><span>PM {{dashboardYear}}</span><b>{{tvSummary.pmDone}}<small>/{{tvSummary.target}}</small></b><i class="tv-kpi-bar"><em :style="{width:tvSummary.pmPct+'%'}"></em></i></div>
+          <div class="tv-kpi" :class="{alert:tvSummary.overdue}"><span>Lampau Tempoh</span><b>{{tvSummary.overdue}}</b></div>
+          <div class="tv-kpi"><span>CM {{dashboardYear}}</span><b>{{tvSummary.cmYear}}</b></div>
+          <div class="tv-kpi" :class="{alert:tvSummary.cmOpen}"><span>Kes CM Aktif</span><b>{{tvSummary.cmOpen}}</b></div>
+        </div>
+      </section>
+      <section class="tv-panel tv-mid">
+        <div class="tv-panel-title">PETA STATUS · MENGIKUT NEGERI</div>
+        <div ref="tvMapEl" class="tv-map"></div>
+        <div class="tv-legend"><span class="lvl-green">● Baik</span><span class="lvl-yellow">● Sederhana</span><span class="lvl-red">● Kritikal</span><span class="tv-legend-note">angka = bilangan site</span></div>
+      </section>
+      <section class="tv-panel tv-right">
+        <div class="tv-panel-title">STATUS SITE <span>· paling kritikal di atas</span></div>
+        <div class="tv-site-list" :key="tvProject">
+          <div v-for="(r,i) in tvSiteRows" :key="r.id" class="tv-site" :class="'lvl-'+r.level" :style="{animationDelay:(i*18)+'ms'}">
+            <span class="tv-site-dot"></span>
+            <span class="tv-site-name" :title="r.name">{{r.name}}</span>
+            <span v-if="r.overdue" class="tv-site-flag">LAMPAU</span>
+            <span class="tv-site-score">{{r.score}}</span>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="tv-ticker">
+      <div class="tv-ticker-label">● TERKINI</div>
+      <div class="tv-ticker-viewport">
+        <div class="tv-ticker-track" :key="tvProject+'|'+tvTickerItems.length" :style="{animationDuration: tvTickerDuration+'s'}">
+          <span v-for="(t,i) in tvTickerItems.concat(tvTickerItems)" :key="i">{{t}}</span>
+        </div>
+      </div>
+    </footer>
+    <button class="tv-exit" @click="closeTvMode" title="Keluar Mod TV (Esc)">✕ Keluar Mod TV</button>
+  </div>
+
 </div><!-- /app-wrap -->
 
 <!-- BATCH PRINT AREA (hidden on screen, shown only when printing) -->
@@ -8806,7 +9031,92 @@ function _applyChartDarkDefaults() {
 }
 function _ensureChartjs() {
   if(!_chartjsReady) _chartjsReady = _loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js');
-  return _chartjsReady.then(_applyChartDarkDefaults);
+  return _chartjsReady.then(() => { _registerChartPolishOnce(); _applyChartDarkDefaults(); });
+}
+// ── Chart polish (one global plugin, so none of the ~10 charts needed
+// editing) ──
+// 1. Gradient fills: a line dataset with an area fill, or a bar dataset
+//    with ONE solid colour, gets a vertical gradient built from that same
+//    colour (horizontal for indexAxis:'y' bars). Datasets that already use
+//    per-bar colour arrays / functions / gradients are left untouched. The
+//    original solid colour becomes the bar's hover colour, so hovering a
+//    bar still visibly reacts.
+// 2. Draw-on-view: a chart created below the fold (or in a hidden tab)
+//    finishes its entrance animation before anyone sees it — this replays
+//    it once, the first time the canvas actually scrolls into view.
+// 3. Sleeker defaults: dark rounded tooltip, rounded bar tops. Defaults
+//    only — any chart that sets its own value still wins.
+function _pmParseColor(s) {
+  let m = /^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$/i.exec(s);
+  if(m) return { r:+m[1], g:+m[2], b:+m[3], a: m[4] !== undefined ? +m[4] : 1 };
+  m = /^#([0-9a-f]{6})$/i.exec(s);
+  if(m) { const n = parseInt(m[1], 16); return { r:n>>16, g:(n>>8)&255, b:n&255, a:1 }; }
+  m = /^#([0-9a-f]{3})$/i.exec(s);
+  if(m) { const [r,g,b] = m[1].split('').map(h => parseInt(h+h, 16)); return { r, g, b, a:1 }; }
+  return null;
+}
+function _pmGradientFn(base, kind, horizontal) {
+  const c0 = _pmParseColor(base);
+  if(!c0) return base;
+  const rgba = a => `rgba(${c0.r},${c0.g},${c0.b},${Math.max(0, Math.min(1, a)).toFixed(3)})`;
+  let cacheKey = '', cached = null;
+  return (ctx) => {
+    const area = ctx.chart.chartArea;
+    if(!area) return base; // first pass, before layout
+    const key = `${area.left}|${area.top}|${area.right}|${area.bottom}`;
+    if(key !== cacheKey) {
+      const c = ctx.chart.ctx;
+      const g = horizontal ? c.createLinearGradient(area.left, 0, area.right, 0) : c.createLinearGradient(0, area.bottom, 0, area.top);
+      if(kind === 'area') { g.addColorStop(0, rgba(0)); g.addColorStop(1, rgba(Math.min(.5, c0.a * 2.6))); }
+      else { g.addColorStop(0, rgba(c0.a * .55)); g.addColorStop(1, rgba(c0.a)); }
+      cacheKey = key; cached = g;
+    }
+    return cached;
+  };
+}
+let _chartPolishRegistered = false;
+function _registerChartPolishOnce() {
+  if(_chartPolishRegistered || typeof Chart === 'undefined') return;
+  _chartPolishRegistered = true;
+  Chart.register({
+    id: 'pmPolish',
+    beforeUpdate(chart) {
+      const type = chart.config.type;
+      (chart.data.datasets || []).forEach(ds => {
+        if(typeof ds.backgroundColor !== 'string') return;
+        const dsType = ds.type || type;
+        if(dsType === 'line' && ds.fill) {
+          ds.backgroundColor = _pmGradientFn(ds.backgroundColor, 'area', false);
+        } else if(dsType === 'bar') {
+          if(ds.hoverBackgroundColor === undefined) ds.hoverBackgroundColor = ds.backgroundColor;
+          ds.backgroundColor = _pmGradientFn(ds.backgroundColor, 'bar', chart.options.indexAxis === 'y');
+        }
+      });
+    },
+    afterInit(chart) {
+      if(typeof IntersectionObserver === 'undefined') return;
+      if(window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const canvas = chart.canvas;
+      const r = canvas.getBoundingClientRect();
+      if(r.width && r.top < window.innerHeight && r.bottom > 0) return; // already on screen
+      const io = new IntersectionObserver(entries => {
+        if(!entries.some(e => e.isIntersecting)) return;
+        io.disconnect(); chart._pmIo = null;
+        if(!chart.canvas) return; // destroyed meanwhile
+        chart.reset(); chart.update();
+      }, { threshold: 0.3 });
+      io.observe(canvas);
+      chart._pmIo = io;
+    },
+    afterDestroy(chart) { chart._pmIo?.disconnect(); chart._pmIo = null; },
+  });
+  const tt = Chart.defaults.plugins.tooltip;
+  tt.backgroundColor = 'rgba(15,23,42,.92)';
+  tt.titleColor = '#f8fafc'; tt.bodyColor = '#e2e8f0';
+  tt.borderColor = 'rgba(148,163,184,.25)'; tt.borderWidth = 1;
+  tt.padding = 10; tt.cornerRadius = 8; tt.boxPadding = 4;
+  tt.titleFont = { weight: '600' };
+  Chart.defaults.elements.bar.borderRadius = 5;
 }
 let _mammothReady = null;
 function _ensureMammoth() {
@@ -8966,11 +9276,16 @@ createApp({
             trigger();
             return;
           }
-          document.startViewTransition(() => {
+          const vt = document.startViewTransition(() => {
             val = newVal;
             trigger();
             return nextTick();
           });
+          // A transition cut short (page switched again mid-transition, or
+          // the tab not visible) rejects these promises — the page change
+          // itself still applies, but unobserved they surfaced as "Uncaught
+          // (in promise) InvalidStateError" console errors.
+          vt.ready?.catch(() => {}); vt.finished?.catch(() => {}); vt.updateCallbackDone?.catch(() => {});
         }
       }));
     }
@@ -9176,6 +9491,36 @@ createApp({
     let _toastIdSeq = 0;
     const isOnline = ref(navigator.onLine);
     const pendingWrites = ref(0);
+    // ── Topbar sync-status pill ──
+    // Data is fetched with one-shot reads (loadAll), not real-time
+    // listeners, so the pill deliberately says "ONLINE · Data N min lalu"
+    // (time since the last successful loadAll) rather than claiming LIVE.
+    // Clicking it re-runs loadAll — except on Urus Peralatan, where loadAll
+    // would replace siteEquip in memory and could drop edits the debounced
+    // autosave hasn't written yet.
+    const lastDataSyncAt = ref(null);
+    const syncNow = ref(Date.now());
+    setInterval(() => { syncNow.value = Date.now(); }, 15000);
+    const syncStatus = computed(() => {
+      if(!isOnline.value) return { state:'offline', label:'LUAR TALIAN' };
+      if(pendingWrites.value > 0) return { state:'saving', label:'MENYEGERAK…' };
+      return { state:'online', label:'ONLINE' };
+    });
+    const syncAgoLabel = computed(() => {
+      const t = lastDataSyncAt.value;
+      if(!t) return '';
+      const s = Math.max(0, Math.round((syncNow.value - t) / 1000));
+      if(s < 45) return 'baru tadi';
+      const m = Math.round(s / 60);
+      if(m < 60) return m + ' min lalu';
+      return Math.floor(m / 60) + ' jam lalu';
+    });
+    const syncPillTitle = computed(() => {
+      if(syncStatus.value.state === 'offline') return 'Tiada sambungan internet — perubahan disimpan tempatan dan akan disegerakkan bila talian pulih.';
+      if(syncStatus.value.state === 'saving') return 'Sedang menghantar perubahan ke pelayan…';
+      const t = lastDataSyncAt.value ? new Date(lastDataSyncAt.value).toLocaleTimeString('ms-MY', { hour:'2-digit', minute:'2-digit' }) : '—';
+      return `Data terakhir dimuat dari pelayan pada ${t}. Klik untuk segar semula.`;
+    });
     let db, auth, storage;
 
     // ---- Equipment state ----
@@ -10452,6 +10797,32 @@ createApp({
       client2Name:'', client2Jawatan:'', client2Tarikh:''
     });
     const pmStep = ref(1);
+    // Direction-aware entrance for the borang's step panels: "Seterusnya"
+    // slides the new step in from the right, "Balik" from the left. Each
+    // step is its own v-if block (re-mounted on change), so a CSS animation
+    // class on mount is enough — no <Transition> wrapper, and the step
+    // switch itself is never delayed. The watcher runs before render
+    // (flush 'pre'), so the new panel mounts with the right direction.
+    const pmStepDir = ref('fwd');
+    const pmStepAnimClass = computed(() => 'pm-step-in-' + pmStepDir.value);
+    watch(pmStep, (n, o) => {
+      pmStepDir.value = (o == null || n >= o) ? 'fwd' : 'back';
+      // Seterusnya/Balik sit at the BOTTOM of a long step — without this
+      // the next step would mount (and play its slide-in) off-screen above
+      // the viewport. Only scrolls when the step indicator is out of view.
+      if(o == null) return;
+      nextTick(() => {
+        const bar = document.querySelector('.pm-progress-bar');
+        const main = document.querySelector('.main');
+        if(!bar || !main) return;
+        const offset = (document.querySelector('.topbar')?.offsetHeight || 0) + 12;
+        const y = bar.getBoundingClientRect().top;
+        if(y < offset) {
+          const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          main.scrollBy({ top: y - offset, behavior: reduce ? 'auto' : 'smooth' });
+        }
+      });
+    });
     const pmProgressPulse = ref(false);
     const pmStepLabels = computed(() =>
       currentProject.value === 'vir'
@@ -15286,7 +15657,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       { id:'cmd-rekod-vir', label:()=>'📋 Rekod Borang (VIR)', kw:'rekod borang senarai records vir', run: () => openPMList('vir') },
       { id:'cmd-laporan', label:()=>'📋 Laporan', kw:'laporan report', visible: () => canViewCredentials.value, run: () => { page.value = 'laporan'; } },
       { id:'cmd-laporan-lanjutan', label:()=>'📈 Laporan Lanjutan', kw:'laporan lanjutan analitik statistik advanced', visible: () => canViewCredentials.value, run: () => { page.value = 'laporan-lanjutan'; } },
-      { id:'cmd-dark-mode', label:()=>darkMode.value?'☀️ Tukar ke Mod Cerah':'🌙 Tukar ke Mod Gelap', kw:'dark mode gelap cerah tema theme', run: () => { darkMode.value = !darkMode.value; } },
+      { id:'cmd-tv-mode', label:()=>'📺 Mod TV (Pusat Kawalan)', kw:'mod tv pusat kawalan paparan skrin penuh wall noc mesyuarat display', run: () => { openTvMode(); } },
+      { id:'cmd-dark-mode', label:()=>darkMode.value?'☀️ Tukar ke Mod Cerah':'🌙 Tukar ke Mod Gelap', kw:'dark mode gelap cerah tema theme', run: () => { toggleDarkMode(); } },
       { id:'cmd-profile', label:()=>'👤 Profil Saya', kw:'profil profile saya', run: () => { initProfile(); page.value = 'profile'; } },
     ];
     const searchResults = computed(() => {
@@ -18592,12 +18964,21 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(_loadAllPartialFail) {
           showToast('Sebahagian data gagal dimuat — cuba muat semula halaman.', 'error');
         }
+        lastDataSyncAt.value = Date.now(); syncNow.value = Date.now(); // topbar sync pill
       } catch(e) {
         console.error(e);
         showToast('Gagal memuatkan data: ' + e.message + '. Semak sambungan internet.', 'error');
       }
       loading.value=false;
       initialLoading.value=false;
+    }
+    // Topbar sync pill click — see lastDataSyncAt's comment.
+    async function refreshDataFromPill() {
+      if(loading.value) return;
+      if(!isOnline.value) { showToast('Tiada sambungan internet — tidak dapat segar semula data.', 'error'); return; }
+      if(page.value === 'site-equip') { showToast('Tidak boleh segar semula di halaman Urus Peralatan — keluar dari halaman ini dahulu supaya perubahan yang belum disimpan tidak hilang.', 'error'); return; }
+      await loadAll();
+      showToast('Data disegerakkan!');
     }
 
     // ---- User Management ----
@@ -19517,7 +19898,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // directly; global-search-result clicks fall through here) also trigger
     // the picker if the last-active system happened to be Optager, since a
     // stale room-uid from a DIFFERENT site would be wrong context to reuse.
+    // Site-name "morph" between Senarai Site and Urus Peralatan: the clicked
+    // site's name in the list and the equipment page header both carry
+    // view-transition-name:site-hero, so the existing page View Transition
+    // (see _usePageTransitionRef) flies one into the other — and "← Balik"
+    // flies it back. Only ONE element per page ever has the name (a
+    // duplicate would make the browser cancel the whole transition).
+    const morphSiteId = ref(null);
     function openSiteEquip(site, mode) {
+      morphSiteId.value = site?.id || null;
       const resolvedSystem = mode === 'rooms' ? null : (mode || equipVirSystem.value);
       if(currentProject.value === 'vir' && resolvedSystem === 'Optager HD4000') {
         _openOptagerRoomPicker(site);
@@ -19575,6 +19964,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // Backfill ids for equipment saved before this id-based keying existed.
       EQUIP_KINDS.forEach(k => (eq[k]||[]).forEach(item => { if(!item._uid) item._uid = _genId(); }));
       EQUIP_KINDS.forEach(k => equipSelected[k].clear()); // don't carry bulk-selection over from a previous site
+      equipFlashCutoff.value = Date.now(); _equipEditReturnKind = null; // rows loaded with the page never flash
       // Same reasoning for password-reveal state — unlike equipSelected,
       // revealedPw previously had no reset at all, so a credential
       // revealed on one site stayed unmasked indefinitely for the rest of
@@ -19937,6 +20327,51 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         }
       } catch(e) { showToast('Gagal salin ke clipboard: ' + e.message, 'error'); }
     }
+    // ── Equipment table row feedback (UI polish) ──
+    // row-flash: every add*/edit/bulk-edit stamps the item with a fresh
+    // _ts, so "_ts newer than equipFlashCutoff" marks just-saved rows
+    // without tracking ids per function. The cutoff is moved past them ~2s
+    // later so the class doesn't linger (and replay if a row re-mounts,
+    // e.g. a camera moving to another NVR group). openSiteEquip() resets it
+    // so rows loaded with the page never flash.
+    // row-fade-out: a row being deleted fades for ~0.2s before the splice.
+    const equipFlashCutoff = ref(Date.now());
+    const equipFadingUids = reactive(new Set());
+    let _equipFlashTimer = null;
+    let _equipEditReturnKind = null; // kind whose ✏️ Edit form is open
+    function equipRowFx(item) {
+      return {
+        'row-flash': (item?._ts || 0) > equipFlashCutoff.value,
+        'row-fade-out': !!item?._uid && equipFadingUids.has(item._uid),
+      };
+    }
+    function _bumpEquipFlash() {
+      clearTimeout(_equipFlashTimer);
+      _equipFlashTimer = setTimeout(() => { equipFlashCutoff.value = Date.now(); }, 2000);
+    }
+    // Called by each add*() right after it saves. After saving an EDIT,
+    // brings the user back down to the row they edited (editEquipItem
+    // scrolled them UP to the form). Plain adds stay at the form so several
+    // items can be entered back to back.
+    function _afterEquipSave(kind) {
+      _bumpEquipFlash();
+      if(_equipEditReturnKind !== kind) return;
+      _equipEditReturnKind = null;
+      const newest = (selSiteEquip.value[kind] || []).reduce((b, it) => (it._ts || 0) > (b?._ts || 0) ? it : b, null);
+      if(!newest?._uid) return;
+      nextTick(() => {
+        const row = document.querySelector(`[data-equip-uid="${CSS.escape(newest._uid)}"]`);
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        row?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+      });
+    }
+    // Marks rows as fading and resolves once the fade has had time to play;
+    // the caller splices, then clears the uids from equipFadingUids.
+    function _fadeOutEquipRows(uids) {
+      uids.forEach(u => { if(u) equipFadingUids.add(u); });
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      return new Promise(r => setTimeout(r, reduce ? 0 : 220));
+    }
     function toggleEquipRow(kind, uid) {
       if(!uid) return;
       equipSelected[kind].has(uid) ? equipSelected[kind].delete(uid) : equipSelected[kind].add(uid);
@@ -19974,8 +20409,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!sel.size) return;
       if(!(await askConfirm(`Padam ${sel.size} rekod terpilih?`))) return;
       const list = activeEquip()[selSite.value.id][kind];
+      const fadeUids = [...sel];
+      await _fadeOutEquipRows(fadeUids); // brief fade-out first (UI polish) — splice below is already _uid-based
       const editedUid = equipEditIdx[kind]!==null ? (list[equipEditIdx[kind]]||{})._uid : null;
       for(let i=list.length-1; i>=0; i--) { if(sel.has(list[i]._uid)) list.splice(i,1); }
+      fadeUids.forEach(u => equipFadingUids.delete(u));
       sel.clear();
       if(editedUid) {
         // Deleting rows shifts every index after them, so the stored
@@ -20082,6 +20520,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(editedUid && sel.has(editedUid)) cancelEditEquip(kind);
       let count = 0;
       list.forEach(it => { if(sel.has(it._uid)) { it[field] = value; it._ts = Date.now(); count++; } });
+      _bumpEquipFlash(); // the bulk-edited rows glow briefly (fresh _ts)
       bulkEditModal.show = false;
       showToast(`${bulkEditFieldsFor(kind)[field].label} dikemaskini untuk ${count} rekod! Jangan lupa klik "Simpan Semua".`);
     }
@@ -20261,6 +20700,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       else if(key === 'alarms') _editAlarmItem(item);
       else _editStandardEquipItem(key, item, refs);
       equipEditIdx[key] = idx;
+      _equipEditReturnKind = key; // _afterEquipSave() scrolls back to this row once saved
       // The edit form sits above the (possibly long) list — scroll it into
       // view so the user isn't left staring at the row they just clicked.
       await nextTick();
@@ -20268,6 +20708,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     function cancelEditEquip(key) {
       equipEditIdx[key] = null;
+      if(_equipEditReturnKind === key) _equipEditReturnKind = null;
       resetForm(EQUIP_KEY_TO_FORM[key]);
     }
 
@@ -20445,6 +20886,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       else { list.push({...camResolved, _uid:_genId(), _ts:Date.now()}); showToast('Kamera berjaya ditambah!'); }
       _maybeAddCustomBrand('BRANDS', camResolved.brand);
       _maybeAddCustomModel('cameras', camResolved.brand, camResolved.model);
+      _afterEquipSave('cameras');
       resetForm('nCam');
     }
     function addNVR() {
@@ -20461,6 +20903,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       _sortByName(list);
       _maybeAddCustomBrand('NVR_BRANDS', resolved.brand);
       _maybeAddCustomModel('nvr', resolved.brand, resolved.model);
+      _afterEquipSave('nvr');
       resetForm('nNVR');
     }
     function addHDD() {
@@ -20480,6 +20923,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('HDD berjaya ditambah!'); }
       _maybeAddCustomBrand('HDD_BRANDS', resolved.brand);
       _maybeAddCustomModel('hdd', resolved.brand, resolved.model);
+      _afterEquipSave('hdd');
       resetForm('nHDD');
     }
     function addSwitch() {
@@ -20496,6 +20940,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       _sortByName(list);
       _maybeAddCustomBrand('SWITCH_BRANDS', resolved.brand);
       _maybeAddCustomModel('switches', resolved.brand, resolved.model);
+      _afterEquipSave('switches');
       resetForm('nSW');
     }
     // VIR rooms are much simpler than equipment (just a name + which system
@@ -20574,6 +21019,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...resolved, _uid:list[equipEditIdx.alarms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Alarm berjaya ditambah!'); }
       _sortByName(list);
+      _afterEquipSave('alarms');
       resetForm('nALM');
     }
     // "Display Cable" and "Digital Clock" only ever use OEM as brand —
@@ -20608,6 +21054,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // add) instead of the standard resetForm() every sibling equipment
       // function uses. Switched to resetForm() so it can never drift out
       // of sync with FORM_DEFAULTS.nMISC again.
+      _afterEquipSave('misc');
       resetForm('nMISC');
     }
     // Resolves one "dropdown value + optional custom text" pair the same
@@ -20660,6 +21107,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
       if(equipEditIdx.servers !== null) { item._uid = list[equipEditIdx.servers]._uid||_genId(); list[equipEditIdx.servers] = item; equipEditIdx.servers = null; showToast('Appliance dikemaskini!'); }
       else { item._uid = _genId(); list.push(item); showToast('Appliance berjaya ditambah!'); }
+      _afterEquipSave('servers');
       resetForm('nServer');
     }
     // Optager license (.lic) file upload/download — stored as a base64 data
@@ -20705,6 +21153,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       else { item._uid = _genId(); list.push(item); showToast('Tablet berjaya ditambah!'); }
       _maybeAddCustomBrand('TABLET_BRANDS', item.brand);
       _maybeAddCustomModel('tablets', item.brand, item.model);
+      _afterEquipSave('tablets');
       resetForm('nTablet');
     }
     // Control APP license (.lic) upload/download — same base64-in-Firestore
@@ -20797,8 +21246,20 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const { siteId, key, idx, itemSnapshot, reason, reasonCustom } = removeReasonModal;
       const list = activeEquip()[siteId]?.[key];
       if(!list) { removeReasonModal.show = false; return; }
+      // Brief fade-out before the row disappears (UI polish). The index is
+      // re-resolved by _uid afterwards in case the list changed during the
+      // ~0.2s fade; rows without a _uid are removed immediately as before.
+      let delIdx = idx;
+      const fadeUid = itemSnapshot?._uid;
+      if(fadeUid) {
+        removeReasonModal.show = false;
+        await _fadeOutEquipRows([fadeUid]);
+        delIdx = list.findIndex(it => it._uid === fadeUid);
+        if(delIdx === -1) { equipFadingUids.delete(fadeUid); return; }
+      }
       const editedUid = equipEditIdx[key]!==null ? (list[equipEditIdx[key]]||{})._uid : null;
-      list.splice(idx,1);
+      list.splice(delIdx,1);
+      if(fadeUid) equipFadingUids.delete(fadeUid);
       if(editedUid) {
         const newIdx = list.findIndex(it => it._uid === editedUid);
         if(newIdx === -1) cancelEditEquip(key);
@@ -25017,6 +25478,195 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       document.body.classList.toggle('dark-mode', val);
       localStorage.setItem('pm_darkmode', val?'1':'0');
     });
+    // Circular "reveal" theme switch — the new theme spreads out from the
+    // toggle button as a growing circle (View Transitions API + a clip-path
+    // animation on the ::view-transition-new(root) snapshot). html.theme-vt
+    // switches off the default page cross-fade for just this transition so
+    // the two don't fight. Browsers without View Transitions, or with
+    // reduced motion, simply switch instantly exactly like before.
+    function toggleDarkMode(e) {
+      const next = !darkMode.value;
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if(typeof document.startViewTransition !== 'function' || reduce) { darkMode.value = next; return; }
+      const r = e?.currentTarget?.getBoundingClientRect?.();
+      const x = r ? r.left + r.width/2 : window.innerWidth - 60;
+      const y = r ? r.top + r.height/2 : 40;
+      const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+      const root = document.documentElement;
+      root.classList.add('theme-vt');
+      const vt = document.startViewTransition(() => {
+        darkMode.value = next;
+        document.body.classList.toggle('dark-mode', next); // apply now — the watcher above runs a tick later
+        return nextTick();
+      });
+      vt.ready.then(() => {
+        root.animate(
+          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+          { duration: 550, easing: 'cubic-bezier(.4,0,.2,1)', pseudoElement: '::view-transition-new(root)' }
+        );
+      }).catch(() => {});
+      vt.updateCallbackDone?.catch(() => {});
+      vt.finished.catch(() => {}).finally(() => root.classList.remove('theme-vt'));
+    }
+
+    // ── 📺 Mod TV / Pusat Kawalan (control-room wall display) ──
+    // Full-screen, read-only "operations centre" view for an office TV or a
+    // meeting: per-project health ring + KPIs, a Malaysia map coloured by
+    // each state's worst site, a worst-first site status grid and a
+    // scrolling ticker (today's teams, overdue sites, open CM cases).
+    // Auto-rotates CCTV ↔ VIR every 30s and re-fetches data every 5 min.
+    // Purely a VIEW over the same computeds the dashboard already uses —
+    // nothing in here writes anything.
+    const tvMode = ref(false);
+    const tvProject = ref('cctv');
+    const tvNow = ref(new Date());
+    const tvIdle = ref(false);
+    const tvMapEl = ref(null);
+    const tvRootEl = ref(null);
+    const tvRotateKey = ref(0); // bumped to restart the rotation progress bar
+    const TV_ROTATE_MS = 30000;
+    let _tvClock = null, _tvRotate = null, _tvRefresh = null, _tvIdleTimer = null, _tvWakeLock = null, _tvWasFullscreen = false;
+    function tvLevel(score) { return score >= 75 ? 'green' : score >= 45 ? 'yellow' : 'red'; } // same thresholds as siteHealthScores
+    const tvSiteRows = computed(() => (tvProject.value === 'vir' ? VIR_SITES : SITES).map(s => {
+      const hs = siteHealthScores.value[s.id] || {};
+      return { id:s.id, name:s.name, score: hs.score ?? 0, level: hs.level || 'red', overdue: !!overdueMap.value[s.id] };
+    }).sort((a, b) => (a.score - b.score) || a.name.localeCompare(b.name)));
+    const tvSummary = computed(() => {
+      const rows = tvSiteRows.value;
+      const isVir = tvProject.value === 'vir';
+      const pmDone = isVir ? pmThisYearVIR.value : pmThisYearCCTV.value;
+      const target = isVir ? virYearTarget.value : cctvYearTarget.value;
+      return {
+        score: rows.length ? Math.round(rows.reduce((t, r) => t + r.score, 0) / rows.length) : 0,
+        sites: rows.length,
+        green: rows.filter(r => r.level === 'green').length,
+        yellow: rows.filter(r => r.level === 'yellow').length,
+        red: rows.filter(r => r.level === 'red').length,
+        overdue: rows.filter(r => r.overdue).length,
+        pmDone, target, pmPct: target ? Math.min(100, Math.round(pmDone / target * 100)) : 0,
+        cmYear: isVir ? cmThisYearVIR.value : cmThisYearCCTV.value,
+        cmOpen: cmCases.value.filter(k => k.status !== 'selesai' && (k.project || 'cctv') === tvProject.value).length,
+      };
+    });
+    const tvTodayStr = computed(() => _localDateStr(tvNow.value));
+    const tvTickerItems = computed(() => {
+      const proj = tvProject.value;
+      const projLabel = proj === 'vir' ? 'SPRM - VIR' : 'SPRM - CCTV';
+      const items = [];
+      teamAssignments.value
+        .filter(t => t.date === tvTodayStr.value && t.project === projLabel)
+        .sort((a, b) => String(a.team).localeCompare(String(b.team)))
+        .forEach(t => items.push(`🛠️ Hari ini: Team ${t.team} — ${t.siteName || '-'} (${t.maintType || 'PM'})`));
+      tvSiteRows.value.filter(r => r.overdue).forEach(r => items.push(`⚠️ ${r.name} — PM lampau tempoh`));
+      cmCases.value
+        .filter(k => k.status !== 'selesai' && (k.project || 'cctv') === proj)
+        .forEach(k => items.push(`🔧 Kes CM aktif: ${k.title || '-'} — ${k.siteName || '-'}`));
+      if(!items.length) items.push('✅ Tiada isu kritikal — semua site beroperasi seperti biasa');
+      return items;
+    });
+    const tvTickerDuration = computed(() => Math.max(28, Math.round(tvTickerItems.value.join(' ').length * 0.2)));
+    const tvClockStr = computed(() => tvNow.value.toLocaleTimeString('ms-MY', { hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false }));
+    const tvDateStr = computed(() => tvNow.value.toLocaleDateString('ms-MY', { weekday:'long', day:'numeric', month:'long', year:'numeric' }));
+    // Own small d3 renderer (the dashboard's Peta Penugasan widget is
+    // single-container), reusing its cached topojson + SITE_STATE_MAP.
+    async function _renderTvMap() {
+      const el = tvMapEl.value;
+      if(!el) return;
+      try {
+        await _ensureD3();
+        if(!mapTopologyCache) { const res = await fetch('malaysia-states.topojson'); mapTopologyCache = await res.json(); }
+        if(tvMapEl.value !== el) return; // closed/re-rendered meanwhile
+        const geo = topojson.feature(mapTopologyCache, mapTopologyCache.objects.states);
+        const W = 900, H = 420;
+        const path = d3.geoPath(d3.geoMercator().fitSize([W, H], geo));
+        const rank = { green:1, yellow:2, red:3 };
+        const byState = {};
+        tvSiteRows.value.forEach(r => {
+          const st = SITE_STATE_MAP[r.id];
+          if(!st) return;
+          const cur = byState[st] || (byState[st] = { level:null, count:0, overdue:0 });
+          cur.count++;
+          if(r.overdue) cur.overdue++;
+          if(!cur.level || rank[r.level] > rank[cur.level]) cur.level = r.level;
+        });
+        el.innerHTML = '';
+        const svg = d3.select(el).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('preserveAspectRatio', 'xMidYMid meet')
+          .attr('role', 'img').style('width', '100%').style('height', '100%');
+        svg.append('title').text('Peta status site mengikut negeri');
+        svg.selectAll('path').data(geo.features).join('path')
+          .attr('d', path)
+          .attr('class', d => 'tv-state tv-state-' + (byState[d.properties.Name]?.level || 'none'));
+        const pins = svg.append('g');
+        geo.features.forEach(f => {
+          const info = byState[f.properties.Name];
+          if(!info) return;
+          const [x, y] = path.centroid(f);
+          if(!isFinite(x) || !isFinite(y)) return;
+          const cls = 'tv-pin tv-pin-' + info.level;
+          if(info.level !== 'green' || info.overdue) pins.append('circle').attr('class', 'tv-pin-ping ' + cls).attr('cx', x).attr('cy', y).attr('r', 8);
+          pins.append('circle').attr('class', cls).attr('cx', x).attr('cy', y).attr('r', 8);
+          pins.append('text').attr('class', 'tv-pin-label').attr('x', x).attr('y', y + 3).text(info.count);
+        });
+      } catch(e) {
+        if(tvMapEl.value === el) el.innerHTML = '<div class="tv-map-err">Peta tidak dapat dimuat</div>';
+      }
+    }
+    function _tvRestartRotation() {
+      clearInterval(_tvRotate);
+      tvRotateKey.value++;
+      _tvRotate = setInterval(() => { tvProject.value = tvProject.value === 'cctv' ? 'vir' : 'cctv'; tvRotateKey.value++; }, TV_ROTATE_MS);
+    }
+    function tvSwitchProject(proj) { tvProject.value = proj; _tvRestartRotation(); }
+    // Exit button + cursor fade out after 3s without mouse/touch movement.
+    function tvPoke() {
+      tvIdle.value = false;
+      clearTimeout(_tvIdleTimer);
+      _tvIdleTimer = setTimeout(() => { tvIdle.value = true; }, 3000);
+    }
+    async function _tvAcquireWakeLock() {
+      try { _tvWakeLock = await navigator.wakeLock?.request('screen'); } catch(e) { _tvWakeLock = null; }
+    }
+    async function openTvMode() {
+      tvProject.value = currentProject.value === 'vir' ? 'vir' : 'cctv';
+      tvNow.value = new Date();
+      tvMode.value = true;
+      loadCmCases(); // lazily-loaded collection — feeds "Kes CM Aktif" + the ticker
+      clearInterval(_tvClock); _tvClock = setInterval(() => { tvNow.value = new Date(); }, 1000);
+      _tvRestartRotation();
+      // Never on Urus Peralatan — loadAll() would replace siteEquip in memory
+      // underneath any edit the debounced autosave hasn't written yet.
+      clearInterval(_tvRefresh);
+      _tvRefresh = setInterval(() => { if(page.value !== 'site-equip' && isOnline.value && !loading.value) loadAll(); }, 5 * 60 * 1000);
+      tvPoke();
+      await nextTick();
+      try { await tvRootEl.value?.requestFullscreen?.({ navigationUI:'hide' }); } catch(e) { /* refused → stays a full-window overlay */ }
+      _tvWasFullscreen = !!document.fullscreenElement;
+      _tvAcquireWakeLock(); // keeps the TV/laptop screen from sleeping
+      _renderTvMap();
+    }
+    function closeTvMode() {
+      if(!tvMode.value) return;
+      tvMode.value = false;
+      clearInterval(_tvClock); clearInterval(_tvRotate); clearInterval(_tvRefresh); clearTimeout(_tvIdleTimer);
+      _tvClock = _tvRotate = _tvRefresh = _tvIdleTimer = null;
+      try { _tvWakeLock?.release?.(); } catch(e) {}
+      _tvWakeLock = null;
+      if(document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+      _tvWasFullscreen = false;
+    }
+    watch(tvProject, () => { if(tvMode.value) nextTick(_renderTvMap); });
+    watch(siteHealthScores, () => { if(tvMode.value) _renderTvMap(); });
+    watch(authUser, u => { if(!u) closeTvMode(); }); // logout / session end
+    // Esc inside fullscreen is consumed by the browser (it only exits
+    // fullscreen) — so leaving fullscreen closes TV mode too.
+    document.addEventListener('fullscreenchange', () => { if(tvMode.value && _tvWasFullscreen && !document.fullscreenElement) closeTvMode(); });
+    document.addEventListener('keydown', e => {
+      if(!tvMode.value) return;
+      if(e.key === 'Escape') { closeTvMode(); return; }
+      if(e.key === 'ArrowLeft' || e.key === 'ArrowRight') tvSwitchProject(tvProject.value === 'cctv' ? 'vir' : 'cctv');
+    });
+    // The browser drops a wake lock whenever the tab is hidden — re-take it.
+    document.addEventListener('visibilitychange', () => { if(tvMode.value && document.visibilityState === 'visible') _tvAcquireWakeLock(); });
 
     // ---- Init ----
     onMounted(()=>{
@@ -25158,7 +25808,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     return {
-      page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
+      page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, syncStatus, syncAgoLabel, syncPillTitle, refreshDataFromPill, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, pmVirItemsBySection, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
@@ -25168,7 +25818,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
-      pm, pmStep, pmStepLabels, pmProgressPulse, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
+      pm, pmStep, pmStepLabels, pmProgressPulse, pmStepAnimClass, equipRowFx, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV, pmActiveFilterChips, clearAllPmFilters,
       addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine, pmHasNota,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
@@ -25299,7 +25949,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       mobileNavOpen, sidebarIndicatorStyle, savedCheckmark, ptrState, showScrollTop, scrollToTop, topbarCompact,
       onExpandEnter, onExpandAfterEnter, onExpandLeave,
       confirmModal, askConfirm, respondConfirmModal, copyToClipboard, runToastUndo,
-      darkMode, themeIconSpin,
+      darkMode, themeIconSpin, toggleDarkMode, morphSiteId,
+      tvMode, tvProject, tvIdle, tvMapEl, tvRootEl, tvRotateKey, tvSiteRows, tvSummary, tvTickerItems, tvTickerDuration, tvClockStr, tvDateStr, tvLevel, tvSwitchProject, tvPoke, openTvMode, closeTvMode,
       setTimeout
     };
   }
