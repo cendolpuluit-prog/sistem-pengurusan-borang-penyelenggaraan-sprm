@@ -1938,6 +1938,33 @@ details.form-control[open] summary::after{content:'▴'}
   </div>
 </div>
 
+<!-- SUPERADMIN PIN (2FA-lite) — its own branch between login and the app,
+     NOT a modal inside app-wrap: the app must not be mounted (or reachable
+     by refreshing the page) until the PIN passes. See pinGate in setup(). -->
+<div v-else-if="pinGate" class="pin-gate-wrap" style="min-height:100vh">
+  <div class="modal-bg">
+    <div class="modal" style="max-width:380px;text-align:center">
+      <div style="font-size:2rem;margin-bottom:6px">🔒</div>
+      <h3 style="text-align:center">{{pinModal.mode==='setup' ? 'Tetapkan PIN Keselamatan' : 'Masukkan PIN Keselamatan'}}</h3>
+      <p style="font-size:.83rem;color:#555;margin-bottom:16px">
+        <template v-if="pinModal.mode==='setup'">Sebagai lapisan keselamatan tambahan untuk akaun Superadmin, sila tetapkan PIN 6-digit. PIN ini akan diminta setiap kali log masuk selepas kata laluan.</template>
+        <template v-else>Sila masukkan PIN 6-digit anda untuk melengkapkan log masuk Superadmin.</template>
+      </p>
+      <div class="form-group">
+        <input class="form-control" type="password" inputmode="numeric" maxlength="6" v-model="pinModal.pin" placeholder="••••••" style="text-align:center;font-size:1.4rem;letter-spacing:.4em" @keyup.enter="pinModal.mode==='setup' ? submitPinSetup() : submitPinVerify()">
+      </div>
+      <div class="form-group" v-if="pinModal.mode==='setup'">
+        <input class="form-control" type="password" inputmode="numeric" maxlength="6" v-model="pinModal.confirmPin" placeholder="Sahkan PIN" style="text-align:center;font-size:1.4rem;letter-spacing:.4em" @keyup.enter="submitPinSetup">
+      </div>
+      <p v-if="pinModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{pinModal.err}}</p>
+      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" @click="pinModal.mode==='setup' ? submitPinSetup() : submitPinVerify()" :disabled="loading">
+        {{loading?'Memproses...':(pinModal.mode==='setup'?'Tetapkan PIN':'Sahkan')}}
+      </button>
+      <button class="btn btn-outline" style="width:100%" @click="cancelPinModal">Batal &amp; Log Keluar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MAIN APP -->
 <div v-else class="app-wrap" :class="pageAccentClass">
 
@@ -3555,6 +3582,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.accessUser" autocomplete="off"></div>
                 <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nCam.accessPw" autocomplete="new-password"></div>
               </template>
+              <div v-if="currentProject!=='vir'" class="form-group" style="grid-column:1/-1"><label>Nota <span class="text-muted text-sm">(pilihan — dipapar dalam senarai ini sahaja, tidak masuk borang PM/CM)</span></label><textarea class="form-control" v-model="nCam.equipNota" rows="2" placeholder="cth: Kamera kerap offline bila hujan / perlu tangga untuk akses"></textarea></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addCamera">{{equipEditIdx.cameras!==null?'✓ Kemaskini Kamera':'+ Tambah Kamera'}}</button>
@@ -3576,12 +3604,13 @@ details.form-control[open] summary::after{content:'▴'}
                 <span class="badge">{{grp.items.length}} Kamera</span>
               </div>
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th>Redundance</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="{'highlight-row':equipEditIdx.cameras===c._idx}">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
                     <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
+                    <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="c.equipNota">{{c.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
@@ -4178,6 +4207,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan, cth: PC)</span></label><input class="form-control" v-model="nMISC.accessUser" autocomplete="off"></div>
                 <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nMISC.accessPw" autocomplete="new-password"></div>
               </template>
+              <div v-if="currentProject!=='vir'" class="form-group" style="grid-column:1/-1"><label>Nota <span class="text-muted text-sm">(pilihan — dipapar dalam senarai ini sahaja, tidak masuk borang PM/CM)</span></label><textarea class="form-control" v-model="nMISC.equipNota" rows="2" placeholder="cth: UPS bateri lemah, perlu tukar tahun depan"></textarea></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addMisc">{{equipEditIdx.misc!==null?'✓ Kemaskini Peralatan':'+ Tambah Peralatan'}}</button>
@@ -4195,11 +4225,12 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="{'highlight-row':equipEditIdx.misc===i}">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
                     <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td><td>{{m.ip}}</td>
+                    <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{m.accessPw ? (revealedPw.misc.has(m._uid) ? m.accessPw : '••••••') : '-'}}</span>
@@ -4211,7 +4242,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
+                  <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="(canViewCredentials?11:9)+(currentProject!=='vir'?1:0)" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -5880,7 +5911,7 @@ details.form-control[open] summary::after{content:'▴'}
             <button class="btn btn-sm btn-outline" @click="viewUserAuditLog(u)" title="Lihat aktiviti pengguna ini dalam Log Audit">📋 Aktiviti</button>
             <button class="btn btn-sm btn-outline" @click="openEditUser(u)" :disabled="u.role==='superadmin'" title="Superadmin edit maklumat sendiri di tab Profil Saya">✏️ Edit</button>
             <button class="btn btn-sm btn-outline" @click="openResetPw(u)" :disabled="u.role==='superadmin'" title="Reset kata laluan pengguna">🔑 Reset PW</button>
-            <button class="btn btn-sm" :class="u.disabled?'btn-success':'btn-warning'" @click="toggleFreeze(u)">{{u.disabled?'✅ Aktif':'🔒 Freeze'}}</button>
+            <button class="btn btn-sm" :class="u.disabled?'btn-success':'btn-warning'" @click="toggleFreeze(u)" :disabled="u.role==='superadmin' && !u.disabled">{{u.disabled?'✅ Aktif':'🔒 Freeze'}}</button>
             <button class="btn btn-sm btn-danger" @click="deleteUser(u)" :disabled="u.role==='superadmin'">🗑</button>
           </div>
         </div>
@@ -8059,29 +8090,6 @@ details.form-control[open] summary::after{content:'▴'}
     </div>
   </div>
 
-  <!-- SUPERADMIN PIN (2FA-lite) -->
-  <div v-if="pinModal.show" class="modal-bg">
-    <div class="modal" style="max-width:380px;text-align:center">
-      <div style="font-size:2rem;margin-bottom:6px">🔒</div>
-      <h3 style="text-align:center">{{pinModal.mode==='setup' ? 'Tetapkan PIN Keselamatan' : 'Masukkan PIN Keselamatan'}}</h3>
-      <p style="font-size:.83rem;color:#555;margin-bottom:16px">
-        <template v-if="pinModal.mode==='setup'">Sebagai lapisan keselamatan tambahan untuk akaun Superadmin, sila tetapkan PIN 6-digit. PIN ini akan diminta setiap kali log masuk selepas kata laluan.</template>
-        <template v-else>Sila masukkan PIN 6-digit anda untuk melengkapkan log masuk Superadmin.</template>
-      </p>
-      <div class="form-group">
-        <input class="form-control" type="password" inputmode="numeric" maxlength="6" v-model="pinModal.pin" placeholder="••••••" style="text-align:center;font-size:1.4rem;letter-spacing:.4em" @keyup.enter="pinModal.mode==='setup' ? submitPinSetup() : submitPinVerify()">
-      </div>
-      <div class="form-group" v-if="pinModal.mode==='setup'">
-        <input class="form-control" type="password" inputmode="numeric" maxlength="6" v-model="pinModal.confirmPin" placeholder="Sahkan PIN" style="text-align:center;font-size:1.4rem;letter-spacing:.4em" @keyup.enter="submitPinSetup">
-      </div>
-      <p v-if="pinModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{pinModal.err}}</p>
-      <button class="btn btn-primary" style="width:100%;margin-bottom:8px" @click="pinModal.mode==='setup' ? submitPinSetup() : submitPinVerify()" :disabled="loading">
-        {{loading?'Memproses...':(pinModal.mode==='setup'?'Tetapkan PIN':'Sahkan')}}
-      </button>
-      <button class="btn btn-outline" style="width:100%" @click="cancelPinModal">Batal &amp; Log Keluar</button>
-    </div>
-  </div>
-
   <!-- ONBOARDING TUTORIAL -->
   <div v-if="tutorialModal.show" class="modal-bg" @click.self="closeTutorial">
     <div class="modal" style="max-width:420px;text-align:center;position:relative">
@@ -9174,7 +9182,11 @@ createApp({
     const siteEquip = ref({});
     const selSite = ref(null);
     const eqTab = ref('cameras');
-    const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:''});
+    // equipNota — CCTV-only internal note shown ONLY in Urus Peralatan's
+    // camera table. Deliberately NOT named `nota`: PM/CM camera rows already
+    // use `nota` for the inspector's problem notes, and loadPMEquip() copies
+    // every camera field into the borang — it strips equipNota there.
+    const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''});
     const nNVR = reactive({name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
@@ -9187,7 +9199,9 @@ createApp({
       'Teltonika Networks': ['TRM240'],
     };
     const ALARM_BRANDS = Object.keys(ALARM_BRAND_MODELS);
-    const nMISC = reactive({name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''});
+    // equipNota — same CCTV-only Urus-Peralatan-only note as nCam's (see
+    // there); stripped from the PM/CM borang in loadPMEquip().
+    const nMISC = reactive({name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:'',equipNota:''});
     // 'Deck'/'DVR Centrix'/'Mixer' added for VIR's SONY system (SPRM Perak
     // only) — no brand/model dict entries below for these (narrow one-off
     // niche gear), so they fall back to free-text brand/model instead of a
@@ -10738,7 +10752,24 @@ createApp({
 
     const refNoDuplicate = computed(() => {
       if(!pm.refNo || !refNoSuffix.value) return false;
-      return pmRecords.value.some(r => r.refNo === pm.refNo && r.id !== pm._draftId);
+      if(pmRecords.value.some(r => r.refNo === pm.refNo && r.id !== pm._draftId)) return true;
+      // Exact-string match alone missed numerically-equal suffixes — typing
+      // "1"/"01"/" 001" when ".../PM/001" already exists matched no refNo
+      // string, and refNoGapWarning/refNoReuseWarning (both numeric) also
+      // stayed silent for that case, so a second official ref no. #1 saved
+      // with no warning at all. Same scope filter as nextRefNoSuggestion
+      // (site/room/year base + maintType). New records only — editing an
+      // existing record never rebuilds its refNo, and shouldn't be blocked
+      // by a legacy "1"/"001" pair that already exists in the data.
+      if(pm._isEdit) return false;
+      const base = refNoBasePrefix.value;
+      const entered = parseInt(refNoSuffix.value, 10);
+      if(!base || !pm.maintType || isNaN(entered)) return false;
+      return pmRecords.value.some(r => {
+        if(r.id === pm._draftId || !r.refNo || !r.refNo.startsWith(base) || (r.maintType||'PM') !== pm.maintType) return false;
+        const segs = r.refNo.split('/');
+        return parseInt(segs[segs.length-1], 10) === entered;
+      });
     });
 
     // ---- Malaysian Holidays ----
@@ -12475,6 +12506,7 @@ createApp({
       { key:'editWarrantyCctv', label:'Edit/Padam Waranti Peralatan CCTV' },
       { key:'editWarrantyVir', label:'Edit/Padam Waranti Peralatan VIR' },
       { key:'editSuratMemo', label:'Edit/Padam Surat & Memo' },
+      { key:'editCmCase', label:'Edit/Padam Kes CM (Corrective)' },
     ];
     function hasPermOverride(key) {
       return authProfile.value?.permissionOverrides?.[key] === true;
@@ -13983,13 +14015,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:''},
+      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''},
       nNVR:  {name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
       nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
       nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nMISC: {name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nMISC: {name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:'',equipNota:''},
       nServer: {name:'', brand:'OPTAGER', model:'HD4000', brandCustom:'', modelCustom:'', serial:'',
         processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
@@ -16300,7 +16332,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // for a filter that actually has results on page 1.
     const AUDIT_LOG_PAGE_SIZE = 20;
     const auditLogPage = ref(1);
-    watch(auditLogFilter, () => { auditLogPage.value = 1; }, { deep: true });
+    // Also drops any bulk selection — selected ids otherwise survived a
+    // filter change, so "Padam Terpilih (N)" would permanently delete logs
+    // no longer visible under the new filter (audit logs have no Tong
+    // Sampah, so that loss is unrecoverable).
+    watch(auditLogFilter, () => { auditLogPage.value = 1; auditLogSelected.clear(); }, { deep: true });
     const auditLogTotalPages = computed(() => Math.max(1, Math.ceil(auditLogFilteredList.value.length / AUDIT_LOG_PAGE_SIZE)));
     const auditLogPagedList = computed(() => {
       const start = (auditLogPage.value - 1) * AUDIT_LOG_PAGE_SIZE;
@@ -17072,6 +17108,108 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     // ── Superadmin PIN (2FA-lite) ──
     const pinModal = reactive({ show:false, mode:'verify', pin:'', confirmPin:'', err:'' });
+    // pinGate renders the PIN screen as its OWN top-level template branch
+    // (splash → login → PIN → app), not a modal inside app-wrap. It used to
+    // be a modal over an app that was already authenticated and mounted
+    // underneath, with no record anywhere that the PIN was still pending —
+    // pressing F5 at the PIN prompt restored the Firebase session through
+    // onAuthStateChanged and opened the full app with no PIN at all. Now
+    // onAuthStateChanged itself raises the gate for any superadmin session
+    // that hasn't passed the PIN, and the app only mounts after it passes.
+    const pinGate = ref(false);
+    let _pinPostAuthPending = false; // onAuthStateChanged deferred _postAuthLoad() behind the gate
+    let _pinFromLogin = false;       // gate raised by doLogin() → finishLogin() once passed (not on reload)
+    let _pinGateOpening = null;
+    // "PIN passed" marker — localStorage (not sessionStorage) so a superadmin
+    // isn't re-asked on every new tab/browser restart while their Firebase
+    // session persists, matching the old "PIN once per login" behaviour.
+    // Stores the uid so it can't carry over to a different account, and is
+    // cleared on doLogout(), at the start of every doLogin(), and whenever
+    // the Firebase session ends. Any storage failure just means the PIN is
+    // asked again — never a lockout.
+    const PIN_OK_KEY = 'pm_sprm_pin_ok';
+    function _pinOkForUid(uid) { try { return !!uid && localStorage.getItem(PIN_OK_KEY) === uid; } catch(e) { return false; } }
+    function _markPinOk(uid) { try { localStorage.setItem(PIN_OK_KEY, uid); } catch(e) {} }
+    function _clearPinOk() { try { localStorage.removeItem(PIN_OK_KEY); } catch(e) {} }
+    // PIN hash/salt now live in userSecrets/{uid} (owner-only read/write in
+    // firestore.rules) instead of users/{uid} — that collection must stay
+    // publicly readable for the pre-auth username lookup, so a PIN hash
+    // there could be read by anyone without logging in and brute-forced
+    // offline (1,000,000 single-SHA-256 PINs ≈ 18s in a browser tab).
+    // Hashed with PBKDF2 (600k iterations, ~0.1s per check) instead of one
+    // SHA-256 round. Legacy hashes still on users/{uid} keep verifying and
+    // are migrated on the next successful PIN entry — and if the
+    // userSecrets rule isn't deployed yet, everything silently stays on
+    // the legacy path, so login keeps working in either deploy order.
+    const PIN_PBKDF2_ITER = 600000;
+    async function hashPinPbkdf2(pin, salt) {
+      const enc = new TextEncoder();
+      const key = await crypto.subtle.importKey('raw', enc.encode(pin), 'PBKDF2', false, ['deriveBits']);
+      const bits = await crypto.subtle.deriveBits({ name:'PBKDF2', hash:'SHA-256', salt: enc.encode(salt), iterations: PIN_PBKDF2_ITER }, key, 256);
+      return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+    // Returns {hash,salt,algo,source} | null (no PIN set anywhere). Throws
+    // only when userSecrets couldn't be READ and hasPin says a PIN exists —
+    // so a network blip can never be mistaken for "no PIN" and drop the
+    // user onto the setup screen (where a new PIN would overwrite theirs).
+    async function _loadPinSecret(uid) {
+      let readErr = null;
+      try {
+        const s = await db.collection('userSecrets').doc(uid).get();
+        const d = s.exists ? s.data() : null;
+        if(d?.pinHash && d?.pinSalt) return { hash:d.pinHash, salt:d.pinSalt, algo:d.pinAlgo||'pbkdf2', source:'secrets' };
+      } catch(e) { readErr = e; }
+      const p = authProfile.value || {};
+      if(p.pinHash && p.pinSalt) return { hash:p.pinHash, salt:p.pinSalt, algo:p.pinAlgo||'sha256', source:'legacy' };
+      if(readErr && p.hasPin) throw readErr;
+      return null;
+    }
+    function _pinHashFor(sec, pin) {
+      return sec.algo === 'pbkdf2' ? hashPinPbkdf2(pin, sec.salt) : hashPin(pin, sec.salt);
+    }
+    // Best-effort, never throws: moves a legacy users/{uid} PIN into
+    // userSecrets, then strips the public copy. The strip only runs once
+    // userSecrets holds the PIN (a failed write jumps straight to catch),
+    // so the user is never left with no readable PIN.
+    async function _migratePinIfNeeded(uid, pin, sec) {
+      try {
+        if(sec.source === 'legacy') {
+          const salt = randomSalt();
+          const hash = await hashPinPbkdf2(pin, salt);
+          await db.collection('userSecrets').doc(uid).set({ pinHash:hash, pinSalt:salt, pinAlgo:'pbkdf2' });
+        }
+        const p = authProfile.value;
+        if(p && (p.pinHash || p.pinSalt || !p.hasPin)) {
+          const del = firebase.firestore.FieldValue.delete();
+          await db.collection('users').doc(uid).update({ pinHash:del, pinSalt:del, pinAlgo:del, hasPin:true });
+          delete p.pinHash; delete p.pinSalt; delete p.pinAlgo; p.hasPin = true;
+        }
+      } catch(e) { /* rule not deployed yet / offline — retried on next PIN entry */ }
+    }
+    // Shared by doLogin() and onAuthStateChanged — both can reach this for
+    // the same login within milliseconds of each other, so the second call
+    // reuses the first rather than resetting the field mid-typing.
+    function _openPinGate(uid) {
+      if(pinGate.value) return Promise.resolve();
+      if(!_pinGateOpening) {
+        _pinGateOpening = (async () => {
+          let sec;
+          try { sec = await _loadPinSecret(uid); } catch(e) { sec = undefined; } // unreadable → verify; submit retries the read
+          pinModal.pin = ''; pinModal.confirmPin = ''; pinModal.err = '';
+          pinModal.mode = sec === null ? 'setup' : 'verify';
+          pinGate.value = true;
+        })().finally(() => { _pinGateOpening = null; });
+      }
+      return _pinGateOpening;
+    }
+    async function _passPinGate() {
+      pinGate.value = false; pinModal.show = false;
+      const fromLogin = _pinFromLogin;
+      _pinFromLogin = false;
+      if(fromLogin) await finishLogin();
+      if(_pinPostAuthPending) { _pinPostAuthPending = false; await _postAuthLoad(); }
+      _afterAppMountedUi();
+    }
     async function hashPin(pin, salt) {
       const data = new TextEncoder().encode(pin + ':' + salt);
       const buf = await crypto.subtle.digest('SHA-256', data);
@@ -17088,13 +17226,34 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(pinModal.pin !== pinModal.confirmPin) { pinModal.err = 'PIN tidak sepadan.'; return; }
       loading.value = true;
       try {
+        const uid = auth.currentUser.uid;
+        // Never let the setup screen overwrite a PIN that already exists
+        // (e.g. it was set from another tab meanwhile, or the gate's own
+        // read was inconclusive) — bounce back to verify instead.
+        let existing;
+        try { existing = await _loadPinSecret(uid); } catch(e) { existing = undefined; }
+        if(existing !== null) {
+          pinModal.mode = 'verify'; pinModal.pin = ''; pinModal.confirmPin = '';
+          pinModal.err = 'PIN sudah ditetapkan untuk akaun ini. Sila masukkan PIN anda.';
+          loading.value = false; return;
+        }
         const salt = randomSalt();
-        const hash = await hashPin(pinModal.pin, salt);
-        await db.collection('users').doc(auth.currentUser.uid).update({ pinHash: hash, pinSalt: salt });
-        authProfile.value.pinHash = hash; authProfile.value.pinSalt = salt;
-        pinModal.show = false; pinModal.pin=''; pinModal.confirmPin='';
+        const hash = await hashPinPbkdf2(pinModal.pin, salt);
+        try {
+          await db.collection('userSecrets').doc(uid).set({ pinHash:hash, pinSalt:salt, pinAlgo:'pbkdf2' });
+          await db.collection('users').doc(uid).update({ hasPin:true });
+          authProfile.value.hasPin = true;
+        } catch(e) {
+          // userSecrets rule not deployed yet — store it the old way so this
+          // login still completes; _migratePinIfNeeded() moves it later.
+          await db.collection('users').doc(uid).update({ pinHash:hash, pinSalt:salt, pinAlgo:'pbkdf2' });
+          authProfile.value.pinHash = hash; authProfile.value.pinSalt = salt; authProfile.value.pinAlgo = 'pbkdf2';
+        }
+        await clearLoginFailures(authProfile.value.username);
+        _markPinOk(uid);
+        pinModal.pin=''; pinModal.confirmPin='';
         showToast('PIN keselamatan berjaya ditetapkan!');
-        await finishLogin();
+        await _passPinGate();
       } catch(e) { pinModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -17114,14 +17273,30 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           pinModal.err = `Terlalu banyak percubaan salah. Cuba lagi selepas ${lock.minsLeft} minit.`;
           loading.value = false; return;
         }
-        const hash = await hashPin(pinModal.pin, authProfile.value.pinSalt);
-        if(hash !== authProfile.value.pinHash) {
+        const uid = auth.currentUser.uid;
+        let sec;
+        try { sec = await _loadPinSecret(uid); }
+        catch(e) {
+          // Couldn't read the stored PIN — not a wrong PIN, so no failure
+          // is recorded; the user just retries once the connection is back.
+          pinModal.err = 'Tidak dapat menyemak PIN — semak sambungan internet dan cuba lagi.';
+          loading.value = false; return;
+        }
+        if(sec === null) {
+          pinModal.mode = 'setup'; pinModal.pin = ''; pinModal.confirmPin = '';
+          pinModal.err = 'Tiada PIN ditetapkan lagi. Sila tetapkan PIN baharu.';
+          loading.value = false; return;
+        }
+        const hash = await _pinHashFor(sec, pinModal.pin);
+        if(hash !== sec.hash) {
           await recordLoginFailure(authProfile.value.username);
           pinModal.err = 'PIN salah.'; pinModal.pin=''; loading.value = false; return;
         }
         await clearLoginFailures(authProfile.value.username);
-        pinModal.show = false; pinModal.pin = '';
-        await finishLogin();
+        await _migratePinIfNeeded(uid, pinModal.pin, sec);
+        _markPinOk(uid);
+        pinModal.pin = '';
+        await _passPinGate();
       } catch(e) { pinModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
@@ -17209,6 +17384,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     async function doLogin() {
       loginErr.value='';
+      _clearPinOk(); // a fresh login never inherits a previous session's "PIN passed" marker
       const uid = loginUser.value.trim().toLowerCase();
       if(!uid || !loginPass.value){ loginErr.value='Sila isi ID dan kata laluan.'; triggerShake(); return; }
       const lockStatus = await checkLoginLockout(uid);
@@ -17224,6 +17400,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // Check hardcoded superadmin first
         const builtIn = USER_MAP[uid];
         let email = builtIn ? builtIn.email : uid+'@pm.admin';
+        let preRole = builtIn ? builtIn.role : null;
 
         // Try Firestore lookup for dynamic users
         if(!builtIn) {
@@ -17232,11 +17409,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const userData = snap.docs[0].data();
           if(userData.disabled){ loginErr.value='Akaun ini telah di-freeze. Hubungi Superadmin.'; triggerShake(); loading.value=false; return; }
           email = userData.email || email;
+          preRole = userData.role || null;
         }
 
         await auth.signInWithEmailAndPassword(email, loginPass.value);
         loginHandshake.steps[0].done = true;
-        await clearLoginFailures(uid);
+        // A superadmin's failure counter is shared with the PIN step and is
+        // only cleared once the PIN passes (submitPinVerify/submitPinSetup)
+        // — clearing it here let anyone holding the password reset the PIN
+        // lockout just by cancelling and logging in again, for unlimited
+        // PIN guesses 4 at a time.
+        if(preRole !== 'superadmin') await clearLoginFailures(uid);
         // Fire-and-forget — surfaces in Senarai Pengguna as "Log masuk
         // terakhir" so a stale/duplicate account (like the mohdasrul@pm.admin
         // one) is visibly dormant instead of invisible. Never block login on
@@ -17279,17 +17462,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           }
         }
         if(authProfile.value?.role === 'superadmin') {
-          if(authProfile.value.pinHash && authProfile.value.pinSalt) {
-            pinModal.mode = 'verify'; pinModal.pin=''; pinModal.err='';
-            pinModal.show = true;
-            loading.value = false;
-            return; // submitPinVerify() calls finishLogin() once the PIN checks out
-          } else {
-            pinModal.mode = 'setup'; pinModal.pin=''; pinModal.confirmPin=''; pinModal.err='';
-            pinModal.show = true;
-            loading.value = false;
-            return; // submitPinSetup() calls finishLogin() once the PIN is created
-          }
+          // Verify vs setup is decided inside _openPinGate (from userSecrets
+          // or the legacy fields). submitPinVerify()/submitPinSetup() →
+          // _passPinGate() → finishLogin() once the PIN checks out.
+          _pinFromLogin = true;
+          await _openPinGate(auth.currentUser.uid);
+          loading.value = false;
+          return;
         }
         loginHandshake.steps[2].done = true;
         await finishLogin();
@@ -17392,6 +17571,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         document.body.appendChild(wipeMsg);
         await new Promise(r => setTimeout(r, 450));
       }
+      _clearPinOk(); // next superadmin session on this device must pass the PIN again
       auth.signOut();
       authProfile.value=null;
       loginUser.value=''; loginPass.value='';
@@ -17417,7 +17597,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // loadAll()/the relevant load*() the moment the new session's
       // onAuthStateChanged fires, so clearing them here loses nothing.
       pmRecords.value = []; teamAssignments.value = [];
-      siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {};
+      siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {}; virSiteEquipSony.value = {};
       contracts.value = []; warranty.value = []; virWarranty.value = [];
       letterMemos.value = []; cmCases.value = [];
       auditLogs.value = []; recentAuditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
@@ -19152,6 +19332,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // which also passes for admin) so this doesn't silently
       // permission-deny if the user-mgmt page ever opens up to admin+.
       if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      // Same superadmin-target guard as deleteUser/openEditUser/openResetPw —
+      // Freeze was the one action on the user card missing it. Superadmin
+      // sees their OWN row in this list, and freezing it is unrecoverable
+      // from the app: the heartbeat force-logs out on every login, and
+      // firestore.rules' myRole() returns '' once frozen, so the account
+      // can't unfreeze itself either (Firebase Console edit only). Only
+      // FREEZING is blocked — unfreezing an already-frozen superadmin stays
+      // allowed so another superadmin can still recover it.
+      if(u.role==='superadmin' && !u.disabled){ showToast('Tidak boleh freeze akaun Superadmin.','error'); return; }
       const newState = !u.disabled;
       try {
         await db.collection('users').doc(u.id).update({ disabled: newState });
@@ -20061,6 +20250,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!item) return;
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet, rooms:nRoom };
       Object.assign(refs[key], item);
+      // Object.assign skips keys the item doesn't have — a camera saved with
+      // no note would otherwise keep the PREVIOUS row's note in the form and
+      // save it onto this one.
+      if(key === 'cameras') nCam.equipNota = item.equipNota || '';
+      if(key === 'misc') nMISC.equipNota = item.equipNota || '';
       if(key === 'rooms') _editRoomItem(item);
       else if(key === 'servers') _editServerItem(item);
       else if(key === 'misc') _editMiscItem(item);
@@ -20239,6 +20433,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // persisted), so an unchecked box always clears redundantNvrRef
       // regardless of whatever the dropdown still shows underneath it.
       camResolved.redundantNvrRef = hasRedundancy ? _resolveDropdownCustom(nCam.redundantNvrRef, redundantNvrRefCustom) : '';
+      // CCTV only (the input is hidden for VIR) — stored only when non-empty.
+      const equipNota = (camResolved.equipNota||'').trim();
+      if(equipNota && currentProject.value !== 'vir') camResolved.equipNota = equipNota;
+      else delete camResolved.equipNota;
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
       const dup = _findDupConflict('cameras', list, camResolved, equipEditIdx.cameras);
@@ -20397,6 +20595,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const brand = (nMISC.brand==='Lain-lain' && nMISC.brandCustom.trim()) ? nMISC.brandCustom.trim() : nMISC.brand;
       const model = (nMISC.model==='Lain-lain' && nMISC.modelCustom.trim()) ? nMISC.modelCustom.trim() : nMISC.model;
       const item = { name:nMISC.name, category, brand, model, serial:nMISC.serial, ip:nMISC.ip, installDate:nMISC.installDate, accessUser:nMISC.accessUser, accessPw:nMISC.accessPw, _ts:Date.now() };
+      // CCTV only (input hidden for VIR) — stored only when non-empty.
+      const equipNota = (nMISC.equipNota||'').trim();
+      if(equipNota && currentProject.value !== 'vir') item.equipNota = equipNota;
       const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
@@ -20896,12 +21097,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       pm.siteName = site?.name||'';
       const eq = siteEquip.value[pm.siteId] || {};
 
-      pm.cameras = (eq.cameras||[]).map(c=>({...c,display:'Baik',icam:'Baik',nota:''}));
+      // equipNota (Urus Peralatan's internal camera note) is stripped — it
+      // must never reach the PM/CM borang or the saved record.
+      pm.cameras = (eq.cameras||[]).map(({equipNota, ...c})=>({...c,display:'Baik',icam:'Baik',nota:''}));
       pm.nvr = (eq.nvr||[]).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
       pm.hdd = _groupHddForPm((eq.hdd||[]).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'})));
       pm.switches = (eq.switches||[]).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = (eq.alarms||[]).map(a=>({...a,func:'Baik',status:'Baik'}));
-      pm.misc = (eq.misc||[]).map(m=>({...m,status:'Baik',nota:''}));
+      pm.misc = (eq.misc||[]).map(({equipNota, ...m})=>({...m,status:'Baik',nota:''})); // equipNota stripped, same as cameras
       // Always sort the borang's equipment lists at load time — regardless
       // of what order they happen to sit in storage (older records, or
       // anything added before the auto-sort-on-save existed) — so the
@@ -24636,17 +24839,21 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // Guards against re-attaching — this is called from onAuthStateChanged
     // on EVERY auth transition (fresh login, AND Firebase re-firing on
     // page-refresh session-restore/token-refresh/reconnect), not just once
-    // per tab. `.main` is a permanent element (no v-if), so without this
-    // guard each re-fire stacked one more full set of touchstart/touchmove/
-    // touchend listeners on top of the previous ones — after N logins in
-    // one tab, a single touch gesture would run pull-to-refresh logic N
-    // times (including N redundant loadAll() calls).
-    let _pullToRefreshSetup = false;
+    // per tab. Without a guard each re-fire stacked one more full set of
+    // touchstart/touchmove/touchend listeners onto the same element — after
+    // N logins in one tab, a single touch gesture would run pull-to-refresh
+    // logic N times (including N redundant loadAll() calls).
+    // Guarded by the ELEMENT, not a one-time boolean: `.main` is NOT
+    // permanent — it lives inside the v-else app-wrap, so logout (and the
+    // superadmin PIN gate) unmounts it and the next login renders a brand
+    // new one. The old boolean then skipped attaching to that new element,
+    // so pull-to-refresh silently died after the first logout in a tab.
+    // The old element's listeners go away with the element itself.
+    let _pullToRefreshEl = null;
     function setupPullToRefresh() {
-      if(_pullToRefreshSetup) return;
       const el = document.querySelector('.main');
-      if(!el) return;
-      _pullToRefreshSetup = true;
+      if(!el || el === _pullToRefreshEl) return;
+      _pullToRefreshEl = el;
       el.addEventListener('touchstart', (e) => {
         if(el.scrollTop > 0) { _ptrActive = false; return; }
         _ptrStartY = e.touches[0].clientY;
@@ -24678,18 +24885,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // lower trigger point since this is a subtle compaction cue, not a
     // "you've scrolled a lot" cue.
     const topbarCompact = ref(false);
-    // Same re-attachment guard as setupPullToRefresh above, and for the
-    // same reason (called on every onAuthStateChanged transition, .main is
-    // permanent) — without it, every re-login added another 'scroll'
-    // listener, so showScrollTop.value got reassigned N times per scroll
-    // event after N logins (same end result, just wasted redundant work
-    // rather than visibly broken).
-    let _scrollToTopSetup = false;
+    // Same element-keyed re-attachment guard as setupPullToRefresh above,
+    // for the same two reasons (no stacking on re-fire; re-attach when
+    // logout/the PIN gate replaced .main with a new element — the old
+    // boolean guard left scroll-to-top and the compact topbar dead after
+    // the first logout in a tab).
+    let _scrollToTopEl = null;
     function setupScrollToTop() {
-      if(_scrollToTopSetup) return;
       const el = document.querySelector('.main');
-      if(!el) return;
-      _scrollToTopSetup = true;
+      if(!el || el === _scrollToTopEl) return;
+      _scrollToTopEl = el;
       el.addEventListener('scroll', () => {
         showScrollTop.value = el.scrollTop > 400;
         topbarCompact.value = el.scrollTop > 40;
@@ -24697,6 +24902,39 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     }
     function scrollToTop() {
       document.querySelector('.main')?.scrollTo({ top:0, behavior:'smooth' });
+    }
+
+    // Post-login data load — was inline in onAuthStateChanged; split out so
+    // the superadmin PIN gate can defer it until the PIN passes
+    // (_passPinGate). Order and behaviour unchanged for every other role.
+    async function _postAuthLoad() {
+      await loadAll();
+      loadCustomEquipmentOptions();
+      // Sequenced with await now that these use the custom askConfirm()
+      // modal — that modal is a single shared piece of state, so firing
+      // both checks concurrently (no await) would let the SECOND
+      // question silently overwrite the FIRST one's still-open dialog
+      // before the user ever got to answer it (the first askConfirm()
+      // call would then hang forever, its promise never resolved).
+      // Native confirm() never had this problem since it blocked the
+      // whole JS thread until dismissed, serializing these for free.
+      await checkPmDraftRecovery();
+      await checkEquipDraftRecovery();
+      restoreLastPage();
+      // Eager (not just on nav-click) — warrantyExpiringCount's nav
+      // badge and the "Perlu Perhatian Hari Ini" dashboard widget both
+      // need this on every login/refresh, not only after the user
+      // happens to visit the Warranty page first. loadVirWarranty()
+      // had the exact same badge/widget dependency (virWarrantyExpiringCount)
+      // but was missing here — only ever loaded on nav-click into the
+      // VIR Warranty page, so the VIR badge silently showed 0 until then.
+      loadWarranty();
+      loadVirWarranty();
+    }
+    // DOM-dependent setup once app-wrap is on screen.
+    function _afterAppMountedUi() {
+      updateSidebarIndicator();
+      nextTick(() => { updateTabIndicators(); setupPullToRefresh(); setupScrollToTop(); });
     }
 
     // Generic expand/collapse <transition> hooks — CSS alone can't animate
@@ -24890,30 +25128,20 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
                 if(builtIn) authProfile.value = { ...builtIn, uid: user.uid };
               }
             } catch(e) { console.warn('Profile load error:', e); }
-            await loadAll();
-            loadCustomEquipmentOptions();
-            // Sequenced with await now that these use the custom askConfirm()
-            // modal — that modal is a single shared piece of state, so firing
-            // both checks concurrently (no await) would let the SECOND
-            // question silently overwrite the FIRST one's still-open dialog
-            // before the user ever got to answer it (the first askConfirm()
-            // call would then hang forever, its promise never resolved).
-            // Native confirm() never had this problem since it blocked the
-            // whole JS thread until dismissed, serializing these for free.
-            await checkPmDraftRecovery();
-            await checkEquipDraftRecovery();
-            restoreLastPage();
-            // Eager (not just on nav-click) — warrantyExpiringCount's nav
-            // badge and the "Perlu Perhatian Hari Ini" dashboard widget both
-            // need this on every login/refresh, not only after the user
-            // happens to visit the Warranty page first. loadVirWarranty()
-            // had the exact same badge/widget dependency (virWarrantyExpiringCount)
-            // but was missing here — only ever loaded on nav-click into the
-            // VIR Warranty page, so the VIR badge silently showed 0 until then.
-            loadWarranty();
-            loadVirWarranty();
+            // Superadmin session (fresh login OR restored by a page refresh)
+            // that hasn't passed the PIN on this device: raise the PIN gate
+            // and defer the data load until it passes (_passPinGate runs
+            // _postAuthLoad). Every other role goes straight through as before.
+            if(authProfile.value?.role === 'superadmin' && !_pinOkForUid(user.uid)) {
+              _pinPostAuthPending = true;
+              await _openPinGate(user.uid);
+            } else {
+              await _postAuthLoad();
+            }
           } else {
             authProfile.value = null;
+            pinGate.value = false; _pinPostAuthPending = false; _pinFromLogin = false;
+            _clearPinOk();
             _startLoginScreenTimers();
           }
         } finally {
@@ -24922,7 +25150,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           // splash screen forever instead of at least reaching the app
           // (which has its own error toasts/retry paths for missing data).
           authChecking.value = false;
-          if(user) { updateSidebarIndicator(); nextTick(() => { updateTabIndicators(); setupPullToRefresh(); setupScrollToTop(); }); }
+          // Skipped while gated — app-wrap isn't mounted yet; _passPinGate()
+          // runs this once the app actually renders.
+          if(user && !pinGate.value) _afterAppMountedUi();
         }
       });
     });
@@ -24968,7 +25198,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday, holidayRowStyle, holidayTypeColor,
       fmtDate, fmtDateDash, fmtDateDashDay, fmtNum, cctvSystemBrands,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
-      pinModal, submitPinSetup, submitPinVerify, cancelPinModal,
+      pinModal, pinGate, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
       WHATS_NEW_ITEMS, whatsNewModal, closeWhatsNew,
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS, PERMISSION_OVERRIDE_CAPABILITIES,
