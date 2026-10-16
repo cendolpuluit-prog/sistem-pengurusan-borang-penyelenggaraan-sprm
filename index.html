@@ -1233,6 +1233,22 @@ details.form-control[open] summary::after{content:'▴'}
    PM (blue/green) or CM (red). */
 .badge-inst{background:#ede7f6;color:#4527a0}
 .dark-mode .badge-inst{background:#2e2350;color:#c4b5fd}
+/* NEW INSTALLATION sign-off — 4 boxes in one bordered 2×2 frame, like the
+   JKR-contractor template: role + company, signature/stamp space, then a
+   Nama/Jawatan/Tarikh table (grey label column, dotted cells, blank =
+   handwritten). Text colour is inherited from the sheet. */
+.pm-inst-sign-wrap{display:grid;grid-template-columns:1fr 1fr;margin-top:12px;border:1px solid #1A2332;page-break-inside:avoid;break-inside:avoid}
+.pm-inst-sign-box{display:flex;flex-direction:column;padding:10px 14px 14px;border-right:1px solid #1A2332;border-bottom:1px solid #1A2332}
+.pm-inst-sign-box:nth-child(2n){border-right:none}
+.pm-inst-sign-box:nth-child(n+3){border-bottom:none}
+.pm-inst-sign-role,.pm-inst-sign-co{font-weight:700;font-size:.82rem;text-transform:uppercase;line-height:1.5}
+.pm-inst-sign-space{height:78px}
+.pm-inst-sign-tbl{width:88%;margin:0 auto;border-collapse:collapse;font-size:.78rem}
+/* Scoped under the wrapper on purpose: the app-wide `th` rule (white text
+   on navy) and the print sheet's own `th` background are more specific than
+   a bare .pm-inst-sign-tbl th — they turned these labels white-on-light-blue. */
+.pm-inst-sign-wrap .pm-inst-sign-tbl th{width:28%;padding:3px 6px;text-align:left;font-weight:400;white-space:nowrap;color:#1A2332;background:#d9d9d9;border:1px dotted #1A2332}
+.pm-inst-sign-wrap .pm-inst-sign-tbl td{height:20px;padding:3px 6px;border:1px dotted #1A2332}
 .team-pill-inst{margin-left:3px;padding:0 4px;border-radius:3px;font-size:.58rem;font-weight:800;letter-spacing:.04em;background:#6d28d9;color:#fff;vertical-align:middle}
 /* Equipment tables — a just-added/edited row briefly glows (no 100%
    keyframe, so it fades back to whatever the row's own background is,
@@ -4672,7 +4688,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="card-title">✍️ Tandatangan</div>
-          <div class="form-row form-row-2" style="margin-bottom:14px">
+          <div v-if="pm.maintType!=='INST'" class="form-row form-row-2" style="margin-bottom:14px">
             <div>
               <p class="fw-600 mb-12" style="color:#1A2332">Wakil Kontraktor</p>
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.contractorName"></div>
@@ -4693,6 +4709,17 @@ details.form-control[open] summary::after{content:'▴'}
                 <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.client2Tarikh"></div>
               </div>
             </div>
+          </div>
+          <!-- NEW INSTALLATION: 4 sign-off boxes (see INST_SIGN_BOXES) -->
+          <div v-else class="form-row form-row-2" style="margin-bottom:14px">
+            <div v-for="b in INST_SIGN_BOXES" :key="b.n">
+              <p class="fw-600 mb-12" style="color:#1A2332">{{b.role}}</p>
+              <div class="form-group"><label>Syarikat</label><input class="form-control" v-model="pm[b.co]" :placeholder="b.defaultCo"></div>
+              <div class="form-group"><label>Nama <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="pm[b.name]"></div>
+              <div class="form-group"><label>Jawatan <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="pm[b.jawatan]"></div>
+              <div class="form-group"><label>Tarikh <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="date" v-model="pm[b.tarikh]"></div>
+            </div>
+            <p class="text-muted" style="grid-column:1/-1;font-size:.75rem;margin:0">Medan kosong akan dicetak sebagai ruang kosong untuk diisi tangan.</p>
           </div>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=2">← Balik</button>
@@ -5563,7 +5590,20 @@ details.form-control[open] summary::after{content:'▴'}
                that's Negeri/Cawangan or HQ); CCTV keeps the original 3
                separate boxes since its contract requires a distinct
                Negeri/Cawangan AND HQ sign-off. -->
-          <div class="pm-sign-wrap" :class="{'pm-sign-wrap-2':viewPM?.project==='vir'}">
+          <!-- NEW INSTALLATION: 4 boxes, 2×2 (see INST_SIGN_BOXES) -->
+          <div v-if="viewPM?.maintType==='INST'" class="pm-inst-sign-wrap">
+            <div v-for="b in INST_SIGN_BOXES" :key="b.n" class="pm-inst-sign-box">
+              <div class="pm-inst-sign-role">{{b.role}};</div>
+              <div class="pm-inst-sign-co">{{instSignCompany(viewPM, b)}};</div>
+              <div class="pm-inst-sign-space"></div>
+              <table class="pm-inst-sign-tbl">
+                <tr><th>Nama</th><td>{{viewPM?.[b.name] || ''}}</td></tr>
+                <tr><th>Jawatan</th><td>{{viewPM?.[b.jawatan] || ''}}</td></tr>
+                <tr><th>Tarikh</th><td>{{viewPM?.[b.tarikh] ? fmtDateDash(viewPM[b.tarikh]) : ''}}</td></tr>
+              </table>
+            </div>
+          </div>
+          <div v-else class="pm-sign-wrap" :class="{'pm-sign-wrap-2':viewPM?.project==='vir'}">
             <div class="pm-sign-box">
               <h4>WAKIL KONTRAKTOR</h4>
               <p class="pm-sign-desc">Saya sebagai Wakil Kontraktor telah menjalankan kerja-kerja penyelenggaraan seperti yang tertakluk di dalam kontrak.</p>
@@ -8407,7 +8447,17 @@ details.form-control[open] summary::after{content:'▴'}
           </tr>
         </tbody>
       </table>
-      <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-top:40px">
+      <table v-if="r.maintType==='INST'" style="width:100%;border-collapse:collapse;font-size:9pt;margin-top:40px">
+        <tr v-for="pair in [[INST_SIGN_BOXES[0],INST_SIGN_BOXES[1]],[INST_SIGN_BOXES[2],INST_SIGN_BOXES[3]]]" :key="pair[0].n">
+          <td v-for="b in pair" :key="b.n" style="border:1px solid #000;padding:4px 8px;width:50%;height:70px;vertical-align:bottom">
+            <div style="font-weight:700">{{b.role}}; {{instSignCompany(r, b)}}</div>
+            <div>Nama: {{r[b.name]||'______________'}}</div>
+            <div>Jawatan: {{r[b.jawatan]||'______________'}}</div>
+            <div>Tarikh: {{r[b.tarikh]?fmtDateDash(r[b.tarikh]):'______________'}}</div>
+          </td>
+        </tr>
+      </table>
+      <table v-else style="width:100%;border-collapse:collapse;font-size:9pt;margin-top:40px">
         <tr>
           <td style="border:1px solid #000;padding:4px 8px;width:33%;height:60px;vertical-align:bottom">
             <div>Kontraktor: {{r.contractorName||'______________'}}</div>
@@ -10763,6 +10813,35 @@ createApp({
       return units;
     });
 
+    // ── NEW INSTALLATION sign-off: 4 boxes (2×2), no SPRM box — the
+    // installation is between Daya One and the JKR-appointed contractor.
+    // Company names are pre-filled but editable per form; Nama/Jawatan/
+    // Tarikh are optional (left blank = handwritten on the printout).
+    // Box 1 (Daya One) reuses the existing contractor* fields. Defined ONCE
+    // here so the form, print, batch print and Word export all agree.
+    // PM/CM forms are untouched — they keep their own boxes.
+    const INST_SIGN_BOXES = [
+      { n:1, role:'DISEDIAKAN OLEH',          co:'instCo1', defaultCo:'DAYA ONE RESOURCES SDN BHD',              name:'contractorName', jawatan:'contractorJawatan', tarikh:'contractorTarikh' },
+      { n:2, role:'DISEMAK OLEH',             co:'instCo2', defaultCo:'SABANG HEBAT SDN BHD',                    name:'instName2',      jawatan:'instJawatan2',      tarikh:'instTarikh2' },
+      { n:3, role:'DILULUSKAN OLEH',          co:'instCo3', defaultCo:'JURUTERA PERUNDING INTELEK SDN BHD (JPI)', name:'instName3',      jawatan:'instJawatan3',      tarikh:'instTarikh3' },
+      { n:4, role:'DISAHKAN & DITERIMA OLEH', co:'instCo4', defaultCo:'WIJAYA DAYA SDN BHD',                     name:'instName4',      jawatan:'instJawatan4',      tarikh:'instTarikh4' },
+    ];
+    function _instSignDefaults() {
+      const o = {};
+      INST_SIGN_BOXES.forEach(b => { o[b.co] = b.defaultCo; if(b.n > 1) { o[b.name] = ''; o[b.jawatan] = ''; o[b.tarikh] = ''; } });
+      return o;
+    }
+    function _instSignFromRecord(r) {
+      const o = _instSignDefaults();
+      INST_SIGN_BOXES.forEach(b => {
+        if(r?.[b.co]) o[b.co] = r[b.co];
+        if(b.n > 1) { o[b.name] = r?.[b.name] || ''; o[b.jawatan] = r?.[b.jawatan] || ''; o[b.tarikh] = r?.[b.tarikh] || ''; }
+      });
+      return o;
+    }
+    // Empty company name falls back to the default (also covers any record
+    // saved before these fields existed).
+    function instSignCompany(rec, b) { return String(rec?.[b.co] || '').trim() || b.defaultCo; }
     const pm = reactive({
       _draftId:null, _createdAt:null, _isEdit:false, _submittedAt:null, _submittedBy:null, _cmStatus:null, _resolvedAt:null,
       siteId:'', siteName:'', refNo:'',
@@ -10805,7 +10884,8 @@ createApp({
       notaCatatan: '',
       contractorName:'', contractorJawatan:'', contractorTarikh:'',
       clientName:'', clientJawatan:'', clientTarikh:'',
-      client2Name:'', client2Jawatan:'', client2Tarikh:''
+      client2Name:'', client2Jawatan:'', client2Tarikh:'',
+      ..._instSignDefaults(),
     });
     const pmStep = ref(1);
     // Direction-aware entrance for the borang's step panels: "Seterusnya"
@@ -21510,6 +21590,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       pm.contractorName=''; pm.contractorJawatan=''; pm.contractorTarikh='';
       pm.clientName=''; pm.clientJawatan=''; pm.clientTarikh='';
       pm.client2Name=''; pm.client2Jawatan=''; pm.client2Tarikh='';
+      Object.assign(pm, _instSignDefaults());
       pmStep.value=1;
       page.value='new-pm';
     }
@@ -21742,6 +21823,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           contractorName:pm.contractorName, contractorJawatan:pm.contractorJawatan, contractorTarikh:pm.contractorTarikh,
           clientName:pm.clientName, clientJawatan:pm.clientJawatan, clientTarikh:pm.clientTarikh,
           client2Name:pm.client2Name, client2Jawatan:pm.client2Jawatan, client2Tarikh:pm.client2Tarikh,
+          ...(pm.maintType === 'INST' ? Object.fromEntries(INST_SIGN_BOXES.flatMap(b => [
+            [b.co, String(pm[b.co] || '').trim() || b.defaultCo],
+            ...(b.n > 1 ? [[b.name, String(pm[b.name] || '').trim()], [b.jawatan, String(pm[b.jawatan] || '').trim()], [b.tarikh, pm[b.tarikh] || '']] : []),
+          ])) : {}),
           notaCatatan: _buildNotaCatatan(),
           notaStruct: _buildNotaStruct(),
           status, createdBy: authUser.value?.email || '',
@@ -21979,6 +22064,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       pm.contractorName=r.contractorName||''; pm.contractorJawatan=r.contractorJawatan||''; pm.contractorTarikh=r.contractorTarikh||'';
       pm.clientName=r.clientName||''; pm.clientJawatan=r.clientJawatan||''; pm.clientTarikh=r.clientTarikh||'';
       pm.client2Name=r.client2Name||''; pm.client2Jawatan=r.client2Jawatan||''; pm.client2Tarikh=r.client2Tarikh||'';
+      Object.assign(pm, _instSignFromRecord(r));
       if(currentProject.value==='vir') {
         pm.virRoomNo = r.virRoomNo||''; pm.virRoomNoCustom='';
         // Legacy records predate the BCD/Optager split — they're always BCD
@@ -22883,8 +22969,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           verticalAlign: VerticalAlign.TOP,
         });
       }
+      // NEW INSTALLATION: 4 boxes as 2 rows of 2 (see INST_SIGN_BOXES).
+      const _instSigCell = b => sigCell(`${b.role}; ${instSignCompany(r, b)}`, r[b.name], r[b.jawatan], r[b.tarikh] ? fmtDateDash(r[b.tarikh]) : '');
+      const _instSigRows = r.maintType === 'INST' ? [
+        new TableRow({ children: [_instSigCell(INST_SIGN_BOXES[0]), _instSigCell(INST_SIGN_BOXES[1])] }),
+        new TableRow({ children: [_instSigCell(INST_SIGN_BOXES[2]), _instSigCell(INST_SIGN_BOXES[3])] }),
+      ] : null;
       children.push(new Table({
-        rows: [new TableRow({ children: r.project==='vir' ? [
+        rows: _instSigRows || [new TableRow({ children: r.project==='vir' ? [
           sigCell('WAKIL KONTRAKTOR', r.contractorName, r.contractorJawatan, r.contractorTarikh),
           sigCell('WAKIL SPRM — NEGERI/CAWANGAN/HQ', r.clientName, r.clientJawatan, r.clientTarikh),
         ] : [
@@ -25861,7 +25953,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
       pm, pmStep, pmStepLabels, pmProgressPulse, pmStepAnimClass, equipRowFx,
-      maintTypeName, maintTypeFull, maintTypeBadge, maintTypeBadgeClass, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
+      maintTypeName, maintTypeFull, maintTypeBadge, maintTypeBadgeClass, INST_SIGN_BOXES, instSignCompany, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV, pmActiveFilterChips, clearAllPmFilters,
       addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine, pmHasNota,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
