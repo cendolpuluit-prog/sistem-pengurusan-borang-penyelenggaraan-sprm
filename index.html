@@ -1229,6 +1229,11 @@ details.form-control[open] summary::after{content:'▴'}
 .dark-mode .custom-tooltip.custom-tooltip-arrow-below::after{border-bottom-color:#30363d}
 @media (max-width:640px){.custom-tooltip{display:none}}
 .highlight-row td{background:#fff9e6!important}
+/* NEW INSTALLATION ('INST') job-type badge — purple, so it never reads as
+   PM (blue/green) or CM (red). */
+.badge-inst{background:#ede7f6;color:#4527a0}
+.dark-mode .badge-inst{background:#2e2350;color:#c4b5fd}
+.team-pill-inst{margin-left:3px;padding:0 4px;border-radius:3px;font-size:.58rem;font-weight:800;letter-spacing:.04em;background:#6d28d9;color:#fff;vertical-align:middle}
 /* Equipment tables — a just-added/edited row briefly glows (no 100%
    keyframe, so it fades back to whatever the row's own background is,
    striped or dark mode, instead of snapping); a row being deleted fades
@@ -2155,7 +2160,7 @@ details.form-control[open] summary::after{content:'▴'}
             <template v-else>
               <div class="flex items-center gap-8" style="flex-wrap:wrap">
                 <b>{{row.dateLabel}}</b>
-                <span class="badge" :class="row.maintType==='CM'?'badge-red':'badge-green'" style="font-size:.68rem">{{row.maintType}}</span>
+                <span class="badge" :class="maintTypeBadgeClass(row.maintType,'badge-green')" style="font-size:.68rem" :title="maintTypeFull(row.maintType)">{{maintTypeBadge(row.maintType)}}</span>
                 <span v-if="row.status" :style="'font-size:.78rem;font-weight:700;color:'+(row.status==='Baik'?'#1b5e20':'#b71c1c')">{{row.status}}</span>
                 <span class="text-sm text-muted">{{row.refNo}}</span>
               </div>
@@ -2758,7 +2763,7 @@ details.form-control[open] summary::after{content:'▴'}
               <span :class="['team-badge','badge-'+a.team]">{{a.team}}</span>
               <div style="flex:1;min-width:0">
                 <div style="font-size:.85rem;font-weight:600;color:#222;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{a.siteName}}</div>
-                <div style="font-size:.75rem;color:#888">{{fmtDateDash(a.date)}} &nbsp;·&nbsp; {{(a.maintType||'PM')}} {{projectLabel(a.project)}}</div>
+                <div style="font-size:.75rem;color:#888">{{fmtDateDash(a.date)}} &nbsp;·&nbsp; {{maintTypeName(a.maintType)}} {{projectLabel(a.project)}}</div>
               </div>
             </div>
           </div>
@@ -4531,6 +4536,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">-- Pilih Jenis --</option>
                 <option value="PM">PM — Preventive Maintenance</option>
                 <option value="CM">CM — Corrective Maintenance</option>
+                <option v-if="currentProject==='vir' && pm.virSystem==='Optager HD4000'" value="INST">NEW INSTALLATION</option>
               </select>
             </div>
             <div class="form-group" v-if="pm.maintType==='PM'">
@@ -4629,7 +4635,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div v-if="pmStep===3 && currentProject==='vir'" :class="pmStepAnimClass">
           <div class="card">
             <div class="card-title">📝 Nota / Catatan Tambahan</div>
-            <p class="text-muted" style="font-size:.75rem;margin:-6px 0 14px">Tajuk pada borang: <b>{{pm.maintType==='CM'?'CORRECTIVE MAINTENANCE (CM)':'PREVENTIVE MAINTENANCE (PM)'}}</b> — ikut "Jenis Penyelenggaraan" yang dipilih di atas.</p>
+            <p class="text-muted" style="font-size:.75rem;margin:-6px 0 14px">Tajuk pada borang: <b>{{pm.maintType==='CM'?'CORRECTIVE MAINTENANCE (CM)':pm.maintType==='INST'?'NEW INSTALLATION':'PREVENTIVE MAINTENANCE (PM)'}}</b> — ikut "Jenis Penyelenggaraan" yang dipilih di atas.</p>
             <div v-for="(item,i) in pm.notaItems" :key="i" style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:12px">
               <div class="flex justify-between items-center mb-8">
                 <b style="font-size:.85rem;color:#003366">Masalah {{i+1}}</b>
@@ -4887,7 +4893,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="card-title">📝 Nota / Catatan Tambahan</div>
-            <p class="text-muted" style="font-size:.75rem;margin:-6px 0 14px">Tajuk pada borang: <b>{{pm.maintType==='CM'?'CORRECTIVE MAINTENANCE (CM)':'PREVENTIVE MAINTENANCE (PM)'}}</b> — ikut "Jenis Penyelenggaraan" yang dipilih di atas.</p>
+            <p class="text-muted" style="font-size:.75rem;margin:-6px 0 14px">Tajuk pada borang: <b>{{pm.maintType==='CM'?'CORRECTIVE MAINTENANCE (CM)':pm.maintType==='INST'?'NEW INSTALLATION':'PREVENTIVE MAINTENANCE (PM)'}}</b> — ikut "Jenis Penyelenggaraan" yang dipilih di atas.</p>
             <div v-for="(item,i) in pm.notaItems" :key="i" style="border:1px solid #ddd;border-radius:8px;padding:12px;margin-bottom:12px">
               <div class="flex justify-between items-center mb-8">
                 <b style="font-size:.85rem;color:#003366">Masalah {{i+1}}</b>
@@ -4984,6 +4990,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">Semua Jenis</option>
                 <option value="PM">PM Sahaja</option>
                 <option value="CM">CM Sahaja</option>
+                <option v-if="currentProject==='vir'" value="INST">NEW INSTALLATION</option>
               </select>
               <select class="form-control" style="width:auto;min-width:140px" v-model="filterPmNo" title="Tapis ikut Penyelenggaraan Ke-">
                 <option value="">Semua PM Ke</option>
@@ -5039,7 +5046,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="r in pmListPagedList" :key="r.id">
                   <td><input type="checkbox" :value="r.id" v-model="batchSelected"></td>
                   <td><b class="mono-data">{{r.refNo||'-'}}</b></td>
-                  <td><span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span></td>
+                  <td><span :class="'badge '+maintTypeBadgeClass(r.maintType)" :title="maintTypeFull(r.maintType)">{{maintTypeBadge(r.maintType)}}</span></td>
                   <td>{{r.siteName}}</td>
                   <td v-if="currentProject!=='vir'">{{cctvSystemBrands(r.cameras) || '—'}}</td>
                   <td v-if="currentProject==='vir'">{{virSystemShortLabel(r.virSystem)}}</td>
@@ -5084,7 +5091,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="pmc-top">
                 <input type="checkbox" :value="r.id" v-model="batchSelected">
                 <b class="pmc-ref mono-data">{{r.refNo||'-'}}</b>
-                <span :class="'badge badge-'+((r.maintType||'PM')==='CM'?'red':'blue')">{{r.maintType||'PM'}}</span>
+                <span :class="'badge '+maintTypeBadgeClass(r.maintType)" :title="maintTypeFull(r.maintType)">{{maintTypeBadge(r.maintType)}}</span>
               </div>
               <div class="pmc-site">{{r.siteName}} <span v-if="currentProject==='vir'" class="badge badge-gray" style="font-size:.65rem">{{virSystemShortLabel(r.virSystem)}}</span><span v-else class="badge badge-gray" style="font-size:.65rem">{{cctvSystemBrands(r.cameras) || '—'}}</span></div>
               <div class="pmc-meta">
@@ -5178,16 +5185,17 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="pm-classification">TERHAD &nbsp;—&nbsp; UNTUK KEGUNAAN RASMI SAHAJA</div>
 
           <!-- TITLE BAR -->
-          <div class="pm-corp-title" v-if="viewPM?.project==='vir'">BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR &nbsp;|&nbsp; SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)</div>
+          <div class="pm-corp-title" v-if="viewPM?.project==='vir' && viewPM?.maintType==='INST'">BORANG PEMASANGAN BARU SISTEM VIR &nbsp;|&nbsp; SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)</div>
+          <div class="pm-corp-title" v-else-if="viewPM?.project==='vir'">BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR &nbsp;|&nbsp; SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)</div>
           <div class="pm-corp-title" v-else>BORANG PENYELENGGARAAN BERJADUAL SISTEM CCTV &nbsp;|&nbsp; SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)</div>
 
           <!-- INFO BLOCK -->
           <div class="pm-corp-info">
             <div class="pm-info-cell"><b>Cawangan / Site:</b> {{viewPM?.siteName}}</div>
-            <div class="pm-info-cell"><b>Tarikh Penyelenggaraan:</b> {{fmtDateDash(viewPM?.visitDate)}}</div>
+            <div class="pm-info-cell"><b>{{viewPM?.maintType==='INST'?'Tarikh Pemasangan:':'Tarikh Penyelenggaraan:'}}</b> {{fmtDateDash(viewPM?.visitDate)}}</div>
             <div class="pm-info-cell" v-if="viewPM?.project==='vir'"><b>No. Bilik VIR:</b> {{viewPM?.virRoomNo||'—'}}</div>
             <div class="pm-info-cell" v-else><b>Bulan Penyelenggaraan:</b> {{viewPM?.month?MONTHS[viewPM.month-1]:'—'}} {{viewPM?.year}}</div>
-            <div class="pm-info-cell"><b>Jenis Penyelenggaraan:</b> <span style="font-weight:700;color:#1A2332">{{viewPM?.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance'}}</span></div>
+            <div class="pm-info-cell"><b>{{viewPM?.maintType==='INST'?'Jenis Kerja:':'Jenis Penyelenggaraan:'}}</b> <span style="font-weight:700;color:#1A2332">{{maintTypeFull(viewPM?.maintType)}}</span></div>
             <!-- VIR only — row split into 2 columns instead of a lone
                  full-width "Penyelenggaraan No." bar: Jenis Sistem VIR
                  (BCD/Optager HD4000) always shows on the left, paired with
@@ -5197,12 +5205,13 @@ details.form-control[open] summary::after{content:'▴'}
                  cause, and a PM record has the reverse. -->
             <template v-if="viewPM?.project==='vir'">
               <div class="pm-info-cell"><b>Jenis Sistem VIR:</b> {{viewPM?.virSystem||'BCD'}}</div>
-              <div class="pm-info-cell"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>&nbsp;
+              <div class="pm-info-cell" v-if="viewPM?.maintType!=='INST'"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>&nbsp;
                 <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
                   <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
                 </span>
                 <span v-else>{{viewPM?.rootCause || '—'}}</span>
               </div>
+              <div class="pm-info-cell" v-else></div>
             </template>
             <!-- CCTV — mirrors the VIR row above: Jenis Sistem CCTV on the
                  left (auto-derived from the distinct camera brands actually
@@ -5649,6 +5658,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <span :class="['team-badge','badge-'+g.team]">{{g.team}}</span>
                       {{shortSite(g.siteName)}}
                       <span v-if="g.projLabel" :class="['team-pill-proj', g.projLabel==='CCTV+VIR'?'proj-both':(g.projLabel==='VIR'?'proj-vir':'proj-cctv')]">{{g.projLabel}}</span>
+                      <span v-if="g.entries.some(e=>e.maintType==='INST')" class="team-pill-inst" title="NEW INSTALLATION">INST</span>
                       <span v-if="g.stopCount>1" class="team-pill-multi">×{{g.stopCount}}</span>
                       <span v-if="rotationDueMembers(g.entries[0]).length" style="margin-left:3px;font-size:.65rem" title="Ada staff perlu rotasi">⚠</span>
                       <span v-if="assignmentStateHoliday(g.entries[0])" style="margin-left:3px;font-size:.65rem" :title="assignmentStateHoliday(g.entries[0]).name+' — cuti negeri ini sahaja'">🎉</span>
@@ -5818,7 +5828,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <td style="text-align:center">
                   <span :class="['jp-badge','badge-'+t.team]">{{t.team}}</span>
                 </td>
-                <td>{{t.maintType||'PM'}}</td>
+                <td>{{maintTypeName(t.maintType)}}</td>
                 <td>{{projectLabel(t.project)}}</td>
                 <td>{{t.siteName||'—'}}<span v-if="t.subProject" class="text-muted text-sm"> ({{t.subProject}})</span></td>
                 <td>{{t.members?.map(m=>m.name).join(', ')||'—'}}</td>
@@ -5881,6 +5891,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="PM">PM — Preventive Maintenance</option>
                 <option value="CM">CM — Corrective Maintenance</option>
                 <option value="Site Visit">Site Visit — Lawatan Tapak</option>
+                <option value="INST">NEW INSTALLATION</option>
               </select>
             </div>
             <div class="form-group" v-if="!NON_SPRM_PROJECTS.includes(teamModal.data.project)">
@@ -5990,7 +6001,7 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="team-card-body">
               <div class="flex items-center gap-8 mb-6">
                 <b style="font-size:.95rem">Team {{t.team}}</b>
-                <span class="badge" style="background:#e8f5e9;color:#1b5e20;font-size:.72rem">{{t.maintType||'PM'}} · {{projectLabel(t.project)}}</span>
+                <span class="badge" style="background:#e8f5e9;color:#1b5e20;font-size:.72rem">{{maintTypeName(t.maintType)}} · {{projectLabel(t.project)}}</span>
               </div>
               <div style="font-size:.85rem;color:#333;margin-bottom:6px">
                 📍 <b>{{t.siteName||'—'}}</b><span v-if="t.subProject" class="text-muted text-sm"> ({{t.subProject}})</span>
@@ -6832,7 +6843,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="r in trashedPmRecords" :key="r.id">
                   <td>{{r.refNo||'-'}}</td>
                   <td>{{r.siteName||'-'}}</td>
-                  <td><span class="badge" :class="r.maintType==='CM'?'badge-red':'badge-green'">{{r.maintType||'PM'}}</span></td>
+                  <td><span class="badge" :class="maintTypeBadgeClass(r.maintType,'badge-green')" :title="maintTypeFull(r.maintType)">{{maintTypeBadge(r.maintType)}}</span></td>
                   <td>{{trashDeletedAtLabel(r)}}</td>
                   <td>{{r.deletedBy||'-'}}</td>
                   <td>{{trashDaysLeft(r)}}</td>
@@ -7374,8 +7385,8 @@ details.form-control[open] summary::after{content:'▴'}
               </select>
             </div>
             <div style="font-size:.8rem;color:#888;padding-bottom:6px">
-              <span style="color:#1b5e20;font-weight:700">CCTV:</span> {{pmRecords.filter(r=>(r.project||'cctv')==='cctv'&&(r.maintType||'PM')!=='CM'&&(r.visitDate?new Date(r.visitDate).getFullYear():Number(r.year))===yirYear).length}} PM &nbsp;·&nbsp;
-              <span style="color:#003366;font-weight:700">VIR:</span> {{pmRecords.filter(r=>r.project==='vir'&&(r.maintType||'PM')!=='CM'&&(r.visitDate?new Date(r.visitDate).getFullYear():Number(r.year))===yirYear).length}} PM &nbsp;·&nbsp;
+              <span style="color:#1b5e20;font-weight:700">CCTV:</span> {{pmRecords.filter(r=>(r.project||'cctv')==='cctv'&&(r.maintType||'PM')==='PM'&&(r.visitDate?new Date(r.visitDate).getFullYear():Number(r.year))===yirYear).length}} PM &nbsp;·&nbsp;
+              <span style="color:#003366;font-weight:700">VIR:</span> {{pmRecords.filter(r=>r.project==='vir'&&(r.maintType||'PM')==='PM'&&(r.visitDate?new Date(r.visitDate).getFullYear():Number(r.year))===yirYear).length}} PM &nbsp;·&nbsp;
               <span style="color:#b71c1c;font-weight:700">CM:</span> {{pmRecords.filter(r=>r.maintType==='CM'&&(r.visitDate?new Date(r.visitDate).getFullYear():Number(r.year))===yirYear).length}} rekod
             </div>
           </div>
@@ -8358,7 +8369,7 @@ details.form-control[open] summary::after{content:'▴'}
         <div style="font-weight:700;font-size:13pt">DAYA ONE RESOURCES SDN BHD</div>
         <div style="font-size:9pt;color:#555">No 29-1 Jalan Equine 9A, Taman Equine, Seri Kembangan 43300, Selangor &nbsp;|&nbsp; Tel: 03-89431400</div>
         <div style="margin-top:6px;background:#1A2332;color:#fff;padding:4px 0;font-weight:700;font-size:11pt">
-          {{r.project==='vir'?'BORANG PENYELENGGARAAN SISTEM VIR':'BORANG PENYELENGGARAAN SISTEM CCTV'}} — SPRM
+          {{r.project==='vir'?(r.maintType==='INST'?'BORANG PEMASANGAN BARU SISTEM VIR':'BORANG PENYELENGGARAAN SISTEM VIR'):'BORANG PENYELENGGARAAN SISTEM CCTV'}} — SPRM
         </div>
       </div>
       <table style="width:100%;border-collapse:collapse;font-size:9pt;margin-bottom:8px">
@@ -8374,7 +8385,7 @@ details.form-control[open] summary::after{content:'▴'}
         </tr>
         <tr>
           <td style="border:1px solid #000;padding:4px 8px"><b>Jenis:</b></td>
-          <td style="border:1px solid #000;padding:4px 8px">{{r.maintType==='CM'?'CM — Corrective':'PM — Preventive'}} {{r.maintType==='PM'?'(Ke-'+r.pmNo+')':''}}</td>
+          <td style="border:1px solid #000;padding:4px 8px">{{r.maintType==='CM'?'CM — Corrective':r.maintType==='INST'?'NEW INSTALLATION':'PM — Preventive'}} {{r.maintType==='PM'?'(Ke-'+r.pmNo+')':''}}</td>
           <td style="border:1px solid #000;padding:4px 8px"><b>Status:</b></td>
           <td style="border:1px solid #000;padding:4px 8px">{{r.status==='submitted'?'Submitted':'Draft'}}</td>
         </tr>
@@ -11617,11 +11628,11 @@ createApp({
     // (not the plain `year` field) so records only carrying `visitDate`
     // still count.
     const timelapseYearOptions = computed(() => {
-      const years = new Set(pmRecords.value.map(r => _recDate(r)?.getFullYear()).filter(Boolean));
+      const years = new Set(maintRecords.value.map(r => _recDate(r)?.getFullYear()).filter(Boolean));
       return [...years].sort((a,b) => b-a);
     });
     function _timelapseRecordsFor(year, month, project) {
-      return pmRecords.value.filter(r => {
+      return maintRecords.value.filter(r => {
         if(project !== 'all' && (r.project||'cctv') !== project) return false;
         const d = _recDate(r);
         return d && d.getFullYear() === year && (d.getMonth()+1) === month;
@@ -11656,7 +11667,7 @@ createApp({
     });
     const timelapseYearVisitedSites = computed(() => {
       const set = new Set();
-      pmRecords.value.forEach(r => {
+      maintRecords.value.forEach(r => {
         if(timelapseModal.project !== 'all' && (r.project||'cctv') !== timelapseModal.project) return;
         const d = _recDate(r);
         if(d && d.getFullYear() === timelapseModal.year) set.add(r.siteId);
@@ -12087,7 +12098,7 @@ createApp({
         items.push({ id:'ov-'+s.id, icon:'⚠️', urgency:0, label:'Site Lampau: '+s.name, sub:VIR_SITES.some(v=>v.id===s.id)?'VIR':'CCTV', date:null, action:'sites' });
       });
       teamAssignments.value.filter(a => a.date >= todayStr && a.date <= in7Str).forEach(a => {
-        items.push({ id:'ta-'+a.id, icon:'📅', urgency:1, label:'Jadual: '+a.siteName, sub:(a.maintType||'PM')+' — Team '+a.team, date:a.date, action:'jadual' });
+        items.push({ id:'ta-'+a.id, icon:'📅', urgency:1, label:'Jadual: '+a.siteName, sub:maintTypeName(a.maintType)+' — Team '+a.team, date:a.date, action:'jadual' });
       });
       contracts.value.filter(c => c.endDate >= todayStr && c.endDate <= in7Str).forEach(c => {
         items.push({ id:'ct-'+c.id, icon:'📜', urgency:1, label:'Kontrak Tamat: '+c.title, sub:(c.project||'cctv')==='vir'?'VIR':'CCTV', date:c.endDate, action:'contracts', project:c.project||'cctv' });
@@ -12715,7 +12726,7 @@ createApp({
         return `<tr>
           <td>${fmtDate(t.date)}</td>
           <td style="text-align:center"><span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:${bc};color:#fff;font-weight:700;font-size:8pt;line-height:20px;text-align:center">${esc(t.team)}</span></td>
-          <td>${esc(t.maintType||'PM')}</td>
+          <td>${esc(maintTypeName(t.maintType))}</td>
           <td>${esc(projectLabel(t.project)||'—')}</td>
           <td>${esc(t.siteName||'—')}${t.subProject?' ('+esc(t.subProject)+')':''}</td>
           <td>${members}</td>
@@ -14617,6 +14628,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     // ---- Project split ----
     const currentProject = ref('cctv');
+    // NEW INSTALLATION ('INST') is only offered for VIR + Optager HD4000 (see
+    // the Jenis dropdown). If the room/system is switched to something else
+    // after picking it, the option disappears from the dropdown but the value
+    // would silently stay — reset it instead. Never during an edit (an
+    // existing INST record keeps its type). Declared HERE, after
+    // currentProject: the watch getter runs immediately at setup time.
+    watch(() => [currentProject.value, pm.virSystem], () => {
+      if(pm.maintType === 'INST' && !pm._isEdit && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) {
+        pm.maintType = '';
+        showToast('NEW INSTALLATION hanya untuk sistem VIR Optager HD4000 — sila pilih semula Jenis.', 'error');
+      }
+    });
     // virSiteEquip now holds ONLY `rooms` per VIR site — shared regardless
     // of system, since a room's system tag is the whole point of it.
     // Cameras/NVR/HDD/Switch/Alarm live in two parallel, fully separate
@@ -15329,6 +15352,22 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     // ---- Records ----
     const pmRecords = ref([]);
+    // Maintenance-contract records only (PM + CM) — every statistic, report,
+    // health score, overdue/contract-window calc and chart reads THIS, not
+    // pmRecords. NEW INSTALLATION (maintType 'INST', VIR Optager) records are
+    // outside the maintenance contract, so they're excluded here in ONE place
+    // instead of in each of the dozens of consumers. pmRecords itself (all
+    // records) is still what the Rekod Borang list, search, CRUD, ref-no
+    // checks, backup and schedule-vs-actual matching use.
+    const maintRecords = computed(() => pmRecords.value.filter(r => r.maintType !== 'INST'));
+    // Job-type display helpers — every label that used to be a two-way
+    // "CM ? … : PM …" ternary goes through these, so a NEW INSTALLATION
+    // record ('INST') can never be printed/shown as "PM — Preventive".
+    // maintTypeName also passes Jadual-only values ("Site Visit") through.
+    function maintTypeName(t) { return t === 'INST' ? 'NEW INSTALLATION' : (t || 'PM'); }
+    function maintTypeFull(t) { return t === 'CM' ? 'CM — Corrective Maintenance' : t === 'INST' ? 'NEW INSTALLATION' : 'PM — Preventive Maintenance'; }
+    function maintTypeBadge(t) { return t === 'INST' ? '🆕 INST' : (t || 'PM'); }
+    function maintTypeBadgeClass(t, pmClass) { return t === 'CM' ? 'badge-red' : t === 'INST' ? 'badge-inst' : (pmClass || 'badge-blue'); }
     const viewPM = ref(null);
     const filterSite = ref('');
     const filterYear = ref('');
@@ -15355,7 +15394,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
       if(filterYear.value) chips.push({ key:'year', label:'Tahun: '+filterYear.value, clear:()=>{filterYear.value='';} });
       if(filterMonth.value) chips.push({ key:'month', label:'Bulan: '+MONTHS[filterMonth.value-1], clear:()=>{filterMonth.value='';} });
-      if(filterMaintType.value) chips.push({ key:'maintType', label:'Jenis: '+(filterMaintType.value==='PM'?'PM Sahaja':'CM Sahaja'), clear:()=>{filterMaintType.value='';} });
+      if(filterMaintType.value) chips.push({ key:'maintType', label:'Jenis: '+(filterMaintType.value==='PM'?'PM Sahaja':filterMaintType.value==='INST'?'NEW INSTALLATION':'CM Sahaja'), clear:()=>{filterMaintType.value='';} });
       if(filterPmNo.value) chips.push({ key:'pmNo', label:'PM Ke-'+filterPmNo.value, clear:()=>{filterPmNo.value='';} });
       if(filterSystem.value) chips.push({ key:'system', label:'Sistem: '+filterSystem.value, clear:()=>{filterSystem.value='';} });
       return chips;
@@ -15418,9 +15457,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return countFromBCD(virSiteEquipBCD.value) + countFromOptager(virSiteEquipOptager.value) + countFromOptager(virSiteEquipVCS.value) + countFromOptager(virSiteEquipSony.value);
     });
 
-    const pmThisYear = computed(() => pmRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
-    const pmCCTV = computed(() => pmRecords.value.filter(r=>(r.project||'cctv')==='cctv'));
-    const pmVIR  = computed(() => pmRecords.value.filter(r=>r.project==='vir'));
+    const pmThisYear = computed(() => maintRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
+    const pmCCTV = computed(() => maintRecords.value.filter(r=>(r.project||'cctv')==='cctv'));
+    const pmVIR  = computed(() => maintRecords.value.filter(r=>r.project==='vir'));
 
     // ---- Dashboard year filter — scopes the PM-count stat cards and the
     // two charts below to a single year; health-score/overdue/approaching
@@ -15432,18 +15471,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       localStorage.setItem('pm_dashboard_compact', dashboardCompact.value ? '1' : '0');
     }
     const dashboardYears = computed(() => {
-      const years = new Set(pmRecords.value.map(r=>r.year).filter(Boolean));
+      const years = new Set(maintRecords.value.map(r=>r.year).filter(Boolean));
       years.add(new Date().getFullYear());
       return [...years].sort((a,b)=>b-a);
     });
     // PM-only (excludes CM) — matches siteHealthScores' own compliance
-    // filter ((r.maintType||'PM')!=='CM'), so a site with several CM visits
+    // filter ((r.maintType||'PM')==='PM'), so a site with several CM visits
     // but zero actual PM visits this year can't show as "100% PM
     // pematuhan" here or in cctvTargetPct/virTargetPct below. CM has its
     // own separate cmThisYearCCTV/VIR count (see below) instead of being
     // silently folded into the PM number.
-    const pmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===dashboardYear.value && (r.maintType||'PM')!=='CM').length);
-    const pmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===dashboardYear.value && (r.maintType||'PM')!=='CM').length);
+    const pmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===dashboardYear.value && (r.maintType||'PM')==='PM').length);
+    const pmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===dashboardYear.value && (r.maintType||'PM')==='PM').length);
     const cmThisYearCCTV = computed(() => pmCCTV.value.filter(r=>r.year===dashboardYear.value && r.maintType==='CM').length);
     const cmThisYearVIR  = computed(() => pmVIR.value.filter(r=>r.year===dashboardYear.value && r.maintType==='CM').length);
 
@@ -15802,7 +15841,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // scratch per site, an O(sites*records) redo on every recompute.
     const pmRecordsBySite = computed(() => {
       const map = {};
-      pmRecords.value.forEach(r => {
+      maintRecords.value.forEach(r => {
         if(!r.siteId) return;
         if(!map[r.siteId]) map[r.siteId] = [];
         map[r.siteId].push(r);
@@ -15822,7 +15861,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // identical .getTime() and Set naturally dedupes them.
       const pmDates = [...new Set(
         (pmRecordsBySite.value[siteId] || [])
-          .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
+          .filter(r => (r.maintType||'PM') === 'PM' && _recDate(r))
           .map(r => _recDate(r).getTime())
       )].sort((a,b) => a-b).map(ms => new Date(ms));
       const windows = VIR_PM_WINDOWS.map((w,i) => ({ start:_parseLocalDate(w.start), end:_parseLocalDate(w.end), fulfilled: !!pmDates[i] }));
@@ -15868,7 +15907,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     function _cctvSiteCycleStatus(siteId) {
       const recs = (pmRecordsBySite.value[siteId] || [])
-        .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
+        .filter(r => (r.maintType||'PM') === 'PM' && _recDate(r))
         .sort((a,b) => _recDate(a) - _recDate(b));
       const cycleSize = PM_PER_YEAR.cctv; // 3
       const total = recs.length;
@@ -15896,7 +15935,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function _virSiteCycleStatus(siteId) {
       const status = _virWindowStatus(siteId);
       const recs = (pmRecordsBySite.value[siteId] || [])
-        .filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r))
+        .filter(r => (r.maintType||'PM') === 'PM' && _recDate(r))
         .sort((a,b) => _recDate(a) - _recDate(b));
       // VIR submits one pmRecords doc PER ROOM (pm.virRoomNo is required on
       // the VIR PM form) — a single physical visit to a 4-room site is 4
@@ -15944,7 +15983,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const showSiteCompletionDetail = ref(false);
 
     function _lastPmDate(siteId) {
-      const recs = (pmRecordsBySite.value[siteId] || []).filter(r => (r.maintType||'PM') !== 'CM');
+      const recs = (pmRecordsBySite.value[siteId] || []).filter(r => (r.maintType||'PM') === 'PM');
       if(!recs.length) return null;
       return recs.reduce((best, r) => {
         const d = r.visitDate ? _parseLocalDate(r.visitDate) : (r.year && r.month ? new Date(r.year, r.month-1, 1) : null);
@@ -16145,7 +16184,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           cycleStart = new Date(now.getFullYear(), 0, 1); // fallback: calendar year
         }
 
-        const pmThisCycle = allRecs.filter(r => (r.maintType||'PM') !== 'CM' && _recDate(r) && _recDate(r) >= cycleStart && _recDate(r) <= now);
+        const pmThisCycle = allRecs.filter(r => (r.maintType||'PM') === 'PM' && _recDate(r) && _recDate(r) >= cycleStart && _recDate(r) <= now);
         const cmThisCycle = allRecs.filter(r => r.maintType === 'CM' && _recDate(r) && _recDate(r) >= cycleStart && _recDate(r) <= now);
         const lastPM = _lastPmDate(s.id);
         const monthsSincePM = lastPM ? (now - lastPM) / (1000*60*60*24*30.44) : 999;
@@ -16387,7 +16426,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         Bulan: r.month?MONTHS[r.month-1]:'-',
         Tahun: r.year||'-',
         'Tarikh Penyelenggaraan': r.visitDate||'-',
-        Jenis: r.maintType||'PM',
+        Jenis: maintTypeName(r.maintType),
         'Status CM': r.maintType==='CM' ? (r.cmStatus==='resolved'?'Selesai':r.cmStatus==='in-progress'?'Dalam Proses':'Terbuka') : '-',
         Status: r.status==='submitted'?'Submitted':'Draft',
         Kamera: r.cameras?.length||0,
@@ -16880,7 +16919,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // one bar. Label always carries a CCTV/VIR tag so two same-coded
       // sites still render as visibly distinct bars.
       const siteCount = {};
-      pmRecords.value.filter(r => r.year === yr).forEach(r => {
+      maintRecords.value.filter(r => r.year === yr).forEach(r => {
         const proj = r.project || 'cctv';
         const site = (proj === 'vir' ? VIR_SITES : SITES).find(s => s.id === r.siteId);
         const label = (site?.code || r.siteName || r.siteId) + (proj === 'vir' ? ' (VIR)' : ' (CCTV)');
@@ -16925,8 +16964,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
 
       // Doughnut chart: PM vs CM, scoped to the same selected year
-      const yrRecords = pmRecords.value.filter(r => r.year === yr);
-      const pmCount = yrRecords.filter(r => r.maintType !== 'CM').length;
+      const yrRecords = maintRecords.value.filter(r => r.year === yr);
+      const pmCount = yrRecords.filter(r => (r.maintType||'PM') === 'PM').length;
       const cmCount = yrRecords.filter(r => r.maintType === 'CM').length;
       const doughCanvas = document.getElementById('chartPMType');
       if(doughCanvas) {
@@ -21645,6 +21684,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(status === 'submitted') {
         if(!pm.siteId) { showToast('Sila pilih site.', 'error'); return; }
         if(!pm.maintType) { showToast('Sila pilih Jenis Penyelenggaraan (PM/CM).', 'error'); return; }
+        if(pm.maintType === 'INST' && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) { showToast('NEW INSTALLATION hanya untuk sistem VIR Optager HD4000.', 'error'); return; }
         if(!pm.month || !pm.year) { showToast('Sila pilih Bulan dan Tahun Penyelenggaraan.', 'error'); return; }
         if(pm.maintType === 'CM' && !pm.rootCause) { showToast('Sila isi Punca Masalah (Root Cause) untuk CM.', 'error'); return; }
         const nudgeIssues = _pmNudgeIssues();
@@ -21698,7 +21738,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           project: isVir ? 'vir' : 'cctv',
           siteId:pm.siteId, siteName:pm.siteName, refNo:pm.refNo,
           month:pm.month, year:pm.year, visitDate:pm.visitDate,
-          maintType: pm.maintType||'PM', pmNo: pm.maintType==='CM' ? null : (pm.pmNo||1), rootCause: pm.maintType==='CM' ? _resolveDropdownCustom(pm.rootCause||'', pm.rootCauseCustom) : '',
+          maintType: pm.maintType||'PM', pmNo: (pm.maintType==='CM' || pm.maintType==='INST') ? null : (pm.pmNo||1), rootCause: pm.maintType==='CM' ? _resolveDropdownCustom(pm.rootCause||'', pm.rootCauseCustom) : '',
           contractorName:pm.contractorName, contractorJawatan:pm.contractorJawatan, contractorTarikh:pm.contractorTarikh,
           clientName:pm.clientName, clientJawatan:pm.clientJawatan, clientTarikh:pm.clientTarikh,
           client2Name:pm.client2Name, client2Jawatan:pm.client2Jawatan, client2Tarikh:pm.client2Tarikh,
@@ -21794,7 +21834,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // VIR_PM_WINDOWS), so it celebrates hitting totalWindows instead.
         // Either way pmCount only crosses the target once, so this fires
         // once per completion rather than on every submit after.
-        if(status==='submitted' && data.maintType!=='CM') {
+        if(status==='submitted' && (data.maintType||'PM')==='PM') {
           const hs = siteHealthScores.value[data.siteId];
           const targetCount = data.project === 'vir' ? hs?.totalWindows : PM_PER_YEAR[data.project];
           if(hs && targetCount && hs.pmCount === targetCount) {
@@ -22691,7 +22731,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
       // ── Title bar ──
       const titleText = r.project === 'vir'
-        ? 'BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR  |  SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)'
+        ? (r.maintType === 'INST'
+            ? 'BORANG PEMASANGAN BARU SISTEM VIR  |  SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)'
+            : 'BORANG PENYELENGGARAAN BERJADUAL SISTEM VIR  |  SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)')
         : 'BORANG PENYELENGGARAAN BERJADUAL SISTEM CCTV  |  SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM)';
       children.push(new Paragraph({
         children: [new TextRun({ text: titleText, color: WHITE, bold: true, size: 20 })],
@@ -22713,9 +22755,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const bulan = r.project === 'vir' ? `No. Bilik VIR: ${r.virRoomNo||'—'}` : `Bulan: ${r.month?MONTHS[r.month-1]:'—'} ${r.year}`;
       children.push(new Table({
         rows: [
-          new TableRow({ children: [infoCell('Cawangan / Site:',true), infoCell(r.siteName), infoCell('Tarikh Penyelenggaraan:',true), infoCell(fmtDateDash(r.visitDate))] }),
-          new TableRow({ children: [infoCell(r.project==='vir'?'No. Bilik VIR:':'Bulan Penyelenggaraan:',true), infoCell(r.project==='vir'?`${r.virRoomNo||'—'}${r.virSystem?' ('+r.virSystem+')':''}`:bulan.replace(/^Bulan: /,'')), infoCell('Jenis Penyelenggaraan:',true), infoCell(r.maintType==='CM'?'CM — Corrective Maintenance':'PM — Preventive Maintenance')] }),
-          new TableRow({ children: [infoCell(r.maintType==='CM'?'Punca Kerosakan:':'Penyelenggaraan No.:',true), infoCell(r.maintType==='CM'?(r.rootCause||'—'):(r.pmNo?`PM ${r.pmNo}`:'—')), infoCell(''), infoCell('')] }),
+          new TableRow({ children: [infoCell('Cawangan / Site:',true), infoCell(r.siteName), infoCell(r.maintType==='INST'?'Tarikh Pemasangan:':'Tarikh Penyelenggaraan:',true), infoCell(fmtDateDash(r.visitDate))] }),
+          new TableRow({ children: [infoCell(r.project==='vir'?'No. Bilik VIR:':'Bulan Penyelenggaraan:',true), infoCell(r.project==='vir'?`${r.virRoomNo||'—'}${r.virSystem?' ('+r.virSystem+')':''}`:bulan.replace(/^Bulan: /,'')), infoCell(r.maintType==='INST'?'Jenis Kerja:':'Jenis Penyelenggaraan:',true), infoCell(maintTypeFull(r.maintType))] }),
+          ...(r.maintType === 'INST' ? [] : [new TableRow({ children: [infoCell(r.maintType==='CM'?'Punca Kerosakan:':'Penyelenggaraan No.:',true), infoCell(r.maintType==='CM'?(r.rootCause||'—'):(r.pmNo?`PM ${r.pmNo}`:'—')), infoCell(''), infoCell('')] })]),
         ],
         width: { size: 100, type: WidthType.PERCENTAGE },
       }));
@@ -22980,7 +23022,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const todayStr = _localDateStr();
         teamAssignments.value.forEach(a => {
           if(a.date >= todayStr && (a.members||[]).some(m => m.uid === authProfile.value.id)) {
-            list.push({ id:'assign-'+a.id, icon:'📌', type:'assignment', title:'Penugasan: '+(a.siteName||'-'), body:'Team '+a.team+' — '+fmtDate(a.date)+(a.maintType?' ('+a.maintType+')':''), time: now, read:false, action:'jadual', project: projShortLabel(a.project).toLowerCase() });
+            list.push({ id:'assign-'+a.id, icon:'📌', type:'assignment', title:'Penugasan: '+(a.siteName||'-'), body:'Team '+a.team+' — '+fmtDate(a.date)+(a.maintType?' ('+maintTypeName(a.maintType)+')':''), time: now, read:false, action:'jadual', project: projShortLabel(a.project).toLowerCase() });
           }
         });
       }
@@ -23088,7 +23130,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const cutoff = new Date();
       cutoff.setMonth(cutoff.getMonth() - n);
       cutoff.setDate(1); cutoff.setHours(0,0,0,0);
-      return pmRecords.value.filter(r => {
+      return maintRecords.value.filter(r => {
         if(laporanProject.value !== 'all' && (r.project||'cctv') !== laporanProject.value) return false;
         if(laporanSite.value !== 'all' && r.siteId !== laporanSite.value) return false;
         let d = null;
@@ -23133,7 +23175,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // counts), so changing Tempoh/Projek/Site morphs the numbers to their
     // new value instead of snapping instantly.
     const laporanCountTotal = countUpFrom(computed(() => laporanFiltered.value.length));
-    const laporanCountPm = countUpFrom(computed(() => laporanFiltered.value.filter(r=>r.maintType!=='CM').length));
+    const laporanCountPm = countUpFrom(computed(() => laporanFiltered.value.filter(r=>(r.maintType||'PM')==='PM').length));
     const laporanCountCm = countUpFrom(computed(() => laporanFiltered.value.filter(r=>r.maintType==='CM').length));
     const laporanCountSites = countUpFrom(computed(() => new Set(laporanFiltered.value.map(r=>r.siteId)).size));
 
@@ -23160,7 +23202,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // Chart 1: PM vs CM per bulan
       const pmByMonth = months.map(m => recs.filter(r => {
         const d = r.visitDate ? new Date(r.visitDate) : (r.year&&r.month ? new Date(r.year,r.month-1,1) : null);
-        return d && d.getFullYear()===m.year && d.getMonth()+1===m.month && (r.maintType||'PM')!=='CM';
+        return d && d.getFullYear()===m.year && d.getMonth()+1===m.month && (r.maintType||'PM')==='PM';
       }).length);
       const cmByMonth = months.map(m => recs.filter(r => {
         const d = r.visitDate ? new Date(r.visitDate) : (r.year&&r.month ? new Date(r.year,r.month-1,1) : null);
@@ -23176,7 +23218,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }, options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'top'} }, scales:{ x:{stacked:false}, y:{beginAtZero:true,ticks:{stepSize:1}} } }});
 
       // Chart 2: Doughnut PM vs CM
-      const pmTotal = recs.filter(r=>(r.maintType||'PM')!=='CM').length;
+      const pmTotal = recs.filter(r=>(r.maintType||'PM')==='PM').length;
       const cmTotal = recs.filter(r=>r.maintType==='CM').length;
       const el2 = document.getElementById('chart-doughnut');
       if(el2) _chartDoughnut = new Chart(el2, { type:'doughnut', data:{
@@ -23199,7 +23241,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const cutoff3 = new Date();
       cutoff3.setMonth(cutoff3.getMonth() - laporanTempoh.value);
       cutoff3.setDate(1); cutoff3.setHours(0,0,0,0);
-      const recsForSiteChart = pmRecords.value.filter(r => {
+      const recsForSiteChart = maintRecords.value.filter(r => {
         if(laporanProject.value !== 'all' && (r.project||'cctv') !== laporanProject.value) return false;
         let d = null;
         if(r.visitDate) d = new Date(r.visitDate);
@@ -23277,7 +23319,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const img3 = c3 ? c3.toDataURL('image/png') : '';
       const img4 = c4 ? c4.toDataURL('image/png') : '';
       if(_restoreChartTheme) _restoreChartTheme();
-      const pmCount = recs.filter(r=>(r.maintType||'PM')!=='CM').length;
+      const pmCount = recs.filter(r=>(r.maintType||'PM')==='PM').length;
       const cmCount = recs.filter(r=>r.maintType==='CM').length;
       const siteCount = new Set(recs.map(r=>r.siteId)).size;
       const rowsHtml = recs.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.refNo||'—')}</td><td>${esc(r.siteName||'—')}</td><td>${esc(r.virRoomNo||'—')}</td><td>${esc(r.visitDate?fmtDateDash(r.visitDate):(r.month?MONTHS[r.month-1]+' '+r.year:'—'))}</td><td>${esc(r.maintType||'PM')}</td><td>${esc((r.project||'cctv').toUpperCase())}</td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:#aaa">Tiada rekod</td></tr>';
@@ -23412,7 +23454,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const items = _filledNotaItems();
       const masalahFilled = items.map(it => (it.masalah||'').trim()).filter(Boolean);
       const tindakanFilled = items.map(it => (it.tindakan||'').trim()).filter(Boolean);
-      const lines = [pm.maintType === 'CM' ? 'CORRECTIVE MAINTENANCE (CM)' : 'PREVENTIVE MAINTENANCE (PM)', ''];
+      const lines = [pm.maintType === 'CM' ? 'CORRECTIVE MAINTENANCE (CM)' : pm.maintType === 'INST' ? 'NEW INSTALLATION' : 'PREVENTIVE MAINTENANCE (PM)', ''];
       if(masalahFilled.length) {
         lines.push('MASALAH');
         masalahFilled.forEach((m,i) => lines.push(`${i+1}) ${m}`));
@@ -23520,7 +23562,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const lbYear = ref(new Date().getFullYear());
     const lbProject = ref('cctv');
 
-    const lbRecords = computed(() => pmRecords.value.filter(r => {
+    const lbRecords = computed(() => maintRecords.value.filter(r => {
       if(lbProject.value !== 'all' && (r.project||'cctv') !== lbProject.value) return false;
       if(r.visitDate) {
         const d = new Date(r.visitDate);
@@ -23535,7 +23577,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const coveredIds = new Set(recs.map(r => r.siteId));
       return {
         total: recs.length,
-        pm: recs.filter(r => (r.maintType||'PM') !== 'CM').length,
+        pm: recs.filter(r => (r.maintType||'PM') === 'PM').length,
         cm: recs.filter(r => r.maintType === 'CM').length,
         sites: coveredIds.size,
         noRecord: activeSites.filter(s => !coveredIds.has(s.id)).length
@@ -23553,7 +23595,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // Build per-site status
       const siteRows = activeSites.map((s, i) => {
         const siteRecs = recs.filter(r => r.siteId === s.id);
-        const pmRecs = siteRecs.filter(r => (r.maintType||'PM') !== 'CM');
+        const pmRecs = siteRecs.filter(r => (r.maintType||'PM') === 'PM');
         const cmRecs = siteRecs.filter(r => r.maintType === 'CM');
         const statusText = siteRecs.length === 0 ? 'Tiada Rekod' : (cmRecs.length > 0 ? 'CM Dilaksanakan' : 'PM Selesai');
         const statusColor = siteRecs.length === 0 ? '#888' : (cmRecs.length > 0 ? '#b71c1c' : '#7A841A');
@@ -23583,7 +23625,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // Summary stats
       const totalSites = activeSites.length;
       const coveredIds = new Set(recs.map(r => r.siteId));
-      const pmCount = recs.filter(r => (r.maintType||'PM') !== 'CM').length;
+      const pmCount = recs.filter(r => (r.maintType||'PM') === 'PM').length;
       const cmCount = recs.filter(r => r.maintType === 'CM').length;
       const sitesOk = activeSites.filter(s => coveredIds.has(s.id)).length;
       const sitesNone = totalSites - sitesOk;
@@ -23734,7 +23776,7 @@ ${allIssues.length > 0 ? `
     async function printYearInReview() {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const yr = yirYear.value;
-      const recs = pmRecords.value.filter(r => {
+      const recs = maintRecords.value.filter(r => {
         const recYear = r.visitDate ? new Date(r.visitDate).getFullYear() : Number(r.year);
         return recYear === yr;
       });
@@ -23742,7 +23784,7 @@ ${allIssues.length > 0 ? `
       // Per-site data builder
       const buildSiteData = (sites, project) => sites.map(s => {
         const sRecs = recs.filter(r => r.siteId === s.id);
-        const pmRecs = sRecs.filter(r => (r.maintType||'PM') !== 'CM');
+        const pmRecs = sRecs.filter(r => (r.maintType||'PM') === 'PM');
         const cmRecs = sRecs.filter(r => r.maintType === 'CM');
         // VIR's real per-year split isn't flat (1/2/1 across 2026-2028, see
         // VIR_PM_WINDOWS) — using PM_PER_YEAR.vir=2 for every year would
@@ -23774,7 +23816,7 @@ ${allIssues.length > 0 ? `
       });
       const failEntries = Object.entries(failMap).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]);
 
-      const totalPM = recs.filter(r=>(r.maintType||'PM')!=='CM').length;
+      const totalPM = recs.filter(r=>(r.maintType||'PM')==='PM').length;
       const totalCM = recs.filter(r=>r.maintType==='CM').length;
       const cctvCompliance = SITES.length ? Math.round(cctvData.reduce((s,x)=>s+x.pct,0)/SITES.length) : 0;
       const virCompliance = VIR_SITES.length ? Math.round(virData.reduce((s,x)=>s+x.pct,0)/VIR_SITES.length) : 0;
@@ -24212,7 +24254,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       // not a flat recurring interval — a flat PM_INTERVAL.vir*30 threshold
       // would falsely flag its normal ~8-month 2027→2028 gap as a breach.
       const intervalDays = proj === 'vir' ? VIR_MAX_EXPECTED_GAP_DAYS : PM_INTERVAL[proj] * 30.44;
-      const recs = pmRecords.value.filter(r => r.siteId===site.id && (r.maintType||'PM')!=='CM')
+      const recs = maintRecords.value.filter(r => r.siteId===site.id && (r.maintType||'PM')==='PM')
         .map(r => ({ ...r, _d: r.visitDate ? new Date(r.visitDate) : (r.year&&r.month ? new Date(r.year, r.month-1, 1) : null) }))
         .filter(r => r._d).sort((a,b) => a._d - b._d);
       const gaps = [];
@@ -24238,14 +24280,14 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const start = _parseLocalDate(customRangeStart.value);
       const end = _parseLocalDate(customRangeEnd.value);
       end.setHours(23,59,59,999); // inclusive of the whole end day
-      return pmRecords.value.filter(r => {
+      return maintRecords.value.filter(r => {
         const d = _recDate(r);
         return d && d >= start && d <= end;
       });
     });
     const customRangeStats = computed(() => {
       const recs = customRangeRecords.value;
-      const pm = recs.filter(r => (r.maintType||'PM')!=='CM').length;
+      const pm = recs.filter(r => (r.maintType||'PM')==='PM').length;
       const cm = recs.filter(r => r.maintType==='CM').length;
       const cctv = recs.filter(r => (r.project||'cctv')==='cctv').length;
       const vir = recs.filter(r => r.project==='vir').length;
@@ -24448,8 +24490,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const yr = now.getFullYear();
       const q = Math.floor(now.getMonth()/3); // 0-3
       const qMonths = [q*3, q*3+1, q*3+2];
-      const qRecs = pmRecords.value.filter(r => { const d=_recDate(r); return d && d.getFullYear()===yr && qMonths.includes(d.getMonth()); });
-      const pmCount = qRecs.filter(r=>(r.maintType||'PM')!=='CM').length;
+      const qRecs = maintRecords.value.filter(r => { const d=_recDate(r); return d && d.getFullYear()===yr && qMonths.includes(d.getMonth()); });
+      const pmCount = qRecs.filter(r=>(r.maintType||'PM')==='PM').length;
       const cmCount = qRecs.filter(r=>r.maintType==='CM').length;
       const siteCount = new Set(qRecs.map(r=>r.siteId)).size;
       const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
@@ -24475,7 +24517,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         .map(x => ({ ...x, sites:[...x.sites] })).slice(0,5);
       const monthlyRows = qMonths.map(m => {
         const mRecs = qRecs.filter(r => _recDate(r)?.getMonth()===m);
-        return { month: MONTHS[m], pm: mRecs.filter(r=>(r.maintType||'PM')!=='CM').length, cm: mRecs.filter(r=>r.maintType==='CM').length };
+        return { month: MONTHS[m], pm: mRecs.filter(r=>(r.maintType||'PM')==='PM').length, cm: mRecs.filter(r=>r.maintType==='CM').length };
       });
       const qLabel = `Suku ${q+1} (${MONTHS[qMonths[0]]}–${MONTHS[qMonths[2]]}) ${yr}`;
       const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
@@ -24660,7 +24702,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const all = [...SITES.map(s=>({...s,project:'cctv'})), ...VIR_SITES.map(s=>({...s,project:'vir'}))];
       const site = all.find(s => s.id === heatmapSiteId.value);
       if(!site) return null;
-      const recs = pmRecords.value.filter(r => r.siteId===heatmapSiteId.value && (r.maintType||'PM')!=='CM');
+      const recs = maintRecords.value.filter(r => r.siteId===heatmapSiteId.value && (r.maintType||'PM')==='PM');
       const years = new Set();
       recs.forEach(r => { const d=_recDate(r); if(d) years.add(d.getFullYear()); });
       const yearList = [...years].sort((a,b) => b-a);
@@ -24723,9 +24765,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     const yoyStats = computed(() => {
       const thisYear = new Date().getFullYear();
       const lastYear = thisYear - 1;
-      const countFor = (yr, isCm) => pmRecords.value.filter(r => {
+      const countFor = (yr, isCm) => maintRecords.value.filter(r => {
         const d = _recDate(r);
-        return d && d.getFullYear()===yr && (isCm ? r.maintType==='CM' : (r.maintType||'PM')!=='CM');
+        return d && d.getFullYear()===yr && (isCm ? r.maintType==='CM' : (r.maintType||'PM')==='PM');
       }).length;
       const pct = (cur, prev) => prev>0 ? Math.round(((cur-prev)/prev)*100) : (cur>0 ? 100 : 0);
       const pmThis = countFor(thisYear,false), pmLast = countFor(lastYear,false);
@@ -24742,7 +24784,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const perTeam = {};
       // Non-SPRM assignments (DOSM/JPM-ICU/KLN/UTHM) are schedule-only (not
       // an SPRM CCTV/VIR project) — excluded from every report, this one included.
-      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project)).forEach(t => {
+      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST').forEach(t => {
         const team = t.team;
         if(!team) return;
         if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, members:new Set() };
@@ -24753,7 +24795,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         // (visitDate isn't required at submit — see savePM()) — without
         // this fallback, a submitted record missing just that one field
         // would silently look like the team never showed up here.
-        const hasRecord = tDate && pmRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        const hasRecord = tDate && maintRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         if(hasRecord) perTeam[team].completed++;
       });
       return Object.values(perTeam)
@@ -24770,14 +24812,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const months = [];
       for(let i=5;i>=0;i--) months.push(_monthKeyOf(new Date(now.getFullYear(), now.getMonth()-i, 1)));
       const perTeamMonth = {};
-      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.team && t.date).forEach(t => {
+      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST' && t.team && t.date).forEach(t => {
         const tDate = new Date(t.date);
         const mk = _monthKeyOf(tDate);
         if(!months.includes(mk)) return;
         if(!perTeamMonth[t.team]) perTeamMonth[t.team] = {};
         if(!perTeamMonth[t.team][mk]) perTeamMonth[t.team][mk] = { assigned:0, completed:0 };
         perTeamMonth[t.team][mk].assigned++;
-        const hasRecord = pmRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        const hasRecord = maintRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         if(hasRecord) perTeamMonth[t.team][mk].completed++;
       });
       const result = {};
@@ -24806,14 +24848,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // isn't really about any one person; this is the per-person equivalent. ──
     const staffWorkload = computed(() => {
       const per = {};
-      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project)).forEach(t => {
+      teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST').forEach(t => {
         const isCm = t.maintType === 'CM';
         const tDate = t.date ? new Date(t.date) : null;
         // _recDate(r) falls back to month/year when visitDate is blank
         // (visitDate isn't required at submit — see savePM()) — without
         // this fallback, a submitted record missing just that one field
         // would silently look like the team never showed up here.
-        const hasRecord = tDate && pmRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        const hasRecord = tDate && maintRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         // Dedup by uid within this one assignment first — a malformed/
         // duplicate member entry on a single doc would otherwise inflate
         // that staff member's count for what is really one assignment.
@@ -24845,7 +24887,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // macam logActorDisplayName/auditLogUserOptions guna.
     const staffStreaks = computed(() => {
       const byStaff = {};
-      pmRecords.value.filter(r => r.status==='submitted' && r.submittedBy).forEach(r => {
+      maintRecords.value.filter(r => r.status==='submitted' && r.submittedBy).forEach(r => {
         const name = submittedByDisplayName(r);
         if(!name || name==='-') return;
         if(!byStaff[name]) byStaff[name] = [];
@@ -24869,9 +24911,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return r.visitDate ? _parseLocalDate(r.visitDate) : (r.year ? new Date(r.year, (r.month||1)-1, 1) : null);
     }
     const yearTrendData = computed(() => {
-      const years = [...new Set(pmRecords.value.map(r => { const d = _recDate(r); return d ? d.getFullYear() : null; }).filter(Boolean))].sort((a,b) => a-b);
-      const pmByYear = years.map(y => pmRecords.value.filter(r => { const d = _recDate(r); return d && d.getFullYear()===y && (r.maintType||'PM')!=='CM'; }).length);
-      const cmByYear = years.map(y => pmRecords.value.filter(r => { const d = _recDate(r); return d && d.getFullYear()===y && r.maintType==='CM'; }).length);
+      const years = [...new Set(maintRecords.value.map(r => { const d = _recDate(r); return d ? d.getFullYear() : null; }).filter(Boolean))].sort((a,b) => a-b);
+      const pmByYear = years.map(y => maintRecords.value.filter(r => { const d = _recDate(r); return d && d.getFullYear()===y && (r.maintType||'PM')==='PM'; }).length);
+      const cmByYear = years.map(y => maintRecords.value.filter(r => { const d = _recDate(r); return d && d.getFullYear()===y && r.maintType==='CM'; }).length);
       return { years, pmByYear, cmByYear };
     });
     let _chartYearTrend = null;
@@ -24911,7 +24953,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     }
     const tindakanBreakdown = computed(() => {
       const map = {};
-      pmRecords.value.forEach(r => {
+      maintRecords.value.forEach(r => {
         _getNotaItems(r).forEach(item => {
           const cat = _classifyTindakan(item.tindakan);
           if(!cat) return;
@@ -25556,7 +25598,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamAssignments.value
         .filter(t => t.date === tvTodayStr.value && t.project === projLabel)
         .sort((a, b) => String(a.team).localeCompare(String(b.team)))
-        .forEach(t => items.push(`🛠️ Hari ini: Team ${t.team} — ${t.siteName || '-'} (${t.maintType || 'PM'})`));
+        .forEach(t => items.push(`🛠️ Hari ini: Team ${t.team} — ${t.siteName || '-'} (${maintTypeName(t.maintType)})`));
       tvSiteRows.value.filter(r => r.overdue).forEach(r => items.push(`⚠️ ${r.name} — PM lampau tempoh`));
       cmCases.value
         .filter(k => k.status !== 'selesai' && (k.project || 'cctv') === proj)
@@ -25818,7 +25860,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
       OPTAGER_PROCESSORS, OPTAGER_RAM, OPTAGER_STORAGE, OPTAGER_STORAGE_TYPES, OPTAGER_STORAGE_SIZES, OPTAGER_GPU, OPTAGER_MOBO, OPTAGER_MOBO_TYPE, OPTAGER_OS,
-      pm, pmStep, pmStepLabels, pmProgressPulse, pmStepAnimClass, equipRowFx, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
+      pm, pmStep, pmStepLabels, pmProgressPulse, pmStepAnimClass, equipRowFx,
+      maintTypeName, maintTypeFull, maintTypeBadge, maintTypeBadgeClass, refNoSuffix, refNoPrefix, refNoDuplicate, nextRefNoSuggestion, refNoGapWarning, refNoReuseWarning, pmCamerasGrouped, viewPMCamerasGrouped, viewPMHddGrouped, viewPMHddTotalUnits,
       pmRecords, viewPM, filterSite, filterYear, filterMonth, filterMaintType, filterPmNo, filterSystem, filterSystemOptionsCCTV, pmActiveFilterChips, clearAllPmFilters,
       addNotaMasalah, removeNotaMasalah, addNotaPending, removeNotaPending, viewPmNotaLines, isNotaHeaderLine, pmHasNota,
       bulkCmStatus, bulkCmSelected, bulkUpdateCMStatus,
