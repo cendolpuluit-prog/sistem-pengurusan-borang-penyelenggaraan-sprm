@@ -6302,6 +6302,15 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
 
         <div class="card">
+          <div class="card-title">🔒 Bersihkan Kata Laluan Peralatan dari Rekod Borang</div>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Rekod borang PM/CM lama mungkin masih menyimpan <b>Username/Password Akses</b> peralatan (kamera, NVR, switch, alarm, lain-lain) — data yang sepatutnya hanya boleh dilihat oleh superadmin/admin/staff. Alat ini membuang <b>hanya</b> dua medan itu daripada rekod borang; semua data lain tidak diubah, dan kata laluan dalam Urus Peralatan kekal seperti biasa. Selamat untuk dijalankan semula.</p>
+          <button class="btn btn-outline btn-sm" @click="cleanupPmRecordCredentials" :disabled="credCleanup.running">
+            {{credCleanup.running?'⏳ Sedang mengimbas...':'🔒 Imbas & Bersihkan Sekarang'}}
+          </button>
+          <p v-if="credCleanup.done" style="color:#198754;font-size:.82rem;margin-top:10px">✅ Selesai — {{credCleanup.changedDocs}} rekod borang ({{credCleanup.changedItems}} peralatan) dibersihkan.</p>
+        </div>
+
+        <div class="card">
           <div class="card-title">💾 Backup Manual</div>
           <p style="color:#555;font-size:.88rem;margin-bottom:14px">Muat turun <b>SEMUA</b> data sistem (peralatan, rekod PM, pengguna, kontrak & SLA, contact person, jadual, log audit, senarai custom) sebagai fail JSON untuk simpanan luar.</p>
           <button class="btn btn-primary" @click="doManualBackup" :disabled="loading">
@@ -14882,10 +14891,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
       const eq = roomScopedStore[pm.siteId]?.byRoom?.[room._uid];
       pm.servers = (eq?.servers || []).map(s => ({...s}));
-      pm.cameras = (eq?.cameras || []).map(c => ({...c}));
-      pm.switches = (eq?.switches || []).map(s => ({...s}));
+      pm.cameras = _stripEquipCreds(eq?.cameras);
+      pm.switches = _stripEquipCreds(eq?.switches);
       pm.tablets = (eq?.tablets || []).map(t => ({...t}));
-      pm.misc = (eq?.misc || []).map(m => ({...m}));
+      pm.misc = _stripEquipCreds(eq?.misc);
     }
     // Regenerates the checklist whenever the system changes — but NEVER
     // during an edit: editRecord() already restored pm.virItems from the
@@ -15045,6 +15054,65 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // different (rooms/byRoom) so blindly reusing this same fixArr logic
     // against it would risk mis-writing VIR's data structure.
     const migrateHanwhaModal = reactive({ show:false, running:false, done:false, changedDocs:0, changedItems:0 });
+    // ── One-time cleanup: equipment credentials inside saved borang ──
+    // Before _stripEquipCreds, saving a borang copied each camera/NVR/
+    // switch/alarm/misc item's accessUser/accessPw into the pmRecords doc —
+    // readable by every signed-in account, internship included. This removes
+    // ONLY those two keys from those equipment lists; every other field
+    // (incl. updatedAt/updatedBy, so nothing looks "edited") is left exactly
+    // as it was. Same shape as migrateHanwhaBrandName: reads the CURRENT
+    // docs fresh from Firestore (never the possibly-stale local copy, so it
+    // can't overwrite someone's newer save), updates only the changed lists,
+    // commits in chunks. Scans first so the confirm shows real counts.
+    // Idempotent — safe to run again. Superadmin only. Tong Sampah entries
+    // can't be edited (rules: update false) — they're purged within 3 days,
+    // and restoreDeletedRecord()/applyRestore() strip on the way back in.
+    const credCleanup = reactive({ running:false, done:false, changedDocs:0, changedItems:0 });
+    const PM_EQUIP_ARRAY_KEYS = ['cameras','nvr','switches','alarms','misc','servers','tablets'];
+    function _hasCreds(it) { return !!it && typeof it === 'object' && ('accessUser' in it || 'accessPw' in it); }
+    async function cleanupPmRecordCredentials() {
+      if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(credCleanup.running) return;
+      credCleanup.running = true; credCleanup.done = false;
+      try {
+        const snap = await db.collection('pmRecords').get();
+        const targets = [];
+        let items = 0;
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          const updates = {};
+          PM_EQUIP_ARRAY_KEYS.forEach(k => {
+            if(!Array.isArray(d[k])) return;
+            const n = d[k].filter(_hasCreds).length;
+            if(!n) return;
+            updates[k] = _stripEquipCreds(d[k]);
+            items += n;
+          });
+          if(Object.keys(updates).length) targets.push({ ref: doc.ref, id: doc.id, updates });
+        });
+        if(!targets.length) {
+          credCleanup.changedDocs = 0; credCleanup.changedItems = 0; credCleanup.done = true;
+          showToast('Tiada Username/Password Akses ditemui dalam rekod borang — tiada apa perlu dibersihkan.');
+          return;
+        }
+        if(!await askConfirm(`Ditemui ${items} peralatan dalam ${targets.length} rekod borang yang masih menyimpan Username/Password Akses.\n\nBuang HANYA dua medan itu daripada rekod tersebut? Semua data lain dalam borang tidak akan diubah.`)) return;
+        for(let i = 0; i < targets.length; i += 400) {
+          const batch = db.batch();
+          targets.slice(i, i + 400).forEach(t => batch.update(t.ref, t.updates));
+          await _fw(batch.commit());
+        }
+        // Keep the already-loaded local copies in step (same fields only).
+        const byId = new Map(targets.map(t => [t.id, t.updates]));
+        pmRecords.value = pmRecords.value.map(r => byId.has(r.id) ? { ...r, ...byId.get(r.id) } : r);
+        credCleanup.changedDocs = targets.length; credCleanup.changedItems = items; credCleanup.done = true;
+        await logAudit('PM_CRED_CLEANUP', `${targets.length} rekod borang / ${items} peralatan`);
+        showToast(`Selesai — ${items} peralatan dalam ${targets.length} rekod dibersihkan.`);
+      } catch(e) {
+        showToast('Gagal bersihkan rekod: ' + e.message + ' (selamat untuk cuba semula)', 'error');
+      } finally {
+        credCleanup.running = false;
+      }
+    }
     function _fixHanwhaBrandArray(arr) {
       if(!Array.isArray(arr) || !arr.length) return null;
       let count = 0;
@@ -15264,6 +15332,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         }
 
         if(data.pmRecords?.length) {
+          // Backups taken before _stripEquipCreds may still hold equipment
+          // credentials inside each borang — strip them on the way back in.
+          data.pmRecords = data.pmRecords.map(r => {
+            const out = { ...r };
+            PM_EQUIP_ARRAY_KEYS.forEach(k => { if(Array.isArray(out[k])) out[k] = _stripEquipCreds(out[k]); });
+            return out;
+          });
           await _batchRestoreCollection('pmRecords', data.pmRecords);
           pmRecords.value = data.pmRecords;
         }
@@ -17315,14 +17390,35 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // stops and they age out as "offline" within that window.
     const ONLINE_THRESHOLD_MS = 90 * 1000;
     const HEARTBEAT_INTERVAL_MS = 45 * 1000;
+    // loadUsers() is a FULL users-collection read. Running it on every 45s
+    // heartbeat tick made it the single heaviest recurring read in the app
+    // (user-count x 80 reads per hour, per open tab) purely to keep the
+    // online-indicator fresh — which tolerates being a few minutes stale.
+    // Throttled to this interval instead; the lastSeen WRITE still goes out
+    // every tick, so this client's own presence stays as precise as before.
+    const USER_LIST_REFRESH_MS = 5 * 60 * 1000;
+    let _lastUserListFetch = 0;
     let _heartbeatTimer = null;
     async function _sendHeartbeat() {
       if(!auth.currentUser) return;
+      // A hidden tab can't act on fresh data, but was still issuing this
+      // whole read batch every 45s for as long as it stayed open. Presence
+      // simply ages out to "offline" while hidden, which is also the more
+      // honest signal. _onHeartbeatVisibility() below fires one immediate
+      // catch-up tick the moment the tab becomes visible again, so nothing
+      // is left stale once the user actually returns.
+      if(document.visibilityState === 'hidden') return;
       try { await db.collection('users').doc(auth.currentUser.uid).update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() }); } catch(e) {}
       // Refresh the local user list too, so other users' presence (as seen
       // by THIS client) doesn't go stale between page loads — allUsers is
-      // otherwise only fetched once at login.
-      try { await loadUsers(); } catch(e) {}
+      // otherwise only fetched once at login. Throttled (see above); the
+      // timestamp is stamped inside loadUsers() itself so ANY caller of it
+      // (loadAll at login, Pengguna page, etc.) counts as a refresh here.
+      if(Date.now() - _lastUserListFetch >= USER_LIST_REFRESH_MS) {
+        // Reset on failure so the next tick retries instead of waiting out
+        // the full window on a transient error.
+        try { await loadUsers(); } catch(e) { _lastUserListFetch = 0; }
+      }
       // Freezing a user (toggleFreeze) or deleting them (deleteUser) only
       // touches Firestore — an already-open tab for that account stays
       // fully authenticated until something re-checks. The heartbeat is the
@@ -17366,12 +17462,31 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         } catch(e) { /* fail-open — don't force-logout on a network hiccup */ }
       }
     }
+    // Immediate catch-up when the tab comes back: re-announces presence and
+    // re-runs the frozen/deleted/expired account check right away instead of
+    // waiting up to 45s for the next tick (the in-tick hidden-guard above
+    // means NO ticks ran while the tab was away). Registered per-session;
+    // addEventListener de-dupes on the same function reference, so a repeat
+    // _startHeartbeat() can't stack duplicate listeners.
+    function _onHeartbeatVisibility() {
+      if(document.visibilityState !== 'visible') return;
+      _sendHeartbeat();
+      // _notifTick() also self-skips while hidden, so without this the bell
+      // would stay as stale as the moment the tab was backgrounded until
+      // its next 5-minute tick. A local rebuild costs no Firestore reads,
+      // so catching up here is free and keeps the pre-throttle freshness.
+      buildNotifications();
+    }
     function _startHeartbeat() {
       _sendHeartbeat();
       clearInterval(_heartbeatTimer);
       _heartbeatTimer = setInterval(_sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+      document.addEventListener('visibilitychange', _onHeartbeatVisibility);
     }
-    function _stopHeartbeat() { clearInterval(_heartbeatTimer); _heartbeatTimer = null; }
+    function _stopHeartbeat() {
+      clearInterval(_heartbeatTimer); _heartbeatTimer = null;
+      document.removeEventListener('visibilitychange', _onHeartbeatVisibility);
+    }
     watch(authUser, (user) => { if(user) _startHeartbeat(); else _stopHeartbeat(); });
 
     function _isUserOnline(u) {
@@ -18733,6 +18848,21 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       });
       return { stripped, creds };
     }
+    // PM/CM records must NEVER carry equipment credentials: pmRecords is
+    // readable by every signed-in account (internship included) — exactly
+    // the exposure this companion credentials collection exists to prevent.
+    // Local equipment state always has them merged in (see above), so every
+    // path that copies equipment into a borang strips them here, and
+    // savePM() strips again as a final net (which also cleans an OLDER
+    // record whenever it's re-saved). No borang view/print uses them — the
+    // VIR "Default Setting" print uses fixed factory defaults instead.
+    function _stripEquipCreds(list) {
+      return (list || []).map(it => {
+        if(!it || typeof it !== 'object') return it;
+        const { accessUser, accessPw, ...rest } = it;
+        return rest;
+      });
+    }
     function _mergeCredentials(equipObj, creds) {
       if(!equipObj || !creds) return equipObj;
       CRED_EQUIP_KINDS.forEach(kind => {
@@ -19052,7 +19182,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         virSiteEquipSony.value = veqSony;
 
         if(pmSnap) pmRecords.value = pmSnap.docs.map(d=>({id:d.id,...d.data()}));
-        if(tSnap) teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()}));
+        // Counts as a fresh pull for the notification tick's hourly
+        // re-fetch throttle (TEAM_ASSIGN_REFETCH_MS) — without this the
+        // very first tick, 5 minutes after login, would immediately re-read
+        // the whole collection that was just loaded here.
+        if(tSnap) { teamAssignments.value = tSnap.docs.map(d => ({id:d.id,...d.data()})); _lastTeamAssignFetch = Date.now(); }
 
         // Contract start dates now feed Site Health Score's PM-cycle
         // anchoring (see siteHealthScores) — that widget is visible to every
@@ -19079,7 +19213,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // buildNotifications directly, so a new "Penugasan" assignment made
         // by an admin elsewhere also surfaces without needing a refresh.
         clearInterval(_notifWatcher);
-        _notifWatcher = setInterval(_refreshTeamAssignmentsForNotif, 5*60*1000);
+        _notifWatcher = setInterval(_notifTick, 5*60*1000);
         if(_loadAllPartialFail) {
           showToast('Sebahagian data gagal dimuat — cuba muat semula halaman.', 'error');
         }
@@ -19103,6 +19237,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // ---- User Management ----
     async function loadUsers() {
       const snap = await db.collection('users').get();
+      // Single source of truth for "when was the users collection last
+      // read" — drives the heartbeat's throttle (USER_LIST_REFRESH_MS), so
+      // loadAll()'s own login-time call here also counts and the heartbeat
+      // doesn't immediately re-read the same data seconds later.
+      _lastUserListFetch = Date.now();
       // Excludes the viewer's own account — self-editing here would bypass
       // the dedicated "Profil Saya" flow. Superadmin is the one exception:
       // their profile should always be visible in Senarai Pengguna (so
@@ -21680,12 +21819,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
       // equipNota (Urus Peralatan's internal camera note) is stripped — it
       // must never reach the PM/CM borang or the saved record.
-      pm.cameras = (eq.cameras||[]).map(({equipNota, ...c})=>({...c,display:'Baik',icam:'Baik',nota:''}));
-      pm.nvr = (eq.nvr||[]).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
+      pm.cameras = _stripEquipCreds(eq.cameras).map(({equipNota, ...c})=>({...c,display:'Baik',icam:'Baik',nota:''}));
+      pm.nvr = _stripEquipCreds(eq.nvr).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
       pm.hdd = _groupHddForPm((eq.hdd||[]).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'})));
-      pm.switches = (eq.switches||[]).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
-      pm.alarms = (eq.alarms||[]).map(a=>({...a,func:'Baik',status:'Baik'}));
-      pm.misc = (eq.misc||[]).map(({equipNota, ...m})=>({...m,status:'Baik',nota:''})); // equipNota stripped, same as cameras
+      pm.switches = _stripEquipCreds(eq.switches).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
+      pm.alarms = _stripEquipCreds(eq.alarms).map(a=>({...a,func:'Baik',status:'Baik'}));
+      pm.misc = _stripEquipCreds(eq.misc).map(({equipNota, ...m})=>({...m,status:'Baik',nota:''})); // equipNota stripped, same as cameras
       // Always sort the borang's equipment lists at load time — regardless
       // of what order they happen to sit in storage (older records, or
       // anything added before the auto-sort-on-save existed) — so the
@@ -21866,13 +22005,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             // _loadPmOptagerEquipSnapshot), so a BCD borang never carries
             // these snapshots even accidentally.
             servers: JSON.parse(JSON.stringify(pm.servers||[])),
-            cameras: JSON.parse(JSON.stringify(pm.cameras||[])),
-            switches: JSON.parse(JSON.stringify(pm.switches||[])),
+            cameras: _stripEquipCreds(JSON.parse(JSON.stringify(pm.cameras||[]))),
+            switches: _stripEquipCreds(JSON.parse(JSON.stringify(pm.switches||[]))),
             tablets: JSON.parse(JSON.stringify(pm.tablets||[])),
-            misc: JSON.parse(JSON.stringify(pm.misc||[])),
+            misc: _stripEquipCreds(JSON.parse(JSON.stringify(pm.misc||[]))),
           } : {
-            cameras:[...pm.cameras], nvr:[...pm.nvr], hdd:[...pm.hdd],
-            switches:[...pm.switches], alarms:[...pm.alarms], misc:[...pm.misc],
+            cameras:_stripEquipCreds(pm.cameras), nvr:_stripEquipCreds(pm.nvr), hdd:[...pm.hdd],
+            switches:_stripEquipCreds(pm.switches), alarms:_stripEquipCreds(pm.alarms), misc:_stripEquipCreds(pm.misc),
             support:JSON.parse(JSON.stringify(pm.support)),
           })
         };
@@ -22287,6 +22426,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       try {
         const { deletedAt, deletedBy, id:_id, ...data } = rec;
         const batch = db.batch();
+        // Older trashed records may still carry equipment credentials —
+        // strip them on the way back (see cleanupPmRecordCredentials).
+        PM_EQUIP_ARRAY_KEYS.forEach(k => { if(Array.isArray(data[k])) data[k] = _stripEquipCreds(data[k]); });
         batch.set(db.collection('pmRecords').doc(id), data);
         batch.delete(db.collection('deletedPmRecords').doc(id));
         await _fw(batch.commit());
@@ -22365,8 +22507,22 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       list.value = list.value.filter(r=>r.id!==id);
       return data; // caller patches this straight into the live list — see restoreTrash*() below
     }
+    // A record's uploaded attachments (serviceReports[].path — Fail Servis /
+    // Resit / Lampiran Surat) live in Firebase Storage, not in the Firestore
+    // doc. Purging only the doc left those files behind forever — storage
+    // cost, and their download URLs (bearer links) kept working after the
+    // record was "permanently" deleted. Called only once a record is gone
+    // for good (soft-delete keeps the files so a restore still works), and
+    // only AFTER the doc delete succeeded. Best-effort: an already-missing
+    // file or a failed delete never blocks the purge. No-op for collections
+    // without attachments (contracts, CM cases).
+    function _deleteRecordFiles(rec) {
+      (rec?.serviceReports || []).forEach(f => { if(f?.path) storage.ref(f.path).delete().catch(() => {}); });
+    }
     async function _permanentlyDeleteFromTrash(deletedCollection, id, list) {
+      const rec = list.value.find(r => r.id === id);
       await _fw(db.collection(deletedCollection).doc(id).delete());
+      _deleteRecordFiles(rec);
       list.value = list.value.filter(r=>r.id!==id);
     }
     async function _purgeOldTrashGeneric(deletedCollection, list) {
@@ -22376,6 +22532,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const batch = db.batch();
       expired.forEach(r => batch.delete(db.collection(deletedCollection).doc(r.id)));
       await batch.commit();
+      expired.forEach(_deleteRecordFiles);
       list.value = list.value.filter(r => !expired.some(e=>e.id===r.id));
     }
 
@@ -23148,12 +23305,34 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // stays open would otherwise never surface as a "Penugasan" alert
     // until their next login/refresh. Re-pulling just this one collection
     // (not a full loadAll()) keeps the periodic tick cheap.
+    // NOTE: re-pulling one collection is cheap only RELATIVE to a full
+    // loadAll() — it is still a whole-collection read, and running it on
+    // every 5-minute tick made it the single largest recurring read in the
+    // app (assignment-count x 12 reads per hour, per open tab). The tick
+    // now does a cheap local rebuild instead (see _notifTick) and only
+    // re-pulls the collection this often.
+    const TEAM_ASSIGN_REFETCH_MS = 60 * 60 * 1000;
+    let _lastTeamAssignFetch = 0;
     async function _refreshTeamAssignmentsForNotif() {
       try {
         const snap = await db.collection('teamAssignments').orderBy('date','asc').get();
         teamAssignments.value = snap.docs.map(d => ({id:d.id,...d.data()}));
+        // Stamped only on SUCCESS, so a failed pull retries on the next
+        // tick instead of counting as a completed refresh.
+        _lastTeamAssignFetch = Date.now();
       } catch(e) { /* best-effort — keep showing whatever's already loaded */ }
       buildNotifications();
+    }
+    // The periodic notification tick. The day-threshold alerts this timer
+    // exists for (CM open >14 days, draft >7 days) derive purely from
+    // already-loaded records plus the current clock, so the common case
+    // needs NO Firestore read at all — only the rarer "did an admin add an
+    // assignment elsewhere?" case does, hence the hourly re-pull above.
+    // Skipped while the tab is hidden, same reasoning as the heartbeat.
+    function _notifTick() {
+      if(document.visibilityState === 'hidden') return;
+      if(Date.now() - _lastTeamAssignFetch >= TEAM_ASSIGN_REFETCH_MS) _refreshTeamAssignmentsForNotif();
+      else buildNotifications();
     }
 
     const _READ_NOTIF_KEY = 'pmcctv_readNotifIds';
@@ -26032,7 +26211,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       bulkEditModal, bulkEditFieldOptions, openBulkEdit, applyBulkEdit,
       infoModal, showInfo,
       openSites, openPMList, openBackup,
-      backupProgress, doManualBackup,
+      backupProgress, doManualBackup, credCleanup, cleanupPmRecordCredentials,
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
       migrateHanwhaModal, migrateHanwhaBrandName,
       restoreFromFile,
