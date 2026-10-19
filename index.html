@@ -1249,6 +1249,8 @@ details.form-control[open] summary::after{content:'▴'}
    a bare .pm-inst-sign-tbl th — they turned these labels white-on-light-blue. */
 .pm-inst-sign-wrap .pm-inst-sign-tbl th{width:28%;padding:3px 6px;text-align:left;font-weight:400;white-space:nowrap;color:#1A2332;background:#d9d9d9;border:1px dotted #1A2332}
 .pm-inst-sign-wrap .pm-inst-sign-tbl td{height:20px;padding:3px 6px;border:1px dotted #1A2332}
+.equip-load-warning{background:#fff3e0;border:1px solid #fb8c00;color:#7a4a00;padding:10px 14px;border-radius:8px;margin-bottom:12px;font-size:.85rem;line-height:1.5}
+.dark-mode .equip-load-warning{background:#3d2a12;border-color:#b26a00;color:#ffcc80}
 .team-pill-inst{margin-left:3px;padding:0 4px;border-radius:3px;font-size:.58rem;font-weight:800;letter-spacing:.04em;background:#6d28d9;color:#fff;vertical-align:middle}
 /* Equipment tables — a just-added/edited row briefly glows (no 100%
    keyframe, so it fades back to whatever the row's own background is,
@@ -3653,10 +3655,11 @@ details.form-control[open] summary::after{content:'▴'}
             <button v-if="currentProject==='vir' && equipVirSystem==='SONY'" class="btn btn-outline btn-sm btn-icon" @click="showInfo('sony')" title="Tentang sistem SONY">ℹ️</button>
             <button class="btn btn-outline btn-sm btn-icon" @click="showInfo('importOcr')" title="Tentang Import Fail & Scan OCR">ℹ️ Import/OCR</button>
           </div>
-          <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading" @click="saveSiteEquip">💾 Simpan Semua</button>
+          <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading || !equipWritable" @click="saveSiteEquip">💾 Simpan Semua</button>
         </div>
         <div v-if="!canEditEquip" class="badge badge-gray" style="display:block;margin-bottom:12px;padding:8px 12px">🔒 Paparan sahaja — {{currentProject==='vir' ? 'hanya admin/superadmin boleh mengedit peralatan site VIR.' : 'hanya admin/superadmin/staff boleh mengedit peralatan site.'}}</div>
-        <fieldset :disabled="!canEditEquip" style="border:0;margin:0;padding:0">
+        <div v-if="canEditEquip && !equipWritable" class="equip-load-warning" role="alert">⚠️ <b>Data peralatan tidak dapat dimuat sepenuhnya</b> (masalah sambungan semasa memuatkan). Penyuntingan &amp; penyimpanan dimatikan buat sementara supaya data sedia ada di pelayan <b>tidak terpadam</b>. Sila muat semula halaman (F5).</div>
+        <fieldset :disabled="!canEditEquip || !equipWritable" style="border:0;margin:0;padding:0">
         <div class="tabs">
           <div v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS')" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Appliance ({{(selSiteEquip.servers||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
@@ -4552,7 +4555,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">-- Pilih Jenis --</option>
                 <option value="PM">PM — Preventive Maintenance</option>
                 <option value="CM">CM — Corrective Maintenance</option>
-                <option v-if="currentProject==='vir' && pm.virSystem==='Optager HD4000'" value="INST">NEW INSTALLATION</option>
+                <option v-if="currentProject==='vir' && pm.virSystem==='Optager HD4000'" value="INST">New Installation</option>
               </select>
             </div>
             <div class="form-group" v-if="pm.maintType==='PM'">
@@ -5017,7 +5020,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="">Semua Jenis</option>
                 <option value="PM">PM Sahaja</option>
                 <option value="CM">CM Sahaja</option>
-                <option v-if="currentProject==='vir'" value="INST">NEW INSTALLATION</option>
+                <option v-if="currentProject==='vir'" value="INST">New Installation</option>
               </select>
               <select class="form-control" style="width:auto;min-width:140px" v-model="filterPmNo" title="Tapis ikut Penyelenggaraan Ke-">
                 <option value="">Semua PM Ke</option>
@@ -5698,7 +5701,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <span :class="['team-badge','badge-'+g.team]">{{g.team}}</span>
                       {{shortSite(g.siteName)}}
                       <span v-if="g.projLabel" :class="['team-pill-proj', g.projLabel==='CCTV+VIR'?'proj-both':(g.projLabel==='VIR'?'proj-vir':'proj-cctv')]">{{g.projLabel}}</span>
-                      <span v-if="g.entries.some(e=>e.maintType==='INST')" class="team-pill-inst" title="NEW INSTALLATION">INST</span>
+                      <span v-if="g.entries.some(e=>e.maintType==='INST')" class="team-pill-inst" title="New Installation">INST</span>
                       <span v-if="g.stopCount>1" class="team-pill-multi">×{{g.stopCount}}</span>
                       <span v-if="rotationDueMembers(g.entries[0]).length" style="margin-left:3px;font-size:.65rem" title="Ada staff perlu rotasi">⚠</span>
                       <span v-if="assignmentStateHoliday(g.entries[0])" style="margin-left:3px;font-size:.65rem" :title="assignmentStateHoliday(g.entries[0]).name+' — cuti negeri ini sahaja'">🎉</span>
@@ -5931,7 +5934,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <option value="PM">PM — Preventive Maintenance</option>
                 <option value="CM">CM — Corrective Maintenance</option>
                 <option value="Site Visit">Site Visit — Lawatan Tapak</option>
-                <option value="INST">NEW INSTALLATION</option>
+                <option value="INST">New Installation</option>
               </select>
             </div>
             <div class="form-group" v-if="!NON_SPRM_PROJECTS.includes(teamModal.data.project)">
@@ -8434,7 +8437,7 @@ details.form-control[open] summary::after{content:'▴'}
         </tr>
         <tr>
           <td style="border:1px solid #000;padding:4px 8px"><b>Jenis:</b></td>
-          <td style="border:1px solid #000;padding:4px 8px">{{r.maintType==='CM'?'CM — Corrective':r.maintType==='INST'?'NEW INSTALLATION':'PM — Preventive'}} {{r.maintType==='PM'?'(Ke-'+r.pmNo+')':''}}</td>
+          <td style="border:1px solid #000;padding:4px 8px">{{r.maintType==='CM'?'CM — Corrective':r.maintType==='INST'?'New Installation':'PM — Preventive'}} {{r.maintType==='PM'?'(Ke-'+r.pmNo+')':''}}</td>
           <td style="border:1px solid #000;padding:4px 8px"><b>Status:</b></td>
           <td style="border:1px solid #000;padding:4px 8px">{{r.status==='submitted'?'Submitted':'Draft'}}</td>
         </tr>
@@ -9595,6 +9598,16 @@ createApp({
 
     // ---- Equipment state ----
     const siteEquip = ref({});
+    // Is each project's equipment in memory COMPLETE (last loadAll read it —
+    // and, for roles that can read them, its credentials — successfully)?
+    // Every equipment save is a whole-document overwrite of one site, so an
+    // empty or credential-less in-memory copy (a failed read) would wipe that
+    // site's real equipment/passwords on the very next edit or autosave.
+    // While false: editing is locked, autosave/"Simpan Semua"/the local draft
+    // are all skipped, and a banner asks for a reload. See loadAll().
+    const equipLoadState = reactive({ cctv:false, vir:false });
+    const equipWritable = computed(() => equipLoadState[currentProject.value === 'vir' ? 'vir' : 'cctv']);
+    let _equipBlockToastAt = 0;
     const selSite = ref(null);
     const eqTab = ref('cameras');
     // equipNota — CCTV-only internal note shown ONLY in Urus Peralatan's
@@ -11060,16 +11073,32 @@ createApp({
     // it into localStorage (debounced) while the form is open, and offers to
     // restore it the next time the app loads.
     const PM_DRAFT_KEY = 'pm_sprm_form_draft';
+    // Scoped PER ACCOUNT (`pm_sprm_form_draft:<uid>`). It used to be one
+    // global key that doLogout() had to wipe (so the next person on a shared
+    // device was never offered someone else's form) — which also wiped the
+    // technician's OWN half-filled borang on the 30-min idle auto-logout,
+    // easy to hit mid-PM (up a ladder checking cameras, phone untouched),
+    // defeating draft recovery exactly when it's needed. Per-account keys
+    // keep both guarantees: your draft survives logout for you, and nobody
+    // else can ever see or be offered it. No equipment passwords inside
+    // (stripped from the borang — see _stripEquipCreds).
+    function _pmDraftKey() { const uid = authUser.value?.uid; return uid ? PM_DRAFT_KEY + ':' + uid : null; }
     let _pmDraftTimer = null;
     function _savePmDraftLocal() {
+      const key = _pmDraftKey();
+      if(!key) return;
       try {
-        localStorage.setItem(PM_DRAFT_KEY, JSON.stringify({
+        localStorage.setItem(key, JSON.stringify({
           pm: pm, pmStep: pmStep.value, project: currentProject.value, savedAt: Date.now(),
         }));
       } catch(e) {}
     }
     function clearPmDraftLocal() {
-      try { localStorage.removeItem(PM_DRAFT_KEY); } catch(e) {}
+      try {
+        const key = _pmDraftKey();
+        if(key) localStorage.removeItem(key);
+        localStorage.removeItem(PM_DRAFT_KEY); // legacy un-scoped key
+      } catch(e) {}
     }
     watch([pm, pmStep], () => {
       if(page.value !== 'new-pm') return;
@@ -11080,8 +11109,13 @@ createApp({
     // Called once after login/app load — offers to resume an unfinished
     // form left over from a session that never reached Submit/Save Draft.
     async function checkPmDraftRecovery() {
+      // A legacy un-scoped draft (saved before drafts were per-account) has
+      // no known owner — never offer it to whoever happens to log in next.
+      try { localStorage.removeItem(PM_DRAFT_KEY); } catch(e) {}
+      const key = _pmDraftKey();
+      if(!key) return;
       let raw;
-      try { raw = localStorage.getItem(PM_DRAFT_KEY); } catch(e) { return; }
+      try { raw = localStorage.getItem(key); } catch(e) { return; }
       if(!raw) return;
       let draft;
       try { draft = JSON.parse(raw); } catch(e) { clearPmDraftLocal(); return; }
@@ -11145,7 +11179,9 @@ createApp({
     const EQUIP_DRAFT_KEY = 'pm_sprm_equip_draft';
     let _equipDraftTimer = null;
     function _saveEquipDraftLocal() {
-      if(!selSite.value) return;
+      // Draft recovery restores by REPLACING the site's whole equipment —
+      // a draft taken from an incomplete copy would wipe the real data later.
+      if(!selSite.value || !equipWritable.value) return;
       try {
         localStorage.setItem(EQUIP_DRAFT_KEY, JSON.stringify({
           siteId: selSite.value.id, project: currentProject.value,
@@ -13782,7 +13818,20 @@ createApp({
       }
       loading.value = true;
       try {
-        const newEntries = (k.entries||[]).map(e => e.id === cmCaseDetail.editingEntryId
+        // Apply the edit to the case's CURRENT entries, re-read just now —
+        // not k.entries, the copy from when this page loaded (the cmCases
+        // list is cached). Overwriting with that copy silently dropped any
+        // entry someone else had appended since (addCmCaseEntry uses
+        // arrayUnion), e.g. a progress note added from a phone while this
+        // page sat open. If the read fails, nothing is written.
+        const fresh = await db.collection('cmCases').doc(k.id).get();
+        const current = (fresh.exists && fresh.data().entries) || [];
+        if(!current.some(e => e.id === cmCaseDetail.editingEntryId)) {
+          cmCaseDetail.err = 'Catatan ini telah dipadam oleh pengguna lain — sila tutup dan buka semula kes ini.';
+          loading.value = false;
+          return;
+        }
+        const newEntries = current.map(e => e.id === cmCaseDetail.editingEntryId
           ? { ...e, date:cmCaseDetail.newEntryDate, status:cmCaseDetail.newEntryStatus.trim(), note:cmCaseDetail.newEntryNote.trim() }
           : e);
         await _fw(db.collection('cmCases').doc(k.id).update({ entries: newEntries }));
@@ -13800,8 +13849,19 @@ createApp({
       const entry = (k.entries||[]).find(e=>e.id===entryId);
       if(!entry || !await askConfirm('Padam catatan ini?')) return;
       try {
-        await _fw(db.collection('cmCases').doc(k.id).update({ entries: firebase.firestore.FieldValue.arrayRemove(entry) }));
-        k.entries = (k.entries||[]).filter(e=>e.id!==entryId);
+        // Remove by id from the case's CURRENT entries — not arrayRemove(entry)
+        // with the on-screen copy: arrayRemove only matches an exactly-equal
+        // object, so if anyone had edited this entry since the page loaded
+        // it silently removed nothing (yet the UI, toast and audit log all
+        // said "deleted", and the entry reappeared on the next reload). The
+        // fresh list also keeps entries others have added meanwhile.
+        const fresh = await db.collection('cmCases').doc(k.id).get();
+        const current = (fresh.exists && fresh.data().entries) || [];
+        const remaining = current.filter(e => e.id !== entryId);
+        if(remaining.length !== current.length) {
+          await _fw(db.collection('cmCases').doc(k.id).update({ entries: remaining }));
+        }
+        k.entries = remaining;
         // If the entry being deleted was mid-edit, the edit form would keep
         // referencing a now-nonexistent id — fall back to "add" mode.
         if(cmCaseDetail.editingEntryId === entryId) cancelEditCmCaseEntry();
@@ -14726,7 +14786,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     watch(() => [currentProject.value, pm.virSystem], () => {
       if(pm.maintType === 'INST' && !pm._isEdit && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) {
         pm.maintType = '';
-        showToast('NEW INSTALLATION hanya untuk sistem VIR Optager HD4000 — sila pilih semula Jenis.', 'error');
+        showToast('New Installation hanya untuk sistem VIR Optager HD4000 — sila pilih semula Jenis.', 'error');
       }
     });
     // virSiteEquip now holds ONLY `rooms` per VIR site — shared regardless
@@ -15322,13 +15382,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           Object.keys(equipEditIdx).forEach(k => { if(equipEditIdx[k] !== null) cancelEditEquip(k); });
         }
         // Only mutate local state after Firestore write confirmed
-        if(data.siteEquip) siteEquip.value = restoredSiteEquip;
+        if(data.siteEquip) { siteEquip.value = restoredSiteEquip; equipLoadState.cctv = true; }
         if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS || data.virSiteEquipSony) {
           virSiteEquip.value = restoredVirRooms;
           virSiteEquipBCD.value = restoredVirBcd;
           virSiteEquipOptager.value = restoredVirOptager;
           virSiteEquipVCS.value = restoredVirVcs;
           virSiteEquipSony.value = restoredVirSony;
+          equipLoadState.vir = true;
         }
 
         if(data.pmRecords?.length) {
@@ -15519,8 +15580,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // "CM ? … : PM …" ternary goes through these, so a NEW INSTALLATION
     // record ('INST') can never be printed/shown as "PM — Preventive".
     // maintTypeName also passes Jadual-only values ("Site Visit") through.
-    function maintTypeName(t) { return t === 'INST' ? 'NEW INSTALLATION' : (t || 'PM'); }
-    function maintTypeFull(t) { return t === 'CM' ? 'CM — Corrective Maintenance' : t === 'INST' ? 'NEW INSTALLATION' : 'PM — Preventive Maintenance'; }
+    function maintTypeName(t) { return t === 'INST' ? 'New Installation' : (t || 'PM'); }
+    function maintTypeFull(t) { return t === 'CM' ? 'CM — Corrective Maintenance' : t === 'INST' ? 'New Installation' : 'PM — Preventive Maintenance'; }
     function maintTypeBadge(t) { return t === 'INST' ? '🆕 INST' : (t || 'PM'); }
     function maintTypeBadgeClass(t, pmClass) { return t === 'CM' ? 'badge-red' : t === 'INST' ? 'badge-inst' : (pmClass || 'badge-blue'); }
     const viewPM = ref(null);
@@ -15549,7 +15610,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
       if(filterYear.value) chips.push({ key:'year', label:'Tahun: '+filterYear.value, clear:()=>{filterYear.value='';} });
       if(filterMonth.value) chips.push({ key:'month', label:'Bulan: '+MONTHS[filterMonth.value-1], clear:()=>{filterMonth.value='';} });
-      if(filterMaintType.value) chips.push({ key:'maintType', label:'Jenis: '+(filterMaintType.value==='PM'?'PM Sahaja':filterMaintType.value==='INST'?'NEW INSTALLATION':'CM Sahaja'), clear:()=>{filterMaintType.value='';} });
+      if(filterMaintType.value) chips.push({ key:'maintType', label:'Jenis: '+(filterMaintType.value==='PM'?'PM Sahaja':filterMaintType.value==='INST'?'New Installation':'CM Sahaja'), clear:()=>{filterMaintType.value='';} });
       if(filterPmNo.value) chips.push({ key:'pmNo', label:'PM Ke-'+filterPmNo.value, clear:()=>{filterPmNo.value='';} });
       if(filterSystem.value) chips.push({ key:'system', label:'Sistem: '+filterSystem.value, clear:()=>{filterSystem.value='';} });
       return chips;
@@ -18204,6 +18265,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // onAuthStateChanged fires, so clearing them here loses nothing.
       pmRecords.value = []; teamAssignments.value = [];
       siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {}; virSiteEquipSony.value = {};
+      equipLoadState.cctv = false; equipLoadState.vir = false;
       contracts.value = []; warranty.value = []; virWarranty.value = [];
       letterMemos.value = []; cmCases.value = [];
       auditLogs.value = []; recentAuditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
@@ -18228,11 +18290,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // straight from a site-equip page with a password revealed leaves
       // that _uid's mask state sitting in memory across the auth boundary.
       EQUIP_KINDS.forEach(k => revealedPw[k]?.clear());
-      // PM_DRAFT_KEY/EQUIP_DRAFT_KEY are plain global localStorage keys, not
-      // scoped per-user — on a shared/kiosk device, a next person logging in
-      // would otherwise get prompted to recover THIS session's unsaved PM
-      // form/equipment draft and could submit it under their own identity.
-      clearPmDraftLocal();
+      // EQUIP_DRAFT_KEY is a plain global localStorage key — on a shared/
+      // kiosk device the next person would otherwise be offered THIS
+      // session's equipment draft (and it can hold access passwords), so it's
+      // wiped here; equipment autosaves within ~2s, so it rarely holds unsaved
+      // work anyway. The PM borang draft is deliberately KEPT: it's scoped
+      // per account (see _pmDraftKey), so nobody else can see or be offered
+      // it, and keeping it is what lets a technician resume a half-filled
+      // form after the 30-min idle auto-logout.
       clearEquipDraftLocal();
       page.value='dashboard';
       if (wipe) {
@@ -19122,7 +19187,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // loads fine, just without accessUser/accessPw values (which the UI
         // hides from them anyway via canViewCredentials).
         if(credSnap) credSnap.forEach(doc => { if(eq[doc.id]) _mergeCredentials(eq[doc.id], doc.data()); });
-        siteEquip.value = eq;
+        // A failed read must never REPLACE good data with an empty copy
+        // (see equipLoadState). For roles that can read the credentials
+        // collection, a null credentials snapshot is a failed read too — for
+        // internship it's the expected permission-denied (and they can't
+        // edit equipment anyway). On failure: keep the previously loaded
+        // complete copy if there is one (a failed refresh/pull-to-refresh),
+        // otherwise show what we have but mark it incomplete (not writable).
+        const _needCreds = canViewCredentials.value;
+        const _cctvEquipOk = !!snap && (!_needCreds || !!credSnap);
+        if(_cctvEquipOk || !equipLoadState.cctv || !Object.keys(siteEquip.value || {}).length) {
+          siteEquip.value = eq;
+          equipLoadState.cctv = _cctvEquipOk;
+        }
 
         // VIR site equipment — one doc per site holding `rooms` (shared)
         // plus two nested, fully separate equipment sets keyed 'BCD' and
@@ -19175,11 +19252,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             });
           }
         });
-        virSiteEquip.value = veqRooms;
-        virSiteEquipBCD.value = veqBcd;
-        virSiteEquipOptager.value = veqOptager;
-        virSiteEquipVCS.value = veqVcs;
-        virSiteEquipSony.value = veqSony;
+        // Same never-replace-good-with-empty rule as siteEquip above.
+        const _virEquipOk = !!vsnap && (!_needCreds || !!vCredSnap);
+        if(_virEquipOk || !equipLoadState.vir || !Object.keys(virSiteEquip.value || {}).length) {
+          virSiteEquip.value = veqRooms;
+          virSiteEquipBCD.value = veqBcd;
+          virSiteEquipOptager.value = veqOptager;
+          virSiteEquipVCS.value = veqVcs;
+          virSiteEquipSony.value = veqSony;
+          equipLoadState.vir = _virEquipOk;
+        }
 
         if(pmSnap) pmRecords.value = pmSnap.docs.map(d=>({id:d.id,...d.data()}));
         // Counts as a fresh pull for the notification tick's hourly
@@ -19417,23 +19499,40 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const cpModal = reactive({ show:false, siteId:null, siteName:'', contacts:[], err:'' });
     const cpSites = computed(() => currentProject.value === 'vir' ? VIR_SITES : SITES);
 
+    // Migrate legacy single-contact shape ({name,phone}) into the new
+    // array shape so every other function can assume an array.
+    function _normalizeContactData(data) {
+      Object.keys(data).forEach(siteId => {
+        if(!Array.isArray(data[siteId])) {
+          const legacy = data[siteId];
+          data[siteId] = (legacy && legacy.name) ? [{ id:_genId(), name:legacy.name||'', phone:legacy.phone||'', label:'' }] : [];
+        }
+      });
+      return data;
+    }
+    async function _fetchContactPersons(proj) {
+      const doc = await db.collection('contactPersons').doc(proj).get();
+      return _normalizeContactData(doc.exists ? { ...doc.data() } : {});
+    }
     async function loadContactPersons() {
       try {
-        const doc = await db.collection('contactPersons').doc(currentProject.value).get();
-        const data = doc.exists ? doc.data() : {};
-        // Migrate legacy single-contact shape ({name,phone}) into the new
-        // array shape so every other function can assume an array.
-        Object.keys(data).forEach(siteId => {
-          if(!Array.isArray(data[siteId])) {
-            const legacy = data[siteId];
-            data[siteId] = (legacy && legacy.name) ? [{ id:_genId(), name:legacy.name||'', phone:legacy.phone||'', label:'' }] : [];
-          }
-        });
-        contactPersons.value = data;
+        contactPersons.value = await _fetchContactPersons(currentProject.value);
       } catch(e) { console.warn('loadContactPersons:', e); }
     }
 
-    function openCpModal(site) {
+    async function openCpModal(site) {
+      // Saving replaces this site's WHOLE contact list, so the modal must
+      // start from a fresh read — not the on-screen copy, which can be empty
+      // (loadContactPersons() failing quietly; it only console.warns) or even
+      // still hold the OTHER project's contacts after a CCTV↔VIR switch whose
+      // reload failed, making every site look empty. Adding one contact then
+      // wiped the site's real ones. If the read fails, don't open at all.
+      try {
+        contactPersons.value = await _fetchContactPersons(currentProject.value);
+      } catch(e) {
+        showToast('Gagal memuat senarai pegawai terkini — sila semak sambungan dan cuba lagi.', 'error');
+        return;
+      }
       cpModal.siteId = site.id;
       cpModal.siteName = site.name;
       cpModal.err = '';
@@ -19863,19 +19962,33 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       nextTick(() => { _kModalLoading = false; });
     }
 
+    // Latest list for one project straight from Firestore (offline: the
+    // local cache, same as before). Throws if it can't be read at all —
+    // callers then abort instead of writing a partial list.
+    async function _freshKontraktorList(proj) {
+      const snap = await db.collection('kontraktorLuar').doc(proj).get();
+      return [...((snap.exists && snap.data().list) || [])];
+    }
     async function saveKModal() {
       if(!canEditKontraktor.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       kModal.err = '';
       if(!kModal.name.trim()) { kModal.err = 'Sila masukkan nama kontraktor.'; return; }
       if(!isValidPhone(kModal.phone)) { kModal.err = 'Format no. telefon tidak sah.'; return; }
       const proj = kModal.proj;
-      const list = [...(kontraktorLuar.value[proj] || [])];
       const areaParts = [kModal.subKawasan, kModal.kawasan, kModal.negeri].filter(Boolean);
       const areaService = areaParts.join(', ');
       const entry = { id: kModal.editId || _genId(), name: kModal.name.trim(), bidangKerja: kModal.bidangKerja.trim(), areaService, negeri: kModal.negeri, kawasan: kModal.kawasan, subKawasan: kModal.subKawasan, phone: kModal.phone.trim() };
-      const idx = list.findIndex(c => c.id === entry.id);
-      if(idx !== -1) list[idx] = entry; else list.push(entry);
       try {
+        // The whole list lives in ONE doc and Firestore replaces arrays on
+        // write (merge:true doesn't merge array items). Building it from the
+        // on-screen copy wiped every other contractor whenever that copy was
+        // stale or empty — e.g. loadKontraktorLuar() failing quietly (it only
+        // console.warns) and someone then adding one entry, or two admins
+        // saving around the same time. Re-read the latest list first and
+        // apply this change to THAT; if the read fails, nothing is written.
+        const list = await _freshKontraktorList(proj);
+        const idx = list.findIndex(c => c.id === entry.id);
+        if(idx !== -1) list[idx] = entry; else list.push(entry);
         await _fw(db.collection('kontraktorLuar').doc(proj).set({ list }, { merge: true }));
         kontraktorLuar.value[proj] = list;
         await logAudit('KONTRAKTOR_LUAR_EDIT', `[${proj.toUpperCase()}] ${entry.name}`);
@@ -19891,8 +20004,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // the combined "Semua" view — falls back to the active tab otherwise,
       // same reasoning as openKModal()/kModal.proj above.
       const proj = itemProj || kontraktorLuarProject.value;
-      const list = (kontraktorLuar.value[proj] || []).filter(c => c.id !== id);
       try {
+        // Same fresh-read reasoning as saveKModal() — never write back a
+        // stale/empty on-screen copy over the whole list.
+        const list = (await _freshKontraktorList(proj)).filter(c => c.id !== id);
         await _fw(db.collection('kontraktorLuar').doc(proj).set({ list }, { merge: false }));
         kontraktorLuar.value[proj] = list;
         await logAudit('KONTRAKTOR_LUAR_DELETE', proj.toUpperCase());
@@ -20979,6 +21094,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // isn't an actual duplicate and shouldn't be blocked the way two items
     // sharing a real serial number would be.
     const _NON_UNIQUE_SERIAL_PLACEHOLDERS = new Set(['n/a','na','-','–','—','tiada','tidak berkenaan','nil','none','x']);
+    // Normalised serial usable as an IDENTIFIER — '' for blanks and for the
+    // placeholders above, so callers never match two different items just
+    // because both were recorded as "-"/"N/A". Used wherever equipment is
+    // matched by serial (history timeline, removal log, warranty archive).
+    function _realSerialKey(s) {
+      const k = String(s || '').trim().toLowerCase();
+      return (k && !_NON_UNIQUE_SERIAL_PLACEHOLDERS.has(k)) ? k : '';
+    }
     function _findDupConflict(kind, list, item, excludeIdx) {
       const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
       const val = String(item[dupField]||'').trim().toLowerCase();
@@ -21049,13 +21172,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const proj = currentProject.value;
       const siteId = selSite.value?.id;
       const statusField = EQUIP_HISTORY_STATUS_FIELD[kind];
+      const itemSerialKey = _realSerialKey(item.serial);
       const rows = pmRecords.value
         .filter(r => r.siteId === siteId && (r.project||'cctv') === proj && r.status === 'submitted')
         .map(r => {
           const list = r[kind] || [];
           let match = item._uid ? list.find(x => x._uid === item._uid) : null;
           if(!match && item.ip) match = list.find(x => x.ip && x.ip === item.ip);
-          if(!match && item.serial) match = list.find(x => x.serial && x.serial === item.serial);
+          if(!match && itemSerialKey) match = list.find(x => _realSerialKey(x.serial) === itemSerialKey);
           if(!match) return null;
           return {
             // A record with no visitDate (only month/year) used to fall back
@@ -21080,7 +21204,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // visit. Reuses the existing log/collection; no new read path.
       if(!equipmentRemovalLogs.value.length) await loadEquipmentRemovalLogs();
       const removal = equipmentRemovalLogs.value.find(l => l.siteId === siteId && (l.project||'cctv') === proj &&
-        (item.serial ? l.serial === item.serial : (l.itemName === item.name && l.brand === item.brand && l.model === item.model)));
+        (itemSerialKey ? _realSerialKey(l.serial) === itemSerialKey : (l.itemName === item.name && l.brand === item.brand && l.model === item.model)));
       if(removal) {
         const d = removal.removedAt?.toDate ? removal.removedAt.toDate() : null;
         rows.push({
@@ -21558,10 +21682,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // archiving a warranty record for a role that can't otherwise touch
       // Waranti Peralatan would bypass that boundary. Surfaces an
       // informational toast instead in that case so it's still not silent.
-      if(itemSnapshot.serial) {
+      // Same serial normalisation + placeholder rule as _findDupConflict():
+      // a "serial" like N/A, -, Tiada isn't an identifier — matching on it
+      // would auto-archive an UNRELATED warranty at this site that happens to
+      // carry the same placeholder (e.g. removing a Rack with serial "-"
+      // archiving the UPS warranty also recorded with "-"). Case/whitespace
+      // are normalised so a genuinely matching warranty isn't missed either.
+      const _serialKey = _realSerialKey(itemSnapshot.serial);
+      if(_serialKey) {
         const isVirWty = currentProject.value === 'vir';
         const warrantyList = isVirWty ? virWarranty.value : warranty.value;
-        const match = warrantyList.find(w => w.serial && w.serial === itemSnapshot.serial && w.siteId === siteId);
+        const match = warrantyList.find(w => _realSerialKey(w.serial) === _serialKey && w.siteId === siteId);
         if(match) {
           if(isVirWty ? canEditVirWarranty.value : canEditWarranty.value) {
             try {
@@ -21596,6 +21727,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // entry (or write the data) under whatever site they've since switched to.
     async function _writeSiteEquipToFirestore(opts = {}) {
       if(!selSite.value || !canEditEquip.value) return;
+      // Never overwrite a site's equipment from an incomplete in-memory copy
+      // (see equipLoadState). Toast throttled so the 2s autosave can't spam it.
+      if(!equipWritable.value) {
+        const now = Date.now();
+        if(opts.toast !== false || now - _equipBlockToastAt > 20000) {
+          _equipBlockToastAt = now;
+          showToast('Data peralatan tidak dimuat sepenuhnya — perubahan TIDAK disimpan supaya data sedia ada tidak terpadam. Sila muat semula halaman (F5).', 'error');
+        }
+        return;
+      }
       const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
       const credCol = currentProject.value === 'vir' ? 'virSiteEquipmentCredentials' : 'siteEquipmentCredentials';
       const siteId = selSite.value.id;
@@ -21904,7 +22045,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(status === 'submitted') {
         if(!pm.siteId) { showToast('Sila pilih site.', 'error'); return; }
         if(!pm.maintType) { showToast('Sila pilih Jenis Penyelenggaraan (PM/CM).', 'error'); return; }
-        if(pm.maintType === 'INST' && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) { showToast('NEW INSTALLATION hanya untuk sistem VIR Optager HD4000.', 'error'); return; }
+        if(pm.maintType === 'INST' && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) { showToast('New Installation hanya untuk sistem VIR Optager HD4000.', 'error'); return; }
         if(!pm.month || !pm.year) { showToast('Sila pilih Bulan dan Tahun Penyelenggaraan.', 'error'); return; }
         if(pm.maintType === 'CM' && !pm.rootCause) { showToast('Sila isi Punca Masalah (Root Cause) untuk CM.', 'error'); return; }
         const nudgeIssues = _pmNudgeIssues();
@@ -26126,7 +26267,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, pmVirItemsBySection, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
       currentProject, virSiteEquip, virSiteEquipBCD, virSiteEquipOptager, virSiteEquipVCS, virSiteEquipSony, equipVirSystem, virSystemShortLabel,
-      siteEquip, selSite, eqTab,
+      siteEquip, selSite, eqTab, equipWritable,
       nCam, nNVR, nHDD, nSW, nALM, nMISC, MISC_CATEGORIES, miscCategoriesShown, miscBrandOptions, miscModelOptions, ALARM_BRANDS, ALARM_BRAND_MODELS,
       nServer, nTablet, addServer, addTablet, toggleServerStorage, uploadServerLicense, removeServerLicenseFile, downloadServerLicense,
       uploadTabletLicense, removeTabletLicenseFile, downloadTabletLicense,
