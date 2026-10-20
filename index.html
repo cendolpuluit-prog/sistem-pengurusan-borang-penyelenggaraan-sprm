@@ -4200,8 +4200,11 @@ details.form-control[open] summary::after{content:'▴'}
                 <select class="form-control" v-model="nServer.moboType"><option value="">— Pilih —</option><option v-for="o in OPTAGER_MOBO_TYPE" :key="o">{{o}}</option></select>
                 <input v-if="nServer.moboType==='Lain-lain'" class="form-control" v-model="nServer.moboTypeCustom" placeholder="Nyatakan jenis motherboard" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>LAN IP Address <span class="text-muted text-sm">(pilihan)</span></label>
+              <div class="form-group"><label>LAN 1 IP Address <span class="text-muted text-sm">(pilihan)</span></label>
                 <input class="form-control" v-model="nServer.lanIp" placeholder="cth: 192.168.0.11">
+              </div>
+              <div class="form-group"><label>LAN 2 IP Address <span class="text-muted text-sm">(pilihan — jika motherboard ada 2 port LAN)</span></label>
+                <input class="form-control" v-model="nServer.lan2Ip" placeholder="cth: 192.168.0.12">
               </div>
               <div class="form-group"><label>WiFi IP Address <span class="text-muted text-sm">(pilihan)</span></label>
                 <input class="form-control" v-model="nServer.wifiIp" placeholder="cth: 192.168.1.11">
@@ -4240,13 +4243,13 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN 1 IP</th><th>LAN 2 IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="[{'highlight-row':equipEditIdx.servers===i}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
                     <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}}</td><td>{{s.serial}}</td>
-                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.lan2Ip||'-'}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
@@ -4257,7 +4260,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="21" class="empty">Tiada appliance.</td></tr>
+                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="22" class="empty">Tiada appliance.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -9749,7 +9752,7 @@ createApp({
     const nServer = reactive({
       name:'', brand:'OPTAGER', model:'HD4000', brandCustom:'', modelCustom:'', serial:'',
       processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
-      gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
+      gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', lan2Ip:'', wifiIp:'',
       os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
       installDate:'', optagerLicenseFile:null,
     });
@@ -10809,7 +10812,8 @@ createApp({
       const units = [];
       (vp.servers||[]).forEach(s => {
         const rows = [];
-        if (s.lanIp) rows.push(['LAN', s.lanIp]);
+        if (s.lanIp) rows.push([s.lan2Ip ? 'LAN 1' : 'LAN', s.lanIp]);
+        if (s.lan2Ip) rows.push(['LAN 2', s.lan2Ip]);
         if (s.wifiIp) rows.push(['WIFI', s.wifiIp]);
         if (s.optagerMachineId) rows.push(['Machine ID', s.optagerMachineId]);
         if (rows.length) units.push({ name: s.name, rows });
@@ -14555,7 +14559,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       nMISC: {name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:'',equipNota:''},
       nServer: {name:'', brand:'OPTAGER', model:'HD4000', brandCustom:'', modelCustom:'', serial:'',
         processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
-        gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', wifiIp:'',
+        gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', lan2Ip:'', wifiIp:'',
         os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
         installDate:'', optagerLicenseFile:null},
       nTablet: {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''},
@@ -15966,13 +15970,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           for(const bucket of buckets) {
             for(const kind of Object.keys(EQUIP_KIND_TO_TAB)) {
               for(const item of (bucket?.[kind]||[])) {
-                const hay = [item.name, item.ip, item.serial, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
+                // Appliances (servers) keep their addresses in lanIp/lan2Ip/
+                // wifiIp, not `ip` — without these an appliance could never
+                // be found by its IP, the most natural way to look one up.
+                const hay = [item.name, item.ip, item.lanIp, item.lan2Ip, item.wifiIp, item.serial, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
                 if(!hay.includes(q)) continue;
                 equipMatches.push({
                   _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
                   siteId, proj, kind, system, siteName:site.name,
                   label: item.name || item.model || item.serial || item.ip || '(tiada nama)',
-                  detail: [item.brand, item.model, item.serial, item.ip].filter(Boolean).join(' · '),
+                  detail: [item.brand, item.model, item.serial, item.ip || item.lanIp].filter(Boolean).join(' · '),
                 });
                 if(equipMatches.length >= 8) break outer;
               }
@@ -18389,7 +18396,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       switches: ['name','brand','model','serial','accessUser','accessPw'],
       alarms:   ['name','type','brand','model','serial','accessUser','accessPw'],
       misc:     ['name','category','brand','model','serial','accessUser','accessPw'],
-      servers:  ['name','brand','model','serial','processor','ram','storage','gpu','mobo','moboType','lanIp','wifiIp','os','optagerMachineId'],
+      servers:  ['name','brand','model','serial','processor','ram','storage','gpu','mobo','moboType','lan2Ip','lanIp','wifiIp','os','optagerMachineId'],
       tablets:  ['name','brand','model','serial','controlAppMachineId'],
     };
     const IMPORT_HEADER_HINTS = {
@@ -18423,7 +18430,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       gpu:       ['gpu','graphic','kad grafik'],
       mobo:      ['motherboard','papan induk','mobo'],
       moboType:  ['mobo type','jenis motherboard'],
-      lanIp:     ['lan ip','ip lan'],
+      lan2Ip:    ['lan 2','lan2'],
+      lanIp:     ['lan ip','ip lan','lan 1','lan1'],
       wifiIp:    ['wifi ip','ip wifi'],
       os:        ['operating system','sistem pengendalian'],
       optagerMachineId:    ['machine id','id mesin'],
@@ -21067,6 +21075,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // save it onto this one.
       if(key === 'cameras') nCam.equipNota = item.equipNota || '';
       if(key === 'misc') nMISC.equipNota = item.equipNota || '';
+      if(key === 'servers') nServer.lan2Ip = item.lan2Ip || ''; // older appliances have no lan2Ip — don't inherit the previous row's
       if(key === 'rooms') _editRoomItem(item);
       else if(key === 'servers') _editServerItem(item);
       else if(key === 'misc') _editMiscItem(item);
@@ -21457,6 +21466,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     function addServer() {
       if(!nServer.name){showToast('Sila masukkan nama/label server','error');return;}
+      // LAN 2 (new, optional) is format-checked like other IP fields. LAN 1 /
+      // WiFi are deliberately NOT newly validated here — existing records may
+      // hold free text there (e.g. "DHCP"), and adding a check now would make
+      // those records fail to save the next time they're edited.
+      if((nServer.lan2Ip||'').trim() && !isValidIp(nServer.lan2Ip.trim())){showToast('Format LAN 2 IP tidak sah (contoh: 192.168.0.12)','error');return;}
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].servers;
       const item = {
@@ -21468,7 +21482,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         gpu: _resolveDropdownCustom(nServer.gpu, nServer.gpuCustom),
         mobo: _resolveDropdownCustom(nServer.mobo, nServer.moboCustom),
         moboType: _resolveDropdownCustom(nServer.moboType, nServer.moboTypeCustom),
-        lanIp: nServer.lanIp, wifiIp: nServer.wifiIp,
+        lanIp: nServer.lanIp, lan2Ip: (nServer.lan2Ip||'').trim(), wifiIp: nServer.wifiIp,
         os: _resolveDropdownCustom(nServer.os, nServer.osCustom),
         osProductKey: nServer.osProductKey,
         optagerMachineId: nServer.optagerMachineId,
