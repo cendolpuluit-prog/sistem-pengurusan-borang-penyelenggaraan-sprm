@@ -1560,6 +1560,8 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-vir-2col-single{grid-template-columns:1fr}
 .pm-chk-box{display:inline-block;width:11px;height:11px;line-height:10px;border:1px solid #444;text-align:center;font-size:7.5pt;color:transparent;margin:0 1px;vertical-align:middle}
 .pm-chk-box.filled{color:#000;font-weight:700}
+.pm-tbl th.pm-chk-hd{font-size:9pt;line-height:1.1;padding:1px 0}
+.pm-tbl td.pm-chk-cell{text-align:center;padding:2px 0}
 .pm-vir-2col>.pm-tbl{min-width:0}
 .pm-tbl th{background:#E9EBEF;color:#1A2332;padding:2px 3px;text-align:center;border:1px solid #111A26;font-weight:800;font-size:6.5pt;font-family:Arial,Helvetica,sans-serif;letter-spacing:0;white-space:nowrap;max-width:0;line-height:1.3}
 .pm-tbl td{padding:2px 4px;border:1px solid #D5D9E0;vertical-align:middle;word-break:break-all;overflow-wrap:break-word;max-width:0;font-family:'Times New Roman',Times,serif;font-size:8pt}
@@ -5374,25 +5376,37 @@ details.form-control[open] summary::after{content:'▴'}
               <template v-for="(page,pi) in virChecklistPages(section)" :key="pi">
                 <div :class="['pm-vir-2col', page.cols.length===1 ? 'pm-vir-2col-single' : '', !page.isLast ? 'pm-vir-page-break' : '']">
                   <table class="pm-tbl" v-for="(col,ci) in page.cols" :key="ci">
-                    <thead><tr><th :style="section==='Status Operasi Sistem'?'width:6%':'width:4%'">{{virChecklistNumbered(section)?'No.':''}}</th><th :style="section==='Status Operasi Sistem'?'width:63%':'width:56%'">{{virChecklistItemColLabel(section)}}</th><th :style="section==='Status Operasi Sistem'?'width:16%;text-align:center':'width:10%;text-align:center'">Status</th><th :style="section==='Status Operasi Sistem'?'width:15%':'width:30%'">Nota</th></tr></thead>
+                    <!-- Status is split into labelled ✓ | ✗ sub-columns, one
+                         box each — it used to be two unlabelled boxes whose
+                         legend only explained the MARK (✓ vs ✗), never which
+                         box meant what. <colgroup> pins the widths, since
+                         table-layout:fixed would otherwise size columns from
+                         the 2-row header unpredictably. Half-width tables
+                         (2 per page) get 7% per sub-column, taken from Nota —
+                         5% of ~311px is narrower than the box itself. -->
+                    <colgroup>
+                      <col :style="section==='Status Operasi Sistem'?'width:6%':'width:4%'">
+                      <col :style="section==='Status Operasi Sistem'?'width:63%':'width:56%'">
+                      <col :style="section==='Status Operasi Sistem'?'width:8%':page.cols.length===2?'width:7%':'width:5%'">
+                      <col :style="section==='Status Operasi Sistem'?'width:8%':page.cols.length===2?'width:7%':'width:5%'">
+                      <col :style="section==='Status Operasi Sistem'?'width:15%':page.cols.length===2?'width:26%':'width:30%'">
+                    </colgroup>
+                    <thead>
+                      <tr><th rowspan="2">{{virChecklistNumbered(section)?'No.':''}}</th><th rowspan="2">{{virChecklistItemColLabel(section)}}</th><th colspan="2" style="text-align:center">Status</th><th rowspan="2">Nota</th></tr>
+                      <tr><th class="pm-chk-hd" style="color:#155724">&#10003;</th><th class="pm-chk-hd" style="color:#721c24">&#10007;</th></tr>
+                    </thead>
                     <tbody>
                       <template v-for="(item,idx) in col.items" :key="item.key">
                         <tr v-if="item.isHeader">
                           <td colspan="2" class="pm-hdr-lbl" style="font-weight:700;background:#F5F6F8">{{item.label}}</td>
-                          <td style="text-align:center;white-space:nowrap;background:#F5F6F8;font-size:7pt;color:#555;font-weight:400">
-                            <template v-if="idx+1<col.items.length && !col.items[idx+1].isHeader">
-                              <span style="color:#155724">&#10003;</span>&nbsp;/&nbsp;<span style="color:#721c24">&#10007;</span>
-                            </template>
-                          </td>
+                          <td colspan="2" style="background:#F5F6F8"></td>
                           <td style="background:#F5F6F8"></td>
                         </tr>
                         <tr v-else>
                           <td style="white-space:nowrap;text-align:center;color:#1A2332">{{virChecklistNumbered(section) ? (col.offset+idx+1) : '–'}}</td>
                           <td>{{item.label}}</td>
-                          <td style="text-align:center;white-space:nowrap">
-                            <span class="pm-chk-box"></span>
-                            <span class="pm-chk-box"></span>
-                          </td>
+                          <td class="pm-chk-cell"><span class="pm-chk-box"></span></td>
+                          <td class="pm-chk-cell"><span class="pm-chk-box"></span></td>
                           <td>{{item.nota}}</td>
                         </tr>
                       </template>
@@ -5400,13 +5414,10 @@ details.form-control[open] summary::after{content:'▴'}
                   </table>
                 </div>
               </template>
-              <!-- Legend for the two blank boxes under Status — left box is
-                   ticked for "Berfungsi" (functional), right box is crossed
-                   for "Tidak Berfungsi" (not functional). Placed once below
-                   each section's table pair (not per-row) since the two
-                   boxes themselves carry no printed label otherwise. -->
+              <!-- Legend — once below each section's table pair, not per-row.
+                   The box's COLUMN (✓ or ✗) carries the meaning. -->
               <div class="pm-chk-legend" style="text-align:right;font-size:7pt;color:#555;font-style:italic;margin:2px 0 6px">
-                Petunjuk Status: <span style="color:#155724;font-weight:700">&#10003;</span> = Berfungsi &nbsp;/&nbsp; <span style="color:#721c24;font-weight:700">&#10007;</span> = Tidak Berfungsi
+                Petunjuk Status: Tandakan kotak di bawah <span style="color:#155724;font-weight:700">&#10003;</span> jika Berfungsi, di bawah <span style="color:#721c24;font-weight:700">&#10007;</span> jika Tidak Berfungsi.
               </div>
             </template>
           </template>
@@ -5424,24 +5435,26 @@ details.form-control[open] summary::after{content:'▴'}
             <div class="pm-section-hdr">Default Setting Perkakasan</div>
             <div :class="['pm-vir-2col', virDefaultSettingUnits.length===1 ? 'pm-vir-2col-single' : '']">
               <table class="pm-tbl" v-for="(u,ui) in virDefaultSettingUnits" :key="ui">
+                <!-- Same labelled ✓ | ✗ Status sub-columns as the checklist
+                     above (this block only ever renders for Optager/VCS/SONY). -->
+                <colgroup><col style="width:34%"><col style="width:46%"><col style="width:10%"><col style="width:10%"></colgroup>
                 <thead>
-                  <tr><th colspan="3" style="text-align:left;background:#F5F6F8">{{u.name}}</th></tr>
-                  <tr><th style="width:34%">Setting</th><th>IP Address</th><th style="width:20%;text-align:center">Status</th></tr>
+                  <tr><th colspan="4" style="text-align:left;background:#F5F6F8">{{u.name}}</th></tr>
+                  <tr><th rowspan="2">Setting</th><th rowspan="2">IP Address</th><th colspan="2" style="text-align:center">Status</th></tr>
+                  <tr><th class="pm-chk-hd" style="color:#155724">&#10003;</th><th class="pm-chk-hd" style="color:#721c24">&#10007;</th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row,ri) in u.rows" :key="ri">
                     <td>{{row[0]}}</td>
                     <td>{{row[1]}}</td>
-                    <td style="text-align:center;white-space:nowrap">
-                      <span class="pm-chk-box"></span>
-                      <span class="pm-chk-box"></span>
-                    </td>
+                    <td class="pm-chk-cell"><span class="pm-chk-box"></span></td>
+                    <td class="pm-chk-cell"><span class="pm-chk-box"></span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div class="pm-chk-legend" style="text-align:right;font-size:7pt;color:#555;font-style:italic;margin:2px 0 6px">
-              Petunjuk Status: <span style="color:#155724;font-weight:700">&#10003;</span> = Berfungsi &nbsp;/&nbsp; <span style="color:#721c24;font-weight:700">&#10007;</span> = Tidak Berfungsi
+              Petunjuk Status: Tandakan kotak di bawah <span style="color:#155724;font-weight:700">&#10003;</span> jika Berfungsi, di bawah <span style="color:#721c24;font-weight:700">&#10007;</span> jika Tidak Berfungsi.
             </div>
           </template>
 
@@ -22198,9 +22211,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // deliberately does NOT warn, same fail-open choice already made
         // for other best-effort checks in this file.
         // Set when the record was deleted (moved to Tong Sampah) while this
-        // edit was open — the .set() below then CREATEs the doc, and the
-        // create rule requires createdBy == the signer for non-admins, so
-        // carrying the original author forward would be rejected.
+        // edit was open — the .set() below would then silently bring it back
+        // as a CREATE, so ask first. On a yes the saver becomes createdBy:
+        // they're the one deliberately reviving it.
         let _recreateDeleted = false;
         if(pm._isEdit && pm._draftId) {
           const liveSnap = await db.collection('pmRecords').doc(pm._draftId).get();
@@ -24273,7 +24286,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
   <img src="LogoD1.svg" alt="Daya One" class="header-logo">
   <div>
     <div class="co-name">DAYA ONE RESOURCES SDN BHD</div>
-    <div class="co-addr">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor &nbsp;|&nbsp; Tel: 03-XXXX XXXX</div>
+    <div class="co-addr">No 29-1 Jalan Equine 9A, Seri Kembangan 43300 Selangor &nbsp;|&nbsp; Tel: 03-89431400</div>
   </div>
   <div class="doc-title">
     <h1>LAPORAN PENYELENGGARAAN BULANAN</h1>
