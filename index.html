@@ -1560,7 +1560,11 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-vir-2col-single{grid-template-columns:1fr}
 .pm-chk-box{display:inline-block;width:11px;height:11px;line-height:10px;border:1px solid #444;text-align:center;font-size:7.5pt;color:transparent;margin:0 1px;vertical-align:middle}
 .pm-chk-box.filled{color:#000;font-weight:700}
-.pm-tbl th.pm-chk-hd{font-size:9pt;line-height:1.1;padding:1px 0}
+.pm-tbl th.pm-chk-hd{line-height:1;padding:2px 0}
+/* ✓ / ✕ drawn as SVG, not font glyphs — the ✗ (U+2717) glyph rendered as a
+   hand-drawn "fancy" cross, and glyphs vary with whatever font each PC
+   prints with. Same stroke weight + square caps so the pair matches. */
+.pm-sym{display:inline-block;vertical-align:middle}
 .pm-tbl td.pm-chk-cell{text-align:center;padding:2px 0}
 .pm-vir-2col>.pm-tbl{min-width:0}
 .pm-tbl th{background:#E9EBEF;color:#1A2332;padding:2px 3px;text-align:center;border:1px solid #111A26;font-weight:800;font-size:6.5pt;font-family:Arial,Helvetica,sans-serif;letter-spacing:0;white-space:nowrap;max-width:0;line-height:1.3}
@@ -1594,7 +1598,7 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
 .pm-no-box{width:22px;height:22px;border:1.5px solid #333;display:inline-flex;align-items:center;justify-content:center;font-size:9pt;font-weight:700;border-radius:3px;color:#333}
 .pm-no-box-ticked{background:#1A2332;color:#fff;border-color:#1A2332}
-.pm-no-box-ticked::after{content:' ✓';font-size:7pt}
+.pm-no-box-tick{margin-left:2px} /* same SVG tick as .pm-sym, not a font ✓ */
 .pm-nota-box{margin:16px 0 10px;border:1.5px solid #333;border-radius:3px}
 .pm-nota-box .pm-nota-hdr{background:#1A2332;color:#fff;font-size:9pt;font-weight:700;padding:4px 10px;letter-spacing:.04em}
 .pm-nota-box .pm-nota-lines{padding:6px 10px 4px}
@@ -5243,7 +5247,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="pm-info-cell"><b>Jenis Sistem VIR:</b> {{viewPM?.virSystem||'BCD'}}</div>
               <div class="pm-info-cell" v-if="viewPM?.maintType!=='INST'"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>&nbsp;
                 <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
-                  <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
+                  <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}<svg v-if="viewPM?.pmNo===n" class="pm-sym pm-no-box-tick" width="8" height="8" viewBox="0 0 12 12" aria-label="Dipilih"><path d="M2 6.4 4.8 9.2 10 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg></span>
                 </span>
                 <span v-else>{{viewPM?.rootCause || '—'}}</span>
               </div>
@@ -5262,7 +5266,7 @@ details.form-control[open] summary::after{content:'▴'}
               <div class="pm-info-cell"><b>Jenis Sistem CCTV:</b> {{cctvSystemBrands(viewPM?.cameras) || '—'}}</div>
               <div class="pm-info-cell"><b>{{viewPM?.maintType==='CM' ? 'Punca Kerosakan:' : 'Penyelenggaraan No.:'}}</b>
                 <span v-if="viewPM?.maintType==='PM'" class="pm-no-boxes">
-                  <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}</span>
+                  <span v-for="n in [1,2,3]" :key="n" :class="['pm-no-box', viewPM?.pmNo===n ? 'pm-no-box-ticked' : '']">{{n}}<svg v-if="viewPM?.pmNo===n" class="pm-sym pm-no-box-tick" width="8" height="8" viewBox="0 0 12 12" aria-label="Dipilih"><path d="M2 6.4 4.8 9.2 10 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/></svg></span>
                 </span>
                 <span v-else>{{viewPM?.rootCause || '—'}}</span>
               </div>
@@ -5393,7 +5397,7 @@ details.form-control[open] summary::after{content:'▴'}
                     </colgroup>
                     <thead>
                       <tr><th rowspan="2">{{virChecklistNumbered(section)?'No.':''}}</th><th rowspan="2">{{virChecklistItemColLabel(section)}}</th><th colspan="2" style="text-align:center">Status</th><th rowspan="2">Nota</th></tr>
-                      <tr><th class="pm-chk-hd" style="color:#155724">&#10003;</th><th class="pm-chk-hd" style="color:#721c24">&#10007;</th></tr>
+                      <tr><th class="pm-chk-hd"><svg class="pm-sym" width="11" height="11" viewBox="0 0 12 12" aria-label="Berfungsi"><path d="M2 6.4 4.8 9.2 10 3" fill="none" stroke="#155724" stroke-width="1.8" stroke-linecap="square"/></svg></th><th class="pm-chk-hd"><svg class="pm-sym" width="11" height="11" viewBox="0 0 12 12" aria-label="Tidak Berfungsi"><path d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5" fill="none" stroke="#721c24" stroke-width="1.8" stroke-linecap="square"/></svg></th></tr>
                     </thead>
                     <tbody>
                       <template v-for="(item,idx) in col.items" :key="item.key">
@@ -5417,7 +5421,7 @@ details.form-control[open] summary::after{content:'▴'}
               <!-- Legend — once below each section's table pair, not per-row.
                    The box's COLUMN (✓ or ✗) carries the meaning. -->
               <div class="pm-chk-legend" style="text-align:right;font-size:7pt;color:#555;font-style:italic;margin:2px 0 6px">
-                Petunjuk Status: Tandakan kotak di bawah <span style="color:#155724;font-weight:700">&#10003;</span> jika Berfungsi, di bawah <span style="color:#721c24;font-weight:700">&#10007;</span> jika Tidak Berfungsi.
+                Petunjuk Status: Tandakan kotak di bawah <svg class="pm-sym" width="9" height="9" viewBox="0 0 12 12" aria-label="Berfungsi"><path d="M2 6.4 4.8 9.2 10 3" fill="none" stroke="#155724" stroke-width="1.8" stroke-linecap="square"/></svg> jika Berfungsi, di bawah <svg class="pm-sym" width="9" height="9" viewBox="0 0 12 12" aria-label="Tidak Berfungsi"><path d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5" fill="none" stroke="#721c24" stroke-width="1.8" stroke-linecap="square"/></svg> jika Tidak Berfungsi.
               </div>
             </template>
           </template>
@@ -5441,7 +5445,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <thead>
                   <tr><th colspan="4" style="text-align:left;background:#F5F6F8">{{u.name}}</th></tr>
                   <tr><th rowspan="2">Setting</th><th rowspan="2">IP Address</th><th colspan="2" style="text-align:center">Status</th></tr>
-                  <tr><th class="pm-chk-hd" style="color:#155724">&#10003;</th><th class="pm-chk-hd" style="color:#721c24">&#10007;</th></tr>
+                  <tr><th class="pm-chk-hd"><svg class="pm-sym" width="11" height="11" viewBox="0 0 12 12" aria-label="Berfungsi"><path d="M2 6.4 4.8 9.2 10 3" fill="none" stroke="#155724" stroke-width="1.8" stroke-linecap="square"/></svg></th><th class="pm-chk-hd"><svg class="pm-sym" width="11" height="11" viewBox="0 0 12 12" aria-label="Tidak Berfungsi"><path d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5" fill="none" stroke="#721c24" stroke-width="1.8" stroke-linecap="square"/></svg></th></tr>
                 </thead>
                 <tbody>
                   <tr v-for="(row,ri) in u.rows" :key="ri">
@@ -5454,7 +5458,7 @@ details.form-control[open] summary::after{content:'▴'}
               </table>
             </div>
             <div class="pm-chk-legend" style="text-align:right;font-size:7pt;color:#555;font-style:italic;margin:2px 0 6px">
-              Petunjuk Status: Tandakan kotak di bawah <span style="color:#155724;font-weight:700">&#10003;</span> jika Berfungsi, di bawah <span style="color:#721c24;font-weight:700">&#10007;</span> jika Tidak Berfungsi.
+              Petunjuk Status: Tandakan kotak di bawah <svg class="pm-sym" width="9" height="9" viewBox="0 0 12 12" aria-label="Berfungsi"><path d="M2 6.4 4.8 9.2 10 3" fill="none" stroke="#155724" stroke-width="1.8" stroke-linecap="square"/></svg> jika Berfungsi, di bawah <svg class="pm-sym" width="9" height="9" viewBox="0 0 12 12" aria-label="Tidak Berfungsi"><path d="M2.5 2.5 9.5 9.5M9.5 2.5 2.5 9.5" fill="none" stroke="#721c24" stroke-width="1.8" stroke-linecap="square"/></svg> jika Tidak Berfungsi.
             </div>
           </template>
 
