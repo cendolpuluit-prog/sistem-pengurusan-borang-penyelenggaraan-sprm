@@ -3123,14 +3123,14 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== WARANTI PERALATAN (CCTV sahaja — tracking dalaman, tidak terkait langsung borang PM/CM) ====== -->
-      <div v-if="page==='warranty' && initialLoading" class="page-view skeleton-wrap">
+      <div v-if="page==='warranty' && canViewCredentials && initialLoading" class="page-view skeleton-wrap">
         <div class="card">
           <div class="skel skel-line" style="width:35%;margin-bottom:14px"></div>
           <div class="skel skel-block" style="height:38px;margin-bottom:16px"></div>
           <div class="skel skel-block" style="height:38px;margin-bottom:8px" v-for="i in 6" :key="i"></div>
         </div>
       </div>
-      <div v-if="page==='warranty' && !initialLoading" class="page-view">
+      <div v-if="page==='warranty' && canViewCredentials && !initialLoading" class="page-view">
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">🛡️ Waranti Peralatan — Projek CCTV</div>
           <div class="flex gap-8">
@@ -3160,7 +3160,7 @@ details.form-control[open] summary::after{content:'▴'}
                     <td style="font-size:.82rem">{{r.warranty?.equipmentName||'-'}}</td>
                     <td style="font-size:.82rem">{{r.warranty?.siteName||'-'}}</td>
                     <td style="font-size:.82rem">{{r.warranty?.vendor||'-'}}</td>
-                    <td style="font-size:.8rem;white-space:nowrap">{{fmtDate(r.uploadedAt?.slice(0,10))}}</td>
+                    <td style="font-size:.8rem;white-space:nowrap">{{fmtIsoDate(r.uploadedAt)}}</td>
                     <td style="font-size:.82rem">{{r.uploadedBy||'-'}}</td>
                     <td style="font-size:.8rem;white-space:nowrap">{{(r.size/1024/1024).toFixed(2)}}MB</td>
                   </tr>
@@ -3300,7 +3300,7 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== SURAT & MEMO ====== -->
-      <div v-if="page==='surat-memo'" class="page-view">
+      <div v-if="page==='surat-memo' && canViewCredentials" class="page-view">
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">📄 Surat &amp; Memo</div>
           <button v-if="canAddLetterMemo" class="btn btn-primary btn-sm" @click="openAddLetterMemo">+ Tambah Surat/Memo</button>
@@ -3341,7 +3341,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <span v-if="!m.project && !m.siteName" class="text-muted">-</span>
                 </td>
                 <td style="font-size:.82rem;white-space:nowrap">{{m.fromParty||'-'}} → {{m.toParty||'-'}}</td>
-                <td style="max-width:320px;white-space:pre-wrap">{{m.perihal||'-'}}</td>
+                <td style="max-width:320px;white-space:pre-wrap">{{m.perihal||'-'}}<div v-if="m.notes" class="text-muted" style="font-size:.76rem;margin-top:4px">📝 {{m.notes}}</div></td>
                 <td>
                   <button class="btn btn-sm btn-outline btn-icon" @click="openServiceReports(m,'suratMemo','suratMemo')" :title="`Lampiran Surat (${(m.serviceReports||[]).length})`">📎<span v-if="(m.serviceReports||[]).length" style="font-size:.7rem;margin-left:2px">{{(m.serviceReports||[]).length}}</span></button>
                 </td>
@@ -3359,7 +3359,7 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== LOG KES CM ====== -->
-      <div v-if="page==='log-cm'" class="page-view">
+      <div v-if="page==='log-cm' && canViewCredentials" class="page-view">
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">🔧 Log Kes CM</div>
           <button v-if="canAddCmCase" class="btn btn-primary btn-sm" @click="openAddCmCase">+ Buka Kes Baru</button>
@@ -3432,7 +3432,7 @@ details.form-control[open] summary::after{content:'▴'}
       </div>
 
       <!-- ====== WARANTI PERALATAN (VIR) ====== -->
-      <div v-if="page==='vir-warranty'" class="page-view">
+      <div v-if="page==='vir-warranty' && canViewCredentials" class="page-view">
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
           <div class="card-title" style="margin:0;border:none;padding:0">🛡️ Waranti Peralatan — Projek VIR</div>
           <div class="flex gap-8">
@@ -4292,6 +4292,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <input v-if="nTablet.model==='Lain-lain'" class="form-control" v-model="nTablet.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.serial"></div>
+              <div class="form-group"><label>IMEI <span class="text-muted text-sm">(pilihan — 15 digit; tidak dipaparkan dalam borang)</span></label><input class="form-control mono-data" v-model="nTablet.imei" inputmode="numeric" placeholder="cth: 356789012345678"></div>
               <div class="form-group"><label>Machine ID <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nTablet.controlAppMachineId"></div>
               <div class="form-group">
                 <label>{{equipVirSystem==='VCS'?'VCS':'Optager HD4000'}} Control APP License Key <span class="text-muted text-sm">(pilihan — rekod dalaman staf sahaja, tidak dipaparkan dalam borang PM/CM)</span></label>
@@ -4317,12 +4318,12 @@ details.form-control[open] summary::after{content:'▴'}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IMEI</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(t,i) in selSiteEquip.tablets||[]" :key="t._uid||i" :class="[{'highlight-row':equipEditIdx.tablets===i}, equipRowFx(t)]" :data-equip-uid="t._uid">
                     <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
                     <td>{{i+1}}</td><td>{{t.name}} <span v-if="isRecentEquip(t)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td><td>{{t.controlAppMachineId}}</td>
+                    <td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td><td class="mono-data">{{t.imei||'-'}}</td><td>{{t.controlAppMachineId}}</td>
                     <td>
                       <button v-if="t.controlAppLicenseFile" class="btn btn-outline btn-sm" @click="downloadTabletLicense(t)" title="Muat turun fail .lic">⬇ {{t.controlAppLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
@@ -4332,7 +4333,7 @@ details.form-control[open] summary::after{content:'▴'}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',i)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="9" class="empty">Tiada tablet.</td></tr>
+                  <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="10" class="empty">Tiada tablet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -6779,7 +6780,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="(r,i) in serviceReportModal.warranty.serviceReports" :key="r.path">
                   <td>{{i+1}}</td>
                   <td><a href="#" @click.prevent="previewServiceReport(r)" style="font-weight:600;font-size:.85rem;word-break:break-all">{{r.name}}</a></td>
-                  <td style="font-size:.82rem;white-space:nowrap">{{fmtDate(r.uploadedAt?.slice(0,10))}}</td>
+                  <td style="font-size:.82rem;white-space:nowrap">{{fmtIsoDate(r.uploadedAt)}}</td>
                   <td style="font-size:.82rem">{{r.uploadedBy}}</td>
                   <td v-if="canEditWarrantyReportFor(serviceReportModal.collection)">
                     <button :disabled="loading" class="btn btn-sm btn-danger btn-icon" @click="deleteServiceReport(r)" title="Padam">🗑</button>
@@ -9756,7 +9757,7 @@ createApp({
       os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
       installDate:'', optagerLicenseFile:null,
     });
-    const nTablet = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''});
+    const nTablet = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:'',imei:''});
     const ROOT_CAUSE_CATEGORIES = ['Litup/Bekalan Kuasa','Cuaca/Petir','Kabel Rosak','Vandalism/Kerosakan Fizikal','Umur Peralatan','Software/Firmware','Lain-lain'];
     // HQ Putrajaya has up to 16 VIR rooms; other sites normally have 1-2 —
     // 20 covers every realistic case with room to spare, plus "Lain-lain"
@@ -10869,7 +10870,7 @@ createApp({
     // saved before these fields existed).
     function instSignCompany(rec, b) { return String(rec?.[b.co] || '').trim() || b.defaultCo; }
     const pm = reactive({
-      _draftId:null, _createdAt:null, _isEdit:false, _submittedAt:null, _submittedBy:null, _cmStatus:null, _resolvedAt:null,
+      _draftId:null, _createdAt:null, _createdBy:null, _isEdit:false, _submittedAt:null, _submittedBy:null, _cmStatus:null, _resolvedAt:null,
       siteId:'', siteName:'', refNo:'',
       month: null, year: null,
       visitDate:'',
@@ -12676,6 +12677,13 @@ createApp({
     // viewed, for no data reason).
     function _parseLocalDate(dateStr){ if(!dateStr) return null; const [y,m,d]=dateStr.split('-').map(Number); return new Date(y, m-1, d); }
     function fmtDate(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}/${m}/${y}`; }
+    // For values stored as a full UTC ISO timestamp (e.g. a service report's
+    // uploadedAt = new Date().toISOString()). Slicing that string's first 10
+    // chars gives the UTC calendar date — a day behind for anything stamped
+    // 00:00–07:59 MYT, the same trap the _parseLocalDate note above describes.
+    // Converts to the local calendar date first. No leading underscore: it's
+    // called from the template, where Vue rejects _-prefixed names.
+    function fmtIsoDate(iso){ if(!iso) return '—'; const d = new Date(iso); return isNaN(d) ? '—' : fmtDate(_localDateStr(d)); }
     // Thousands-separator for cumulative counts that can genuinely reach
     // 4+ digits over years of operation (total PM/CM records especially —
     // site counts stay in the dozens so this rarely changes anything
@@ -13643,7 +13651,14 @@ createApp({
     const cmCasesFiltered = computed(() => cmCases.value.filter(k =>
       (!cmCaseFilterSite.value || k.siteId === cmCaseFilterSite.value) &&
       (!cmCaseFilterProject.value || k.project === cmCaseFilterProject.value) &&
-      (!cmCaseFilterStatus.value || k.status === cmCaseFilterStatus.value)
+      // "pending" means "not selesai", NOT a literal status==='pending'
+      // match: new cases always get status:'pending', but a legacy or
+      // backup-restored case can have no status at all. The nav badge
+      // already counts those (status!=='selesai'), so matching on the
+      // literal here made them show in the badge yet vanish from the
+      // Pending filter — visible in the count, unreachable in the list.
+      (!cmCaseFilterStatus.value
+        || (cmCaseFilterStatus.value === 'pending' ? k.status !== 'selesai' : k.status === cmCaseFilterStatus.value))
     ));
     // Cases carry no "root category" field (just a free-typed title) — the
     // only reliable resolution-velocity split available is by project, using
@@ -13731,12 +13746,16 @@ createApp({
     async function deleteCmCase(k) {
       if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!await askConfirm(`Padam kes CM "${k.title}" (${k.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      // The button is :disabled="loading" but this never set it — a second
+      // click while the first soft-delete was in flight fired a duplicate.
+      loading.value = true;
       try {
         const data = await _softDeleteToTrash('cmCases', 'deletedCmCases', k.id);
         cmCases.value = cmCases.value.filter(x => x.id !== k.id);
         await logAudit('CM_CASE_DELETE', `${k.title} — ${k.siteName}`);
         showUndoToast('Kes CM dipindah ke Tong Sampah.', () => _undoSoftDelete('cmCases', 'deletedCmCases', k.id, data, cmCases));
       } catch(e) { showToast('Gagal padam kes CM: ' + e.message, 'error'); }
+      loading.value = false;
     }
     async function toggleCmCaseStatus(k) {
       if(!canEditCmCase.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
@@ -14013,10 +14032,22 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return (s||'').toString().trim().replace(/[^a-zA-Z0-9-]+/g,'').slice(0,30) || 'NoSN';
     }
     function _buildServiceReportFileName(w, ext) {
-      const dt = new Date();
+      // Surat & Memo reuses this same attachment pipeline but its records
+      // have no `serial` and aren't service reports at all — naming those
+      // "ServiceReport_NoSN_<today>" made every letter attachment
+      // identical and meaningless. Detect that shape and name them after
+      // the letter instead, dated by letterDate (the date that matters)
+      // rather than whenever the upload happened.
+      const isLetter = !w.serial && (w.letterDate || w.perihal);
+      const dt = isLetter && w.letterDate ? new Date(w.letterDate) : new Date();
       const dd = String(dt.getDate()).padStart(2,'0');
       const mm = String(dt.getMonth()+1).padStart(2,'0');
-      const base = `ServiceReport_${_sanitizeForFilename(w.serial)}_${dd}${mm}${dt.getFullYear()}`;
+      // _sanitizeForFilename falls back to 'NoSN' (no serial number), which
+      // is meaningless on a letter — give the letter branch its own label.
+      const letterTag = _sanitizeForFilename(w.perihal);
+      const base = isLetter
+        ? `SuratMemo_${letterTag === 'NoSN' ? 'TanpaPerihal' : letterTag}_${dd}${mm}${dt.getFullYear()}`
+        : `ServiceReport_${_sanitizeForFilename(w.serial)}_${dd}${mm}${dt.getFullYear()}`;
       const usedNames = new Set((w.serviceReports||[]).map(r => r.name.toLowerCase()));
       let name = `${base}.${ext}`;
       for(let i=2; usedNames.has(name.toLowerCase()); i++) name = `${base}_${i}.${ext}`;
@@ -14562,7 +14593,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', lan2Ip:'', wifiIp:'',
         os:'', osCustom:'', osProductKey:'', optagerMachineId:'', optagerLicenseExpiry:'',
         installDate:'', optagerLicenseFile:null},
-      nTablet: {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:''},
+      nTablet: {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',controlAppMachineId:'',controlAppLicenseKey:'',controlAppLicenseFile:null,installDate:'',imei:''},
     };
 
     // ---- Crowdsourced brand/model dropdown growth ----
@@ -14786,9 +14817,23 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // after picking it, the option disappears from the dropdown but the value
     // would silently stay — reset it instead. Never during an edit (an
     // existing INST record keeps its type). Declared HERE, after
-    // currentProject: the watch getter runs immediately at setup time.
-    watch(() => [currentProject.value, pm.virSystem], () => {
-      if(pm.maintType === 'INST' && !pm._isEdit && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) {
+    // currentProject: the callback reads it.
+    //
+    // Watches pm.virSystem ONLY (it used to watch currentProject too) and
+    // only acts while the borang is actually open. savePM() and
+    // cancelPmForm() reset just pm's private flags, not pm.maintType, so
+    // after submitting or cancelling an INST borang the value 'INST' stays
+    // behind — and clicking ANY sidebar item under PROJEK CCTV (which sets
+    // currentProject directly, no form reset) fired this guard, popping
+    // "New Installation hanya untuk..." on a plain Rekod Borang/Site/Kontrak
+    // page the user never meant to touch a form on. Gating on page alone
+    // isn't enough: `page` commits inside the View Transition callback,
+    // AFTER this watcher runs, so it still reads 'new-pm' while leaving.
+    // Dropping currentProject is safe: inside the form the project only
+    // changes via startNewPM(), which resets maintType first; the INST
+    // option is hidden for CCTV; and savePM() hard-blocks a stray INST.
+    watch(() => pm.virSystem, () => {
+      if(page.value === 'new-pm' && pm.maintType === 'INST' && !pm._isEdit && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) {
         pm.maintType = '';
         showToast('New Installation hanya untuk sistem VIR Optager HD4000 — sila pilih semula Jenis.', 'error');
       }
@@ -14957,7 +15002,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       pm.servers = (eq?.servers || []).map(s => ({...s}));
       pm.cameras = _stripEquipCreds(eq?.cameras);
       pm.switches = _stripEquipCreds(eq?.switches);
-      pm.tablets = (eq?.tablets || []).map(t => ({...t}));
+      pm.tablets = (eq?.tablets || []).map(({ imei, ...t }) => ({...t})); // IMEI is Urus-Peralatan-only
       pm.misc = _stripEquipCreds(eq?.misc);
     }
     // Regenerates the checklist whenever the system changes — but NEVER
@@ -15973,7 +16018,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
                 // Appliances (servers) keep their addresses in lanIp/lan2Ip/
                 // wifiIp, not `ip` — without these an appliance could never
                 // be found by its IP, the most natural way to look one up.
-                const hay = [item.name, item.ip, item.lanIp, item.lan2Ip, item.wifiIp, item.serial, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
+                const hay = [item.name, item.ip, item.lanIp, item.lan2Ip, item.wifiIp, item.serial, item.imei, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
                 if(!hay.includes(q)) continue;
                 equipMatches.push({
                   _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
@@ -18246,6 +18291,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         await new Promise(r => setTimeout(r, 450));
       }
       _clearPinOk(); // next superadmin session on this device must pass the PIN again
+      // Same shared/kiosk-device reasoning as the cache/data wipes below:
+      // the last-visited page is remembered across sessions, so without
+      // this the NEXT person to sign in gets restored onto whatever page
+      // the previous user was on — including role-gated ones they
+      // shouldn't reach (restoreLastPage() sets page.value directly,
+      // bypassing the nav item's v-if). _canLandOnPage() now also blocks
+      // that, but clearing the key removes the cross-session leak itself.
+      try { localStorage.removeItem(LAST_PAGE_KEY); } catch(e) {}
       auth.signOut();
       authProfile.value=null;
       loginUser.value=''; loginPass.value='';
@@ -18397,7 +18450,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       alarms:   ['name','type','brand','model','serial','accessUser','accessPw'],
       misc:     ['name','category','brand','model','serial','accessUser','accessPw'],
       servers:  ['name','brand','model','serial','processor','ram','storage','gpu','mobo','moboType','lan2Ip','lanIp','wifiIp','os','optagerMachineId'],
-      tablets:  ['name','brand','model','serial','controlAppMachineId'],
+      tablets:  ['name','brand','model','serial','imei','controlAppMachineId'],
     };
     const IMPORT_HEADER_HINTS = {
       name:     ['name','nama','lokasi','location','channel','device','desc'],
@@ -18436,6 +18489,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       os:        ['operating system','sistem pengendalian'],
       optagerMachineId:    ['machine id','id mesin'],
       controlAppMachineId: ['machine id','id mesin'],
+      imei:      ['imei'],
     };
     // Product-line names / model-number prefixes that reliably identify a
     // brand even when the brand itself was never typed or OCR'd — e.g. a
@@ -18550,6 +18604,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if('brand' in row && !row.brand && brandHit && v.length < 30) { row.brand = brandHit; return; }
         if('serial' in row && !row.serial && serialRe.test(v) && /\d/.test(v) && /[A-Za-z]/.test(v)) { row.serial = v; return; }
         if('capacity' in row && !row.capacity && /^\d+(\.\d+)?\s*(TB|GB)$/i.test(v)) { row.capacity = v; return; }
+        // A bare 15-digit IMEI has no letters, so serialRe skips it and it
+        // would otherwise fall through to leftover and become the Name.
+        if('imei' in row && !row.imei && _isValidImei(v.replace(/[\s-]/g, ''))) { row.imei = v.replace(/[\s-]/g, ''); return; }
         // Generic status/result words from a source table's own Status
         // column — no field for these here, and if a poorly-split row
         // leaves this as the only leftover value, it's far better to leave
@@ -18736,6 +18793,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(kind === 'hdd' && !item.config) item.config = 'RAID 5';
         if(kind === 'alarms' && !item.type) item.type = 'SMS Alert System';
         if(kind === 'misc' && !item.category) item.category = 'Monitor';
+        if(kind === 'tablets') { const imei = String(item.imei||'').replace(/[\s-]/g, ''); if(imei) item.imei = imei; else delete item.imei; } // same shape as addTablet()
         list.push(item);
         if(key) seen.set(key, item);
         added++;
@@ -19120,6 +19178,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const kind = importState.kind;
       const rows = importState.rows.filter(r => r._include);
       if(!rows.length) { showToast('Tiada rekod dipilih untuk import.', 'error'); return; }
+      // Same IMEI rule as addTablet() — an imported bad IMEI would otherwise
+      // land unchecked, then block every later edit of that tablet.
+      if(kind === 'tablets') {
+        const badIdx = rows.findIndex(r => { const v = String(r.imei||'').replace(/[\s-]/g, ''); return v && !_isValidImei(v); });
+        if(badIdx > -1) { showToast(`IMEI tidak sah pada baris ${badIdx+1} ("${rows[badIdx].imei}") — mesti 15 digit sah. Betulkan atau kosongkan sebelum import.`, 'error'); return; }
+      }
       const result = _autoAddRows(rows, kind, importState._targetProj, importState._targetSiteId);
       importState.rows = [];
       importState.added = result.added;
@@ -20476,7 +20540,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // new-PM draft, the site-compare picker) can't be safely reconstructed
     // from just a page name, so those fall back to their parent list page
     // instead of silently landing on a broken/blank view.
-    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','trash','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty','surat-memo'];
+    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','trash','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty','surat-memo','log-cm'];
     // Pages whose data is otherwise ONLY fetched by the nav item's own
     // @click handler (loadX();page='x') — landing on them via restore
     // bypasses that click entirely, so page.value flips but the underlying
@@ -20485,7 +20549,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // already populated, not a blank page that "fixes itself" on next click.
     const RESTORE_PAGE_LOADERS = {
       warranty: loadWarranty, 'vir-warranty': loadVirWarranty, 'surat-memo': loadLetterMemos,
-      contracts: loadContracts, 'audit-log': loadAuditLogs,
+      contracts: loadContracts, 'audit-log': loadAuditLogs, 'log-cm': loadCmCases,
       'contact-person': loadContactPersons,
       profile: initProfile, 'kontraktor-luar': loadKontraktorLuar,
       // openTrash() (not loadTrash alone) — it Promise.all's all 5 trash
@@ -20497,6 +20561,24 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // and assuming nothing needs recovering when it actually does.
       trash: openTrash,
     };
+    // Minimum role needed to land on a restorable page. restoreLastPage()
+    // writes page.value straight from localStorage, which bypasses the nav
+    // item's own v-if gate entirely — so without this, signing in on a
+    // browser where a higher-privileged user last visited a gated page
+    // (e.g. an admin on Surat & Memo) dropped the next user straight onto
+    // it. Pages absent from this map are open to every signed-in role.
+    const RESTORE_PAGE_MIN_ROLE = {
+      laporan: 'staff', 'laporan-lanjutan': 'staff', warranty: 'staff',
+      'vir-warranty': 'staff', 'surat-memo': 'staff', 'log-cm': 'staff',
+      'audit-log': 'staff',
+      trash: 'superadmin', 'user-mgmt': 'superadmin', backup: 'superadmin',
+    };
+    function _canLandOnPage(p) {
+      const need = RESTORE_PAGE_MIN_ROLE[p];
+      if(!need) return true;
+      if(need === 'superadmin') return authProfile.value?.role === 'superadmin';
+      return ['superadmin','admin','staff'].includes(authProfile.value?.role); // 'staff' = staff and above, i.e. internship excluded
+    }
     const LAST_PAGE_KEY = 'pmapp_lastPage';
     watch([page, currentProject, selSite], () => {
       try {
@@ -20519,7 +20601,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         else page.value = 'sites'; // site was removed/renamed since last visit
         return;
       }
-      if(RESTORABLE_PAGES.includes(saved.page)) {
+      if(RESTORABLE_PAGES.includes(saved.page) && _canLandOnPage(saved.page)) {
         page.value = saved.page;
         RESTORE_PAGE_LOADERS[saved.page]?.();
       }
@@ -21076,6 +21158,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(key === 'cameras') nCam.equipNota = item.equipNota || '';
       if(key === 'misc') nMISC.equipNota = item.equipNota || '';
       if(key === 'servers') nServer.lan2Ip = item.lan2Ip || ''; // older appliances have no lan2Ip — don't inherit the previous row's
+      if(key === 'tablets') nTablet.imei = item.imei || '';   // same for tablets saved before the IMEI field existed
       if(key === 'rooms') _editRoomItem(item);
       else if(key === 'servers') _editServerItem(item);
       else if(key === 'misc') _editMiscItem(item);
@@ -21217,8 +21300,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(removal) {
         const d = removal.removedAt?.toDate ? removal.removedAt.toDate() : null;
         rows.push({
-          rawDate: d ? d.toISOString().slice(0,10) : '9999-99-99',
-          dateLabel: d ? fmtDateDash(d.toISOString().slice(0,10)) : '-',
+          // removedAt is a real instant, so it must be read as a LOCAL date
+          // — toISOString() gave the UTC date, showing a removal done
+          // 00:00–07:59 MYT a day early and sorting it ahead of a PM/CM
+          // visit logged that same morning.
+          rawDate: d ? _localDateStr(d) : '9999-99-99',
+          dateLabel: d ? fmtDateDash(_localDateStr(d)) : '-',
           isRemoval: true,
           reasonLabel: REMOVAL_REASON_LABEL[removal.reason] || removal.reason,
           reasonCustom: removal.reasonCustom || '',
@@ -21537,12 +21624,28 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       a.download = item.optagerLicenseFile.name || 'optager-license.lic';
       a.click();
     }
+    // 15 digits + Luhn check digit (the IMEI standard's own checksum).
+    function _isValidImei(s) {
+      if(!/^\d{15}$/.test(s)) return false;
+      let sum = 0;
+      for(let i = 0; i < 15; i++) {
+        let d = +s[14 - i];
+        if(i % 2 === 1) { d *= 2; if(d > 9) d -= 9; }
+        sum += d;
+      }
+      return sum % 10 === 0;
+    }
     function addTablet() {
       if(!nTablet.name){showToast('Sila masukkan nama/label tablet','error');return;}
+      // IMEI (optional, Urus Peralatan only — stripped from the borang):
+      // spaces/dashes tolerated, then must be a real 15-digit IMEI incl. its
+      // Luhn check digit, so a mistyped digit is caught here, not months later.
+      const imei = String(nTablet.imei || '').replace(/[\s-]/g, '');
+      if(imei && !_isValidImei(imei)){showToast('IMEI tidak sah — mesti 15 digit. Sila semak semula nombor (digit terakhir ialah digit semakan).','error');return;}
       const resolved = _resolveBrandModel(nTablet);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].tablets;
-      const item = { name:resolved.name, brand:resolved.brand, model:resolved.model, serial:resolved.serial, controlAppMachineId:resolved.controlAppMachineId, controlAppLicenseKey:resolved.controlAppLicenseKey, controlAppLicenseFile:resolved.controlAppLicenseFile, installDate:resolved.installDate, _ts:Date.now() };
+      const item = { name:resolved.name, brand:resolved.brand, model:resolved.model, serial:resolved.serial, controlAppMachineId:resolved.controlAppMachineId, controlAppLicenseKey:resolved.controlAppLicenseKey, controlAppLicenseFile:resolved.controlAppLicenseFile, installDate:resolved.installDate, ...(imei ? { imei } : {}), _ts:Date.now() };
       const dup = _findDupConflict('tablets', list, item, equipEditIdx.tablets);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.tablets !== null) { item._uid = list[equipEditIdx.tablets]._uid||_genId(); list[equipEditIdx.tablets] = item; equipEditIdx.tablets = null; showToast('Tablet dikemaskini!'); }
@@ -21860,7 +21963,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // ---- PM Form ----
     function startNewPM(proj) {
       clearPmDraftLocal();
-      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._cmStatus = null; pm._resolvedAt = null;
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._createdBy = null; pm._cmStatus = null; pm._resolvedAt = null;
       if(proj) currentProject.value = proj;
       pm.virRoomNo=''; pm.virRoomNoCustom='';
       pm.virSystem = 'BCD'; // sane default until a room is picked (or changed via onVirRoomChange)
@@ -22094,9 +22197,20 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // inconclusive (missing/malformed timestamp on either side) it
         // deliberately does NOT warn, same fail-open choice already made
         // for other best-effort checks in this file.
+        // Set when the record was deleted (moved to Tong Sampah) while this
+        // edit was open — the .set() below then CREATEs the doc, and the
+        // create rule requires createdBy == the signer for non-admins, so
+        // carrying the original author forward would be rejected.
+        let _recreateDeleted = false;
         if(pm._isEdit && pm._draftId) {
           const liveSnap = await db.collection('pmRecords').doc(pm._draftId).get();
-          if(liveSnap.exists) {
+          if(!liveSnap.exists) {
+            if(!await askConfirm(`Rekod "${pm.refNo||pm._draftId}" telah dipadam oleh orang lain sejak anda membuka borang ini.\n\nSimpan semula sebagai rekod anda? (Anda akan direkodkan sebagai pencipta. Batal jika rekod ini memang patut dipadam.)`)) {
+              loading.value=false;
+              return;
+            }
+            _recreateDeleted = true;
+          } else {
             const liveVersion = liveSnap.data().updatedAt || liveSnap.data().createdAt || null;
             const loadedVersion = pm._loadedUpdatedAt || null;
             const comparable = liveVersion && loadedVersion && liveVersion.isEqual && loadedVersion.isEqual;
@@ -22123,7 +22237,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           ])) : {}),
           notaCatatan: _buildNotaCatatan(),
           notaStruct: _buildNotaStruct(),
-          status, createdBy: authUser.value?.email || '',
+          // createdBy is the ORIGINAL author — firestore.rules' create rule
+          // pins it to the signer's own email for exactly that attribution
+          // purpose, and Backup & Restore deliberately preserves it. This
+          // full .set() used to overwrite it with whoever made an edit, so
+          // the real author was lost forever after any edit by someone else.
+          // Only the create path stamps the current user; an edit carries the
+          // captured original forward (updatedBy below records the editor).
+          // Rules allow this: update/delete don't check createdBy at all —
+          // except a record deleted mid-edit, which is a create again (see
+          // _recreateDeleted above).
+          status, createdBy: (pm._isEdit && pm._createdBy && !_recreateDeleted) ? pm._createdBy : (authUser.value?.email || ''),
           // Resubmitting an edit must NOT reset an already-resolved/in-
           // progress CM record back to 'open' — pm._cmStatus (captured in
           // editRecord()) carries the existing value forward; only a
@@ -22162,7 +22286,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             servers: JSON.parse(JSON.stringify(pm.servers||[])),
             cameras: _stripEquipCreds(JSON.parse(JSON.stringify(pm.cameras||[]))),
             switches: _stripEquipCreds(JSON.parse(JSON.stringify(pm.switches||[]))),
-            tablets: JSON.parse(JSON.stringify(pm.tablets||[])),
+            tablets: JSON.parse(JSON.stringify(pm.tablets||[])).map(({ imei, ...t }) => t),
             misc: _stripEquipCreds(JSON.parse(JSON.stringify(pm.misc||[]))),
           } : {
             cameras:_stripEquipCreds(pm.cameras), nvr:_stripEquipCreds(pm.nvr), hdd:[...pm.hdd],
@@ -22222,7 +22346,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           }
         }
         viewPM.value = {id:pm._draftId,...localData};
-        pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._cmStatus = null; pm._resolvedAt = null; // clear so next new form gets fresh ID
+        pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._createdBy = null; pm._cmStatus = null; pm._resolvedAt = null; // clear so next new form gets fresh ID
         page.value='pm-view';
       } catch(e){ showToast('Gagal: '+e.message,'error'); }
       loading.value=false;
@@ -22293,6 +22417,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // forward rather than losing them.
       pm._submittedAt = r.submittedAt || null;
       pm._submittedBy = r.submittedBy || null;
+      // Original author, carried forward by savePM() — see its createdBy line.
+      pm._createdBy = r.createdBy || null;
       // Same idea for CM Status — savePM() used to force this back to
       // 'open' on every resubmit, silently undoing "Selesai"/"Dalam Proses"
       // the moment someone edited an already-resolved CM record.
@@ -22425,7 +22551,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       clearPmDraftLocal();
       const wasEdit = pm._isEdit;
       const originalId = pm._draftId;
-      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._cmStatus = null; pm._resolvedAt = null;
+      pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._createdBy = null; pm._cmStatus = null; pm._resolvedAt = null;
       if(wasEdit && originalId) {
         // Return to viewing the record as it was, not the bare list —
         // less jarring than dumping them back at the full pm-list table.
@@ -22553,13 +22679,25 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // Client-only app, no server cron — this fires whenever a superadmin
     // opens Tong Sampah ("checks in when someone happens to be logged in",
     // an accepted limitation elsewhere in this codebase already).
+    // Firestore caps a batch at 500 writes. Trash can easily exceed that
+    // (a bulk delete of a year's PM records, or a backlog built up past
+    // the retention window) — one oversized batch throws and the whole
+    // purge silently aborts inside its caller's catch, so expired entries
+    // would never actually be cleared. Chunked at 450 for the same reason
+    // and with the same margin as _batchRestoreCollection.
+    async function _batchDeleteDocs(deletedCollection, docs) {
+      const CHUNK = 450;
+      for(let i=0; i<docs.length; i+=CHUNK) {
+        const b = db.batch();
+        docs.slice(i, i+CHUNK).forEach(r => b.delete(db.collection(deletedCollection).doc(r.id)));
+        await b.commit();
+      }
+    }
     async function _purgeOldTrash() {
       const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
       const expired = trashedPmRecords.value.filter(r => { const ms = _trashMs(r); return ms && ms < cutoff; });
       if(!expired.length) return;
-      const batch = db.batch();
-      expired.forEach(r => batch.delete(db.collection('deletedPmRecords').doc(r.id)));
-      await batch.commit();
+      await _batchDeleteDocs('deletedPmRecords', expired);
       trashedPmRecords.value = trashedPmRecords.value.filter(r => !expired.some(e=>e.id===r.id));
     }
     async function restoreDeletedRecord(id) {
@@ -22573,11 +22711,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // tradeoff). Restoring on top of that would silently create two
       // active records sharing one reference number, so this is the one
       // point both ever get compared — must catch it here.
-      if(rec.refNo && pmRecords.value.some(r => r.refNo === rec.refNo && r.id !== id)) {
-        showToast(`Tidak boleh pulihkan — No. Rujukan "${rec.refNo}" kini digunakan oleh rekod aktif lain. Selesaikan pertindihan itu dahulu.`, 'error');
-        return;
-      }
+      const _refNoTaken = () => rec.refNo && pmRecords.value.some(r => r.refNo === rec.refNo && r.id !== id);
+      const _refNoErr = () => showToast(`Tidak boleh pulihkan — No. Rujukan "${rec.refNo}" kini digunakan oleh rekod aktif lain. Selesaikan pertindihan itu dahulu.`, 'error');
+      if(_refNoTaken()) { _refNoErr(); return; }
       if(!await askConfirm(`Pulihkan rekod "${rec.refNo||id}"?`)) return;
+      // Re-check after the dialog: it stays open indefinitely, and another
+      // tab/user can submit a record claiming this refNo while it sits
+      // there. Without this the pre-dialog check above is advisory only.
+      if(_refNoTaken()) { _refNoErr(); return; }
       try {
         const { deletedAt, deletedBy, id:_id, ...data } = rec;
         const batch = db.batch();
@@ -22645,6 +22786,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // few-second window would defeat the point of a quick undo.
     async function _undoSoftDelete(collection, deletedCollection, id, data, localArray) {
       if(!data) return;
+      // Older PM records may still carry inline equipment credentials.
+      // restoreDeletedRecord() strips them on its way back in; this path
+      // has to do the same, otherwise undoing a delete re-injects
+      // accessUser/accessPw into pmRecords — which is readable by every
+      // signed-in role, i.e. exactly the leak splitting them out into
+      // siteEquipmentCredentials was meant to close.
+      if(collection === 'pmRecords') {
+        data = { ...data };
+        PM_EQUIP_ARRAY_KEYS.forEach(k => { if(Array.isArray(data[k])) data[k] = _stripEquipCreds(data[k]); });
+      }
       const batch = db.batch();
       batch.set(db.collection(collection).doc(id), data);
       batch.delete(db.collection(deletedCollection).doc(id));
@@ -22653,7 +22804,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     async function _restoreFromTrash(deletedCollection, collection, id, list) {
       const rec = list.value.find(r=>r.id===id);
-      if(!rec) return null;
+      // Throw rather than return null: every caller sits inside a try/catch
+      // and showed its "berjaya dipulihkan!" toast unconditionally, so a
+      // record that disappeared while the confirm dialog was open (purged
+      // in another tab, or auto-purged past the retention window) reported
+      // a successful restore that never happened.
+      if(!rec) throw new Error('Rekod tiada dalam Tong Sampah — mungkin telah dipadam kekal.');
       const { deletedAt, deletedBy, id:_id, ...data } = rec;
       const batch = db.batch();
       batch.set(db.collection(collection).doc(id), data);
@@ -22684,9 +22840,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const cutoff = Date.now() - TRASH_RETENTION_DAYS*86400000;
       const expired = list.value.filter(r => { const ms = _trashMs(r); return ms && ms < cutoff; });
       if(!expired.length) return;
-      const batch = db.batch();
-      expired.forEach(r => batch.delete(db.collection(deletedCollection).doc(r.id)));
-      await batch.commit();
+      await _batchDeleteDocs(deletedCollection, expired); // chunked — see _batchDeleteDocs
       expired.forEach(_deleteRecordFiles);
       list.value = list.value.filter(r => !expired.some(e=>e.id===r.id));
     }
@@ -23553,9 +23707,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     const laporanFiltered = computed(() => {
       const n = laporanTempoh.value;
-      const cutoff = new Date();
-      cutoff.setMonth(cutoff.getMonth() - n);
-      cutoff.setDate(1); cutoff.setHours(0,0,0,0);
+      // 1st of the OLDEST month _getLaporanMonthRange(n) charts (n months
+      // incl. this one). Was setMonth(-n) then setDate(1): one month more
+      // than the chart showed (stat cards ≠ bar totals) — only right on the
+      // 29th–31st, where setMonth's overflow happened to cancel it out.
+      const now = new Date();
+      const cutoff = new Date(now.getFullYear(), now.getMonth() - (n-1), 1);
       return maintRecords.value.filter(r => {
         if(laporanProject.value !== 'all' && (r.project||'cctv') !== laporanProject.value) return false;
         if(laporanSite.value !== 'all' && r.siteId !== laporanSite.value) return false;
@@ -23664,9 +23821,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // reference" interaction the click handler is for. Same
       // tempoh+project+date-cutoff logic as laporanFiltered, just without
       // its site clause.
-      const cutoff3 = new Date();
-      cutoff3.setMonth(cutoff3.getMonth() - laporanTempoh.value);
-      cutoff3.setDate(1); cutoff3.setHours(0,0,0,0);
+      const _now3 = new Date();
+      const cutoff3 = new Date(_now3.getFullYear(), _now3.getMonth() - (laporanTempoh.value-1), 1); // same window as laporanFiltered
       const recsForSiteChart = maintRecords.value.filter(r => {
         if(laporanProject.value !== 'all' && (r.project||'cctv') !== laporanProject.value) return false;
         let d = null;
@@ -24345,11 +24501,11 @@ tr:nth-child(even) td{background:#f9fafc}
 ${worstSites.length||bestSites.length ? `<div class="highlight-grid">
   ${worstSites.length?`<div class="hl-box" style="border-color:#ffcdd2;background:#fff5f5">
     <div class="hl-title" style="color:#c62828">⚠ Site Pematuhan Rendah</div>
-    ${worstSites.map(s=>`<div class="hl-row"><span>${s.name}</span><span style="color:${levelColor(s.level)};font-weight:700">${s.pmCount}/${s.expected} PM (${s.pct}%)</span></div>`).join('')}
+    ${worstSites.map(s=>`<div class="hl-row"><span>${esc(s.name)}</span><span style="color:${levelColor(s.level)};font-weight:700">${s.pmCount}/${s.expected} PM (${s.pct}%)</span></div>`).join('')}
   </div>`:''}
   ${bestSites.length?`<div class="hl-box" style="border-color:#D9E38A;background:#FAFBEC">
     <div class="hl-title" style="color:#7A841A">✓ Site Pematuhan Penuh</div>
-    ${bestSites.map(s=>`<div class="hl-row"><span>${s.name}</span><span style="color:#7A841A;font-weight:700">${s.pmCount}/${s.expected} PM ✓</span></div>`).join('')}
+    ${bestSites.map(s=>`<div class="hl-row"><span>${esc(s.name)}</span><span style="color:#7A841A;font-weight:700">${s.pmCount}/${s.expected} PM ✓</span></div>`).join('')}
   </div>`:''}
 </div>`:''}
 
@@ -25216,7 +25372,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, members:new Set() };
         perTeam[team].assigned++;
         (t.members||[]).forEach(m => perTeam[team].members.add(m.name));
-        const tDate = t.date ? new Date(t.date) : null;
+        // _parseLocalDate (local midnight), matching _recDate(r) on the other
+        // side of the ±7-day comparison below — new Date(t.date) parsed UTC
+        // midnight (08:00 MYT), skewing the window by 8h: a record exactly 7
+        // days BEFORE the assignment fell outside it, 7 days after didn't.
+        const tDate = t.date ? _parseLocalDate(t.date) : null;
         // _recDate(r) falls back to month/year when visitDate is blank
         // (visitDate isn't required at submit — see savePM()) — without
         // this fallback, a submitted record missing just that one field
@@ -25239,7 +25399,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       for(let i=5;i>=0;i--) months.push(_monthKeyOf(new Date(now.getFullYear(), now.getMonth()-i, 1)));
       const perTeamMonth = {};
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST' && t.team && t.date).forEach(t => {
-        const tDate = new Date(t.date);
+        const tDate = _parseLocalDate(t.date); // local midnight — see teamPerformance's tDate note
         const mk = _monthKeyOf(tDate);
         if(!months.includes(mk)) return;
         if(!perTeamMonth[t.team]) perTeamMonth[t.team] = {};
@@ -25276,7 +25436,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const per = {};
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST').forEach(t => {
         const isCm = t.maintType === 'CM';
-        const tDate = t.date ? new Date(t.date) : null;
+        // _parseLocalDate (local midnight), matching _recDate(r) on the other
+        // side of the ±7-day comparison below — new Date(t.date) parsed UTC
+        // midnight (08:00 MYT), skewing the window by 8h: a record exactly 7
+        // days BEFORE the assignment fell outside it, 7 days after didn't.
+        const tDate = t.date ? _parseLocalDate(t.date) : null;
         // _recDate(r) falls back to month/year when visitDate is blank
         // (visitDate isn't required at submit — see savePM()) — without
         // this fallback, a submitted record missing just that one field
@@ -25591,19 +25755,19 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Ganti-Rosak Peralatan');
-      XLSX.writeFile(wb, `sejarah_ganti_rosak_peralatan_${new Date().toISOString().slice(0,10)}.xlsx`);
+      XLSX.writeFile(wb, `sejarah_ganti_rosak_peralatan_${_localDateStr()}.xlsx`);
       await logAudit('EXPORT_FAILURE_REPORT_EXCEL', `${rows.length} baris`);
     }
     async function exportFailureReportPdf() {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const list = failureReport.value;
       const tableRows = list.map(r => `<tr>
-        <td>${(r.siteName||'-').replace(/</g,'&lt;')}</td><td>${r.project.toUpperCase()}</td><td>${(r.category||'-').replace(/</g,'&lt;')}</td>
+        <td>${esc(r.siteName||'-')}</td><td>${r.project.toUpperCase()}</td><td>${esc(r.category||'-')}</td>
         <td>${r.rosak}</td><td>${r.gantiBaru}</td><td>${r.lain}</td><td><b>${r.total}</b></td>
       </tr>`).join('');
       const w = window.open('','_blank','width=1100,height=750');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
-      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Sejarah_Ganti_Rosak_Peralatan_${new Date().toISOString().slice(0,10)}</title>
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Sejarah_Ganti_Rosak_Peralatan_${_localDateStr()}</title>
         <style>
           @page{size:landscape;margin:12mm}
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
@@ -26315,7 +26479,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamModalStateHoliday, assignmentStateHoliday, stateHolidaysForDay,
       staffRotationModal, openStaffRotationDetail, staffRotationDetail,
       publicHolidaysForDay, schoolHolidaysForDay, isPublicHoliday, isSchoolHoliday, holidaysForMonth, todayHoliday, holidayRowStyle, holidayTypeColor,
-      fmtDate, fmtDateDash, fmtDateDashDay, fmtNum, cctvSystemBrands,
+      fmtDate, fmtIsoDate, fmtDateDash, fmtDateDashDay, fmtNum, cctvSystemBrands,
       doLogin, doLogout, confirmLogout, forgotPwModal, openForgotPw, submitForgotPw, welcomePopup,
       pinModal, pinGate, submitPinSetup, submitPinVerify, cancelPinModal,
       TUTORIAL_STEPS, tutorialModal, openTutorial, closeTutorial, tutorialNext, tutorialPrev,
