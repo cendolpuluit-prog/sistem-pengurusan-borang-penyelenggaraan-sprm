@@ -1261,6 +1261,10 @@ details.form-control[open] summary::after{content:'▴'}
 @keyframes equipRowFlashDark{0%,35%{background-color:#4a3f12}}
 .equip-table tr.row-flash td{animation:equipRowFlash 1.6s ease-out}
 .dark-mode .equip-table tr.row-flash td{animation-name:equipRowFlashDark}
+/* Global-search hit (_focusEquipSearchHit, kontraktor focus) — two amber pulses. */
+tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
+@keyframes equipSearchHit{0%,100%{background-color:transparent}50%{background-color:rgba(255,193,7,.38)}}
+@media (prefers-reduced-motion: reduce){tr.row-search-hit td{animation:none;background-color:rgba(255,193,7,.25)}}
 .equip-table tr{transition:opacity .22s ease}
 .equip-table tr.row-fade-out{opacity:0;pointer-events:none}
 /* PM/CM borang steps — direction-aware entrance (see pmStepAnimClass). No
@@ -1598,6 +1602,13 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
 .pm-no-box{width:22px;height:22px;border:1.5px solid #333;display:inline-flex;align-items:center;justify-content:center;font-size:9pt;font-weight:700;border-radius:3px;color:#333}
 .pm-no-box-ticked{background:#1A2332;color:#fff;border-color:#1A2332}
+.equip-filter-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px;padding:8px 10px;border:1px solid rgba(0,51,102,.12);border-radius:10px;background:rgba(0,51,102,.03)}
+.equip-filter-bar .form-control{width:auto;min-width:150px;padding:5px 8px;font-size:.82rem}
+.equip-filter-bar .equip-filter-q{min-width:200px;flex:1 1 200px}
+.equip-filter-label{font-size:.8rem;font-weight:700;color:#003366}
+.equip-filter-temp{display:flex;align-items:center;gap:4px;font-size:.8rem;white-space:nowrap;cursor:pointer}
+.equip-filter-status{font-size:.78rem;color:#e65100;white-space:nowrap}
+.equip-filter-status a{color:#c62828;font-weight:700;text-decoration:none}
 .equip-temp-badge{background:#fff3e0;color:#e65100;border:1px solid #ffcc80;font-size:.65rem;cursor:pointer;white-space:nowrap}
 .temp-orig-box{background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.35);border-radius:8px;padding:8px 10px}
 .temp-orig-tbl{width:100%;font-size:.8rem;border-collapse:collapse}
@@ -2177,10 +2188,17 @@ details.form-control[open] summary::after{content:'▴'}
       <div v-if="!equipHistoryModal.rows.length" class="empty">Tiada rekod PM/CM (submitted) dijumpai untuk item ini.</div>
       <div v-else class="equip-history-timeline">
         <div v-for="(row,i) in equipHistoryModal.rows" v-show="equipHistoryModal.playIdx<0 || i<=equipHistoryModal.playIdx" :key="i"
-          class="equip-history-item" :class="{'timelapse-reveal':equipHistoryModal.playIdx>=0 && i===equipHistoryModal.playIdx,'timelapse-current':equipHistoryModal.playing && i===equipHistoryModal.playIdx, no:row.isRemoval||row.status==='Tidak'}">
-          <div class="equip-history-dot" :class="row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':''))"></div>
+          class="equip-history-item" :class="{'timelapse-reveal':equipHistoryModal.playIdx>=0 && i===equipHistoryModal.playIdx,'timelapse-current':equipHistoryModal.playing && i===equipHistoryModal.playIdx, no:(row.isRemoval && !row.isSwap)||row.status==='Tidak'}">
+          <div class="equip-history-dot" :class="row.isSwap?'':(row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':'')))"></div>
           <div class="equip-history-content">
-            <template v-if="row.isRemoval">
+            <template v-if="row.isSwap">
+              <div class="flex items-center gap-8" style="flex-wrap:wrap">
+                <b>{{row.dateLabel}}</b>
+                <span class="badge equip-temp-badge" style="cursor:default">{{row.swapLabel}}</span>
+              </div>
+              <div class="text-sm text-muted" style="margin-top:2px">Unit keluar: {{row.unit}}<span v-if="row.reasonCustom"> — {{row.reasonCustom}}</span></div>
+            </template>
+            <template v-else-if="row.isRemoval">
               <div class="flex items-center gap-8" style="flex-wrap:wrap">
                 <b>{{row.dateLabel}}</b>
                 <span class="badge badge-red" style="font-size:.68rem">🗑 Dibuang/Digantikan</span>
@@ -2194,6 +2212,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <span v-if="row.status" :style="'font-size:.78rem;font-weight:700;color:'+(row.status==='Baik'?'#1b5e20':'#b71c1c')">{{row.status}}</span>
                 <span class="text-sm text-muted">{{row.refNo}}</span>
               </div>
+              <div v-if="equipHistoryModal.multiUnit && row.unit" class="text-sm" style="margin-top:2px;color:#555">Unit: {{row.unit}}</div>
               <div v-if="row.nota" class="text-sm text-muted" style="margin-top:2px">{{row.nota}}</div>
             </template>
           </div>
@@ -3671,7 +3690,13 @@ details.form-control[open] summary::after{content:'▴'}
         </div>
         <div v-if="!canEditEquip" class="badge badge-gray" style="display:block;margin-bottom:12px;padding:8px 12px">🔒 Paparan sahaja — {{currentProject==='vir' ? 'hanya admin/superadmin boleh mengedit peralatan site VIR.' : 'hanya admin/superadmin/staff boleh mengedit peralatan site.'}}</div>
         <div v-if="canEditEquip && !equipWritable" class="equip-load-warning" role="alert">⚠️ <b>Data peralatan tidak dapat dimuat sepenuhnya</b> (masalah sambungan semasa memuatkan). Penyuntingan &amp; penyimpanan dimatikan buat sementara supaya data sedia ada di pelayan <b>tidak terpadam</b>. Sila muat semula halaman (F5).</div>
-        <fieldset :disabled="!canEditEquip || !equipWritable" style="border:0;margin:0;padding:0">
+        <div v-if="canEditEquip && equipConflictHere" class="equip-load-warning" role="alert">
+          ⚠️ <b>Peralatan site ini telah disimpan oleh {{equipConflict.by || 'pengguna lain'}}</b><span v-if="equipConflict.at"> pada {{equipConflict.at.toLocaleString('ms-MY')}}</span> sejak anda membukanya. <b>Autosimpan dihentikan</b> supaya perubahan mereka tidak tertindih. Pilih:
+          <div class="flex gap-8" style="margin-top:8px;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" :disabled="loading" @click="resolveEquipConflictReload">🔄 Muat semula data terkini (buang perubahan saya)</button>
+            <button class="btn btn-danger btn-sm" :disabled="loading" @click="resolveEquipConflictOverwrite">💾 Simpan versi saya (gantikan versi mereka)</button>
+          </div>
+        </div>
         <div class="tabs">
           <div v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS')" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Appliance ({{(selSiteEquip.servers||[]).length}})</div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
@@ -3683,6 +3708,21 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="tab" :class="{active:eqTab==='misc'}" @click="eqTab='misc'">📦 Lain-lain ({{(selSiteEquip.misc||[]).length}})</div>
           <div v-if="currentProject==='vir'" class="tab" :class="{active:eqTab==='rooms'}" @click="eqTab='rooms'">🚪 Bilik &amp; Sistem ({{(selSiteEquip.rooms||[]).length}})</div>
         </div>
+        <!-- Filter bar for the active tab's list (see equipView). Kept OUTSIDE
+             the fieldset below on purpose: that fieldset disables every
+             control for view-only accounts, and filtering is reading, not
+             editing. (The tab bar above is plain divs — it never needed it.) -->
+        <div v-if="equipFilterKind && (selSiteEquip[equipFilterKind]||[]).length" class="equip-filter-bar">
+          <span class="equip-filter-label">🔎 Tapis senarai:</span>
+          <select v-for="f in EQUIP_FILTER_FIELDS[equipFilterKind]" :key="equipFilterKind+f.key" class="form-control" v-model="equipFilter[equipFilterKind][f.key]">
+            <option value="">{{f.label}}: Semua</option>
+            <option v-for="o in equipFilterOptions(equipFilterKind, f.key)" :key="o.value" :value="o.value">{{o.value}} ({{o.count}})</option>
+          </select>
+          <input class="form-control equip-filter-q" v-model="equipFilter[equipFilterKind].q" placeholder="Cari nama / IP / no. siri">
+          <label v-if="equipHasTemp(equipFilterKind)" class="equip-filter-temp"><input type="checkbox" v-model="equipFilter[equipFilterKind].temp"> 🔁 Sementara sahaja</label>
+          <span v-if="equipFilterActive(equipFilterKind)" class="equip-filter-status">Menapis: <b>{{equipView[equipFilterKind].length}}</b> daripada {{(selSiteEquip[equipFilterKind]||[]).length}} · <a href="#" @click.prevent="clearEquipFilter(equipFilterKind)">✕ Kosongkan</a></span>
+        </div>
+        <fieldset :disabled="!canEditEquip || !equipWritable" style="border:0;margin:0;padding:0">
 
         <!-- CAMERAS TAB -->
         <div v-show="eqTab==='cameras'">
@@ -3780,7 +3820,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Kamera</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Kamera <span v-if="equipFilterActive('cameras')" class="equip-filter-status">· ditapis {{equipView.cameras.length}}/{{(selSiteEquip.cameras||[]).length}} <a href="#" @click.prevent="clearEquipFilter('cameras')" title="Kosongkan penapis">✕</a></span></div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.cameras||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByIp('cameras')">🔀 Susun ikut IP</button>
                 <button v-if="equipSelected.cameras.size" class="btn btn-outline btn-sm" @click="openBulkEdit('cameras')">✏️ Edit Pukal ({{equipSelected.cameras.size}})</button>
@@ -3873,7 +3913,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai NVR</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai NVR <span v-if="equipFilterActive('nvr')" class="equip-filter-status">· ditapis {{equipView.nvr.length}}/{{(selSiteEquip.nvr||[]).length}} <a href="#" @click.prevent="clearEquipFilter('nvr')" title="Kosongkan penapis">✕</a></span></div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.nvr||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByIp('nvr')">🔀 Susun ikut IP</button>
                 <button v-if="(selSiteEquip.nvr||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByName('nvr')">🔀 Susun ikut Nama</button>
@@ -3885,9 +3925,9 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Peranan</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="[{'highlight-row':equipEditIdx.nvr===i}, equipRowFx(n)]" :data-equip-uid="n._uid">
+                  <tr v-for="(n,i) in equipView.nvr" :key="n._uid||n._idx" :class="[{'highlight-row':equipEditIdx.nvr===n._idx}, equipRowFx(n)]" :data-equip-uid="n._uid">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',i)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data">{{n.serial}}</td><td class="mono-data">{{n.ip}}</td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data">{{n.serial}}</td><td class="mono-data">{{n.ip}}</td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -3895,9 +3935,9 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('nvr',n)" title="Sejarah PM/CM">🕐</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('nvr',i)" :title="n._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',i)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('nvr',n._idx)" :title="n._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',n._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',n._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.nvr||[]).length"><td :colspan="canViewCredentials?12:10" class="empty">Tiada NVR.</td></tr>
@@ -3960,7 +4000,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Hard Disk</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Hard Disk <span v-if="equipFilterActive('hdd')" class="equip-filter-status">· ditapis {{equipView.hdd.length}}/{{(selSiteEquip.hdd||[]).length}} <a href="#" @click.prevent="clearEquipFilter('hdd')" title="Kosongkan penapis">✕</a></span></div>
               <div class="flex gap-8">
                 <button v-if="equipSelected.hdd.size" class="btn btn-outline btn-sm" @click="openBulkEdit('hdd')">✏️ Edit Pukal ({{equipSelected.hdd.size}})</button>
                 <button :disabled="loading" v-if="equipSelected.hdd.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('hdd')">🗑 Padam Terpilih ({{equipSelected.hdd.size}})</button>
@@ -4032,7 +4072,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Network Switch</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Network Switch <span v-if="equipFilterActive('switches')" class="equip-filter-status">· ditapis {{equipView.switches.length}}/{{(selSiteEquip.switches||[]).length}} <a href="#" @click.prevent="clearEquipFilter('switches')" title="Kosongkan penapis">✕</a></span></div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.switches||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByName('switches')">🔀 Susun ikut Nama</button>
                 <button v-if="equipSelected.switches.size" class="btn btn-outline btn-sm" @click="openBulkEdit('switches')">✏️ Edit Pukal ({{equipSelected.switches.size}})</button>
@@ -4043,9 +4083,9 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="[{'highlight-row':equipEditIdx.switches===i}, equipRowFx(s)]" :data-equip-uid="s._uid">
+                  <tr v-for="(s,i) in equipView.switches" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.switches===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',i)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data">{{s.ip}}</td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data">{{s.ip}}</td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -4053,9 +4093,9 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('switches',s)" title="Sejarah PM/CM">🕐</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('switches',i)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',i)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('switches',s._idx)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',s._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',s._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada switch.</td></tr>
@@ -4117,7 +4157,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Alarm</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Alarm <span v-if="equipFilterActive('alarms')" class="equip-filter-status">· ditapis {{equipView.alarms.length}}/{{(selSiteEquip.alarms||[]).length}} <a href="#" @click.prevent="clearEquipFilter('alarms')" title="Kosongkan penapis">✕</a></span></div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.alarms||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByName('alarms')">🔀 Susun ikut Nama</button>
                 <button v-if="equipSelected.alarms.size" class="btn btn-outline btn-sm" @click="openBulkEdit('alarms')">✏️ Edit Pukal ({{equipSelected.alarms.size}})</button>
@@ -4128,9 +4168,9 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="[{'highlight-row':equipEditIdx.alarms===i}, equipRowFx(a)]" :data-equip-uid="a._uid">
+                  <tr v-for="(a,i) in equipView.alarms" :key="a._uid||a._idx" :class="[{'highlight-row':equipEditIdx.alarms===a._idx}, equipRowFx(a)]" :data-equip-uid="a._uid">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
-                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',i)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td>{{a.serial}}</td><td>{{a.ip}}</td>
+                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td>{{a.serial}}</td><td>{{a.ip}}</td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
@@ -4138,9 +4178,9 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('alarms',a)" title="Sejarah PM/CM">🕐</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('alarms',i)" :title="a._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',i)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('alarms',a._idx)" :title="a._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',a._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',a._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.alarms||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada alarm.</td></tr>
@@ -4255,17 +4295,17 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Appliance</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Appliance <span v-if="equipFilterActive('servers')" class="equip-filter-status">· ditapis {{equipView.servers.length}}/{{(selSiteEquip.servers||[]).length}} <a href="#" @click.prevent="clearEquipFilter('servers')" title="Kosongkan penapis">✕</a></span></div>
               <button :disabled="loading" v-if="equipSelected.servers.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('servers')">🗑 Padam Terpilih ({{equipSelected.servers.size}})</button>
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN 1 IP</th><th>LAN 2 IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="[{'highlight-row':equipEditIdx.servers===i}, equipRowFx(s)]" :data-equip-uid="s._uid">
+                  <tr v-for="(s,i) in equipView.servers" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.servers===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('servers',i)" :title="tempBadgeTitle(s)">🔁 Sementara</span></td><td>{{s.serial}}</td>
+                    <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('servers',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span></td><td>{{s.serial}}</td>
                     <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.lan2Ip||'-'}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
@@ -4273,9 +4313,9 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td>{{s.installDate}}</td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('servers',i)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('servers',i)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',i)" title="Padam">🗑</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('servers',s._idx)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('servers',s._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',s._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="22" class="empty">Tiada appliance.</td></tr>
@@ -4331,25 +4371,25 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Tablet</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Tablet <span v-if="equipFilterActive('tablets')" class="equip-filter-status">· ditapis {{equipView.tablets.length}}/{{(selSiteEquip.tablets||[]).length}} <a href="#" @click.prevent="clearEquipFilter('tablets')" title="Kosongkan penapis">✕</a></span></div>
               <button :disabled="loading" v-if="equipSelected.tablets.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('tablets')">🗑 Padam Terpilih ({{equipSelected.tablets.size}})</button>
             </div>
             <div class="tbl-wrap">
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IMEI</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(t,i) in selSiteEquip.tablets||[]" :key="t._uid||i" :class="[{'highlight-row':equipEditIdx.tablets===i}, equipRowFx(t)]" :data-equip-uid="t._uid">
+                  <tr v-for="(t,i) in equipView.tablets" :key="t._uid||t._idx" :class="[{'highlight-row':equipEditIdx.tablets===t._idx}, equipRowFx(t)]" :data-equip-uid="t._uid">
                     <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
                     <td>{{i+1}}</td><td>{{t.name}} <span v-if="isRecentEquip(t)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{t.brand}}</td><td>{{t.model}} <span v-if="t._temp" class="badge equip-temp-badge" @click="openTempReplace('tablets',i)" :title="tempBadgeTitle(t)">🔁 Sementara</span></td><td>{{t.serial}}</td><td class="mono-data">{{t.imei||'-'}}</td><td>{{t.controlAppMachineId}}</td>
+                    <td>{{t.brand}}</td><td>{{t.model}} <span v-if="t._temp" class="badge equip-temp-badge" @click="openTempReplace('tablets',t._idx)" :title="tempBadgeTitle(t)">🔁 Sementara</span></td><td>{{t.serial}}</td><td class="mono-data">{{t.imei||'-'}}</td><td>{{t.controlAppMachineId}}</td>
                     <td>
                       <button v-if="t.controlAppLicenseFile" class="btn btn-outline btn-sm" @click="downloadTabletLicense(t)" title="Muat turun fail .lic">⬇ {{t.controlAppLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('tablets',i)" :title="t._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('tablets',i)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',i)" title="Padam">🗑</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('tablets',t._idx)" :title="t._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('tablets',t._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',t._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="10" class="empty">Tiada tablet.</td></tr>
@@ -4416,7 +4456,7 @@ details.form-control[open] summary::after{content:'▴'}
           </div>
           <div class="card">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Peralatan Lain-lain</div>
+              <div class="card-title" style="margin:0;border:none;padding:0">Senarai Peralatan Lain-lain <span v-if="equipFilterActive('misc')" class="equip-filter-status">· ditapis {{equipView.misc.length}}/{{(selSiteEquip.misc||[]).length}} <a href="#" @click.prevent="clearEquipFilter('misc')" title="Kosongkan penapis">✕</a></span></div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.misc||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByName('misc')">🔀 Susun ikut Nama</button>
                 <button v-if="equipSelected.misc.size" class="btn btn-outline btn-sm" @click="openBulkEdit('misc')">✏️ Edit Pukal ({{equipSelected.misc.size}})</button>
@@ -4427,9 +4467,9 @@ details.form-control[open] summary::after{content:'▴'}
               <table class="equip-table">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="[{'highlight-row':equipEditIdx.misc===i}, equipRowFx(m)]" :data-equip-uid="m._uid">
+                  <tr v-for="(m,i) in equipView.misc" :key="m._uid||m._idx" :class="[{'highlight-row':equipEditIdx.misc===m._idx}, equipRowFx(m)]" :data-equip-uid="m._uid">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
-                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',i)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td>{{m.ip}}</td>
+                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td>{{m.ip}}</td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -4438,9 +4478,9 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('misc',m)" title="Sejarah PM/CM">🕐</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('misc',i)" :title="m._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',i)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('misc',m._idx)" :title="m._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',m._idx)" title="Edit">✏️</button>
+                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',m._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="(canViewCredentials?11:9)+(currentProject!=='vir'?1:0)" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
@@ -7223,12 +7263,13 @@ details.form-control[open] summary::after{content:'▴'}
           <span v-if="kontraktorLuarProject==='all'" class="text-sm text-muted" style="align-self:center;margin-left:4px">💡 Tapisan CCTV/VIR berguna bila senarai jadi panjang</span>
         </div>
 
+        <div v-if="kontraktorFocusId" class="equip-filter-bar"><span class="equip-filter-status">Menunjukkan 1 kontraktor daripada carian · <a href="#" @click.prevent="kontraktorFocusId=null">✕ Tunjuk semua</a></span></div>
         <div class="card">
           <div class="tbl-wrap">
             <table>
               <thead><tr><th style="width:40px">#</th><th v-if="kontraktorLuarProject==='all'" style="width:70px">Sistem</th><th>Nama Kontraktor/Kedai</th><th>Skop Kerja/Barang Dijual</th><th>Area Service</th><th>No. Telefon</th><th v-if="canEditKontraktor" style="width:90px;text-align:center">Tindakan</th></tr></thead>
               <tbody>
-                <tr v-for="(c,i) in kontraktorLuarPagedList" :key="c.id">
+                <tr v-for="(c,i) in kontraktorLuarPagedList" :key="c.id" :class="{'row-search-hit': kontraktorFocusFlash && c.id===kontraktorFocusId}">
                   <td style="text-align:center;color:#888;font-size:.8rem">{{(kontraktorLuarPage-1)*20+i+1}}</td>
                   <td v-if="kontraktorLuarProject==='all'">
                     <span class="badge" :style="c._kProj==='vir' ? 'background:#fff0e0;color:#7a2e00' : 'background:#e3f0ff;color:#005599'">{{c._kProj==='vir'?'VIR':'CCTV'}}</span>
@@ -7646,6 +7687,7 @@ details.form-control[open] summary::after{content:'▴'}
           <div class="tab" :class="{active:reportTab==='punca'}" @click="reportTab='punca'">🎯 Punca Kerosakan</div>
           <div class="tab" :class="{active:reportTab==='jangkahayat'}" @click="reportTab='jangkahayat'">📅 Jangka Hayat</div>
           <div class="tab" :class="{active:reportTab==='gantirosak'}" @click="reportTab='gantirosak'; loadEquipmentRemovalLogs()">♻️ Sejarah Ganti/Rosak</div>
+          <div class="tab" :class="{active:reportTab==='sementara'}" @click="reportTab='sementara'">🔁 Peralatan Sementara</div>
           <div class="tab" :class="{active:reportTab==='perbandingan'}" @click="reportTab='perbandingan'">⚖️ Perbandingan Site</div>
           <div class="tab" :class="{active:reportTab==='musim'}" @click="reportTab='musim'">🌦️ Corak Musim</div>
           <div class="tab" :class="{active:reportTab==='heatmap'}" @click="reportTab='heatmap'">🗓️ Heatmap Pematuhan</div>
@@ -8059,6 +8101,45 @@ details.form-control[open] summary::after{content:'▴'}
                     <td><span v-if="isHighRiskEquip(r.brand,r.model)" class="badge badge-red" title="Model ni antara punca kegagalan paling kerap direkod">⚠️ Tinggi ({{highRiskEquipPct(r.brand,r.model)}}%)</span><span v-else class="text-muted">—</span></td>
                   </tr>
                   <tr v-if="!equipmentLifespan.length"><td colspan="10" class="empty">Tiada peralatan lepas {{EQUIPMENT_LIFESPAN_YEARS}} tahun (atau tarikh pasang belum direkodkan untuk peralatan sedia ada).</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: PERALATAN GANTIAN SEMENTARA (see tempEquipmentReport) -->
+        <div v-if="reportTab==='sementara'" class="tab-content-fade">
+          <div class="card">
+            <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
+              <div class="card-title" style="margin:0;border:none;padding:0">Peralatan Gantian Sementara</div>
+              <div class="flex gap-8" style="flex-wrap:wrap">
+                <select class="form-control" style="width:auto;min-width:130px" v-model="tempEquipFilterProj">
+                  <option value="all">Semua Projek</option>
+                  <option value="cctv">CCTV</option>
+                  <option value="vir">VIR</option>
+                </select>
+                <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportTempEquipExcel">📊 Export Excel</button>
+                <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-danger" @click="exportTempEquipPdf">🖨️ Export PDF</button>
+              </div>
+            </div>
+            <p class="text-sm text-muted mb-12">Peralatan yang sedang menggunakan unit gantian sementara (🔁 di Urus Peralatan Site), bersama rekod unit asal. <b>{{tempEquipmentReport.length}}</b> unit di <b>{{tempEquipSiteCount}}</b> site. Sebab/catatan dalaman tidak dipaparkan di sini atau dalam export — lihat butang 🔁 pada baris peralatan.</p>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama / Lokasi</th><th>IP Address</th><th>Unit Asal</th><th>Unit Sementara</th><th>Tarikh Ganti</th><th>Tempoh</th><th>Oleh</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r,i) in tempEquipmentReport" :key="i">
+                    <td>{{r.siteName}}</td>
+                    <td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
+                    <td>{{r.cat}}</td>
+                    <td>{{r.name}}</td>
+                    <td class="mono-data">{{r.ip||'-'}}</td>
+                    <td>{{r.orig}}<div class="text-muted text-sm mono-data">SN: {{r.origSerial}}</div></td>
+                    <td>{{r.cur}}<div class="text-muted text-sm mono-data">SN: {{r.curSerial}}</div></td>
+                    <td style="white-space:nowrap">{{r.date ? fmtDate(r.date) : '-'}}</td>
+                    <td style="white-space:nowrap">{{r.days !== null ? r.days + ' hari' : '-'}}</td>
+                    <td style="font-size:.8rem">{{r.by||'-'}}</td>
+                  </tr>
+                  <tr v-if="!tempEquipmentReport.length"><td colspan="10" class="empty">Tiada peralatan gantian sementara.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -16100,8 +16181,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           // byRoom[roomUid] instead of directly on the site record — flatten
           // every room's bucket into the same loop shape the flat (CCTV/BCD)
           // case already uses below.
-          const buckets = system && system !== 'BCD' ? Object.values(store[siteId]?.byRoom || {}) : [store[siteId]];
-          for(const bucket of buckets) {
+          // [roomUid, bucket] — the room is kept so a click can open that
+          // room directly instead of the room picker.
+          const buckets = system && system !== 'BCD' ? Object.entries(store[siteId]?.byRoom || {}) : [[null, store[siteId]]];
+          for(const [roomUid, bucket] of buckets) {
             for(const kind of Object.keys(EQUIP_KIND_TO_TAB)) {
               for(const item of (bucket?.[kind]||[])) {
                 // Appliances (servers) keep their addresses in lanIp/lan2Ip/
@@ -16111,7 +16194,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
                 if(!hay.includes(q)) continue;
                 equipMatches.push({
                   _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
-                  siteId, proj, kind, system, siteName:site.name,
+                  siteId, proj, kind, system, roomUid, siteName:site.name,
+                  // Identifies the one item to show (see _focusEquipSearchHit) —
+                  // serial/ip/name back up _uid for rows saved before _uid existed.
+                  uid: item._uid || null, serial: item.serial || '', ip: item.ip || '', name: item.name || '',
                   label: item.name || item.model || item.serial || item.ip || '(tiada nama)',
                   detail: [item.brand, item.model, item.serial, item.ip || item.lanIp].filter(Boolean).join(' · '),
                 });
@@ -16155,16 +16241,27 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         currentProject.value = item.proj;
         const site = (item.proj==='vir'?VIR_SITES:SITES).find(s=>s.id===item.siteId);
         if(site) {
-          // VIR needs its system passed through (BCD/Optager HD4000/VCS/SONY) —
-          // openSiteEquip() routes Optager/VCS to their room picker instead
-          // of opening the equipment page directly, same as clicking that
-          // system's button on the site list manually.
-          openSiteEquip(site, item.proj === 'vir' ? item.system : undefined);
-          if(item.proj === 'cctv') eqTab.value = EQUIP_KIND_TO_TAB[item.kind] || eqTab.value;
+          // Room-scoped VIR systems open the item's own room directly (the
+          // result carries its roomUid) instead of the room picker; CCTV and
+          // BCD open the site as before.
+          const roomOpener = item.proj === 'vir' && item.roomUid
+            ? { 'Optager HD4000': openOptagerRoomEquip, VCS: openVcsRoomEquip, SONY: openSonyRoomEquip }[item.system]
+            : null;
+          if(roomOpener) roomOpener(site, item.roomUid);
+          else openSiteEquip(site, item.proj === 'vir' ? item.system : undefined);
+          eqTab.value = EQUIP_KIND_TO_TAB[item.kind] || eqTab.value;
+          _focusEquipSearchHit(item);
         }
       } else if(item._kind === 'kontraktor') {
         kontraktorLuarProject.value = item.proj;
         page.value = 'kontraktor-luar';
+        // Set after the project/page watchers (which clear any focus) have run.
+        nextTick(() => {
+          kontraktorFocusId.value = item.id;
+          kontraktorLuarPage.value = 1;
+          kontraktorFocusFlash.value = true;
+          setTimeout(() => { kontraktorFocusFlash.value = false; }, 2600);
+        });
       } else {
         viewRecord(item);
       }
@@ -19342,11 +19439,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // "misc" for older records) would otherwise load with that field
         // missing entirely, and pushing onto `undefined` later throws.
         if(snap) snap.forEach(doc=>{
-          eq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[], ...doc.data()};
-          // Firestore's own doc-level write timestamp — see _equipDocUpdateTime's
-          // own comment (near saveSiteEquip) for why this piggybacks on that
-          // instead of a new schema field.
-          _equipDocUpdateTime['siteEquipment:'+doc.id] = doc.updateTime || null;
+          // _rev/_revBy/_revAt are the doc's save-version stamp (see
+          // _equipRev) — tracked separately, never part of the equipment object.
+          const { _rev, _revBy, _revAt, ...d } = doc.data();
+          eq[doc.id] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[], ...d};
+          _equipRev['siteEquipment:'+doc.id] = _rev || null;
         });
         // Auto-tidy any site whose list was saved out of order before the
         // auto-sort-on-add/edit existed — this fixes it in local state on
@@ -19379,7 +19476,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // 'Optager HD4000' (their physical asset types don't overlap).
         if(vsnap) vsnap.forEach(doc=>{
           const d = doc.data();
-          _equipDocUpdateTime['virSiteEquipment:'+doc.id] = doc.updateTime || null;
+          _equipRev['virSiteEquipment:'+doc.id] = d._rev || null;
           veqRooms[doc.id] = { rooms: d.rooms || [] };
           // Legacy docs saved before the BCD/Optager split kept
           // cameras/nvr/hdd/switches/alarms at the top level — treat those
@@ -19850,20 +19947,29 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // the CCTV/VIR toggle changes.
     const KONTRAKTOR_LUAR_PAGE_SIZE = 20;
     const kontraktorLuarPage = ref(1);
-    watch(kontraktorLuarProject, () => { kontraktorLuarPage.value = 1; });
+    // Global-search click on one kontraktor (see handleSearchResultClick):
+    // the list shows just that record until "Tunjuk semua", a CCTV/VIR
+    // toggle, or leaving the page. kontraktorFocusFlash drives the row's
+    // brief highlight (same row-search-hit style as Urus Peralatan).
+    const kontraktorFocusId = ref(null);
+    const kontraktorFocusFlash = ref(false);
+    watch(kontraktorLuarProject, () => { kontraktorLuarPage.value = 1; kontraktorFocusId.value = null; });
+    watch(page, (p) => { if(p !== 'kontraktor-luar') kontraktorFocusId.value = null; });
     // Combined view tags each record with its own origin (_kProj) — needed
     // so the table can show a CCTV/VIR badge per row, and so Edit/Delete on
     // a row still target the record's real project (see openKModal/
     // deleteKontraktor above), not whatever tab happens to be active.
-    const kontraktorLuarList = computed(() => {
-      if(kontraktorLuarProject.value === 'all') {
-        return [
+    // Full list for the CCTV/VIR toggle (what Export PDF prints) …
+    const _kontraktorLuarAll = computed(() => kontraktorLuarProject.value === 'all'
+      ? [
           ...(kontraktorLuar.value.cctv||[]).map(c => ({ ...c, _kProj:'cctv' })),
           ...(kontraktorLuar.value.vir||[]).map(c => ({ ...c, _kProj:'vir' })),
-        ];
-      }
-      return kontraktorLuar.value[kontraktorLuarProject.value] || [];
-    });
+        ]
+      : (kontraktorLuar.value[kontraktorLuarProject.value] || []));
+    // … and what the table shows: narrowed to one record by a search click.
+    const kontraktorLuarList = computed(() => kontraktorFocusId.value
+      ? _kontraktorLuarAll.value.filter(c => c.id === kontraktorFocusId.value)
+      : _kontraktorLuarAll.value);
     const kontraktorLuarTotalPages = computed(() => Math.max(1, Math.ceil(kontraktorLuarList.value.length / KONTRAKTOR_LUAR_PAGE_SIZE)));
     // Clamp back into range if the list shrinks below the current page (e.g.
     // deleting the last record on the last page) — without this the pager
@@ -20194,9 +20300,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function exportKontraktorPdf() {
       const proj = kontraktorLuarProject.value;
       const projLabel = proj === 'vir' ? 'VIR' : proj === 'cctv' ? 'CCTV' : 'CCTV & VIR';
-      // kontraktorLuarList already returns the combined, _kProj-tagged list
-      // when proj==='all' — reuse it instead of re-deriving here.
-      const list = kontraktorLuarList.value;
+      // _kontraktorLuarAll already returns the combined, _kProj-tagged list
+      // when proj==='all' — reuse it instead of re-deriving here. (Not
+      // kontraktorLuarList: that may be narrowed to one search hit.)
+      const list = _kontraktorLuarAll.value;
       const sysCol = proj === 'all' ? '<th style="width:10%">Sistem</th>' : '';
       const rows = list.length ? list.map((c,i) => `<tr>
           <td style="text-align:center">${i+1}</td>
@@ -20807,7 +20914,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // with no NVR assigned. _idx preserves each item's REAL index in the
     // unfiltered array so edit/delete still target the correct record.
     function _groupByNvr(list) {
-      const indexed = (list || []).map((it, idx) => ({ ...it, _idx: idx }));
+      // Rows from equipView already carry their real _idx — keep it; the
+      // position in a FILTERED list is not the item's index.
+      const indexed = (list || []).map((it, idx) => it._idx !== undefined ? it : ({ ...it, _idx: idx }));
       const groups = {};
       indexed.forEach(it => {
         const key = it.nvrRef && it.nvrRef.trim() ? it.nvrRef.trim() : 'Tiada NVR';
@@ -20818,8 +20927,99 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(groups['Tiada NVR']) names.push('Tiada NVR');
       return names.map(name => ({ name, items: groups[name] }));
     }
-    const hddGroupedByNvr = computed(() => _groupByNvr(selSiteEquip.value.hdd));
-    const camerasGroupedByNvr = computed(() => _groupByNvr(selSiteEquip.value.cameras));
+    // ---- Urus Peralatan table filters ----
+    // Per-tab dropdowns (built from the values actually present at this
+    // site, with counts) + free-text search + "temporary units only".
+    // equipView holds each kind's visible rows as {...item, _idx} — _idx is
+    // the item's REAL index in the unfiltered list, and every row action
+    // (edit/delete/🔁) must use it: the row's position in a filtered table
+    // points at a different item.
+    const EQUIP_FILTER_FIELDS = {
+      cameras:  [{ key:'brand', label:'Brand' }, { key:'camType', label:'Jenis' }],
+      nvr:      [{ key:'type', label:'Jenis' }, { key:'brand', label:'Brand' }],
+      hdd:      [{ key:'brand', label:'Brand' }, { key:'capacity', label:'Kapasiti' }],
+      switches: [{ key:'brand', label:'Brand' }],
+      alarms:   [{ key:'type', label:'Jenis' }, { key:'brand', label:'Brand' }],
+      misc:     [{ key:'category', label:'Kategori' }, { key:'brand', label:'Brand' }],
+      servers:  [{ key:'brand', label:'Brand' }],
+      tablets:  [{ key:'brand', label:'Brand' }],
+    };
+    const EQUIP_SEARCH_FIELDS = ['name','ip','lanIp','lan2Ip','wifiIp','serial','imei','model','brand','nvrRef','category','type','camType','equipNota','nota'];
+    const _NO_VALUE = '(Tiada)';
+    // uid: set only by a global-search click (see _focusEquipSearchHit) — one exact item.
+    const _blankEquipFilter = () => ({ brand:'', camType:'', type:'', capacity:'', category:'', q:'', temp:false, uid:'' });
+    const equipFilter = reactive(Object.fromEntries(Object.keys(EQUIP_FILTER_FIELDS).map(k => [k, _blankEquipFilter()])));
+    const _equipFilterVal = (it, key) => String(it?.[key] ?? '').trim() || _NO_VALUE;
+    function equipFilterActive(kind) {
+      const f = equipFilter[kind];
+      return !!f && (!!f.q.trim() || f.temp || !!f.uid || EQUIP_FILTER_FIELDS[kind].some(x => f[x.key]));
+    }
+    function clearEquipFilter(kind) { Object.assign(equipFilter[kind], _blankEquipFilter()); }
+    function equipFilterOptions(kind, key) {
+      const counts = new Map();
+      (selSiteEquip.value[kind] || []).forEach(it => { const v = _equipFilterVal(it, key); counts.set(v, (counts.get(v) || 0) + 1); });
+      return [...counts].map(([value, count]) => ({ value, count })).sort((a, b) => a.value.localeCompare(b.value));
+    }
+    function equipHasTemp(kind) { return (selSiteEquip.value[kind] || []).some(it => it._temp); }
+    // Global-search click on one piece of equipment: show THAT item only
+    // (a uid filter — "✕ Kosongkan" brings the full list back), scrolled
+    // to and briefly flashed (equipSearchHitUid → equipRowFx).
+    const equipSearchHitUid = ref(null);
+    async function _focusEquipSearchHit(hit) {
+      // Opening a different site/room fires the watcher that clears every
+      // filter — let it run first, or it would wipe the one set below.
+      await nextTick();
+      const list = selSiteEquip.value[hit.kind] || [];
+      // _uid first; serial/ip/name for a row that had no _uid when the
+      // search ran (the page backfills one on open).
+      const it = (hit.uid && list.find(x => x._uid === hit.uid))
+        || list.find(x => (hit.serial && x.serial === hit.serial) || (hit.ip && x.ip === hit.ip))
+        || list.find(x => hit.name && x.name === hit.name);
+      if(!it?._uid) return;
+      // Start clean: a previous search hit on this same site (no site change,
+      // so no automatic reset) would otherwise leave another tab filtered.
+      Object.keys(equipFilter).forEach(clearEquipFilter);
+      equipFilter[hit.kind].uid = it._uid;
+      equipSearchHitUid.value = it._uid;
+      await nextTick();
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelector(`[data-equip-uid="${CSS.escape(it._uid)}"]`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+      setTimeout(() => { if(equipSearchHitUid.value === it._uid) equipSearchHitUid.value = null; }, 2600);
+    }
+    // eqTab ids → equipment kind (two tab ids are singular); rooms has no filter.
+    const _EQ_TAB_KIND = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switch:'switches', alarm:'alarms', misc:'misc', servers:'servers', tablets:'tablets' };
+    const equipFilterKind = computed(() => _EQ_TAB_KIND[eqTab.value] || null);
+    const equipView = computed(() => {
+      const out = {};
+      Object.keys(EQUIP_FILTER_FIELDS).forEach(kind => {
+        const f = equipFilter[kind];
+        const q = f.q.trim().toLowerCase();
+        out[kind] = (selSiteEquip.value[kind] || []).map((it, idx) => ({ ...it, _idx: idx })).filter(it => {
+          if(f.uid && it._uid !== f.uid) return false;
+          if(f.temp && !it._temp) return false;
+          if(EQUIP_FILTER_FIELDS[kind].some(x => f[x.key] && _equipFilterVal(it, x.key) !== f[x.key])) return false;
+          return !q || EQUIP_SEARCH_FIELDS.some(k => String(it[k] || '').toLowerCase().includes(q));
+        });
+      });
+      return out;
+    });
+    // Bulk actions only ever act on rows the user can see: a selection on a
+    // row the filter now hides is dropped, so "Padam Terpilih" can't delete
+    // something off-screen.
+    watch(equipView, (view) => {
+      Object.keys(view).forEach(kind => {
+        const sel = equipSelected[kind];
+        if(!sel?.size) return;
+        const visible = new Set(view[kind].map(it => it._uid));
+        [...sel].forEach(u => { if(!visible.has(u)) sel.delete(u); });
+      });
+    });
+    // A filter set for one site/room makes no sense on the next one.
+    watch(() => [selSite.value?.id, currentProject.value, equipVirSystem.value, equipVirRoomUid.value], () => {
+      Object.keys(equipFilter).forEach(clearEquipFilter);
+    });
+    const hddGroupedByNvr = computed(() => _groupByNvr(equipView.value.hdd));
+    const camerasGroupedByNvr = computed(() => _groupByNvr(equipView.value.cameras));
     // "Senarai Bilik" filter — the list otherwise always shows every room
     // for the site regardless of system, which is correct for management
     // but can look like a bug when a room of the "wrong" system shows up
@@ -20907,6 +21107,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return {
         'row-flash': (item?._ts || 0) > equipFlashCutoff.value,
         'row-fade-out': !!item?._uid && equipFadingUids.has(item._uid),
+        'row-search-hit': !!item?._uid && item._uid === equipSearchHitUid.value,
       };
     }
     function _bumpEquipFlash() {
@@ -20941,12 +21142,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!uid) return;
       equipSelected[kind].has(uid) ? equipSelected[kind].delete(uid) : equipSelected[kind].add(uid);
     }
+    // "All" = all rows currently shown (see equipView's filter), never rows a filter hides.
     function isEquipAllSelected(kind) {
-      const list = selSiteEquip.value[kind]||[];
+      const list = equipView.value[kind] || selSiteEquip.value[kind] || [];
       return list.length>0 && list.every(it => equipSelected[kind].has(it._uid));
     }
     function toggleEquipSelectAll(kind) {
-      const list = selSiteEquip.value[kind]||[];
+      const list = equipView.value[kind] || selSiteEquip.value[kind] || [];
       if(isEquipAllSelected(kind)) equipSelected[kind].clear();
       // Mutate the existing reactive Set in place (clear + re-add) rather
       // than replacing it with a new Set instance — avoids any doubt about
@@ -21048,7 +21250,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // One equipmentRemovalLog entry. Best-effort, never throws — a failed log
     // must never look like the equipment change itself failed.
     function _logEquipRemoval(siteId, key, snap, reason, reasonCustom) {
-      return db.collection('equipmentRemovalLog').add({
+      const entry = {
         project: currentProject.value,
         siteId, siteName: selSite.value?.name || siteId,
         // "Lain-lain" (misc) covers many distinct sub-categories (PC, UPS,
@@ -21057,11 +21259,23 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // so the report can tell a TV failure apart from a PC failure.
         category: key === 'misc' ? (snap.category || 'Lain-lain') : (EQUIPMENT_CATEGORY_LABEL[key] || key),
         itemName: snap.name || snap.nvrRef || '-',
+        // The row (position) the unit sat in — lets the history timeline
+        // tie a swap/restore to the position even when that unit's serial
+        // never appeared in a borang.
+        itemUid: snap._uid || '',
         brand: snap.brand || '-', model: snap.model || '-', serial: snap.serial || '-',
         reason, reasonCustom: reasonCustom || '',
-        removedAt: firebase.firestore.FieldValue.serverTimestamp(),
         removedBy: authUser.value?.email || '',
-      }).catch(e => console.warn('Gagal log penyingkiran peralatan:', e));
+      };
+      // The log is read once per session (see openEquipHistory /
+      // loadEquipmentRemovalLogs) — once it's loaded, patch this entry in so
+      // the history timeline and Ganti/Rosak report reflect it right away
+      // instead of only after a full reload. Not before: a non-empty list
+      // would stop that first load from ever happening.
+      const now = new Date();
+      if(equipmentRemovalLogs.value.length) equipmentRemovalLogs.value.unshift({ id: 'local-' + now.getTime() + '-' + Math.random().toString(36).slice(2,6), ...entry, removedAt: { toDate: () => now } });
+      return db.collection('equipmentRemovalLog').add({ ...entry, removedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        .catch(e => console.warn('Gagal log penyingkiran peralatan:', e));
     }
 
     // ---- Ganti Sementara (temporary stand-in unit) ----
@@ -21463,7 +21677,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // (stable across renames), falling back to ip/serial for older records
     // predating _uid tracking.
     const EQUIP_HISTORY_STATUS_FIELD = { cameras:'display', nvr:'status', hdd:'status', switches:'status', alarms:'status', misc:'status' };
-    const equipHistoryModal = reactive({ show:false, label:'', rows:[], playing:false, playIdx:-1 });
+    const equipHistoryModal = reactive({ show:false, label:'', rows:[], playing:false, playIdx:-1, multiUnit:false });
     let _equipHistoryTimer = null;
     // Time-lapse playback — steps playIdx forward one row at a time so the
     // timeline reveals itself chronologically (v-show in the template gates
@@ -21494,6 +21708,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const siteId = selSite.value?.id;
       const statusField = EQUIP_HISTORY_STATUS_FIELD[kind];
       const itemSerialKey = _realSerialKey(item.serial);
+      // The timeline follows the POSITION (_uid first, below), so after a
+      // temporary swap (see openTempReplace) it spans more than one physical
+      // unit. Collect every unit seen so each visit can say which one it
+      // was, and so swap/restore log entries for any of them are included.
+      const serialKeys = new Set([itemSerialKey, _realSerialKey(item._temp?.original?.serial)].filter(Boolean));
+      const unitLabel = x => `${x.brand||'-'} ${x.model||''}`.trim() + (x.serial ? ` (SN ${x.serial})` : '');
+      const units = new Set([unitLabel(item)]);
       const rows = pmRecords.value
         .filter(r => r.siteId === siteId && (r.project||'cctv') === proj && r.status === 'submitted')
         .map(r => {
@@ -21502,7 +21723,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           if(!match && item.ip) match = list.find(x => x.ip && x.ip === item.ip);
           if(!match && itemSerialKey) match = list.find(x => _realSerialKey(x.serial) === itemSerialKey);
           if(!match) return null;
+          const mk = _realSerialKey(match.serial);
+          if(mk) serialKeys.add(mk);
+          const unit = unitLabel(match);
+          units.add(unit);
           return {
+            unit,
             // A record with no visitDate (only month/year) used to fall back
             // to '' here — since '' sorts before every real 'YYYY-MM-DD'
             // string, every such record was pushed to the very FRONT of the
@@ -21524,10 +21750,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // taken out of service — instead of stopping at its last recorded
       // visit. Reuses the existing log/collection; no new read path.
       if(!equipmentRemovalLogs.value.length) await loadEquipmentRemovalLogs();
-      const removal = equipmentRemovalLogs.value.find(l => l.siteId === siteId && (l.project||'cctv') === proj &&
-        (itemSerialKey ? _realSerialKey(l.serial) === itemSerialKey : (l.itemName === item.name && l.brand === item.brand && l.model === item.model)));
-      if(removal) {
-        const d = removal.removedAt?.toDate ? removal.removedAt.toDate() : null;
+      // Every log entry for any unit that has held this position (was: only
+      // the single latest one for the current serial — so a swap-out and
+      // its later restore couldn't both show, and a restored unit's
+      // timeline ended on a red "removed" it had come back from).
+      const logs = equipmentRemovalLogs.value.filter(l => l.siteId === siteId && (l.project||'cctv') === proj &&
+        ((item._uid && l.itemUid === item._uid) ||
+         (serialKeys.size ? serialKeys.has(_realSerialKey(l.serial)) : (l.itemName === item.name && l.brand === item.brand && l.model === item.model))));
+      logs.forEach(l => {
+        const d = l.removedAt?.toDate ? l.removedAt.toDate() : null;
         rows.push({
           // removedAt is a real instant, so it must be read as a LOCAL date
           // — toISOString() gave the UTC date, showing a removal done
@@ -21535,12 +21766,21 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           // visit logged that same morning.
           rawDate: d ? _localDateStr(d) : '9999-99-99',
           dateLabel: d ? fmtDateDash(_localDateStr(d)) : '-',
+          ts: d ? d.getTime() : Infinity, // same-day order: a swap and its restore can share a date
           isRemoval: true,
-          reasonLabel: REMOVAL_REASON_LABEL[removal.reason] || removal.reason,
-          reasonCustom: removal.reasonCustom || '',
+          // A temporary swap or its undo is a change of unit, not a removal
+          // of the position — shown neutrally instead of as a red delete.
+          isSwap: l.reason === 'ganti-sementara' || l.reason === 'pulih-asal',
+          swapLabel: l.reason === 'pulih-asal' ? '↩️ Unit asal dipulihkan' : '🔁 Ganti sementara',
+          unit: `${l.brand||'-'} ${l.model && l.model !== '-' ? l.model : ''}`.trim() + (l.serial && l.serial !== '-' ? ` (SN ${l.serial})` : ''),
+          reasonLabel: REMOVAL_REASON_LABEL[l.reason] || l.reason,
+          reasonCustom: l.reasonCustom || '',
         });
-      }
-      rows.sort((a,b) => (a.rawDate||'').localeCompare(b.rawDate||''));
+      });
+      // PM/CM rows carry no time (ts 0), so a visit sorts before a swap/removal logged the same day.
+      rows.sort((a,b) => (a.rawDate||'').localeCompare(b.rawDate||'') || ((a.ts||0) - (b.ts||0)));
+      // Unit labels only earn their space once the position has had more than one unit.
+      equipHistoryModal.multiUnit = units.size > 1 || rows.some(r => r.isSwap);
       equipHistoryModal.label = item.name || item.model || item.ip || '-';
       equipHistoryModal.rows = rows;
       equipHistoryModal.playing = false;
@@ -22046,16 +22286,43 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         }
       }
     }
-    // Tracks each equipment doc's Firestore-native updateTime as of the last
-    // time we either LOADED it (loadAll()) or WROTE it ourselves (refreshed
-    // below) — piggybacks on Firestore's own doc metadata instead of adding
-    // a new schema field just for this. Keyed 'collection:siteId' since
-    // siteEquipment/virSiteEquipment are separate collections. Used by
-    // saveSiteEquip() (the EXPLICIT "Simpan Semua" click only, never the
-    // silent debounced autosave — see that function's own comment for why)
-    // to detect someone else having saved equipment changes to this same
-    // site in between, before silently overwriting them.
-    let _equipDocUpdateTime = {};
+    // Concurrent-edit guard for equipment docs. Every save stamps the doc
+    // with a fresh random `_rev` (+ _revBy/_revAt). _equipRev holds, per
+    // 'collection:siteId', the rev this session last loaded or wrote;
+    // _myEquipRevs every rev this session wrote (so our own in-flight or
+    // offline-queued writes never look like someone else's). Before EVERY
+    // write — the 2s autosave included — a live rev that is neither means
+    // another user (or another tab) saved this site in between: the write
+    // is held and equipConflict asks the user which version to keep,
+    // instead of the old silent whole-array overwrite.
+    // (This replaced a check on doc.updateTime, which the web SDK doesn't
+    // have — that guard never actually ran.)
+    let _equipRev = {};
+    const _myEquipRevs = new Set();
+    const equipConflict = reactive({ key:null, siteName:'', by:'', at:null });
+    const equipConflictHere = computed(() => {
+      if(!equipConflict.key || !selSite.value) return false;
+      const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
+      return equipConflict.key === col + ':' + selSite.value.id;
+    });
+    function _clearEquipConflict() { Object.assign(equipConflict, { key:null, siteName:'', by:'', at:null }); }
+    // "Muat semula": drop this session's unsaved equipment edits and take the
+    // server's version. A full loadAll() reuses the one tested loader for
+    // both projects' (room-scoped) shapes; it's rare enough not to matter.
+    async function resolveEquipConflictReload() {
+      if(!await askConfirm('Muat semula data peralatan terkini dari pelayan?\n\nPerubahan anda yang belum disimpan untuk site ini akan DIBUANG.')) return;
+      clearTimeout(_equipAutoSaveTimer); _equipAutoSaveTimer = null;
+      Object.keys(equipEditIdx).forEach(k => { if(equipEditIdx[k] !== null) cancelEditEquip(k); });
+      clearEquipDraftLocal();
+      _clearEquipConflict();
+      loading.value = true;
+      try { await loadAll(); showToast('Data peralatan terkini dimuat.'); }
+      finally { loading.value = false; }
+    }
+    async function resolveEquipConflictOverwrite() {
+      if(!await askConfirm(`Simpan versi anda dan GANTIKAN perubahan yang disimpan oleh ${equipConflict.by || 'pengguna lain'}?`)) return;
+      await _writeSiteEquipToFirestore({ force: true });
+    }
     // Shared write path for both the manual "Simpan Semua" button and the
     // debounced auto-save — captures the target site/label up front since
     // the user isn't blocked from navigating away while this write is in
@@ -22077,6 +22344,25 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const credCol = currentProject.value === 'vir' ? 'virSiteEquipmentCredentials' : 'siteEquipmentCredentials';
       const siteId = selSite.value.id;
       const siteLabel = selSite.value?.name || selSite.value?.id;
+      const revKey = col + ':' + siteId;
+      // Held until the user resolves it (banner) — no point re-reading
+      // every 2s just to find the same conflict again.
+      if(!opts.force && equipConflict.key === revKey) return 'conflict';
+      if(!opts.force) {
+        // A failed read (offline with nothing cached) skips the check and
+        // saves as before — never block offline editing on it.
+        const live = await db.collection(col).doc(siteId).get().catch(() => null);
+        if(live) {
+          const liveRev = live.exists ? (live.data()._rev || null) : null;
+          if(liveRev !== (_equipRev[revKey] || null) && !_myEquipRevs.has(liveRev)) {
+            const ld = live.exists ? live.data() : {};
+            Object.assign(equipConflict, { key: revKey, siteName: siteLabel, by: ld._revBy || '', at: ld._revAt?.toDate ? ld._revAt.toDate() : null });
+            return 'conflict';
+          }
+        }
+      }
+      const rev = _genId();
+      const revMeta = { _rev: rev, _revBy: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '', _revAt: firebase.firestore.FieldValue.serverTimestamp() };
       // accessUser/accessPw are split out into a companion doc with its own
       // (stricter) read rule — see _splitCredentials — so the main doc
       // written here never carries them, regardless of who's saving.
@@ -22114,19 +22400,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // almost anywhere else. logAudit is fire-and-forget for the same
         // reason autosave shouldn't make the user wait on it (see savePM).
         const batch = db.batch();
-        batch.set(db.collection(col).doc(siteId), data, { merge: true });
+        batch.set(db.collection(col).doc(siteId), { ...data, ...revMeta }, { merge: true });
         batch.set(db.collection(credCol).doc(siteId), credData, { merge: true });
+        // Recorded BEFORE the commit resolves: commit() only resolves on
+        // server ack (never, while offline), and the next autosave's check
+        // must already recognise this rev as ours.
+        _myEquipRevs.add(rev);
+        _equipRev[revKey] = rev;
+        if(equipConflict.key === revKey) _clearEquipConflict(); // a forced save resolves it
         await _fw(batch.commit());
         logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
-        // Refresh the tracked updateTime to reflect OUR OWN write (the
-        // client SDK's batch.commit() doesn't return server write-times the
-        // way the admin SDK does, so a fresh read is the only way to get
-        // it) — without this, saveSiteEquip()'s staleness check would flag
-        // our own just-completed autosave as "someone else changed this"
-        // the very next time "Simpan Semua" is clicked. Fire-and-forget:
-        // never blocks the save itself or the toast/checkmark below on it.
-        db.collection(col).doc(siteId).get().then(d => { _equipDocUpdateTime[col+':'+siteId] = d.updateTime || null; }).catch(()=>{});
         // Checkmark only alongside the toast (i.e. never for the silent
         // {toast:false} auto-save tick) — flashing it every ~2s while
         // someone's actively typing would be constant visual noise, not delight.
@@ -22139,31 +22423,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function saveSiteEquip() {
       if(!selSite.value) return;
       loading.value=true;
-      // Concurrent-edit guard — EXPLICIT "Simpan Semua" click only, never
-      // the silent debounced autosave (which fires ~every 2s during normal
-      // editing — a confirm() prompt popping up unprompted mid-typing would
-      // be disruptive, and the autosave itself already limits how much any
-      // one person's own gap of unsaved work can grow). _writeSiteEquipToFirestore
-      // always does a full document overwrite (equipment arrays aren't
-      // merged item-by-item), so if someone else saved a change to this
-      // SAME site's equipment since we loaded/last-saved it, this would
-      // otherwise silently discard theirs. Only warns on the specific
-      // deliberate "I'm done editing" action, not on every autosave tick.
-      const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
-      const key = col+':'+selSite.value.id;
-      const loadedVersion = _equipDocUpdateTime[key] || null;
-      if(loadedVersion) {
-        const liveSnap = await db.collection(col).doc(selSite.value.id).get();
-        const liveVersion = liveSnap.updateTime || null;
-        if(liveVersion && liveVersion.isEqual && loadedVersion.isEqual && !liveVersion.isEqual(loadedVersion)) {
-          if(!await askConfirm(`Peralatan site "${selSite.value.name}" telah diubah oleh orang lain sejak anda buka/simpan halaman ini.\n\nTeruskan simpan? (Perubahan mereka akan digantikan dengan versi anda.)`)) {
-            loading.value=false;
-            return;
-          }
-        }
-      }
-      await _writeSiteEquipToFirestore();
-      loading.value=false;
+      // A conflict (someone else saved this site since we loaded it — see
+      // _equipRev) is shown as the banner above the tabs, where the user
+      // picks reload vs overwrite; nothing is written here in that case.
+      try {
+        if(await _writeSiteEquipToFirestore() === 'conflict') showToast('Peralatan site ini telah diubah oleh orang lain — sila pilih tindakan pada amaran di atas.', 'error');
+      } finally { loading.value=false; }
     }
 
     // ── Auto-save: silently persists equipment changes ~2s after the user
@@ -25898,6 +26163,115 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       return rows.sort((a,b) => b.ageYears - a.ageYears);
     });
 
+    // ── Peralatan Gantian Sementara — every row currently holding a
+    // temporary stand-in unit (see openTempReplace), across both projects
+    // and every VIR store. Deliberately leaves out the internal reason
+    // text (_temp.reason): this list is meant to be shown/printed for
+    // meetings with the client. ──
+    const TEMP_REPORT_CATS = [['cameras','Kamera'],['nvr','NVR'],['hdd','HDD'],['switches','Switch'],['alarms','Alarm'],['misc','Lain-lain'],['servers','Appliance'],['tablets','Tablet']];
+    const tempEquipFilterProj = ref('all');
+    const tempEquipmentReport = computed(() => {
+      const rows = [];
+      const today = _parseLocalDate(_localDateStr());
+      const push = (siteName, proj, eq) => {
+        TEMP_REPORT_CATS.forEach(([key, label]) => (eq?.[key] || []).forEach(it => {
+          if(!it?._temp) return;
+          const o = it._temp.original || {};
+          const since = it._temp.date ? _parseLocalDate(it._temp.date) : null;
+          rows.push({
+            siteName, proj, cat: key === 'misc' ? (it.category || label) : label,
+            name: it.name || it.nvrRef || o.name || '-', ip: it.ip || it.lanIp || '',
+            orig: `${o.brand||'-'} ${o.model||''}`.trim(), origSerial: o.serial || '-',
+            cur: `${it.brand||'-'} ${it.model||''}`.trim(), curSerial: it.serial || '-',
+            date: it._temp.date || '', days: since ? Math.max(0, Math.round((today - since) / 86400000)) : null,
+            by: it._temp.by || '',
+          });
+        }));
+      };
+      SITES.forEach(s => push(s.name, 'CCTV', siteEquip.value[s.id]));
+      VIR_SITES.forEach(s => {
+        push(s.name, 'VIR', virSiteEquipBCD.value[s.id]);
+        // Optager / VCS / SONY are room-scoped — one entry per room.
+        [virSiteEquipOptager.value, virSiteEquipVCS.value, virSiteEquipSony.value].forEach(store => {
+          Object.entries(store[s.id]?.byRoom || {}).forEach(([roomUid, roomEq]) => {
+            const room = (virSiteEquip.value[s.id]?.rooms || []).find(r => r._uid === roomUid);
+            const roomLabel = roomUid === 'legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name || roomUid);
+            push(`${s.name} — ${roomLabel}`, 'VIR', roomEq);
+          });
+        });
+      });
+      return rows
+        .filter(r => tempEquipFilterProj.value === 'all' || r.proj.toLowerCase() === tempEquipFilterProj.value)
+        .sort((a, b) => a.siteName.localeCompare(b.siteName) || a.date.localeCompare(b.date));
+    });
+    const tempEquipSiteCount = computed(() => new Set(tempEquipmentReport.value.map(r => r.siteName)).size);
+    async function exportTempEquipExcel() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      await _ensureXLSX();
+      const rows = tempEquipmentReport.value.map((r, i) => ({
+        '#': i+1, Site: r.siteName, Projek: r.proj, Kategori: r.cat, 'Nama / Lokasi': r.name, 'IP Address': r.ip,
+        'Unit Asal': r.orig, 'No. Siri Asal': r.origSerial, 'Unit Sementara': r.cur, 'No. Siri Sementara': r.curSerial,
+        'Tarikh Ganti': r.date ? fmtDate(r.date) : '-', 'Tempoh (hari)': r.days ?? '-',
+      }));
+      const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
+      _autoFitExcelCols(ws, rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Peralatan Sementara');
+      XLSX.writeFile(wb, `peralatan_gantian_sementara_${_localDateStr()}.xlsx`);
+      await logAudit('EXPORT_TEMP_EQUIP_EXCEL', `${rows.length} baris`);
+    }
+    async function exportTempEquipPdf() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const list = tempEquipmentReport.value;
+      const tableRows = list.map((r, i) => `<tr>
+        <td>${i+1}</td><td>${esc(r.siteName)}</td><td>${r.proj}</td><td>${esc(r.cat)}</td><td>${esc(r.name)}</td><td>${esc(r.ip||'-')}</td>
+        <td>${esc(r.orig)}<br><span class="sn">SN: ${esc(r.origSerial)}</span></td>
+        <td>${esc(r.cur)}<br><span class="sn">SN: ${esc(r.curSerial)}</span></td>
+        <td>${r.date ? fmtDate(r.date) : '-'}</td><td>${r.days ?? '-'}</td>
+      </tr>`).join('') || '<tr><td colspan="10" style="text-align:center;color:#888">Tiada peralatan gantian sementara.</td></tr>';
+      const w = window.open('','_blank','width=1100,height=750');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Peralatan_Gantian_Sementara_${_localDateStr()}</title>
+        <style>
+          @page{size:landscape;margin:12mm}
+          body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
+          h2{color:#003366;margin-bottom:2px}
+          p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
+          .header-side{flex-shrink:0;text-align:right}
+          .header-generated{font-style:italic;color:#888;font-size:7.5pt;margin:4px 0 0}
+          table{width:100%;border-collapse:collapse;margin-top:6px}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
+          td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt;vertical-align:top}
+          tr:nth-child(even) td{background:#f7f9fc}
+          .sn{color:#555;font-size:7.5pt}
+        </style>
+      </head><body>
+        <div class="header">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Senarai Peralatan Gantian Sementara</h2>
+            <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
+          </div>
+          <div class="header-side">
+            <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
+            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} unit · ${tempEquipSiteCount.value} site</p>
+          </div>
+        </div>
+        <table><thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama / Lokasi</th><th>IP Address</th><th>Unit Asal</th><th>Unit Sementara</th><th>Tarikh Ganti</th><th>Tempoh (hari)</th></tr></thead>
+        <tbody>${tableRows}</tbody></table>
+      </body></html>`);
+      w.document.close();
+      w.focus();
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); w.close(); }, 200);
+      await logAudit('EXPORT_TEMP_EQUIP_PDF', `${list.length} baris`);
+    }
+
     // ── "Sejarah Ganti/Rosak Peralatan" — powered by equipmentRemovalLog,
     // written once per item by confirmRemoveItem() whenever equipment is
     // deleted from Urus Peralatan Site with a reason attached. ──
@@ -26748,6 +27122,10 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       removeReasonModal, confirmRemoveItem,
       tempReplaceModal, openTempReplace, confirmTempReplace, restoreTempOriginal, tempOrigRows, tempBadgeTitle, pmHasTemp,
+      equipConflict, equipConflictHere, resolveEquipConflictReload, resolveEquipConflictOverwrite,
+      tempEquipmentReport, tempEquipSiteCount, tempEquipFilterProj, exportTempEquipExcel, exportTempEquipPdf,
+      EQUIP_FILTER_FIELDS, equipFilter, equipView, equipFilterKind, equipFilterOptions, equipFilterActive, clearEquipFilter, equipHasTemp,
+      kontraktorFocusId, kontraktorFocusFlash,
       brandOptionsFor, modelOptionsFor, isRecentEquip, equipAgeColor, equipAgeTitle,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       customEquipCleanupBrandIsCustom, removeCustomBrand,
