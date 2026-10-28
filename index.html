@@ -1598,6 +1598,12 @@ details.form-control[open] summary::after{content:'▴'}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
 .pm-no-box{width:22px;height:22px;border:1.5px solid #333;display:inline-flex;align-items:center;justify-content:center;font-size:9pt;font-weight:700;border-radius:3px;color:#333}
 .pm-no-box-ticked{background:#1A2332;color:#fff;border-color:#1A2332}
+.equip-temp-badge{background:#fff3e0;color:#e65100;border:1px solid #ffcc80;font-size:.65rem;cursor:pointer;white-space:nowrap}
+.temp-orig-box{background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.35);border-radius:8px;padding:8px 10px}
+.temp-orig-tbl{width:100%;font-size:.8rem;border-collapse:collapse}
+.temp-orig-tbl td{padding:2px 4px;vertical-align:top}
+.temp-orig-tbl td:first-child{color:#666;white-space:nowrap;width:40%}
+.pm-temp-note{font-size:7.5pt;font-style:italic;color:#444;margin:2px 0 6px}
 .pm-no-box-tick{margin-left:2px} /* same SVG tick as .pm-sym, not a font ✓ */
 .pm-nota-box{margin:16px 0 10px;border:1.5px solid #333;border-radius:3px}
 .pm-nota-box .pm-nota-hdr{background:#1A2332;color:#fff;font-size:9pt;font-weight:700;padding:4px 10px;letter-spacing:.04em}
@@ -3791,7 +3797,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="[{'highlight-row':equipEditIdx.cameras===c._idx}, equipRowFx(c)]" :data-equip-uid="c._uid">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}}</td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="c.equipNota">{{c.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
@@ -3801,6 +3807,7 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('cameras',c)" title="Sejarah PM/CM">🕐</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('cameras',c._idx)" :title="c._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',c._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',c._idx)" title="Padam">🗑</button>
                     </td>
@@ -3880,7 +3887,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(n,i) in selSiteEquip.nvr||[]" :key="n._uid||i" :class="[{'highlight-row':equipEditIdx.nvr===i}, equipRowFx(n)]" :data-equip-uid="n._uid">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}}</td><td class="mono-data">{{n.serial}}</td><td class="mono-data">{{n.ip}}</td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',i)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data">{{n.serial}}</td><td class="mono-data">{{n.ip}}</td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -3888,6 +3895,7 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('nvr',n)" title="Sejarah PM/CM">🕐</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('nvr',i)" :title="n._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',i)" title="Padam">🗑</button>
                     </td>
@@ -3968,9 +3976,10 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="[{'highlight-row':equipEditIdx.hdd===h._idx}, equipRowFx(h)]" :data-equip-uid="h._uid">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
-                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}}</td><td>{{h.model}} <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}}</td><td>{{h.model}} <span v-if="h._temp" class="badge equip-temp-badge" @click="openTempReplace('hdd',h._idx)" :title="tempBadgeTitle(h)">🔁 Sementara</span> <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('hdd',h._idx)" :title="h._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',h._idx)" title="Padam">🗑</button>
                     </td>
@@ -4036,7 +4045,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(s,i) in selSiteEquip.switches||[]" :key="s._uid||i" :class="[{'highlight-row':equipEditIdx.switches===i}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data">{{s.ip}}</td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',i)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data">{{s.ip}}</td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -4044,6 +4053,7 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('switches',s)" title="Sejarah PM/CM">🕐</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('switches',i)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',i)" title="Padam">🗑</button>
                     </td>
@@ -4120,7 +4130,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(a,i) in selSiteEquip.alarms||[]" :key="a._uid||i" :class="[{'highlight-row':equipEditIdx.alarms===i}, equipRowFx(a)]" :data-equip-uid="a._uid">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
-                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}}</td><td>{{a.serial}}</td><td>{{a.ip}}</td>
+                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',i)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td>{{a.serial}}</td><td>{{a.ip}}</td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
@@ -4128,6 +4138,7 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('alarms',a)" title="Sejarah PM/CM">🕐</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('alarms',i)" :title="a._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',i)" title="Padam">🗑</button>
                     </td>
@@ -4254,7 +4265,7 @@ details.form-control[open] summary::after{content:'▴'}
                   <tr v-for="(s,i) in selSiteEquip.servers||[]" :key="s._uid||i" :class="[{'highlight-row':equipEditIdx.servers===i}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}}</td><td>{{s.serial}}</td>
+                    <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('servers',i)" :title="tempBadgeTitle(s)">🔁 Sementara</span></td><td>{{s.serial}}</td>
                     <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.lan2Ip||'-'}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
@@ -4262,6 +4273,7 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td>{{s.installDate}}</td>
                     <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('servers',i)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('servers',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',i)" title="Padam">🗑</button>
                     </td>
@@ -4329,12 +4341,13 @@ details.form-control[open] summary::after{content:'▴'}
                   <tr v-for="(t,i) in selSiteEquip.tablets||[]" :key="t._uid||i" :class="[{'highlight-row':equipEditIdx.tablets===i}, equipRowFx(t)]" :data-equip-uid="t._uid">
                     <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
                     <td>{{i+1}}</td><td>{{t.name}} <span v-if="isRecentEquip(t)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
-                    <td>{{t.brand}}</td><td>{{t.model}}</td><td>{{t.serial}}</td><td class="mono-data">{{t.imei||'-'}}</td><td>{{t.controlAppMachineId}}</td>
+                    <td>{{t.brand}}</td><td>{{t.model}} <span v-if="t._temp" class="badge equip-temp-badge" @click="openTempReplace('tablets',i)" :title="tempBadgeTitle(t)">🔁 Sementara</span></td><td>{{t.serial}}</td><td class="mono-data">{{t.imei||'-'}}</td><td>{{t.controlAppMachineId}}</td>
                     <td>
                       <button v-if="t.controlAppLicenseFile" class="btn btn-outline btn-sm" @click="downloadTabletLicense(t)" title="Muat turun fail .lic">⬇ {{t.controlAppLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
                     <td class="flex gap-8">
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('tablets',i)" :title="t._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('tablets',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',i)" title="Padam">🗑</button>
                     </td>
@@ -4416,7 +4429,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tbody>
                   <tr v-for="(m,i) in selSiteEquip.misc||[]" :key="m._uid||i" :class="[{'highlight-row':equipEditIdx.misc===i}, equipRowFx(m)]" :data-equip-uid="m._uid">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
-                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}}</td><td>{{m.serial}}</td><td>{{m.ip}}</td>
+                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',i)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td>{{m.ip}}</td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -4425,6 +4438,7 @@ details.form-control[open] summary::after{content:'▴'}
                     </td>
                     <td class="flex gap-8">
                       <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('misc',m)" title="Sejarah PM/CM">🕐</button>
+                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('misc',i)" :title="m._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',i)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',i)" title="Padam">🗑</button>
                     </td>
@@ -5311,10 +5325,11 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
               <tbody>
                 <tr v-for="(s,i) in viewPM?.servers" :key="i">
-                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand||(viewPM?.virSystem==='VCS'?'VCS':'OPTAGER')}}</td><td class="ctr">{{s.model||(viewPM?.virSystem==='VCS'?'':'HD4000')}}</td><td class="ctr">{{s.serial}}</td>
+                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand||(viewPM?.virSystem==='VCS'?'VCS':'OPTAGER')}}</td><td class="ctr">{{s.model||(viewPM?.virSystem==='VCS'?'':'HD4000')}}<span v-if="s.isTemp">*</span></td><td class="ctr">{{s.serial}}</td>
                 </tr>
               </tbody>
             </table>
+            <p v-if="pmHasTemp(viewPM?.servers)" class="pm-temp-note">* Unit gantian sementara.</p>
             <p v-if="!viewPM?.servers?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Appliance</p>
 
             <div class="pm-section-hdr">2. &nbsp;KAMERA <span>({{viewPM?.cameras?.length||0}} unit)</span></div>
@@ -5322,10 +5337,11 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
               <tbody>
                 <tr v-for="(c,i) in viewPM?.cameras" :key="i">
-                  <td class="ctr">{{i+1}}</td><td>{{c.name}}</td><td class="ctr">{{c.brand}}</td><td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
+                  <td class="ctr">{{i+1}}</td><td>{{c.name}}</td><td class="ctr">{{c.brand}}</td><td class="ctr">{{c.model}}<span v-if="c.isTemp">*</span></td><td class="ctr">{{c.serial}}</td>
                 </tr>
               </tbody>
             </table>
+            <p v-if="pmHasTemp(viewPM?.cameras)" class="pm-temp-note">* Unit gantian sementara.</p>
             <p v-if="!viewPM?.cameras?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Kamera</p>
 
             <div class="pm-section-hdr">3. &nbsp;POE/NETWORK SWITCH <span>({{viewPM?.switches?.length||0}} unit)</span></div>
@@ -5333,10 +5349,11 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
               <tbody>
                 <tr v-for="(s,i) in viewPM?.switches" :key="i">
-                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand}}</td><td class="ctr">{{s.model}}</td><td class="ctr">{{s.serial}}</td>
+                  <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td class="ctr">{{s.brand}}</td><td class="ctr">{{s.model}}<span v-if="s.isTemp">*</span></td><td class="ctr">{{s.serial}}</td>
                 </tr>
               </tbody>
             </table>
+            <p v-if="pmHasTemp(viewPM?.switches)" class="pm-temp-note">* Unit gantian sementara.</p>
             <p v-if="!viewPM?.switches?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod POE/Network Switch</p>
 
             <div class="pm-section-hdr">4. &nbsp;TABLET <span>({{viewPM?.tablets?.length||0}} unit)</span></div>
@@ -5344,10 +5361,11 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr><th style="width:4%">No.</th><th style="width:36%">Nama</th><th style="width:20%">Brand</th><th style="width:20%">Model</th><th style="width:20%">No. Siri</th></tr></thead>
               <tbody>
                 <tr v-for="(t,i) in viewPM?.tablets" :key="i">
-                  <td class="ctr">{{i+1}}</td><td>{{t.name}}</td><td class="ctr">{{t.brand}}</td><td class="ctr">{{t.model}}</td><td class="ctr">{{t.serial}}</td>
+                  <td class="ctr">{{i+1}}</td><td>{{t.name}}</td><td class="ctr">{{t.brand}}</td><td class="ctr">{{t.model}}<span v-if="t.isTemp">*</span></td><td class="ctr">{{t.serial}}</td>
                 </tr>
               </tbody>
             </table>
+            <p v-if="pmHasTemp(viewPM?.tablets)" class="pm-temp-note">* Unit gantian sementara.</p>
             <p v-if="!viewPM?.tablets?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Tablet</p>
 
             <div class="pm-section-hdr">5. &nbsp;LAIN-LAIN <span>({{viewPM?.misc?.length||0}} unit)</span></div>
@@ -5355,10 +5373,11 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr><th style="width:4%">No.</th><th style="width:26%">Nama</th><th style="width:16%">Kategori</th><th style="width:18%">Brand</th><th style="width:18%">Model</th><th style="width:18%">No. Siri</th></tr></thead>
               <tbody>
                 <tr v-for="(m,i) in viewPM?.misc" :key="i">
-                  <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td class="ctr">{{m.category}}</td><td class="ctr">{{m.brand}}</td><td class="ctr">{{m.model}}</td><td class="ctr">{{m.serial}}</td>
+                  <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td class="ctr">{{m.category}}</td><td class="ctr">{{m.brand}}</td><td class="ctr">{{m.model}}<span v-if="m.isTemp">*</span></td><td class="ctr">{{m.serial}}</td>
                 </tr>
               </tbody>
             </table>
+            <p v-if="pmHasTemp(viewPM?.misc)" class="pm-temp-note">* Unit gantian sementara.</p>
             <p v-if="!viewPM?.misc?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod Lain-Lain</p>
           </template>
 
@@ -5485,7 +5504,7 @@ details.form-control[open] summary::after{content:'▴'}
                 <tr v-for="(c,gi) in grp.items" :key="gi">
                   <td class="ctr">{{gi+1}}</td>
                   <td>{{c.name}}</td><td class="ctr">{{c.brand}}</td><td class="ctr">{{c.ip}}</td>
-                  <td class="ctr">{{c.model}}</td><td class="ctr">{{c.serial}}</td>
+                  <td class="ctr">{{c.model}}<span v-if="c.isTemp">*</span></td><td class="ctr">{{c.serial}}</td>
                   <td class="ctr">{{c.camType}}</td>
                   <td class="ctr">{{c.redundantNvrRef ? ('🔁 '+c.redundantNvrRef) : '-'}}</td>
                   <td :class="c.display==='Baik'?'ok':'no'">{{c.display}}</td>
@@ -5493,6 +5512,7 @@ details.form-control[open] summary::after{content:'▴'}
               </tbody>
             </table>
           </div>
+          <p v-if="pmHasTemp(viewPM?.cameras)" class="pm-temp-note">* Unit gantian sementara.</p>
           <p v-if="!viewPM?.cameras?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod kamera</p>
 
           <!-- 2. NVR -->
@@ -5502,7 +5522,7 @@ details.form-control[open] summary::after{content:'▴'}
             <thead><tr><th style="width:4%">No.</th><th style="width:24%">Nama / Jenis</th><th style="width:12%">Brand</th><th style="width:16%">Model</th><th style="width:16%">No. Siri</th><th style="width:14%">IP Address</th><th style="width:14%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(n,i) in viewPM?.nvr" :key="i">
-                <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.brand}}</td><td class="ctr">{{n.model}}</td>
+                <td class="ctr">{{i+1}}</td><td>{{n.name}}</td><td class="ctr">{{n.brand}}</td><td class="ctr">{{n.model}}<span v-if="n.isTemp">*</span></td>
                 <td class="ctr">{{n.serial}}</td>
                 <td class="ctr">{{n.ip}}</td>
                 <td :class="n.status==='Baik'?'ok':'no'">{{n.status}}</td>
@@ -5510,6 +5530,7 @@ details.form-control[open] summary::after{content:'▴'}
               <tr v-if="!viewPM?.nvr?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod NVR</td></tr>
             </tbody>
           </table>
+          <p v-if="pmHasTemp(viewPM?.nvr)" class="pm-temp-note">* Unit gantian sementara.</p>
           </div>
 
           <!-- 3. HDD -->
@@ -5521,7 +5542,7 @@ details.form-control[open] summary::after{content:'▴'}
               <thead><tr><th style="width:4%">No.</th><th style="width:20%">Brand</th><th style="width:22%">Model</th><th style="width:24%">Saiz Storan</th><th style="width:18%">Konfigurasi Storan</th><th style="width:12%">Status</th></tr></thead>
               <tbody>
                 <tr v-for="(h,gi) in grp.items" :key="gi">
-                  <td class="ctr">{{gi+1}}</td><td>{{h.brand}}</td><td>{{h.model}}</td>
+                  <td class="ctr">{{gi+1}}</td><td>{{h.brand}}</td><td>{{h.model}}<span v-if="h.isTemp">*</span></td>
                   <td class="ctr">{{h.capacity||'—'}} x{{h.totalUnit||'1'}}unit</td>
                   <td class="ctr">{{h.raidType||'—'}}</td>
                   <td :class="h.status==='Baik'?'ok':'no'">{{h.status}}</td>
@@ -5529,6 +5550,7 @@ details.form-control[open] summary::after{content:'▴'}
               </tbody>
             </table>
           </div>
+          <p v-if="pmHasTemp(viewPM?.hdd)" class="pm-temp-note">* Unit gantian sementara.</p>
           <p v-if="!viewPM?.hdd?.length" class="ctr" style="padding:8px;color:#888">Tiada rekod HDD</p>
           </div>
 
@@ -5539,13 +5561,14 @@ details.form-control[open] summary::after{content:'▴'}
             <thead><tr><th style="width:5%">No.</th><th style="width:25%">Nama</th><th style="width:14%">Brand</th><th style="width:28%">Model</th><th style="width:16%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(s,i) in viewPM?.switches" :key="i">
-                <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}}</td>
+                <td class="ctr">{{i+1}}</td><td>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}}<span v-if="s.isTemp">*</span></td>
                 <td class="ctr">{{s.serial}}</td>
                 <td :class="s.status==='Baik'?'ok':'no'">{{s.status}}</td>
               </tr>
               <tr v-if="!viewPM?.switches?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod Switch</td></tr>
             </tbody>
           </table>
+          <p v-if="pmHasTemp(viewPM?.switches)" class="pm-temp-note">* Unit gantian sementara.</p>
           </div>
 
           <!-- 5. ALARM -->
@@ -5555,13 +5578,14 @@ details.form-control[open] summary::after{content:'▴'}
             <thead><tr><th style="width:5%">No.</th><th style="width:24%">Nama</th><th style="width:22%">Jenis</th><th style="width:15%">Model</th><th style="width:22%">No. Siri</th><th style="width:12%">Status</th></tr></thead>
             <tbody>
               <tr v-for="(a,i) in viewPM?.alarms" :key="i">
-                <td class="ctr">{{i+1}}</td><td>{{a.name}}</td><td>{{a.type}}</td><td>{{a.model}}</td>
+                <td class="ctr">{{i+1}}</td><td>{{a.name}}</td><td>{{a.type}}</td><td>{{a.model}}<span v-if="a.isTemp">*</span></td>
                 <td class="ctr">{{a.serial}}</td>
                 <td :class="a.status==='Baik'?'ok':'no'">{{a.status}}</td>
               </tr>
               <tr v-if="!viewPM?.alarms?.length"><td colspan="6" class="ctr" style="padding:8px;color:#888">Tiada rekod Alarm</td></tr>
             </tbody>
           </table>
+          <p v-if="pmHasTemp(viewPM?.alarms)" class="pm-temp-note">* Unit gantian sementara.</p>
           </div>
 
           <!-- 6. LAIN-LAIN PERALATAN -->
@@ -5572,12 +5596,13 @@ details.form-control[open] summary::after{content:'▴'}
             <tbody>
               <tr v-for="(m,i) in viewPM?.misc" :key="i">
                 <td class="ctr">{{i+1}}</td><td>{{m.name}}</td><td>{{m.category}}</td><td class="ctr">{{m.brand}}</td>
-                <td class="ctr">{{m.model}}</td><td class="ctr">{{m.serial}}</td>
+                <td class="ctr">{{m.model}}<span v-if="m.isTemp">*</span></td><td class="ctr">{{m.serial}}</td>
                 <td :class="m.status==='Baik'?'ok':'no'">{{m.status}}</td>
               </tr>
               <tr v-if="!viewPM?.misc?.length"><td colspan="7" class="ctr" style="padding:8px;color:#888">Tiada rekod peralatan lain-lain</td></tr>
             </tbody>
           </table>
+          <p v-if="pmHasTemp(viewPM?.misc)" class="pm-temp-note">* Unit gantian sementara.</p>
           </div>
 
           <!-- 7. SUPPORT -->
@@ -6866,10 +6891,55 @@ details.form-control[open] summary::after{content:'▴'}
             </select>
             <input v-if="removeReasonModal.reason==='lain'" class="form-control" v-model="removeReasonModal.reasonCustom" placeholder="Nyatakan sebab" style="margin-top:6px">
           </div>
+          <p v-if="removeReasonModal.itemSnapshot?._temp" class="text-sm mb-12" style="color:#e65100">⚠ Ini unit gantian sementara. Butiran penuh unit asal ({{removeReasonModal.itemSnapshot._temp.original?.brand}} {{removeReasonModal.itemSnapshot._temp.original?.model}}) akan hilang — hanya brand/model/no. siri direkod dalam Sejarah Ganti/Rosak. Untuk kembalikan unit asal, guna butang 🔁 → Pulihkan Unit Asal.</p>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="removeReasonModal.show=false">Batal</button>
             <button class="btn btn-danger" @click="confirmRemoveItem">🗑 Padam</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Ganti Sementara (see openTempReplace). mode 'replace' records a
+           stand-in unit; mode 'info' shows the stored original + restore. -->
+      <div v-if="tempReplaceModal.show" class="modal-bg">
+        <div class="modal" style="max-width:480px">
+          <template v-if="tempReplaceModal.mode==='replace'">
+            <h3>🔁 Ganti Sementara</h3>
+            <p class="text-sm text-muted mb-12">Unit semasa akan disimpan sebagai <b>rekod unit asal</b> dan boleh dipulihkan bila-bila masa. Nama, lokasi dan tetapan lain dikekalkan — isi butiran unit pengganti sahaja.</p>
+            <div class="temp-orig-box mb-12">
+              <div class="text-sm" style="font-weight:700;margin-bottom:2px">Unit asal</div>
+              <div class="text-sm">{{tempReplaceModal.current?.name || tempReplaceModal.current?.nvrRef || '-'}} — {{tempReplaceModal.current?.brand||'-'}} {{tempReplaceModal.current?.model||''}} · No. Siri {{tempReplaceModal.current?.serial||'-'}}<span v-if="tempReplaceModal.current?.ip"> · {{tempReplaceModal.current.ip}}</span></div>
+            </div>
+            <div class="form-group"><label>Brand unit pengganti *</label><input class="form-control" v-model="tempReplaceModal.brand" placeholder="cth: Panasonic" @input="tempReplaceModal.err=''"></div>
+            <div class="form-group"><label>Model *</label><input class="form-control" v-model="tempReplaceModal.model" placeholder="cth: WV-S2131L" @input="tempReplaceModal.err=''"></div>
+            <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="tempReplaceModal.serial" @input="tempReplaceModal.err=''"></div>
+            <div v-if="tempReplaceModal.hasIp" class="form-group"><label>IP Address</label><input class="form-control mono-data" v-model="tempReplaceModal.ip" @input="tempReplaceModal.err=''"></div>
+            <div class="form-group"><label>Tarikh Ganti *</label><input class="form-control" type="date" v-model="tempReplaceModal.date"></div>
+            <div class="form-group"><label>Sebab / Catatan <span class="text-muted text-sm">(dalaman — tidak dicetak pada borang)</span></label><textarea class="form-control" rows="3" v-model="tempReplaceModal.reason"></textarea></div>
+            <p v-if="tempReplaceModal.err" class="text-sm mb-12" style="color:#c62828">{{tempReplaceModal.err}}</p>
+            <div class="flex gap-8">
+              <button class="btn btn-outline" @click="tempReplaceModal.show=false">Batal</button>
+              <button class="btn btn-primary" @click="confirmTempReplace">🔁 Simpan Ganti Sementara</button>
+            </div>
+          </template>
+          <template v-else>
+            <h3>🔁 Unit Gantian Sementara</h3>
+            <p class="text-sm mb-12">Unit semasa: <b>{{tempReplaceModal.current?.brand||'-'}} {{tempReplaceModal.current?.model||''}}</b> · No. Siri {{tempReplaceModal.current?.serial||'-'}}</p>
+            <div class="temp-orig-box mb-12">
+              <div class="text-sm" style="font-weight:700;margin-bottom:4px">Rekod unit asal</div>
+              <table class="temp-orig-tbl">
+                <tr v-for="row in tempOrigRows(tempReplaceModal.current?._temp?.original)" :key="row[0]"><td>{{row[0]}}</td><td>{{row[1]}}</td></tr>
+              </table>
+              <div class="text-sm text-muted" style="margin-top:6px">Diganti pada {{fmtDate(tempReplaceModal.current?._temp?.date)}}<span v-if="tempReplaceModal.current?._temp?.by"> oleh {{tempReplaceModal.current._temp.by}}</span></div>
+              <div v-if="tempReplaceModal.current?._temp?.reason" class="text-sm" style="margin-top:6px;white-space:pre-wrap"><b>Sebab / Catatan (dalaman):</b> {{tempReplaceModal.current._temp.reason}}</div>
+            </div>
+            <p class="text-sm text-muted mb-12">Untuk betulkan butiran unit sementara, guna butang ✏️ Edit pada baris tersebut.</p>
+            <p v-if="tempReplaceModal.err" class="text-sm mb-12" style="color:#c62828">{{tempReplaceModal.err}}</p>
+            <div class="flex gap-8">
+              <button class="btn btn-outline" @click="tempReplaceModal.show=false">Tutup</button>
+              <button class="btn btn-primary" @click="restoreTempOriginal">↩️ Pulihkan Unit Asal</button>
+            </div>
+          </template>
         </div>
       </div>
 
@@ -12742,7 +12812,9 @@ createApp({
     function cctvSystemBrands(cameras){
       if(!cameras || !cameras.length) return '';
       if(_brandsCache.has(cameras)) return _brandsCache.get(cameras);
-      const brands = [...new Set(cameras.map(c => c.brand).filter(Boolean))].join(', ');
+      // A temporary stand-in counts as its ORIGINAL brand — the site's
+      // system (e.g. Bosch BVMS) hasn't changed, only one camera on it.
+      const brands = [...new Set(cameras.map(c => c.tempOrigBrand || c.brand).filter(Boolean))].join(', ');
       _brandsCache.set(cameras, brands);
       return brands;
     }
@@ -15016,10 +15088,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         return;
       }
       const eq = roomScopedStore[pm.siteId]?.byRoom?.[room._uid];
-      pm.servers = (eq?.servers || []).map(s => ({...s}));
+      pm.servers = _stripEquipCreds(eq?.servers); // no creds on servers — run through it for the _temp → isTemp conversion
       pm.cameras = _stripEquipCreds(eq?.cameras);
       pm.switches = _stripEquipCreds(eq?.switches);
-      pm.tablets = (eq?.tablets || []).map(({ imei, ...t }) => ({...t})); // IMEI is Urus-Peralatan-only
+      pm.tablets = _stripEquipCreds(eq?.tablets).map(({ imei, ...t }) => t); // IMEI is Urus-Peralatan-only
       pm.misc = _stripEquipCreds(eq?.misc);
     }
     // Regenerates the checklist whenever the system changes — but NEVER
@@ -16035,7 +16107,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
                 // Appliances (servers) keep their addresses in lanIp/lan2Ip/
                 // wifiIp, not `ip` — without these an appliance could never
                 // be found by its IP, the most natural way to look one up.
-                const hay = [item.name, item.ip, item.lanIp, item.lan2Ip, item.wifiIp, item.serial, item.imei, item.model, item.brand].filter(Boolean).join(' ').toLowerCase();
+                const hay = [item.name, item.ip, item.lanIp, item.lan2Ip, item.wifiIp, item.serial, item.imei, item.model, item.brand, item._temp?.original?.serial, item._temp?.original?.brand, item._temp?.original?.model].filter(Boolean).join(' ').toLowerCase();
                 if(!hay.includes(q)) continue;
                 equipMatches.push({
                   _kind:'equipment', id:'eq-'+(item._uid || item.serial || item.ip || Math.random()),
@@ -18401,6 +18473,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function resetForm(formName) {
       const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC, nServer, nTablet, nRoom };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
+      delete refs[formName]._temp; // not a form field — never let one carry into the next item (see _equipEditTemp)
       // FORM_DEFAULTS.nServer's brand/model assume Optager (its only real
       // appliance) — VCS is a different vendor, so override to its own
       // fixed default here instead of showing "OPTAGER"/"HD4000" on a VCS
@@ -19007,10 +19080,21 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function _stripEquipCreds(list) {
       return (list || []).map(it => {
         if(!it || typeof it !== 'object') return it;
-        const { accessUser, accessPw, ...rest } = it;
+        const { accessUser, accessPw, ...rest } = _toPmTempFields(it);
         return rest;
       });
     }
+    // A temporary stand-in unit (see openTempReplace) carries the full
+    // original record + an internal reason in `_temp`. Borang copies get
+    // only an isTemp flag (prints the "*" note) and the original's brand
+    // (keeps "Jenis Sistem CCTV" on the real system, see cctvSystemBrands)
+    // — never the original's details or the reason, which are internal.
+    function _toPmTempFields(it) {
+      if(!it || typeof it !== 'object' || !it._temp) return it;
+      const { _temp, ...rest } = it;
+      return { ...rest, isTemp: true, tempOrigBrand: _temp.original?.brand || '' };
+    }
+    function pmHasTemp(list) { return (list || []).some(x => x?.isTemp); }
     function _mergeCredentials(equipObj, creds) {
       if(!equipObj || !creds) return equipObj;
       CRED_EQUIP_KINDS.forEach(kind => {
@@ -20834,6 +20918,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // scrolled them UP to the form). Plain adds stay at the form so several
     // items can be entered back to back.
     function _afterEquipSave(kind) {
+      _reattachEquipTemp(kind);
       _bumpEquipFlash();
       if(_equipEditReturnKind !== kind) return;
       _equipEditReturnKind = null;
@@ -20892,6 +20977,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const fadeUids = [...sel];
       await _fadeOutEquipRows(fadeUids); // brief fade-out first (UI polish) — splice below is already _uid-based
       const editedUid = equipEditIdx[kind]!==null ? (list[equipEditIdx[kind]]||{})._uid : null;
+      // Same as confirmRemoveItem: a deleted stand-in row's original unit
+      // keeps a log entry instead of vanishing with it.
+      list.filter(it => sel.has(it._uid) && it._temp?.original).forEach(it =>
+        _logEquipRemoval(selSite.value.id, kind, it._temp.original, 'rekod-asal', 'Rekod unit asal — dipadam bersama unit gantian sementara'));
       for(let i=list.length-1; i>=0; i--) { if(sel.has(list[i]._uid)) list.splice(i,1); }
       fadeUids.forEach(u => equipFadingUids.delete(u));
       sel.clear();
@@ -20955,7 +21044,126 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // "equipmentRemovalLog" collection/rule.
     const removeReasonModal = reactive({ show:false, siteId:null, key:null, idx:null, itemSnapshot:null, reason:'rosak', reasonCustom:'' });
     const EQUIPMENT_CATEGORY_LABEL = { cameras:'Kamera', nvr:'NVR', hdd:'HDD', switches:'Switch', alarms:'Alarm', misc:'Lain-lain', servers:'Server', tablets:'Tablet' };
-    const REMOVAL_REASON_LABEL = { rosak:'🔧 Rosak', 'ganti-baru':'🔄 Ganti Baru/Naik Taraf', tersilap:'✏️ Tersilap Masuk', lain:'📋 Lain-lain' };
+    const REMOVAL_REASON_LABEL = { rosak:'🔧 Rosak', 'ganti-baru':'🔄 Ganti Baru/Naik Taraf', tersilap:'✏️ Tersilap Masuk', lain:'📋 Lain-lain', 'ganti-sementara':'🔁 Ganti Sementara', 'pulih-asal':'↩️ Unit Sementara Dipulangkan', 'rekod-asal':'📦 Rekod Unit Asal' };
+    // One equipmentRemovalLog entry. Best-effort, never throws — a failed log
+    // must never look like the equipment change itself failed.
+    function _logEquipRemoval(siteId, key, snap, reason, reasonCustom) {
+      return db.collection('equipmentRemovalLog').add({
+        project: currentProject.value,
+        siteId, siteName: selSite.value?.name || siteId,
+        // "Lain-lain" (misc) covers many distinct sub-categories (PC, UPS,
+        // Monitor, TV, etc.) chosen via the item's own Kategori dropdown —
+        // use that specific value instead of the generic "Lain-lain" label
+        // so the report can tell a TV failure apart from a PC failure.
+        category: key === 'misc' ? (snap.category || 'Lain-lain') : (EQUIPMENT_CATEGORY_LABEL[key] || key),
+        itemName: snap.name || snap.nvrRef || '-',
+        brand: snap.brand || '-', model: snap.model || '-', serial: snap.serial || '-',
+        reason, reasonCustom: reasonCustom || '',
+        removedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        removedBy: authUser.value?.email || '',
+      }).catch(e => console.warn('Gagal log penyingkiran peralatan:', e));
+    }
+
+    // ---- Ganti Sementara (temporary stand-in unit) ----
+    // A unit swapped out for an indefinite period (e.g. a broken camera
+    // under disputed warranty, stood in for by an old unit from the store)
+    // keeps its POSITION's row — name, location, IP, NVR — and only the
+    // unit inside it changes. The full original record lives on the row as
+    // `_temp: { original, reason, date, by }` so it can be viewed and
+    // restored later; borang copies only ever get an isTemp flag (see
+    // _toPmTempFields). Unlike a delete, this never touches the original
+    // unit's warranty record. The reason is free text and internal only.
+    const tempReplaceModal = reactive({ show:false, mode:'replace', key:null, uid:null, siteId:null, current:null, brand:'', model:'', serial:'', ip:'', hasIp:false, date:'', reason:'', err:'' });
+    // editEquipItem() parks an edited row's `_temp` here instead of copying
+    // it into the form — every add*() rebuilds the item from form fields, so
+    // it would otherwise be dropped on save (misc/server/tablet) or leak into
+    // the next NEW item (the rest, via the form object). _afterEquipSave()
+    // puts it back on the saved row by _uid.
+    let _equipEditTemp = null;
+    function _reattachEquipTemp(kind) {
+      if(!_equipEditTemp || _equipEditTemp.key !== kind) return;
+      const it = (selSiteEquip.value[kind] || []).find(x => x._uid === _equipEditTemp.uid);
+      if(it && !it._temp) it._temp = _equipEditTemp.temp;
+      _equipEditTemp = null;
+    }
+    const _TEMP_ORIG_FIELDS = [['name','Nama / Lokasi'],['category','Kategori'],['type','Jenis'],['camType','Jenis'],['brand','Brand'],['model','Model'],['serial','No. Siri'],['imei','IMEI'],['ip','IP Address'],['lanIp','LAN 1 IP'],['lan2Ip','LAN 2 IP'],['wifiIp','WiFi IP'],['nvrRef','NVR Berkaitan'],['redundantNvrRef','Redundance'],['accessory','Aksesori'],['capacity','Kapasiti'],['config','Konfigurasi'],['installDate','Tarikh Pasang']];
+    function tempOrigRows(orig) {
+      return _TEMP_ORIG_FIELDS
+        .filter(([k]) => orig && orig[k] != null && String(orig[k]).trim() !== '')
+        .map(([k, label]) => [label, k === 'installDate' ? fmtDate(orig[k]) : orig[k]]);
+    }
+    function tempBadgeTitle(it) {
+      const o = it?._temp?.original || {};
+      return `Unit gantian sementara. Asal: ${o.brand||'-'} ${o.model||''} (SN ${o.serial||'-'}) — klik untuk butiran`;
+    }
+    function _tempTarget() {
+      const list = activeEquip()[tempReplaceModal.siteId]?.[tempReplaceModal.key];
+      return { list, idx: list ? list.findIndex(it => it._uid === tempReplaceModal.uid) : -1 };
+    }
+    function openTempReplace(key, idx) {
+      if(!canEditEquip.value) { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const item = (selSiteEquip.value[key] || [])[idx];
+      if(!item) return;
+      if(!item._uid) item._uid = _genId(); // older rows may predate _uid — needed to find it again on save
+      Object.assign(tempReplaceModal, {
+        show: true, mode: item._temp ? 'info' : 'replace', key, uid: item._uid, siteId: selSite.value.id,
+        current: { ...item }, brand: '', model: '', serial: '', ip: item.ip || '', hasIp: 'ip' in item,
+        date: _localDateStr(), reason: '', err: '',
+      });
+    }
+    function confirmTempReplace() {
+      const m = tempReplaceModal;
+      const brand = m.brand.trim(), model = m.model.trim(), serial = m.serial.trim(), ip = m.ip.trim();
+      if(!brand || !model) { m.err = 'Brand dan Model unit pengganti wajib diisi.'; return; }
+      if(m.hasIp && !isValidIp(ip)) { m.err = 'Format IP Address tidak sah (contoh: 192.168.0.11)'; return; }
+      if(!m.date) { m.err = 'Sila pilih Tarikh Ganti.'; return; }
+      const { list, idx } = _tempTarget();
+      if(idx === -1) { m.err = 'Rekod tidak dijumpai — mungkin telah diubah atau dipadam. Tutup dan cuba lagi.'; return; }
+      const cur = list[idx];
+      // The stand-in is a different physical unit: its own IMEI is unknown.
+      const { imei, ...base } = cur;
+      const next = { ...base, brand, model, serial, ...(m.hasIp ? { ip } : {}), installDate: m.date };
+      const dup = _findDupConflict(m.key, list, next, idx);
+      if(dup) { m.err = _dupErrMsg(dup); return; }
+      // Credentials stay out of the snapshot (they live in their own
+      // stricter-access collection), as does any stale _temp/_ts.
+      const { accessUser, accessPw, _temp, _ts, ...original } = cur;
+      next._temp = { original, reason: m.reason.trim(), date: m.date, by: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '' };
+      next._ts = Date.now();
+      if(equipEditIdx[m.key] === idx) cancelEditEquip(m.key); // its form holds the pre-swap unit
+      list[idx] = next;
+      _logEquipRemoval(m.siteId, m.key, original, 'ganti-sementara', m.reason.trim());
+      _bumpEquipFlash();
+      m.show = false;
+      showToast('Unit sementara direkodkan — butiran unit asal disimpan. Jangan lupa klik "Simpan Semua".');
+    }
+    async function restoreTempOriginal() {
+      const m = tempReplaceModal;
+      let { list, idx } = _tempTarget();
+      if(idx === -1 || !list[idx]._temp?.original) { m.err = 'Rekod tidak dijumpai — mungkin telah diubah atau dipadam. Tutup dan cuba lagi.'; return; }
+      const before = list[idx], beforeOrig = before._temp.original;
+      m.show = false; // askConfirm is its own modal
+      if(!await askConfirm(`Pulihkan unit asal ${beforeOrig.brand||''} ${beforeOrig.model||''} (SN ${beforeOrig.serial||'-'})?\n\nUnit sementara ${before.brand||''} ${before.model||''} (SN ${before.serial||'-'}) akan dibuang dari senarai dan direkodkan dalam Sejarah Ganti/Rosak Peralatan.`)) return;
+      // Re-resolve by _uid after the await — the list may have shifted (or
+      // the row been restored/deleted) while the dialog sat open.
+      ({ list, idx } = _tempTarget());
+      if(idx === -1 || !list[idx]._temp?.original) { showToast('Rekod tidak dijumpai — mungkin telah diubah atau dipadam.', 'error'); return; }
+      const cur = list[idx], orig = cur._temp.original;
+      const restored = { ...orig, _uid: cur._uid, _ts: Date.now() };
+      // Keep whatever login is on the row now — the original's was never
+      // snapshotted (see confirmTempReplace). Only set when present: a
+      // Firestore write rejects undefined fields.
+      if(cur.accessUser) restored.accessUser = cur.accessUser;
+      if(cur.accessPw) restored.accessPw = cur.accessPw;
+      const dup = _findDupConflict(m.key, list, restored, idx);
+      if(dup) { showToast('Tidak boleh pulihkan — ' + _dupErrMsg(dup), 'error'); return; }
+      if(equipEditIdx[m.key] === idx) cancelEditEquip(m.key);
+      list[idx] = restored;
+      const { _temp, accessUser, accessPw, ...standIn } = cur;
+      _logEquipRemoval(m.siteId, m.key, standIn, 'pulih-asal', '');
+      _bumpEquipFlash();
+      showToast('Unit asal dipulihkan. Jangan lupa klik "Simpan Semua".');
+    }
 
     const bulkEditModal = reactive({ show:false, kind:'', field:'installDate', value:'' });
     // NVR Berkaitan is only offered for cameras/hdd — those are the only
@@ -21169,6 +21377,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!item) return;
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet, rooms:nRoom };
       Object.assign(refs[key], item);
+      // `_temp` stays off the form — see _equipEditTemp.
+      delete refs[key]._temp;
+      _equipEditTemp = item._temp ? { key, uid: item._uid, temp: item._temp } : null;
       // Object.assign skips keys the item doesn't have — a camera saved with
       // no note would otherwise keep the PREVIOUS row's note in the form and
       // save it onto this one.
@@ -21190,6 +21401,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     function cancelEditEquip(key) {
       equipEditIdx[key] = null;
+      if(_equipEditTemp?.key === key) _equipEditTemp = null;
       if(_equipEditReturnKind === key) _equipEditReturnKind = null;
       resetForm(EQUIP_KEY_TO_FORM[key]);
     }
@@ -21786,22 +21998,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // succeeded in local state above (and will reach Firestore via the
       // usual equipment auto-save) regardless of whether this log write
       // succeeds — a failure here should never look like the delete failed.
-      try {
-        await db.collection('equipmentRemovalLog').add({
-          project: currentProject.value,
-          siteId, siteName: selSite.value?.name || siteId,
-          // "Lain-lain" (misc) covers many distinct sub-categories (PC, UPS,
-          // Monitor, TV, etc.) chosen via the item's own Kategori dropdown —
-          // use that specific value instead of the generic "Lain-lain" label
-          // so the report can tell a TV failure apart from a PC failure.
-          category: key === 'misc' ? (itemSnapshot.category || 'Lain-lain') : (EQUIPMENT_CATEGORY_LABEL[key] || key),
-          itemName: itemSnapshot.name || itemSnapshot.nvrRef || '-',
-          brand: itemSnapshot.brand || '-', model: itemSnapshot.model || '-', serial: itemSnapshot.serial || '-',
-          reason, reasonCustom: reason === 'lain' ? (reasonCustom||'').trim() : '',
-          removedAt: firebase.firestore.FieldValue.serverTimestamp(),
-          removedBy: authUser.value?.email || '',
-        });
-      } catch(e) { console.warn('Gagal log penyingkiran peralatan:', e); }
+      await _logEquipRemoval(siteId, key, itemSnapshot, reason, reason === 'lain' ? (reasonCustom||'').trim() : '');
+      // Deleting a temporary stand-in row would otherwise lose the original
+      // unit it was holding the place of — keep at least its log entry.
+      // 'rekod-asal', not 'ganti-sementara': its swap-out was already logged
+      // (and counted) when the stand-in went in — see failureReport.
+      if(itemSnapshot._temp?.original) await _logEquipRemoval(siteId, key, itemSnapshot._temp.original, 'rekod-asal', 'Rekod unit asal — dipadam bersama unit gantian sementara');
       // Cross-reference against equipmentWarranty/virEquipmentWarranty by
       // serial+site — without this, a warranty record for equipment that's
       // now gone stays "active" forever, still counted in the dashboard's
@@ -22033,6 +22235,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const key = [h.brand||'', h.model||'', h.capacity||'', h.nvrRef||''].join('|');
         if(!groups[key]) { groups[key] = {...h, totalUnit:0}; order.push(key); }
         groups[key].totalUnit += Number(h.totalUnit) || 1;
+        if(h.isTemp && !groups[key].isTemp) { groups[key].isTemp = true; groups[key].tempOrigBrand = h.tempOrigBrand; }
       });
       return order.map(k => groups[k]);
     }
@@ -22096,7 +22299,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // must never reach the PM/CM borang or the saved record.
       pm.cameras = _stripEquipCreds(eq.cameras).map(({equipNota, ...c})=>({...c,display:'Baik',icam:'Baik',nota:''}));
       pm.nvr = _stripEquipCreds(eq.nvr).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
-      pm.hdd = _groupHddForPm((eq.hdd||[]).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'})));
+      pm.hdd = _groupHddForPm(_stripEquipCreds(eq.hdd).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'})));
       pm.switches = _stripEquipCreds(eq.switches).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = _stripEquipCreds(eq.alarms).map(a=>({...a,func:'Baik',status:'Baik'}));
       pm.misc = _stripEquipCreds(eq.misc).map(({equipNota, ...m})=>({...m,status:'Baik',nota:''})); // equipNota stripped, same as cameras
@@ -25731,6 +25934,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         // needed, just never counted here so test/mistake entries can't
         // skew the rosak/ganti-baru/lain-lain figures.
         if(l.reason === 'tersilap') return;
+        // A stand-in going back out isn't a failure — its swap-in was
+        // already counted (as 'ganti-sementara', under Lain-lain).
+        if(l.reason === 'pulih-asal') return;
+        // Informational copy of an original kept when its stand-in row was
+        // deleted — the original was already counted at swap time.
+        if(l.reason === 'rekod-asal') return;
         const key = l.siteId + '|' + l.category;
         if(!groups[key]) groups[key] = { siteId:l.siteId, siteName:l.siteName||l.siteId, category:l.category, project:l.project||'cctv', rosak:0, gantiBaru:0, lain:0, total:0 };
         groups[key].total++;
@@ -26538,6 +26747,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       sonyRoomChoicesForSite, pickSonyRoom, openSonyRoomEquip, roomChoicesForModal, pickRoomForModal,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       removeReasonModal, confirmRemoveItem,
+      tempReplaceModal, openTempReplace, confirmTempReplace, restoreTempOriginal, tempOrigRows, tempBadgeTitle, pmHasTemp,
       brandOptionsFor, modelOptionsFor, isRecentEquip, equipAgeColor, equipAgeTitle,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       customEquipCleanupBrandIsCustom, removeCustomBrand,
