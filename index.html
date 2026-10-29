@@ -11295,6 +11295,20 @@ createApp({
       if(pm._isEdit) return;
       pm.refNo = refNoPrefix.value ? refNoPrefix.value + refNoSuffix.value : '';
     });
+    // ...but a number the user deliberately retypes while editing (e.g.
+    // closing the gap a deleted 006 left by renumbering 007 → 006) must
+    // still land in pm.refNo — the early return above silently dropped it,
+    // so the record saved, printed and listed under its old number. Only
+    // the running-number segment is swapped; the historical prefix (year/
+    // room/type) stays exactly as issued. editRecord() setting the suffix
+    // from the record's own refNo is a no-op here (same segment).
+    watch(refNoSuffix, (sfx) => {
+      if(!pm._isEdit || !pm.refNo) return;
+      const segs = pm.refNo.split('/');
+      if(segs.length < 2 || segs[segs.length-1] === sfx) return;
+      segs[segs.length-1] = sfx;
+      pm.refNo = segs.join('/');
+    });
 
     // Auto-suggest the next sequential ref-no suffix for the selected site
     // (scoped to site+project+year+room+maintType), so the field starts
@@ -11559,10 +11573,11 @@ createApp({
       // string, and refNoGapWarning/refNoReuseWarning (both numeric) also
       // stayed silent for that case, so a second official ref no. #1 saved
       // with no warning at all. Same scope filter as nextRefNoSuggestion
-      // (site/room/year base + maintType). New records only — editing an
-      // existing record never rebuilds its refNo, and shouldn't be blocked
-      // by a legacy "1"/"001" pair that already exists in the data.
-      if(pm._isEdit) return false;
+      // (site/room/year base + maintType). Skipped when editing a record
+      // whose number is unchanged — it shouldn't be blocked by a legacy
+      // "1"/"001" pair that already exists in the data — but applies once
+      // the user renumbers it (see the refNoSuffix watch).
+      if(pm._isEdit && pm.refNo === pmRecords.value.find(r => r.id === pm._draftId)?.refNo) return false;
       const base = refNoBasePrefix.value;
       const entered = parseInt(refNoSuffix.value, 10);
       if(!base || !pm.maintType || isNaN(entered)) return false;
