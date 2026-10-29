@@ -9,7 +9,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js"></script>
+<!-- firebase-storage-compat is lazy-loaded (see _ensureStorage) — it is only
+     needed to upload/delete attachments and profile photos, never at startup. -->
 <!-- XLSX/Tesseract OCR/PDF.js/jsPDF/docx/Chart.js/Mammoth/D3/TopoJSON are
      genuinely LAZY-loaded now (see _loadScript()/_ensureXLSX() etc. near the
      top of the main app script below), not listed as script tags here at
@@ -28,6 +29,14 @@
      blocking-load problem it replaced). True lazy loading avoids both:
      nothing downloads/executes until a specific feature is actually used,
      spread out over the session instead of bunched at startup. -->
+<!-- Firebase Auth/Firestore endpoints are only contacted once the app script
+     runs (session restore, then loadAll), i.e. discovered late — warming the
+     TLS connection now overlaps that handshake with script download/parse.
+     crossorigin: the SDKs talk to these over anonymous CORS fetch/XHR, so the
+     warmed connection must be in that pool to actually be reused. -->
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin>
+<link rel="preconnect" href="https://securetoken.googleapis.com" crossorigin>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- dns-prefetch (not preconnect) for the lazy-loaded library CDNs — these
@@ -1602,6 +1611,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .pm-no-boxes{display:inline-flex;gap:6px;margin-left:8px;vertical-align:middle}
 .pm-no-box{width:22px;height:22px;border:1.5px solid #333;display:inline-flex;align-items:center;justify-content:center;font-size:9pt;font-weight:700;border-radius:3px;color:#333}
 .pm-no-box-ticked{background:#1A2332;color:#fff;border-color:#1A2332}
+.equip-form-collapsed > :not(:first-child){display:none!important}
+.equip-form-collapsed > :first-child{margin-bottom:0!important}
+.equip-form-toggle{cursor:pointer;user-select:none}
+.equip-form-chev{display:inline-block;width:1em;color:#003366}
+.equip-table th.th-sort{cursor:pointer;user-select:none;white-space:nowrap}
+.equip-table th.th-sort .sort-ind{margin-left:3px;font-size:.7em;opacity:.35}
+.equip-table th.th-sort .sort-ind.on{opacity:1}
 .equip-filter-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px;padding:8px 10px;border:1px solid rgba(0,51,102,.12);border-radius:10px;background:rgba(0,51,102,.03)}
 .equip-filter-bar .form-control{width:auto;min-width:150px;padding:5px 8px;font-size:.82rem}
 .equip-filter-bar .equip-filter-q{min-width:200px;flex:1 1 200px}
@@ -1615,6 +1631,61 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .temp-orig-tbl td{padding:2px 4px;vertical-align:top}
 .temp-orig-tbl td:first-child{color:#666;white-space:nowrap;width:40%}
 .pm-temp-note{font-size:7.5pt;font-style:italic;color:#444;margin:2px 0 6px}
+/* Urus Peralatan lists: Nama (3rd column — after the select box and #)
+   and Tindakan (last) stay pinned while a wide table scrolls sideways
+   inside its .tbl-wrap (Appliance has 22 columns). Pinned cells need an
+   opaque background; the header row is already sticky (.tbl-wrap th). */
+.equip-table-sticky th:nth-child(3),.equip-table-sticky td:nth-child(3){position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 #e8edf5}
+.equip-table-sticky th:last-child,.equip-table-sticky td:last-child:not(.empty){position:sticky;right:0;z-index:1;background:#fff;box-shadow:-1px 0 0 #e8edf5}
+.equip-table-sticky td.flex:last-child{display:table-cell;white-space:nowrap}
+.equip-table-sticky thead th:nth-child(3),.equip-table-sticky thead th:last-child{z-index:3;background:#f0f4ff}
+.equip-table-sticky tr:hover td:nth-child(3),.equip-table-sticky tr:hover td:last-child:not(.empty){background:#f9fbff}
+.dark-mode .equip-table-sticky td:nth-child(3),.dark-mode .equip-table-sticky td:last-child:not(.empty){background:#161b22;box-shadow:none}
+.dark-mode .equip-table-sticky thead th:nth-child(3),.dark-mode .equip-table-sticky thead th:last-child{background:#21262d}
+/* "⚙ Lajur" picker */
+.equip-col-picker{position:relative}
+.equip-col-panel{position:absolute;top:calc(100% + 4px);right:0;z-index:20;min-width:200px;max-height:320px;overflow:auto;background:#fff;border:1px solid #d5dbe5;border-radius:10px;box-shadow:0 8px 24px rgba(0,40,100,.15);padding:8px 10px;display:flex;flex-direction:column;gap:4px;font-size:.82rem}
+.equip-col-panel label{display:flex;align-items:center;gap:6px;cursor:pointer;white-space:nowrap}
+.dark-mode .equip-col-panel{background:#161b22;border-color:#30363d;color:#e0e0e0}
+/* Autosave status beside "Simpan Semua" */
+.equip-save-status{font-size:.78rem;color:#6b7686;white-space:nowrap}
+.equip-save-status.is-saved{color:#2e7d32}
+.equip-save-status.is-offline{color:#b26a00}
+.equip-save-status.is-error{color:#c62828;font-weight:600}
+.dark-mode .equip-save-status{color:#9aa4b2}
+.dark-mode .equip-save-status.is-saved{color:#81c784}
+.dark-mode .equip-save-status.is-offline{color:#ffb74d}
+.dark-mode .equip-save-status.is-error{color:#ff8a80}
+/* IP cells: click to copy; amber when another item on the site uses the same IP */
+.ip-copy{cursor:copy;border-radius:4px;padding:1px 3px;margin:-1px -3px;white-space:nowrap}
+.ip-copy:hover{background:#e8f0ff;text-decoration:underline dotted}
+.ip-dup{background:#fff3cd;color:#8a5300;font-weight:600}
+.ip-dup::before{content:'⚠ '}
+.ip-clash-hint{margin-top:4px;font-size:.75rem;color:#b26a00}
+.dark-mode .ip-copy:hover{background:#1f2a3a}
+.dark-mode .ip-dup{background:#4a3b12;color:#ffd54f}
+.dark-mode .ip-clash-hint{color:#ffb74d}
+/* Optager licence expiry */
+.lic-soon{color:#b26a00;font-weight:600}
+.lic-expired{color:#c62828;font-weight:600}
+.lic-note{font-size:.72rem;font-weight:400;white-space:nowrap}
+.tab-alert{display:inline-block;margin-left:4px;padding:0 6px;border-radius:9px;background:#fdecea;color:#c62828;font-size:.7rem;font-weight:700}
+.tab-alert.soon{background:#fff3e0;color:#b26a00}
+.dark-mode .lic-soon{color:#ffb74d}
+.dark-mode .lic-expired{color:#ff8a80}
+.dark-mode .tab-alert{background:#4a1f1f;color:#ff8a80}
+.dark-mode .tab-alert.soon{background:#3d2a12;color:#ffcc80}
+.topbar-search-wrap .search-active{background:#eef4ff}
+.dark-mode .topbar-search-wrap .search-active{background:#1f2a3a}
+/* Dark-mode twins for the Urus Peralatan additions (temp badge/box, filter
+   bar, form toggle) — they were light-only and glared on the dark theme. */
+.dark-mode .equip-temp-badge{background:#3d2a12;color:#ffcc80;border-color:#b26a00}
+.dark-mode .temp-orig-box{background:rgba(255,152,0,.10);border-color:rgba(255,183,77,.35)}
+.dark-mode .temp-orig-tbl td:first-child{color:#9aa4b2}
+.dark-mode .equip-filter-bar{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1)}
+.dark-mode .equip-filter-label,.dark-mode .equip-form-chev{color:#90caf9}
+.dark-mode .equip-filter-status{color:#ffb74d}
+.dark-mode .equip-filter-status a{color:#ff8a80}
 .pm-no-box-tick{margin-left:2px} /* same SVG tick as .pm-sym, not a font ✓ */
 .pm-nota-box{margin:16px 0 10px;border:1.5px solid #333;border-radius:3px}
 .pm-nota-box .pm-nota-hdr{background:#1A2332;color:#fff;font-size:9pt;font-weight:700;padding:4px 10px;letter-spacing:.04em}
@@ -2189,9 +2260,17 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       <div v-else class="equip-history-timeline">
         <div v-for="(row,i) in equipHistoryModal.rows" v-show="equipHistoryModal.playIdx<0 || i<=equipHistoryModal.playIdx" :key="i"
           class="equip-history-item" :class="{'timelapse-reveal':equipHistoryModal.playIdx>=0 && i===equipHistoryModal.playIdx,'timelapse-current':equipHistoryModal.playing && i===equipHistoryModal.playIdx, no:(row.isRemoval && !row.isSwap)||row.status==='Tidak'}">
-          <div class="equip-history-dot" :class="row.isSwap?'':(row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':'')))"></div>
+          <div class="equip-history-dot" :class="(row.isSwap||row.isChange)?'':(row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':'')))"></div>
           <div class="equip-history-content">
-            <template v-if="row.isSwap">
+            <template v-if="row.isChange">
+              <div class="flex items-center gap-8" style="flex-wrap:wrap">
+                <b>{{row.dateLabel}}</b>
+                <span class="badge badge-gray" style="font-size:.68rem">✏️ {{row.note || 'Dikemas kini'}}</span>
+                <span v-if="row.by" class="text-sm text-muted">oleh {{row.by}}</span>
+              </div>
+              <div v-for="(d,di) in row.diffs" :key="di" class="text-sm text-muted" style="margin-top:2px">{{d.f}}: <span class="mono-data">{{d.from || '—'}}</span> → <span class="mono-data">{{d.to || '—'}}</span></div>
+            </template>
+            <template v-else-if="row.isSwap">
               <div class="flex items-center gap-8" style="flex-wrap:wrap">
                 <b>{{row.dateLabel}}</b>
                 <span class="badge equip-temp-badge" style="cursor:default">{{row.swapLabel}}</span>
@@ -2212,7 +2291,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <span v-if="row.status" :style="'font-size:.78rem;font-weight:700;color:'+(row.status==='Baik'?'#1b5e20':'#b71c1c')">{{row.status}}</span>
                 <span class="text-sm text-muted">{{row.refNo}}</span>
               </div>
-              <div v-if="equipHistoryModal.multiUnit && row.unit" class="text-sm" style="margin-top:2px;color:#555">Unit: {{row.unit}}</div>
+              <div v-if="equipHistoryModal.multiUnit && row.unit" class="text-sm text-muted" style="margin-top:2px">Unit: {{row.unit}}</div>
               <div v-if="row.nota" class="text-sm text-muted" style="margin-top:2px">{{row.nota}}</div>
             </template>
           </div>
@@ -2356,11 +2435,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
     <div class="topbar no-print" :class="{'topbar-compact':topbarCompact}" :style="topbarAccentColor ? {borderBottomColor: topbarAccentColor, borderBottomWidth: '3px'} : {}">
       <h3>{{pageTitle}}</h3>
       <div class="topbar-search-wrap" style="position:relative;flex:1;max-width:360px;margin:0 20px">
-        <input ref="globalSearchInputRef" class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." :style="'font-size:.83rem;padding:7px '+(globalSearch?'30px':'54px')+' 7px 12px'">
+        <input ref="globalSearchInputRef" class="form-control" v-model="globalSearch" @focus="showSearchResults=true" @blur="setTimeout(()=>showSearchResults=false,200)" @keydown="onGlobalSearchKey" placeholder="🔍 Cari site, no. rujukan, peralatan, kontraktor..." :style="'font-size:.83rem;padding:7px '+(globalSearch?'30px':'54px')+' 7px 12px'">
         <kbd v-if="!globalSearch" class="search-kbd-hint" aria-hidden="true">{{isMacPlatform?'⌘':'Ctrl'}} K</kbd>
         <button v-if="globalSearch" type="button" class="search-clear-btn" @mousedown.prevent="globalSearch=''" title="Kosongkan carian" aria-label="Kosongkan carian">✕</button>
         <div v-if="showSearchResults && searchResults.length" class="dropdown-panel" style="position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:100;max-height:320px;overflow-y:auto;margin-top:4px">
-          <div v-for="r in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
+          <div v-for="(r,ri) in searchResults" :key="r.id" @mousedown="handleSearchResultClick(r)" @mouseenter="searchActiveIdx=ri" :class="{'search-active': ri===searchActiveIdx}" style="padding:10px 14px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;flex-direction:column;gap:2px">
             <template v-if="r._kind==='command'">
               <div style="font-weight:700;font-size:.85rem;color:#003366">{{r.label}}</div>
             </template>
@@ -2457,7 +2536,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 
       <!-- ====== DASHBOARD ====== -->
       <!-- DASHBOARD SKELETON (shown while initial data load is in-flight) -->
-      <div v-if="page==='dashboard' && initialLoading" class="page-view skeleton-wrap">
+      <div v-if="page==='dashboard' && !listDataReady" class="page-view skeleton-wrap">
         <div class="stat-grid" style="margin-bottom:24px">
           <div class="skel skel-stat"></div><div class="skel skel-stat"></div><div class="skel skel-stat"></div>
         </div>
@@ -2468,7 +2547,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <div class="card"><div class="skel skel-line" style="width:30%"></div><div class="skel skel-line"></div><div class="skel skel-line"></div><div class="skel skel-line" style="width:70%"></div></div>
       </div>
 
-      <div v-if="page==='dashboard' && !initialLoading" class="page-view">
+      <div v-if="page==='dashboard' && listDataReady" class="page-view">
 
         <!-- OPS ROOM HERO — bold "control room" overview, reuses existing
              healthCountCctv/Vir, zoneOverdueCounts, ZONES & countUp numbers
@@ -3686,7 +3765,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <button v-if="currentProject==='vir' && equipVirSystem==='SONY'" class="btn btn-outline btn-sm btn-icon" @click="showInfo('sony')" title="Tentang sistem SONY">ℹ️</button>
             <button class="btn btn-outline btn-sm btn-icon" @click="showInfo('importOcr')" title="Tentang Import Fail & Scan OCR">ℹ️ Import/OCR</button>
           </div>
-          <button v-if="canEditEquip" class="btn btn-success btn-sm" :disabled="loading || !equipWritable" @click="saveSiteEquip">💾 Simpan Semua</button>
+          <div v-if="canEditEquip" class="flex items-center gap-8">
+            <span v-if="equipSaveStatusText" class="equip-save-status" :class="'is-'+equipSaveStatusHere" role="status" aria-live="polite">{{equipSaveStatusText}}</span>
+            <button class="btn btn-success btn-sm" :disabled="loading || !equipWritable" @click="saveSiteEquip" :title="'Simpan semua perubahan ('+(isMacPlatform?'⌘':'Ctrl')+'+S)'">💾 Simpan Semua</button>
+          </div>
         </div>
         <div v-if="!canEditEquip" class="badge badge-gray" style="display:block;margin-bottom:12px;padding:8px 12px">🔒 Paparan sahaja — {{currentProject==='vir' ? 'hanya admin/superadmin boleh mengedit peralatan site VIR.' : 'hanya admin/superadmin/staff boleh mengedit peralatan site.'}}</div>
         <div v-if="canEditEquip && !equipWritable" class="equip-load-warning" role="alert">⚠️ <b>Data peralatan tidak dapat dimuat sepenuhnya</b> (masalah sambungan semasa memuatkan). Penyuntingan &amp; penyimpanan dimatikan buat sementara supaya data sedia ada di pelayan <b>tidak terpadam</b>. Sila muat semula halaman (F5).</div>
@@ -3698,7 +3780,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           </div>
         </div>
         <div class="tabs">
-          <div v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS')" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Appliance ({{(selSiteEquip.servers||[]).length}})</div>
+          <div v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS')" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Appliance ({{(selSiteEquip.servers||[]).length}})<span v-if="equipLicenseAlert.expired" class="tab-alert" :title="equipLicenseAlert.expired+' lesen Optager telah tamat'">⚠ {{equipLicenseAlert.expired}}</span><span v-else-if="equipLicenseAlert.soon" class="tab-alert soon" :title="equipLicenseAlert.soon+' lesen Optager akan tamat dalam 60 hari'">⏰ {{equipLicenseAlert.soon}}</span></div>
           <div class="tab" :class="{active:eqTab==='cameras'}" @click="eqTab='cameras'">📷 Kamera ({{(selSiteEquip.cameras||[]).length}})</div>
           <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY'))" class="tab" :class="{active:eqTab==='nvr'}" @click="eqTab='nvr'">🖥️ {{currentProject==='vir'?'NVR':'Server/NVR/SAN'}} ({{(selSiteEquip.nvr||[]).length}})</div>
           <div v-if="!(currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS'||equipVirSystem==='SONY'))" class="tab" :class="{active:eqTab==='hdd'}" @click="eqTab='hdd'">💾 Hard Disk ({{(selSiteEquip.hdd||[]).length}})</div>
@@ -3721,14 +3803,21 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <input class="form-control equip-filter-q" v-model="equipFilter[equipFilterKind].q" placeholder="Cari nama / IP / no. siri">
           <label v-if="equipHasTemp(equipFilterKind)" class="equip-filter-temp"><input type="checkbox" v-model="equipFilter[equipFilterKind].temp"> 🔁 Sementara sahaja</label>
           <span v-if="equipFilterActive(equipFilterKind)" class="equip-filter-status">Menapis: <b>{{equipView[equipFilterKind].length}}</b> daripada {{(selSiteEquip[equipFilterKind]||[]).length}} · <a href="#" @click.prevent="clearEquipFilter(equipFilterKind)">✕ Kosongkan</a></span>
+          <div class="equip-col-picker" style="margin-left:auto">
+            <button type="button" class="btn btn-outline btn-sm" @click="equipColPickerOpen=!equipColPickerOpen" :aria-expanded="equipColPickerOpen">⚙ Lajur<span v-if="(equipHiddenCols[equipFilterKind]||[]).length"> · {{equipHiddenCols[equipFilterKind].length}} disembunyi</span></button>
+            <div v-if="equipColPickerOpen" class="equip-col-panel">
+              <label v-for="c in equipHideableCols(equipFilterKind)" :key="c"><input type="checkbox" :checked="!isEquipColHidden(equipFilterKind,c)" @change="toggleEquipCol(equipFilterKind,c)"> {{c}}</label>
+              <a v-if="(equipHiddenCols[equipFilterKind]||[]).length" href="#" @click.prevent="resetEquipCols(equipFilterKind)" style="margin-top:4px">↺ Tunjuk semua lajur</a>
+            </div>
+          </div>
         </div>
-        <fieldset :disabled="!canEditEquip || !equipWritable" style="border:0;margin:0;padding:0">
+        <fieldset :disabled="!canEditEquip || !equipWritable" style="border:0;margin:0;padding:0;min-width:0">
 
         <!-- CAMERAS TAB -->
         <div v-show="eqTab==='cameras'">
-          <div class="card" id="equip-form-cameras">
+          <div class="card" id="equip-form-cameras" :class="{'equip-form-collapsed': !equipFormShown('cameras')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Kamera</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('cameras')"><span class="equip-form-chev">{{equipFormShown('cameras')?'▾':'▸'}}</span> Tambah Kamera</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">
                   📷 Scan Serial
@@ -3752,7 +3841,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="form-row form-row-3">
               <div class="form-group"><label>Nama/Lokasi Kamera *</label><input class="form-control" v-model="nCam.name" placeholder="cth: D bilik mesyuarat"></div>
-              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.ip" placeholder="192.168.0.11"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.ip" placeholder="192.168.0.11"><div v-if="equipFormIpClash('cameras',nCam.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('cameras',nCam.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Jenis</label>
                 <select class="form-control" v-model="nCam.camType">
                   <option value="">-- Pilih --</option>
@@ -3832,21 +3921,21 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <strong>{{grp.name==='Tiada NVR' ? '⚠️ Tiada NVR Berkaitan' : '📼 '+grp.name}}</strong>
                 <span class="badge">{{grp.items.length}} Kamera</span>
               </div>
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th>Nama/Lokasi</th><th>IP Address</th><th>Jenis</th><th>Brand</th><th>Model</th><th v-if="currentProject!=='vir'">Aksesori</th><th>No. Siri</th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-cameras">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('cameras','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.cameras.key==='name'}">{{equipSortIcon('cameras','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.cameras.key==='ip'}">{{equipSortIcon('cameras','ip')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','camType')">Jenis<span class="sort-ind" :class="{on:equipSort.cameras.key==='camType'}">{{equipSortIcon('cameras','camType')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','brand')">Brand<span class="sort-ind" :class="{on:equipSort.cameras.key==='brand'}">{{equipSortIcon('cameras','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','model')">Model<span class="sort-ind" :class="{on:equipSort.cameras.key==='model'}">{{equipSortIcon('cameras','model')}}</span></th><th v-if="currentProject!=='vir'">Aksesori</th><th class="th-sort" @click="toggleEquipSort('cameras','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.cameras.key==='serial'}">{{equipSortIcon('cameras','serial')}}</span></th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="[{'highlight-row':equipEditIdx.cameras===c._idx}, equipRowFx(c)]" :data-equip-uid="c._uid">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{c.ip}}</td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="c.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(c.ip,'cameras',c._uid||c._idx).length}" :title="ipCellTitle(c.ip,'cameras',c._uid||c._idx)" @click="copyIp(c.ip)">{{c.ip}}</span></td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="c.equipNota">{{c.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{c.accessPw ? (revealedPw.cameras.has(c._uid) ? c.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('cameras',c._uid)" :title="revealedPw.cameras.has(c._uid)?'Sembunyi':'Papar'">{{revealedPw.cameras.has(c._uid)?'🙈':'👁'}}</button><button v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(c.accessPw, $event)" title="Salin kata laluan">📋</button>
+                      <a href="#" role="button" v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="togglePwReveal('cameras',c._uid)" :title="revealedPw.cameras.has(c._uid)?'Sembunyi':'Papar'">{{revealedPw.cameras.has(c._uid)?'🙈':'👁'}}</a><a href="#" role="button" v-if="c.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="copyToClipboard(c.accessPw, $event)" title="Salin kata laluan">📋</a>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('cameras',c)" title="Sejarah PM/CM">🕐</button>
+                      <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('cameras',c)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('cameras',c._idx)" :title="c._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',c._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',c._idx)" title="Padam">🗑</button>
@@ -3855,15 +3944,16 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 </tbody>
               </table>
             </div>
-            <div v-if="!(selSiteEquip.cameras||[]).length" class="empty">Tiada kamera. Tambah di atas.</div>
+            <div v-if="!(selSiteEquip.cameras||[]).length" class="empty">Tiada kamera lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('cameras')">+ Tambah Kamera</button></div>
+            <div v-if="(selSiteEquip.cameras||[]).length && !equipView.cameras.length" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('cameras')">Kosongkan penapis</a></div>
           </div>
         </div>
 
         <!-- NVR TAB -->
         <div v-show="eqTab==='nvr'">
-          <div class="card" id="equip-form-nvr">
+          <div class="card" id="equip-form-nvr" :class="{'equip-form-collapsed': !equipFormShown('nvr')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah NVR / Extension</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('nvr')"><span class="equip-form-chev">{{equipFormShown('nvr')?'▾':'▸'}}</span> Tambah NVR / Extension</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nNVR','serial')"></label>
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'nvr')"></label>
@@ -3898,7 +3988,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <input v-if="nNVR.model==='Lain-lain'" class="form-control" v-model="nNVR.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"></div>
-              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.ip"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.ip"><div v-if="equipFormIpClash('nvr',nNVR.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('nvr',nNVR.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
@@ -3922,25 +4012,25 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
             </div>
             <div class="tbl-wrap">
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Peranan</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-nvr">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('nvr','name')">Nama<span class="sort-ind" :class="{on:equipSort.nvr.key==='name'}">{{equipSortIcon('nvr','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','type')">Jenis<span class="sort-ind" :class="{on:equipSort.nvr.key==='type'}">{{equipSortIcon('nvr','type')}}</span></th><th>Peranan</th><th class="th-sort" @click="toggleEquipSort('nvr','brand')">Brand<span class="sort-ind" :class="{on:equipSort.nvr.key==='brand'}">{{equipSortIcon('nvr','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','model')">Model<span class="sort-ind" :class="{on:equipSort.nvr.key==='model'}">{{equipSortIcon('nvr','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.nvr.key==='serial'}">{{equipSortIcon('nvr','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','ip')">IP<span class="sort-ind" :class="{on:equipSort.nvr.key==='ip'}">{{equipSortIcon('nvr','ip')}}</span></th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in equipView.nvr" :key="n._uid||n._idx" :class="[{'highlight-row':equipEditIdx.nvr===n._idx}, equipRowFx(n)]" :data-equip-uid="n._uid">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data">{{n.serial}}</td><td class="mono-data">{{n.ip}}</td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data">{{n.serial}}</td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('nvr',n._uid)" :title="revealedPw.nvr.has(n._uid)?'Sembunyi':'Papar'">{{revealedPw.nvr.has(n._uid)?'🙈':'👁'}}</button><button v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(n.accessPw, $event)" title="Salin kata laluan">📋</button>
+                      <a href="#" role="button" v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="togglePwReveal('nvr',n._uid)" :title="revealedPw.nvr.has(n._uid)?'Sembunyi':'Papar'">{{revealedPw.nvr.has(n._uid)?'🙈':'👁'}}</a><a href="#" role="button" v-if="n.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="copyToClipboard(n.accessPw, $event)" title="Salin kata laluan">📋</a>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('nvr',n)" title="Sejarah PM/CM">🕐</button>
+                      <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('nvr',n)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('nvr',n._idx)" :title="n._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',n._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',n._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td :colspan="canViewCredentials?12:10" class="empty">Tiada NVR.</td></tr>
+                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td :colspan="canViewCredentials?12:10" class="empty">Tiada NVR lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('nvr')">+ Tambah NVR</button></td></tr><tr v-if="(selSiteEquip.nvr||[]).length && !equipView.nvr.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('nvr')">Kosongkan penapis</a></td></tr>
                 </tbody>
               </table>
             </div>
@@ -3949,9 +4039,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 
         <!-- HDD TAB -->
         <div v-show="eqTab==='hdd'">
-          <div class="card" id="equip-form-hdd">
+          <div class="card" id="equip-form-hdd" :class="{'equip-form-collapsed': !equipFormShown('hdd')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Hard Disk</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('hdd')"><span class="equip-form-chev">{{equipFormShown('hdd')?'▾':'▸'}}</span> Tambah Hard Disk</div>
               <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nHDD','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'hdd')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nHDD')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nHDD'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nHDD','serial',t)">{{t}}</span></div></div></div>
@@ -4011,14 +4101,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <strong>{{grp.name==='Tiada NVR' ? '⚠️ Tiada NVR Berkaitan' : '📼 '+grp.name}}</strong>
                 <span class="badge">{{grp.items.length}} HDD</span>
               </div>
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('hdd',grp.items)" @change="toggleEquipGroupSelectAll('hdd',grp.items)"></th><th>#</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Kapasiti</th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-hdd">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('hdd',grp.items)" @change="toggleEquipGroupSelectAll('hdd',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('hdd','brand')">Brand<span class="sort-ind" :class="{on:equipSort.hdd.key==='brand'}">{{equipSortIcon('hdd','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','model')">Model<span class="sort-ind" :class="{on:equipSort.hdd.key==='model'}">{{equipSortIcon('hdd','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.hdd.key==='serial'}">{{equipSortIcon('hdd','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','capacity')">Kapasiti<span class="sort-ind" :class="{on:equipSort.hdd.key==='capacity'}">{{equipSortIcon('hdd','capacity')}}</span></th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="[{'highlight-row':equipEditIdx.hdd===h._idx}, equipRowFx(h)]" :data-equip-uid="h._uid">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
                     <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}}</td><td>{{h.model}} <span v-if="h._temp" class="badge equip-temp-badge" @click="openTempReplace('hdd',h._idx)" :title="tempBadgeTitle(h)">🔁 Sementara</span> <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</button>
+                      <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('hdd',h._idx)" :title="h._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',h._idx)" title="Padam">🗑</button>
@@ -4027,15 +4117,16 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 </tbody>
               </table>
             </div>
-            <div v-if="!(selSiteEquip.hdd||[]).length" class="empty">Tiada HDD.</div>
+            <div v-if="!(selSiteEquip.hdd||[]).length" class="empty">Tiada hard disk lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('hdd')">+ Tambah Hard Disk</button></div>
+            <div v-if="(selSiteEquip.hdd||[]).length && !equipView.hdd.length" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('hdd')">Kosongkan penapis</a></div>
           </div>
         </div>
 
         <!-- SWITCH TAB -->
         <div v-show="eqTab==='switch'">
-          <div class="card" id="equip-form-switches">
+          <div class="card" id="equip-form-switches" :class="{'equip-form-collapsed': !equipFormShown('switches')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Network Switch</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('switches')"><span class="equip-form-chev">{{equipFormShown('switches')?'▾':'▸'}}</span> Tambah Network Switch</div>
               <div class="flex gap-8"><label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nSW','serial')"></label><label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'switches')"></label><button class="btn btn-outline btn-sm" @click="resetForm('nSW')">↺ Reset</button></div>
             </div>
             <div v-if="ocrState.active && ocrState.target==='nSW'" class="mb-12"><div class="ocr-loading" v-if="ocrState.loading">⏳ Sedang menganalisa imej... {{ocrState.progress}}%</div><div v-if="!ocrState.loading && ocrState.tokens.length"><p class="text-sm text-muted mb-12">Pilih teks yang merupakan No. Siri:</p><div class="ocr-result"><span class="ocr-token" v-for="t in ocrState.tokens" :key="t" @click="pickOcr('nSW','serial',t)">{{t}}</span></div></div></div>
@@ -4057,7 +4148,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <input v-if="nSW.model==='Lain-lain'" class="form-control" v-model="nSW.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"></div>
-              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.ip" placeholder="cth: 192.168.1.10"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.ip" placeholder="cth: 192.168.1.10"><div v-if="equipFormIpClash('switches',nSW.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('switches',nSW.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
@@ -4080,25 +4171,25 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
             </div>
             <div class="tbl-wrap">
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-switches">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('switches','name')">Nama<span class="sort-ind" :class="{on:equipSort.switches.key==='name'}">{{equipSortIcon('switches','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','brand')">Brand<span class="sort-ind" :class="{on:equipSort.switches.key==='brand'}">{{equipSortIcon('switches','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','model')">Model<span class="sort-ind" :class="{on:equipSort.switches.key==='model'}">{{equipSortIcon('switches','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.switches.key==='serial'}">{{equipSortIcon('switches','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.switches.key==='ip'}">{{equipSortIcon('switches','ip')}}</span></th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in equipView.switches" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.switches===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data">{{s.ip}}</td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data"><span v-if="s.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.ip,'switches',s._uid||s._idx).length}" :title="ipCellTitle(s.ip,'switches',s._uid||s._idx)" @click="copyIp(s.ip)">{{s.ip}}</span></td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('switches',s._uid)" :title="revealedPw.switches.has(s._uid)?'Sembunyi':'Papar'">{{revealedPw.switches.has(s._uid)?'🙈':'👁'}}</button><button v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(s.accessPw, $event)" title="Salin kata laluan">📋</button>
+                      <a href="#" role="button" v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="togglePwReveal('switches',s._uid)" :title="revealedPw.switches.has(s._uid)?'Sembunyi':'Papar'">{{revealedPw.switches.has(s._uid)?'🙈':'👁'}}</a><a href="#" role="button" v-if="s.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="copyToClipboard(s.accessPw, $event)" title="Salin kata laluan">📋</a>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('switches',s)" title="Sejarah PM/CM">🕐</button>
+                      <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('switches',s)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('switches',s._idx)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',s._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',s._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada switch.</td></tr>
+                  <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada switch lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('switches')">+ Tambah Switch</button></td></tr><tr v-if="(selSiteEquip.switches||[]).length && !equipView.switches.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('switches')">Kosongkan penapis</a></td></tr>
                 </tbody>
               </table>
             </div>
@@ -4107,9 +4198,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 
         <!-- ALARM TAB -->
         <div v-show="eqTab==='alarm'">
-          <div class="card" id="equip-form-alarms">
+          <div class="card" id="equip-form-alarms" :class="{'equip-form-collapsed': !equipFormShown('alarms')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Alarm SMS System</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('alarms')"><span class="equip-form-chev">{{equipFormShown('alarms')?'▾':'▸'}}</span> Tambah Alarm SMS System</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'alarms')"></label>
                 <button class="btn btn-outline btn-sm" @click="resetForm('nALM')">↺ Reset</button>
@@ -4143,7 +4234,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 </select>
                 <input v-if="nALM.type==='Lain-lain'" class="form-control" v-model="nALM.typeCustom" placeholder="Nyatakan jenis sebenar" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.ip" placeholder="cth: 192.168.1.20"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.ip" placeholder="cth: 192.168.1.20"><div v-if="equipFormIpClash('alarms',nALM.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('alarms',nALM.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nALM.installDate"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.accessUser" autocomplete="off"></div>
@@ -4165,25 +4256,25 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
             </div>
             <div class="tbl-wrap">
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th>Nama</th><th>Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-alarms">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('alarms','name')">Nama<span class="sort-ind" :class="{on:equipSort.alarms.key==='name'}">{{equipSortIcon('alarms','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','type')">Jenis<span class="sort-ind" :class="{on:equipSort.alarms.key==='type'}">{{equipSortIcon('alarms','type')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','brand')">Brand<span class="sort-ind" :class="{on:equipSort.alarms.key==='brand'}">{{equipSortIcon('alarms','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','model')">Model<span class="sort-ind" :class="{on:equipSort.alarms.key==='model'}">{{equipSortIcon('alarms','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.alarms.key==='serial'}">{{equipSortIcon('alarms','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.alarms.key==='ip'}">{{equipSortIcon('alarms','ip')}}</span></th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(a,i) in equipView.alarms" :key="a._uid||a._idx" :class="[{'highlight-row':equipEditIdx.alarms===a._idx}, equipRowFx(a)]" :data-equip-uid="a._uid">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
-                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td>{{a.serial}}</td><td>{{a.ip}}</td>
+                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td>{{a.serial}}</td><td><span v-if="a.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(a.ip,'alarms',a._uid||a._idx).length}" :title="ipCellTitle(a.ip,'alarms',a._uid||a._idx)" @click="copyIp(a.ip)">{{a.ip}}</span></td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('alarms',a._uid)" :title="revealedPw.alarms.has(a._uid)?'Sembunyi':'Papar'">{{revealedPw.alarms.has(a._uid)?'🙈':'👁'}}</button><button v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(a.accessPw, $event)" title="Salin kata laluan">📋</button>
+                      <a href="#" role="button" v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="togglePwReveal('alarms',a._uid)" :title="revealedPw.alarms.has(a._uid)?'Sembunyi':'Papar'">{{revealedPw.alarms.has(a._uid)?'🙈':'👁'}}</a><a href="#" role="button" v-if="a.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="copyToClipboard(a.accessPw, $event)" title="Salin kata laluan">📋</a>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('alarms',a)" title="Sejarah PM/CM">🕐</button>
+                      <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('alarms',a)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('alarms',a._idx)" :title="a._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',a._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',a._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada alarm.</td></tr>
+                  <tr v-if="!(selSiteEquip.alarms||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada alarm lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('alarms')">+ Tambah Alarm</button></td></tr><tr v-if="(selSiteEquip.alarms||[]).length && !equipView.alarms.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('alarms')">Kosongkan penapis</a></td></tr>
                 </tbody>
               </table>
             </div>
@@ -4192,9 +4283,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 
         <!-- SERVER/APPLIANCE TAB (VIR Optager HD4000 only) -->
         <div v-show="eqTab==='servers'">
-          <div class="card" id="equip-form-servers">
+          <div class="card" id="equip-form-servers" :class="{'equip-form-collapsed': !equipFormShown('servers')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Appliance {{equipVirSystem==='VCS'?'VCS':'Optager HD4000'}}</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('servers')"><span class="equip-form-chev">{{equipFormShown('servers')?'▾':'▸'}}</span> Tambah Appliance {{equipVirSystem==='VCS'?'VCS':'Optager HD4000'}}</div>
               <button class="btn btn-outline btn-sm" @click="resetForm('nServer')">↺ Reset</button>
             </div>
             <div class="form-group"><label>Nama/Label Appliance</label><input class="form-control" v-model="nServer.name" :placeholder="'cth: Appliance '+(equipVirSystem==='VCS'?'VCS':'Optager')+' Bilik VIR 1'"></div>
@@ -4258,13 +4349,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <input v-if="nServer.moboType==='Lain-lain'" class="form-control" v-model="nServer.moboTypeCustom" placeholder="Nyatakan jenis motherboard" style="margin-top:6px">
               </div>
               <div class="form-group"><label>LAN 1 IP Address <span class="text-muted text-sm">(pilihan)</span></label>
-                <input class="form-control" v-model="nServer.lanIp" placeholder="cth: 192.168.0.11">
+                <input class="form-control" v-model="nServer.lanIp" placeholder="cth: 192.168.0.11"><div v-if="equipFormIpClash('servers',nServer.lanIp).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('servers',nServer.lanIp).join(', ')}}</div>
               </div>
               <div class="form-group"><label>LAN 2 IP Address <span class="text-muted text-sm">(pilihan — jika motherboard ada 2 port LAN)</span></label>
-                <input class="form-control" v-model="nServer.lan2Ip" placeholder="cth: 192.168.0.12">
+                <input class="form-control" v-model="nServer.lan2Ip" placeholder="cth: 192.168.0.12"><div v-if="equipFormIpClash('servers',nServer.lan2Ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('servers',nServer.lan2Ip).join(', ')}}</div>
               </div>
               <div class="form-group"><label>WiFi IP Address <span class="text-muted text-sm">(pilihan)</span></label>
-                <input class="form-control" v-model="nServer.wifiIp" placeholder="cth: 192.168.1.11">
+                <input class="form-control" v-model="nServer.wifiIp" placeholder="cth: 192.168.1.11"><div v-if="equipFormIpClash('servers',nServer.wifiIp).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('servers',nServer.wifiIp).join(', ')}}</div>
               </div>
             </div>
 
@@ -4299,14 +4390,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <button :disabled="loading" v-if="equipSelected.servers.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('servers')">🗑 Padam Terpilih ({{equipSelected.servers.size}})</button>
             </div>
             <div class="tbl-wrap">
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th>LAN 1 IP</th><th>LAN 2 IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-servers">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('servers','name')">Nama<span class="sort-ind" :class="{on:equipSort.servers.key==='name'}">{{equipSortIcon('servers','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','brand')">Brand<span class="sort-ind" :class="{on:equipSort.servers.key==='brand'}">{{equipSortIcon('servers','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','model')">Model<span class="sort-ind" :class="{on:equipSort.servers.key==='model'}">{{equipSortIcon('servers','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.servers.key==='serial'}">{{equipSortIcon('servers','serial')}}</span></th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th class="th-sort" @click="toggleEquipSort('servers','lanIp')">LAN 1 IP<span class="sort-ind" :class="{on:equipSort.servers.key==='lanIp'}">{{equipSortIcon('servers','lanIp')}}</span></th><th>LAN 2 IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in equipView.servers" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.servers===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
                     <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('servers',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span></td><td>{{s.serial}}</td>
-                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td>{{s.lanIp}}</td><td>{{s.lan2Ip||'-'}}</td><td>{{s.wifiIp}}</td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td>{{s.optagerLicenseExpiry}}</td>
+                    <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td><span v-if="s.lanIp" class="ip-copy" :class="{'ip-dup':equipIpClash(s.lanIp,'servers',s._uid||s._idx).length}" :title="ipCellTitle(s.lanIp,'servers',s._uid||s._idx)" @click="copyIp(s.lanIp)">{{s.lanIp}}</span></td><td><span v-if="s.lan2Ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.lan2Ip,'servers',s._uid||s._idx).length}" :title="ipCellTitle(s.lan2Ip,'servers',s._uid||s._idx)" @click="copyIp(s.lan2Ip)">{{s.lan2Ip}}</span><span v-else class="text-muted text-sm">-</span></td><td><span v-if="s.wifiIp" class="ip-copy" :class="{'ip-dup':equipIpClash(s.wifiIp,'servers',s._uid||s._idx).length}" :title="ipCellTitle(s.wifiIp,'servers',s._uid||s._idx)" @click="copyIp(s.wifiIp)">{{s.wifiIp}}</span></td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td><span v-if="s.optagerLicenseExpiry" :class="licenseExpiryState(s.optagerLicenseExpiry) && 'lic-'+licenseExpiryState(s.optagerLicenseExpiry)">{{fmtDate(s.optagerLicenseExpiry)}}<span v-if="licenseExpiryNote(s.optagerLicenseExpiry)" class="lic-note"> · {{licenseExpiryNote(s.optagerLicenseExpiry)}}</span></span></td>
                     <td>
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
@@ -4318,7 +4409,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',s._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="22" class="empty">Tiada appliance.</td></tr>
+                  <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="22" class="empty">Tiada appliance lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('servers')">+ Tambah Appliance</button></td></tr><tr v-if="(selSiteEquip.servers||[]).length && !equipView.servers.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('servers')">Kosongkan penapis</a></td></tr>
                 </tbody>
               </table>
             </div>
@@ -4327,9 +4418,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 
         <!-- TABLET TAB (VIR Optager HD4000 only) -->
         <div v-show="eqTab==='tablets'">
-          <div class="card" id="equip-form-tablets">
+          <div class="card" id="equip-form-tablets" :class="{'equip-form-collapsed': !equipFormShown('tablets')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Android Tablet</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('tablets')"><span class="equip-form-chev">{{equipFormShown('tablets')?'▾':'▸'}}</span> Tambah Android Tablet</div>
               <button class="btn btn-outline btn-sm" @click="resetForm('nTablet')">↺ Reset</button>
             </div>
             <div class="form-row form-row-3">
@@ -4375,8 +4466,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <button :disabled="loading" v-if="equipSelected.tablets.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('tablets')">🗑 Padam Terpilih ({{equipSelected.tablets.size}})</button>
             </div>
             <div class="tbl-wrap">
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th>Nama</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IMEI</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-tablets">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('tablets','name')">Nama<span class="sort-ind" :class="{on:equipSort.tablets.key==='name'}">{{equipSortIcon('tablets','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','brand')">Brand<span class="sort-ind" :class="{on:equipSort.tablets.key==='brand'}">{{equipSortIcon('tablets','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','model')">Model<span class="sort-ind" :class="{on:equipSort.tablets.key==='model'}">{{equipSortIcon('tablets','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.tablets.key==='serial'}">{{equipSortIcon('tablets','serial')}}</span></th><th>IMEI</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(t,i) in equipView.tablets" :key="t._uid||t._idx" :class="[{'highlight-row':equipEditIdx.tablets===t._idx}, equipRowFx(t)]" :data-equip-uid="t._uid">
                     <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
@@ -4392,7 +4483,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',t._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="10" class="empty">Tiada tablet.</td></tr>
+                  <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="10" class="empty">Tiada tablet lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('tablets')">+ Tambah Tablet</button></td></tr><tr v-if="(selSiteEquip.tablets||[]).length && !equipView.tablets.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('tablets')">Kosongkan penapis</a></td></tr>
                 </tbody>
               </table>
             </div>
@@ -4401,9 +4492,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 
         <!-- LAIN-LAIN PERALATAN TAB (CCTV only — Monitor/TV/PC/UPS/POE dll.) -->
         <div v-show="eqTab==='misc'">
-          <div class="card" id="equip-form-misc">
+          <div class="card" id="equip-form-misc" :class="{'equip-form-collapsed': !equipFormShown('misc')}">
             <div class="flex justify-between items-center mb-16">
-              <div class="card-title" style="margin:0;border:none;padding:0">Tambah Peralatan Lain-lain</div>
+              <div class="card-title equip-form-toggle" style="margin:0;border:none;padding:0" @click="toggleEquipForm('misc')"><span class="equip-form-chev">{{equipFormShown('misc')?'▾':'▸'}}</span> Tambah Peralatan Lain-lain</div>
               <div class="flex gap-8">
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📷 Scan Serial<input type="file" accept="image/*" capture="environment" style="display:none" @change="ocrScan($event,'nMISC','serial')"></label>
                 <label class="btn btn-outline btn-sm" style="cursor:pointer">📄 Import Fail<input type="file" accept=".txt,.csv,.xlsx,.xls,.docx,.pdf,image/*" style="display:none" @change="importEquipFile($event,'misc')"></label>
@@ -4441,7 +4532,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <input v-if="miscBrandOptions && nMISC.model==='Lain-lain'" class="form-control" v-model="nMISC.modelCustom" placeholder="Nyatakan model sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>No. Siri / Kuantiti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
-              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.ip" placeholder="cth: 192.168.1.30"></div>
+              <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.ip" placeholder="cth: 192.168.1.30"><div v-if="equipFormIpClash('misc',nMISC.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('misc',nMISC.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan, cth: PC)</span></label><input class="form-control" v-model="nMISC.accessUser" autocomplete="off"></div>
@@ -4464,26 +4555,26 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
             </div>
             <div class="tbl-wrap">
-              <table class="equip-table">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th>Nama/Lokasi</th><th>Kategori</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+              <table class="equip-table equip-table-sticky equip-tbl-misc">
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('misc','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.misc.key==='name'}">{{equipSortIcon('misc','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','category')">Kategori<span class="sort-ind" :class="{on:equipSort.misc.key==='category'}">{{equipSortIcon('misc','category')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','brand')">Brand<span class="sort-ind" :class="{on:equipSort.misc.key==='brand'}">{{equipSortIcon('misc','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','model')">Model<span class="sort-ind" :class="{on:equipSort.misc.key==='model'}">{{equipSortIcon('misc','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.misc.key==='serial'}">{{equipSortIcon('misc','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.misc.key==='ip'}">{{equipSortIcon('misc','ip')}}</span></th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(m,i) in equipView.misc" :key="m._uid||m._idx" :class="[{'highlight-row':equipEditIdx.misc===m._idx}, equipRowFx(m)]" :data-equip-uid="m._uid">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
-                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td>{{m.ip}}</td>
+                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td><span v-if="m.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(m.ip,'misc',m._uid||m._idx).length}" :title="ipCellTitle(m.ip,'misc',m._uid||m._idx)" @click="copyIp(m.ip)">{{m.ip}}</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{m.accessPw ? (revealedPw.misc.has(m._uid) ? m.accessPw : '••••••') : '-'}}</span>
-                      <button v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click="togglePwReveal('misc',m._uid)" :title="revealedPw.misc.has(m._uid)?'Sembunyi':'Papar'">{{revealedPw.misc.has(m._uid)?'🙈':'👁'}}</button><button v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click="copyToClipboard(m.accessPw, $event)" title="Salin kata laluan">📋</button>
+                      <a href="#" role="button" v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="togglePwReveal('misc',m._uid)" :title="revealedPw.misc.has(m._uid)?'Sembunyi':'Papar'">{{revealedPw.misc.has(m._uid)?'🙈':'👁'}}</a><a href="#" role="button" v-if="m.accessPw" class="btn btn-outline btn-sm btn-icon" @click.prevent="copyToClipboard(m.accessPw, $event)" title="Salin kata laluan">📋</a>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openEquipHistory('misc',m)" title="Sejarah PM/CM">🕐</button>
+                      <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('misc',m)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('misc',m._idx)" :title="m._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
                       <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',m._idx)" title="Edit">✏️</button>
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',m._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="(canViewCredentials?11:9)+(currentProject!=='vir'?1:0)" class="empty">Tiada peralatan lain-lain. Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr>
+                  <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="(canViewCredentials?11:9)+(currentProject!=='vir'?1:0)" class="empty">Tiada peralatan lain-lain lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('misc')">+ Tambah Peralatan</button><br> Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr><tr v-if="(selSiteEquip.misc||[]).length && !equipView.misc.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('misc')">Kosongkan penapis</a></td></tr>
                 </tbody>
               </table>
             </div>
@@ -5056,14 +5147,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       </div>
 
       <!-- ====== PM LIST ====== -->
-      <div v-if="page==='pm-list' && initialLoading" class="page-view skeleton-wrap">
+      <div v-if="page==='pm-list' && !listDataReady" class="page-view skeleton-wrap">
         <div class="card">
           <div class="skel skel-line" style="width:35%;margin-bottom:14px"></div>
           <div class="skel skel-block" style="height:38px;margin-bottom:16px"></div>
           <div class="skel skel-block" style="height:38px;margin-bottom:8px" v-for="i in 6" :key="i"></div>
         </div>
       </div>
-      <div v-if="page==='pm-list' && !initialLoading" class="page-view">
+      <div v-if="page==='pm-list' && listDataReady" class="page-view">
         <div class="card">
           <div class="flex justify-between items-center mb-16">
             <div class="card-title" style="margin:0;border:none;padding:0">Semua Rekod</div>
@@ -6973,11 +7064,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="text-sm text-muted" style="margin-top:6px">Diganti pada {{fmtDate(tempReplaceModal.current?._temp?.date)}}<span v-if="tempReplaceModal.current?._temp?.by"> oleh {{tempReplaceModal.current._temp.by}}</span></div>
               <div v-if="tempReplaceModal.current?._temp?.reason" class="text-sm" style="margin-top:6px;white-space:pre-wrap"><b>Sebab / Catatan (dalaman):</b> {{tempReplaceModal.current._temp.reason}}</div>
             </div>
-            <p class="text-sm text-muted mb-12">Untuk betulkan butiran unit sementara, guna butang ✏️ Edit pada baris tersebut.</p>
+            <p v-if="canEditEquip" class="text-sm text-muted mb-12">Untuk betulkan butiran unit sementara, guna butang ✏️ Edit pada baris tersebut.</p>
             <p v-if="tempReplaceModal.err" class="text-sm mb-12" style="color:#c62828">{{tempReplaceModal.err}}</p>
             <div class="flex gap-8">
               <button class="btn btn-outline" @click="tempReplaceModal.show=false">Tutup</button>
-              <button class="btn btn-primary" @click="restoreTempOriginal">↩️ Pulihkan Unit Asal</button>
+              <button v-if="canEditEquip" class="btn btn-primary" @click="restoreTempOriginal">↩️ Pulihkan Unit Asal</button>
             </div>
           </template>
         </div>
@@ -9767,6 +9858,18 @@ createApp({
       return `Data terakhir dimuat dari pelayan pada ${t}. Klik untuk segar semula.`;
     });
     let db, auth, storage;
+    // Firebase Storage SDK is loaded on first use instead of in <head> (see
+    // the comment there). Every storage.ref() call site awaits this first.
+    // Reset on failure so a transient network error can be retried.
+    let _storageReady = null;
+    function _ensureStorage() {
+      if(!_storageReady) {
+        _storageReady = _loadScript('https://www.gstatic.com/firebasejs/10.7.0/firebase-storage-compat.js')
+          .then(() => { storage = firebase.storage(); })
+          .catch(e => { _storageReady = null; throw e; });
+      }
+      return _storageReady;
+    }
 
     // ---- Equipment state ----
     const siteEquip = ref({});
@@ -9779,6 +9882,24 @@ createApp({
     // are all skipped, and a banner asks for a reload. See loadAll().
     const equipLoadState = reactive({ cctv:false, vir:false });
     const equipWritable = computed(() => equipLoadState[currentProject.value === 'vir' ? 'vir' : 'cctv']);
+    // True only while loadAll() is actually running. Paired with
+    // equipLoadState it tells "equipment not here YET" (a load is still in
+    // flight — wait) apart from "equipment failed to load" (nothing to wait
+    // for) — see startNewPM()'s guard.
+    const loadAllInFlight = ref(false);
+    // Dashboard and Rekod Borang can render from Firestore's local cache
+    // before the server read finishes (see loadAll()). Deliberately NOT
+    // initialLoading itself: Urus Peralatan, Kontrak, Waranti and Laporan
+    // Lanjutan also key off initialLoading and need server data — equipment
+    // in particular is never painted from cache.
+    const listCachePainted = ref(false);
+    const listDataReady = computed(() => !initialLoading.value || listCachePainted.value);
+    // The dashboard's skeleton->cards swap now happens on listDataReady,
+    // which can be well before initialLoading flips. Observe the cards the
+    // moment they first appear — otherwise the later initialLoading watch
+    // (above) would find them un-observed and re-hide them (reveal-pending)
+    // to animate in again, making an already-visible dashboard blink.
+    watch(listDataReady, () => nextTick(_observeRevealCards));
     let _equipBlockToastAt = 0;
     const selSite = ref(null);
     const eqTab = ref('cameras');
@@ -11894,7 +12015,13 @@ createApp({
     // reliably catches every path that lands the user on a ready
     // dashboard, regardless of restoreLastPage()'s outcome or any error
     // elsewhere in that unrelated chain.
-    watch([page, initialLoading], ([p, il]) => { if (p === 'dashboard' && !il) nextTick(() => initMapWidget()); }, { immediate: true });
+    // listDataReady (not initialLoading) — the dashboard, map container
+    // included, can now render from cache before the server read finishes
+    // (see loadAll). It flips false->true once per session just like
+    // initialLoading did, so the reasoning above still holds; pins then
+    // refresh on their own via the mapStateAssignments watch below once
+    // server data replaces the cached assignments.
+    watch([page, listDataReady], ([p, ready]) => { if (p === 'dashboard' && ready) nextTick(() => initMapWidget()); }, { immediate: true });
     // A hovered element's tooltip has no way to hear about page navigation
     // on its own — v-if unmounting the hovered element doesn't fire a real
     // mouseout event, so without this the floating tooltip (and its stale
@@ -14292,6 +14419,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const cleanName = _buildServiceReportFileName(w, finalExt);
         const uploadFile = new File([compressedFile], cleanName, { type: compressedFile.type });
         const path = `${serviceReportModal.storagePrefix}/${w.id}/${Date.now()}_${uploadFile.name}`;
+        await _ensureStorage();
         const snap = await storage.ref(path).put(uploadFile);
         const url = await snap.ref.getDownloadURL();
         const entry = {
@@ -14324,7 +14452,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         await db.collection(serviceReportModal.collection).doc(w.id).update({
           serviceReports: firebase.firestore.FieldValue.arrayRemove(report),
         });
-        await storage.ref(report.path).delete().catch(()=>{}); // ignore if already gone
+        await _ensureStorage().then(() => storage.ref(report.path).delete()).catch(()=>{}); // ignore if already gone
         w.serviceReports = (w.serviceReports||[]).filter(r => r.path !== report.path);
         await logAudit('WARRANTY_SERVICE_REPORT_DELETE', `${w.equipmentName || w.perihal || '-'} — ${w.siteName} — ${report.name}`);
         showToast('Fail servis dipadam.');
@@ -15096,10 +15224,25 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // deep-traversal to one site's data, the only thing the callback (an
     // autosave debounce trigger) actually needs to react to.
     let _stopEquipDeepWatch = null;
+    // Which equipment bucket the watch is looking at. Only an edit made IN
+    // that bucket should autosave: the getter also fires when another site/
+    // room is opened without leaving this page (global search, 🔁 Tukar
+    // Bilik) or when loadAll swaps in fresh server data — saving then wrote
+    // the unchanged data back, logged a bogus EQUIPMENT_UPDATE and bumped
+    // _rev, giving anyone editing that site a false conflict. Edits mutate
+    // the bucket in place (new === old); a switch or reload replaces it.
+    // (A bucket created from nothing — first item on a new site — still saves.)
+    let _equipWatchId = null;
+    function _equipWatchIdentity() { return [currentProject.value, selSite.value?.id, equipVirSystem.value, equipVirRoomUid.value].join('|'); }
     function _startEquipDeepWatch() {
       if(_stopEquipDeepWatch) return;
-      _stopEquipDeepWatch = watch(() => selSite.value ? activeEquip()[selSite.value.id] : null, () => {
+      _equipWatchId = _equipWatchIdentity();
+      _stopEquipDeepWatch = watch(() => selSite.value ? activeEquip()[selSite.value.id] : null, (nv, ov) => {
         if(!selSite.value) return;
+        const id = _equipWatchIdentity();
+        const switched = id !== _equipWatchId;
+        _equipWatchId = id;
+        if(switched || (ov && nv !== ov)) return;
         clearTimeout(_equipDraftTimer);
         _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
         // Debounced auto-save to Firestore — pushed back on every further
@@ -15107,6 +15250,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // user pauses for 2s.
         clearTimeout(_equipAutoSaveTimer);
         _equipAutoSaveTimer = setTimeout(() => { _equipAutoSaveTimer = null; _writeSiteEquipToFirestore({ toast:false }); }, 2000);
+        if(canEditEquip.value && equipWritable.value) { ++_equipSaveTok; _setEquipSaveStatus(_equipDocKey(), 'pending'); }
       }, { deep: true });
     }
     watch(page, (p) => {
@@ -15548,7 +15692,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             // — only the Firestore write is split into the two collections.
             restoredSiteEquip[id] = merged;
             const { stripped, creds } = _splitCredentials(merged);
-            _batchSetChunked(db.collection('siteEquipment').doc(id), stripped);
+            _batchSetChunked(db.collection('siteEquipment').doc(id), { ...stripped, ..._equipRevStamp('siteEquipment', id, 'restore backup') });
             _batchSetChunked(db.collection('siteEquipmentCredentials').doc(id), creds);
           });
         }
@@ -15584,7 +15728,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             const optagerSplit = _splitOptagerByRoom(optager);
             const vcsSplit = _splitVcsByRoom(vcs);
             const sonySplit = _splitSonyByRoom(sony);
-            _batchSetChunked(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped }, { merge: true });
+            _batchSetChunked(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped, ..._equipRevStamp('virSiteEquipment', id, 'restore backup') }, { merge: true });
             _batchSetChunked(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds, SONY: sonySplit.creds }, { merge: true });
           });
         }
@@ -15763,7 +15907,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const optagerSplit = _splitOptagerByRoom(optager);
           const vcsSplit = _splitVcsByRoom(vcs);
           const sonySplit = _splitSonyByRoom(sony);
-          await _fw(db.collection('virSiteEquipment').doc(id).set({ rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped }, { merge: true }));
+          await _fw(db.collection('virSiteEquipment').doc(id).set({ rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped, ..._equipRevStamp('virSiteEquipment', id, 'restore backup') }, { merge: true }));
           await _fw(db.collection('virSiteEquipmentCredentials').doc(id).set({ BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds, SONY: sonySplit.creds }, { merge: true }));
           virSiteEquip.value = { ...virSiteEquip.value, [id]: { rooms } };
           virSiteEquipBCD.value = { ...virSiteEquipBCD.value, [id]: bcd };
@@ -15774,7 +15918,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
           const merged = {...EQUIP_SHAPE_CCTV, ...(singleSiteRestore.data.siteEquip?.[id] || {})};
           const { stripped, creds } = _splitCredentials(merged);
-          await _fw(db.collection('siteEquipment').doc(id).set(stripped));
+          await _fw(db.collection('siteEquipment').doc(id).set({ ...stripped, ..._equipRevStamp('siteEquipment', id, 'restore backup') }));
           await _fw(db.collection('siteEquipmentCredentials').doc(id).set(creds));
           siteEquip.value = { ...siteEquip.value, [id]: merged };
         }
@@ -16091,6 +16235,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         e.preventDefault();
         globalSearchInputRef.value?.focus();
       }
+      // Ctrl/⌘+S on Urus Peralatan = "Simpan Semua" (and never the browser's
+      // "Save page as" there). Same guards as the button's :disabled.
+      if((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 's' && page.value === 'site-equip' && canEditEquip.value) {
+        e.preventDefault();
+        if(!loading.value && equipWritable.value) saveSiteEquip();
+      }
     });
     // searchResults below does a full scan across pmRecords + every site's
     // equipment (cameras/nvr/hdd/switches/alarms/misc/servers/tablets,
@@ -16229,6 +16379,31 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return [...commandMatches, ...siteMatches, ...recordMatches, ...equipMatches, ...kontraktorMatches];
     });
 
+    // Keyboard drive for the global search dropdown: ↑/↓ move the highlight,
+    // Enter opens it (the first result when nothing is highlighted yet),
+    // Esc closes. Pairs with Ctrl+K — find and open without the mouse.
+    const searchActiveIdx = ref(-1);
+    watch(globalSearch, () => { searchActiveIdx.value = -1; });
+    function onGlobalSearchKey(e) {
+      const list = searchResults.value || [];
+      if(e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        if(!list.length) return;
+        e.preventDefault();
+        showSearchResults.value = true;
+        const n = list.length, i = searchActiveIdx.value;
+        searchActiveIdx.value = e.key === 'ArrowDown' ? (i + 1) % n : (i <= 0 ? n - 1 : i - 1);
+        nextTick(() => document.querySelector('.topbar-search-wrap .search-active')?.scrollIntoView({ block:'nearest' }));
+      } else if(e.key === 'Enter') {
+        const pick = list[searchActiveIdx.value] || list[0];
+        if(!pick) return;
+        e.preventDefault();
+        handleSearchResultClick(pick);
+        e.target.blur();
+      } else if(e.key === 'Escape') {
+        showSearchResults.value = false;
+        e.target.blur();
+      }
+    }
     function handleSearchResultClick(item) {
       globalSearch.value = ''; showSearchResults.value = false;
       if(item._kind === 'command') {
@@ -16293,6 +16468,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // by siteNextPmMap/overdueMap/siteHealthScores — without this shared
     // map they'd independently re-filter the full pmRecords array from
     // scratch per site, an O(sites*records) redo on every recompute.
+    // teamPerformance/teamPerformanceTrend/staffWorkload use it the same
+    // way for their per-assignment "was there a record near this date"
+    // lookup — that was a scan of every record for every assignment.
     const pmRecordsBySite = computed(() => {
       const map = {};
       maintRecords.value.forEach(r => {
@@ -17687,9 +17865,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // A user is considered "online" if their lastSeen is within the last
     // ONLINE_THRESHOLD_MS; if a tab is closed/crashes, the heartbeat simply
     // stops and they age out as "offline" within that window.
-    const ONLINE_THRESHOLD_MS = 90 * 1000;
-    const HEARTBEAT_INTERVAL_MS = 45 * 1000;
-    // loadUsers() is a FULL users-collection read. Running it on every 45s
+    // Kept at 2x the heartbeat interval so one late/missed tick never flips
+    // an active user to "offline". Heartbeat is 90s (was 45s): each tick is
+    // a write + an own-doc read per open tab, and the freeze/delete/expiry
+    // force-logout it also drives is UX only — firestore.rules already
+    // refuses writes from a frozen account (myRole() checks isNotFrozen()).
+    const ONLINE_THRESHOLD_MS = 180 * 1000;
+    const HEARTBEAT_INTERVAL_MS = 90 * 1000;
+    // loadUsers() is a FULL users-collection read. Running it on every
     // heartbeat tick made it the single heaviest recurring read in the app
     // (user-count x 80 reads per hour, per open tab) purely to keep the
     // online-indicator fresh — which tolerates being a few minutes stale.
@@ -17763,7 +17946,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     // Immediate catch-up when the tab comes back: re-announces presence and
     // re-runs the frozen/deleted/expired account check right away instead of
-    // waiting up to 45s for the next tick (the in-tick hidden-guard above
+    // waiting up to HEARTBEAT_INTERVAL_MS for the next tick (the in-tick hidden-guard above
     // means NO ticks ran while the tab was away). Registered per-session;
     // addEventListener de-dupes on the same function reference, so a repeat
     // _startHeartbeat() can't stack duplicate listeners.
@@ -17933,15 +18116,31 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // Dashboard → Kontrak → Dashboard → Kontrak) cost a full Firestore
     // re-fetch every single time even when nothing had changed. None of
     // these collections sync in real time (load*() are one-time .get()
-    // reads, not onSnapshot listeners), so a short skip-window doesn't
-    // give up any freshness guarantee that already existed. Call
-    // load*(true) to force a real fetch regardless — used right after a
-    // bulk backup restore, where the collection's data changed via a
-    // path these functions can't otherwise detect.
-    const COLL_CACHE_MS = 30 * 1000;
+    // reads, not onSnapshot listeners), so a skip-window doesn't give up
+    // any freshness guarantee that already existed. Call load*(true) to
+    // force a real fetch regardless — used right after a bulk backup
+    // restore, where the collection's data changed via a path these
+    // functions can't otherwise detect, and by every manual refresh (see
+    // _refreshCurrentPageCollection). 5 min (was 30s): this session's own
+    // edits never depend on it — the CRUD modals patch the local list
+    // directly (_localUpsert) — so it only delays seeing OTHER users'
+    // changes, which a manual refresh now always fetches immediately.
+    const COLL_CACHE_MS = 5 * 60 * 1000;
     const _collLoadedAt = {};
     function _collFresh(key) { return _collLoadedAt[key] && (Date.now() - _collLoadedAt[key] < COLL_CACHE_MS); }
     function _markCollLoaded(key) { _collLoadedAt[key] = Date.now(); }
+    // Manual refresh (sync pill / pull-to-refresh) must always fetch fresh,
+    // not be swallowed by the skip-window above. loadAll() covers pmRecords/
+    // equipment/schedule/users but not these lazily-loaded page lists, so
+    // force-reload whichever one the user is currently looking at.
+    async function _refreshCurrentPageCollection() {
+      const loaders = {
+        // contracts omitted: loadAll() already force-reloads it.
+        warranty: loadWarranty, 'vir-warranty': loadVirWarranty,
+        'surat-memo': loadLetterMemos, 'log-cm': loadCmCases, 'audit-log': loadAuditLogs,
+      };
+      await loaders[page.value]?.(true);
+    }
     // Patches a single add/edit result into a local ref-array list in
     // place, instead of re-fetching the whole collection (the same
     // reasoning as savePM's local pmRecords patch above) — used by the
@@ -18512,6 +18711,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       pmRecords.value = []; teamAssignments.value = [];
       siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {}; virSiteEquipSony.value = {};
       equipLoadState.cctv = false; equipLoadState.vir = false;
+      _clearEquipConflict(); // a held conflict belongs to this session's unsaved edits — never the next user's
+      listCachePainted.value = false;
       contracts.value = []; warranty.value = []; virWarranty.value = [];
       letterMemos.value = []; cmCases.value = [];
       auditLogs.value = []; recentAuditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
@@ -18570,7 +18771,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function resetForm(formName) {
       const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC, nServer, nTablet, nRoom };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
-      delete refs[formName]._temp; // not a form field — never let one carry into the next item (see _equipEditTemp)
+      delete refs[formName]._temp; delete refs[formName]._changes; // not form fields — never let one carry into the next item (see _equipEditTemp)
       // FORM_DEFAULTS.nServer's brand/model assume Optager (its only real
       // appliance) — VCS is a different vendor, so override to its own
       // fixed default here instead of showing "OPTAGER"/"HD4000" on a VCS
@@ -18591,6 +18792,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     async function ocrScan(event, formName, field) {
       const file = event.target.files[0];
       if (!file) return;
+      // The scan fills (and shows its token picker inside) that kind's form — unfold it.
+      const _ocrKind = Object.keys(EQUIP_KEY_TO_FORM).find(k => EQUIP_KEY_TO_FORM[k] === formName);
+      if(_ocrKind && _ocrKind in equipFormOpen) equipFormOpen[_ocrKind] = true;
       ocrState.active=true; ocrState.target=formName; ocrState.loading=true; ocrState.tokens=[]; ocrState.progress=0;
       event.target.value='';
       try {
@@ -18981,6 +19185,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(kind === 'alarms' && !item.type) item.type = 'SMS Alert System';
         if(kind === 'misc' && !item.category) item.category = 'Monitor';
         if(kind === 'tablets') { const imei = String(item.imei||'').replace(/[\s-]/g, ''); if(imei) item.imei = imei; else delete item.imei; } // same shape as addTablet()
+        _appendEquipChange(item, { note: 'Ditambah (import fail)' });
         list.push(item);
         if(key) seen.set(key, item);
         added++;
@@ -19177,7 +19382,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function _stripEquipCreds(list) {
       return (list || []).map(it => {
         if(!it || typeof it !== 'object') return it;
-        const { accessUser, accessPw, ...rest } = _toPmTempFields(it);
+        // _changes is the Urus Peralatan edit log — internal, never part of a borang.
+        const { accessUser, accessPw, _changes, ...rest } = _toPmTempFields(it);
         return rest;
       });
     }
@@ -19390,8 +19596,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
 
     // ---- Load data ----
+    // Resolves true only for a fully successful load — callers show their own
+    // "✅ disegerakkan/dimuat" toast on that alone, since a failed or partial
+    // load has already shown its error toast (the two used to appear together).
     async function loadAll() {
       loading.value=true;
+      loadAllInFlight.value = true;
+      let _loadOk = false;
       try {
         const eq = {};
         SITES.forEach(s=>{ eq[s.id]={cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]}; });
@@ -19413,7 +19624,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           _loadAllPartialFail = true;
           return null;
         };
-        const [snap, credSnap, vsnap, vCredSnap, pmSnap, tSnap] = await Promise.all([
+        // Started (not awaited) BEFORE the cache paint below, so the network
+        // round-trip runs concurrently with the local IndexedDB read instead
+        // of after it.
+        const _serverReads = Promise.all([
           db.collection('siteEquipment').get().catch(_catchRead('siteEquipment')),
           db.collection('siteEquipmentCredentials').get().catch(()=>null),
           db.collection('virSiteEquipment').get().catch(_catchRead('virSiteEquipment')),
@@ -19433,6 +19647,41 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           // the user happens to visit that page first.
           loadKontraktorLuar(),
         ]);
+        // Not awaited until after the cache paint, so a rejection could land
+        // while nothing is listening yet and log a spurious "Uncaught (in
+        // promise)". This handled branch silences only that warning — the
+        // `await _serverReads` below still throws into the outer catch.
+        _serverReads.catch(() => {});
+
+        // Cache-first paint. Offline persistence is on (enablePersistence),
+        // but a plain .get() still waits for the server whenever online —
+        // so the dashboard sat on its skeleton for the full pmRecords +
+        // teamAssignments download, a cost that only grows as records
+        // accumulate. Painting those two from the local cache first makes a
+        // repeat login near-instant; the server results below then replace
+        // them wholesale (deleted docs drop out, edits land).
+        // Scoped on purpose:
+        //   - Only these two collections. A cache read does NOT evaluate
+        //     security rules, so it must stay limited to data every
+        //     signed-in role may read anyway (both are `isSignedIn()` in
+        //     firestore.rules) — never the *Credentials collections.
+        //   - Never equipment. Its saves are whole-site overwrites guarded
+        //     by equipLoadState; painting a stale copy could let an edit or
+        //     autosave land on top of it.
+        //   - Only on a cold load (nothing in memory yet): a refresh while
+        //     data is already shown gains nothing from a stale repaint.
+        if(!pmRecords.value.length && !teamAssignments.value.length) {
+          try {
+            const [pmC, tC] = await Promise.all([
+              db.collection('pmRecords').orderBy('createdAt','desc').get({ source:'cache' }),
+              db.collection('teamAssignments').orderBy('date','asc').get({ source:'cache' }),
+            ]);
+            if(pmC.size) { pmRecords.value = pmC.docs.map(d=>({id:d.id,...d.data()})); listCachePainted.value = true; }
+            if(tC.size) teamAssignments.value = tC.docs.map(d=>({id:d.id,...d.data()}));
+          } catch(e) { /* no cache yet / persistence unavailable — just wait for the server */ }
+        }
+
+        const [snap, credSnap, vsnap, vCredSnap, pmSnap, tSnap] = await _serverReads;
 
         // Merge onto the default shape (not a full overwrite) — a site doc
         // saved before some equipment category existed in the schema (e.g.
@@ -19470,6 +19719,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           siteEquip.value = eq;
           equipLoadState.cctv = _cctvEquipOk;
         }
+        // Fresh server copy in memory → a held save-conflict on it is moot
+        // (the unsaved local edits it was holding were just replaced).
+        if(_cctvEquipOk && equipConflict.key?.startsWith('siteEquipment:')) _clearEquipConflict();
 
         // VIR site equipment — one doc per site holding `rooms` (shared)
         // plus two nested, fully separate equipment sets keyed 'BCD' and
@@ -19532,6 +19784,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           virSiteEquipSony.value = veqSony;
           equipLoadState.vir = _virEquipOk;
         }
+        if(_virEquipOk && equipConflict.key?.startsWith('virSiteEquipment:')) _clearEquipConflict(); // see the CCTV note above
 
         if(pmSnap) pmRecords.value = pmSnap.docs.map(d=>({id:d.id,...d.data()}));
         // Counts as a fresh pull for the notification tick's hourly
@@ -19543,7 +19796,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // Contract start dates now feed Site Health Score's PM-cycle
         // anchoring (see siteHealthScores) — that widget is visible to every
         // role, so contracts must load for everyone, not just admin/superadmin.
-        loadContracts(); // fire-and-forget — needed for the dashboard expiry badge/alert + site health scoring
+        // force: with COLL_CACHE_MS at 5 min this would otherwise skip on a
+        // manual refresh / TV-mode refresh and leave contract dates stale.
+        loadContracts(true); // fire-and-forget — needed for the dashboard expiry badge/alert + site health scoring
         // The FULL auditLogs collection is NOT preloaded here on purpose —
         // unlike contracts, it's an unbounded, ever-growing collection that's
         // only otherwise read on the rarely-visited full Log Audit page (both
@@ -19569,21 +19824,25 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         if(_loadAllPartialFail) {
           showToast('Sebahagian data gagal dimuat — cuba muat semula halaman.', 'error');
         }
+        _loadOk = !_loadAllPartialFail;
         lastDataSyncAt.value = Date.now(); syncNow.value = Date.now(); // topbar sync pill
       } catch(e) {
         console.error(e);
         showToast('Gagal memuatkan data: ' + e.message + '. Semak sambungan internet.', 'error');
       }
       loading.value=false;
+      loadAllInFlight.value = false;
       initialLoading.value=false;
+      return _loadOk;
     }
     // Topbar sync pill click — see lastDataSyncAt's comment.
     async function refreshDataFromPill() {
       if(loading.value) return;
       if(!isOnline.value) { showToast('Tiada sambungan internet — tidak dapat segar semula data.', 'error'); return; }
       if(page.value === 'site-equip') { showToast('Tidak boleh segar semula di halaman Urus Peralatan — keluar dari halaman ini dahulu supaya perubahan yang belum disimpan tidak hilang.', 'error'); return; }
-      await loadAll();
-      showToast('Data disegerakkan!');
+      const ok = await loadAll();
+      await _refreshCurrentPageCollection();
+      if(ok) showToast('Data disegerakkan!');
     }
 
     // ---- User Management ----
@@ -20514,6 +20773,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const blob = await (await fetch(dataURL)).blob();
         const oldPath = allUsers.value.find(u => u.id === uid)?.photoPath || authProfile.value?.photoPath;
         const path = `profile-photos/${uid}/${Date.now()}_avatar.jpg`;
+        await _ensureStorage();
         const snap = await storage.ref(path).put(blob, { contentType: 'image/jpeg' });
         const url = await snap.ref.getDownloadURL();
         await db.collection('users').doc(uid).update({ photoURL: url, photoPath: path });
@@ -20983,26 +21243,139 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       equipSearchHitUid.value = it._uid;
       await nextTick();
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      document.querySelector(`[data-equip-uid="${CSS.escape(it._uid)}"]`)?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+      // The page swap can run inside a View Transition, so the row may not be
+      // in the DOM yet on this tick — try again shortly if it isn't.
+      const scrollToHit = () => {
+        const row = document.querySelector(`[data-equip-uid="${CSS.escape(it._uid)}"]`);
+        row?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
+        return !!row;
+      };
+      if(!scrollToHit()) setTimeout(scrollToHit, 400);
       setTimeout(() => { if(equipSearchHitUid.value === it._uid) equipSearchHitUid.value = null; }, 2600);
     }
     // eqTab ids → equipment kind (two tab ids are singular); rooms has no filter.
     const _EQ_TAB_KIND = { cameras:'cameras', nvr:'nvr', hdd:'hdd', switch:'switches', alarm:'alarms', misc:'misc', servers:'servers', tablets:'tablets' };
     const equipFilterKind = computed(() => _EQ_TAB_KIND[eqTab.value] || null);
+
+    // ---- "⚙ Lajur" column picker — per viewer, remembered in this browser ----
+    // Hiding is done by nth-child, so each kind's list below must follow its
+    // <thead> exactly, v-if conditions included (Aksesori/Nota are CCTV-only,
+    // Username/Password need canViewCredentials). DOM column 1 is the select
+    // box, 2 is "#", 3 is the name (pinned, never hideable), last is Tindakan.
+    const _EQUIP_COL_LS_KEY = 'pmapp_equipHiddenCols';
+    function _equipCols(kind) {
+      const cctv = currentProject.value !== 'vir', cred = canViewCredentials.value;
+      const cols = {
+        cameras:  ['Nama/Lokasi','IP Address','Jenis','Brand','Model', cctv && 'Aksesori','No. Siri','Redundance', cctv && 'Nota', cred && 'Username', cred && 'Password'],
+        nvr:      ['Nama','Jenis','Peranan','Brand','Model','No. Siri','IP','Nota', cred && 'Username', cred && 'Password'],
+        hdd:      ['Brand','Model','No. Siri','Kapasiti','Jumlah Unit','Config'],
+        switches: ['Nama','Brand','Model','No. Siri','IP Address','Nota', cred && 'Username', cred && 'Password'],
+        alarms:   ['Nama','Jenis','Brand','Model','No. Siri','IP Address', cred && 'Username', cred && 'Password'],
+        servers:  ['Nama','Brand','Model','No. Siri','Processor','RAM','Storage','GPU','Motherboard','Motherboard Type','LAN 1 IP','LAN 2 IP','WiFi IP','OS','OS Product Key','Optager Machine ID','License Expiry','Lesen (.lic)','Tarikh Pasang'],
+        tablets:  ['Nama','Brand','Model','No. Siri','IMEI','Machine ID','Lesen (.lic)'],
+        misc:     ['Nama/Lokasi','Kategori','Brand','Model','No. Siri','IP Address', cctv && 'Nota', cred && 'Username', cred && 'Password'],
+      }[kind] || [];
+      return ['', '#', ...cols.filter(Boolean)];
+    }
+    function equipHideableCols(kind) { return _equipCols(kind).slice(3); }
+    const equipHiddenCols = reactive(Object.fromEntries(Object.keys(EQUIP_FILTER_FIELDS).map(k => [k, []])));
+    try {
+      const saved = JSON.parse(localStorage.getItem(_EQUIP_COL_LS_KEY) || '{}');
+      Object.keys(equipHiddenCols).forEach(k => { if(Array.isArray(saved[k])) equipHiddenCols[k] = saved[k].filter(x => typeof x === 'string'); });
+    } catch(e) {}
+    const equipColPickerOpen = ref(false);
+    watch([eqTab, () => selSite.value?.id], () => { equipColPickerOpen.value = false; });
+    // Close the panel on a click outside it or Escape, like a normal dropdown.
+    // composedPath(), not target.closest(): "↺ Tunjuk semua" removes itself
+    // (v-if) before this listener runs, so its target is already detached.
+    document.addEventListener('click', e => { if(equipColPickerOpen.value && !e.composedPath().some(el => el.classList?.contains('equip-col-picker'))) equipColPickerOpen.value = false; });
+    document.addEventListener('keydown', e => { if(e.key === 'Escape' && equipColPickerOpen.value) equipColPickerOpen.value = false; });
+    function isEquipColHidden(kind, label) { return (equipHiddenCols[kind] || []).includes(label); }
+    function _saveEquipCols() { try { localStorage.setItem(_EQUIP_COL_LS_KEY, JSON.stringify(equipHiddenCols)); } catch(e) {} }
+    function toggleEquipCol(kind, label) {
+      const cur = equipHiddenCols[kind] || [];
+      equipHiddenCols[kind] = cur.includes(label) ? cur.filter(x => x !== label) : [...cur, label];
+      _saveEquipCols();
+    }
+    function resetEquipCols(kind) { equipHiddenCols[kind] = []; _saveEquipCols(); }
+    // One generated <style> holds every hide rule. Recomputed whenever the
+    // choices, the project (Aksesori/Nota) or the role (credentials) change,
+    // since those shift which nth-child a given column sits at.
+    let _equipColStyleEl = null;
+    watch(() => [JSON.stringify(equipHiddenCols), currentProject.value, canViewCredentials.value], () => {
+      const rules = [];
+      Object.keys(equipHiddenCols).forEach(kind => {
+        const cols = _equipCols(kind);
+        equipHiddenCols[kind].forEach(label => {
+          const i = cols.indexOf(label);
+          if(i >= 3) rules.push(`.equip-tbl-${kind} th:nth-child(${i+1}),.equip-tbl-${kind} td:nth-child(${i+1}){display:none}`);
+        });
+      });
+      if(!_equipColStyleEl) { _equipColStyleEl = document.createElement('style'); _equipColStyleEl.id = 'equip-col-hide'; document.head.appendChild(_equipColStyleEl); }
+      _equipColStyleEl.textContent = rules.join('\n');
+    }, { immediate: true });
+    // Click-a-column-header sort (view only — the stored order, which the
+    // "Susun ikut IP" button and the borang use, is never changed). Cycles
+    // ascending → descending → off. IP columns compare numerically
+    // (10.0.0.9 before 10.0.0.10); text compares naturally (CAM-2 before CAM-10).
+    const equipSort = reactive(Object.fromEntries(Object.keys(EQUIP_FILTER_FIELDS).map(k => [k, { key:'', dir:1 }])));
+    function toggleEquipSort(kind, key) {
+      const s = equipSort[kind];
+      if(s.key !== key) { s.key = key; s.dir = 1; }
+      else if(s.dir === 1) s.dir = -1;
+      else { s.key = ''; s.dir = 1; }
+    }
+    function equipSortIcon(kind, key) {
+      const s = equipSort[kind];
+      return s.key !== key ? '↕' : (s.dir === 1 ? '▲' : '▼');
+    }
+    const _IP_SORT_KEYS = new Set(['ip', 'lanIp']);
+    function _equipCompare(a, b, key) {
+      if(_IP_SORT_KEYS.has(key)) {
+        const ka = _ipSortKey(a[key]), kb = _ipSortKey(b[key]);
+        for(let i = 0; i < 4; i++) if(ka[i] !== kb[i]) return ka[i] < kb[i] ? -1 : 1;
+        return 0;
+      }
+      return String(a[key] ?? '').localeCompare(String(b[key] ?? ''), undefined, { numeric:true, sensitivity:'base' });
+    }
     const equipView = computed(() => {
       const out = {};
       Object.keys(EQUIP_FILTER_FIELDS).forEach(kind => {
         const f = equipFilter[kind];
         const q = f.q.trim().toLowerCase();
-        out[kind] = (selSiteEquip.value[kind] || []).map((it, idx) => ({ ...it, _idx: idx })).filter(it => {
+        const rows = (selSiteEquip.value[kind] || []).map((it, idx) => ({ ...it, _idx: idx })).filter(it => {
           if(f.uid && it._uid !== f.uid) return false;
           if(f.temp && !it._temp) return false;
           if(EQUIP_FILTER_FIELDS[kind].some(x => f[x.key] && _equipFilterVal(it, x.key) !== f[x.key])) return false;
           return !q || EQUIP_SEARCH_FIELDS.some(k => String(it[k] || '').toLowerCase().includes(q));
         });
+        const s = equipSort[kind];
+        if(s.key) rows.sort((a, b) => s.dir * _equipCompare(a, b, s.key));
+        out[kind] = rows;
       });
       return out;
     });
+    // Add/edit form cards start folded (just their header row — Scan/Import
+    // stay reachable) so the list isn't pushed a full screen down. Shown
+    // anyway while editing that kind, when the list is still empty, or
+    // after the user opens it / starts an OCR scan into it.
+    const equipFormOpen = reactive(Object.fromEntries(Object.keys(EQUIP_FILTER_FIELDS).map(k => [k, false])));
+    function equipFormShown(kind) {
+      return equipFormOpen[kind] || equipEditIdx[kind] !== null || !(selSiteEquip.value[kind] || []).length;
+    }
+    function toggleEquipForm(kind) {
+      if(equipEditIdx[kind] !== null || !(selSiteEquip.value[kind] || []).length) return; // forced open — see equipFormShown
+      equipFormOpen[kind] = !equipFormOpen[kind];
+    }
+    // Empty-list "+ Tambah" button: unfold the form, bring it into view and
+    // put the cursor in its first field.
+    async function focusEquipForm(kind) {
+      equipFormOpen[kind] = true;
+      await nextTick();
+      const card = document.getElementById('equip-form-' + kind);
+      card?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      card?.querySelector('input:not([type=file]):not([type=checkbox]), select, textarea')?.focus({ preventScroll: true });
+    }
     // Bulk actions only ever act on rows the user can see: a selection on a
     // row the filter now hides is dropped, so "Padam Terpilih" can't delete
     // something off-screen.
@@ -21017,6 +21390,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // A filter set for one site/room makes no sense on the next one.
     watch(() => [selSite.value?.id, currentProject.value, equipVirSystem.value, equipVirRoomUid.value], () => {
       Object.keys(equipFilter).forEach(clearEquipFilter);
+      Object.keys(equipFormOpen).forEach(k => { equipFormOpen[k] = false; });
     });
     const hddGroupedByNvr = computed(() => _groupByNvr(equipView.value.hdd));
     const camerasGroupedByNvr = computed(() => _groupByNvr(equipView.value.cameras));
@@ -21080,9 +21454,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // needs to survive a re-render.
     async function copyToClipboard(text, evt) {
       if(!text) return;
+      // Read before the await — the browser resets event.currentTarget to
+      // null once dispatch ends, so reading it after left btn null and the
+      // "✓" feedback never showed.
+      const btn = evt?.currentTarget;
       try {
         await navigator.clipboard.writeText(String(text));
-        const btn = evt?.currentTarget;
         if(btn) {
           const original = btn.textContent;
           btn.textContent = '✓';
@@ -21091,6 +21468,72 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         }
       } catch(e) { showToast('Gagal salin ke clipboard: ' + e.message, 'error'); }
     }
+    // ── IP cells in the equipment tables: click to copy + duplicate flag ──
+    // Index of every well-formed IPv4 on the open site (current room for
+    // Optager/VCS/SONY) → the items using it, so a typo that gives two
+    // devices the same IP shows up in amber. "-", "DHCP" etc. never clash.
+    const _EQUIP_IP_FIELDS = { cameras:['ip'], nvr:['ip'], switches:['ip'], alarms:['ip'], misc:['ip'], servers:['lanIp','lan2Ip','wifiIp'] };
+    const _EQUIP_IP_KIND_LABEL = { cameras:'Kamera', nvr:'NVR', switches:'Switch', alarms:'Alarm', misc:'Lain-lain', servers:'Appliance' };
+    const _IPV4_RE = /^\d{1,3}(\.\d{1,3}){3}$/;
+    const equipIpIndex = computed(() => {
+      const idx = {};
+      const eq = selSiteEquip.value || {};
+      Object.entries(_EQUIP_IP_FIELDS).forEach(([kind, fields]) => {
+        (eq[kind] || []).forEach((it, i) => {
+          const id = kind + ':' + (it._uid || i);
+          fields.forEach(f => {
+            const ip = String(it[f] || '').trim();
+            if(!_IPV4_RE.test(ip)) return;
+            const list = idx[ip] || (idx[ip] = []);
+            if(!list.some(e => e.id === id)) list.push({ id, label: _EQUIP_IP_KIND_LABEL[kind] + ' ' + (it.name || '(tanpa nama)') });
+          });
+        });
+      });
+      return idx;
+    });
+    // Labels of the OTHER items using this IP. uid = the asking row's
+    // _uid (or its real index, matching the index above).
+    function equipIpClash(ip, kind, uid) {
+      const list = equipIpIndex.value[String(ip || '').trim()];
+      if(!list || list.length < 2) return [];
+      return list.filter(e => e.id !== kind + ':' + uid).map(e => e.label);
+    }
+    // Same check for the add/edit form's IP field, ignoring the item being edited.
+    function equipFormIpClash(kind, ip) {
+      const ei = equipEditIdx[kind];
+      const it = ei !== null ? (selSiteEquip.value[kind] || [])[ei] : null;
+      const list = equipIpIndex.value[String(ip || '').trim()] || [];
+      const self = it ? kind + ':' + (it._uid || ei) : null;
+      return list.filter(e => e.id !== self).map(e => e.label);
+    }
+    function ipCellTitle(ip, kind, uid) {
+      const clash = equipIpClash(ip, kind, uid);
+      return (clash.length ? '⚠️ IP sama dengan: ' + clash.join(', ') + '\n' : '') + 'Klik untuk salin';
+    }
+    async function copyIp(ip) {
+      try { await navigator.clipboard.writeText(String(ip)); showToast(`IP ${ip} disalin`); }
+      catch(e) { showToast('Gagal salin ke clipboard: ' + e.message, 'error'); }
+    }
+    // Optager licence expiry ("YYYY-MM-DD"): '' | 'soon' (≤60 days) | 'expired'.
+    function licenseDaysLeft(d) {
+      const exp = _parseLocalDate(d);
+      if(!exp || isNaN(exp)) return null;
+      const today = _parseLocalDate(_localDateStr());
+      return Math.round((exp - today) / 864e5);
+    }
+    function licenseExpiryState(d) {
+      const n = licenseDaysLeft(d);
+      return n === null ? '' : n < 0 ? 'expired' : n <= 60 ? 'soon' : '';
+    }
+    function licenseExpiryNote(d) {
+      const n = licenseDaysLeft(d);
+      if(n === null || n > 60) return '';
+      return n < 0 ? `tamat ${-n} hari lalu` : n === 0 ? 'tamat hari ini' : `${n} hari lagi`;
+    }
+    const equipLicenseAlert = computed(() => {
+      const states = (selSiteEquip.value.servers || []).map(s => licenseExpiryState(s.optagerLicenseExpiry));
+      return { expired: states.filter(s => s === 'expired').length, soon: states.filter(s => s === 'soon').length };
+    });
     // ── Equipment table row feedback (UI polish) ──
     // row-flash: every add*/edit/bulk-edit stamps the item with a fresh
     // _ts, so "_ts newer than equipFlashCutoff" marks just-saved rows
@@ -21119,7 +21562,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // scrolled them UP to the form). Plain adds stay at the form so several
     // items can be entered back to back.
     function _afterEquipSave(kind) {
-      _reattachEquipTemp(kind);
+      if(!_reattachEquipTemp(kind)) {
+        // Plain add — the new row is the one just stamped with the newest _ts.
+        const added = (selSiteEquip.value[kind] || []).reduce((b, it) => (it._ts || 0) > (b?._ts || 0) ? it : b, null);
+        if(added && !added._changes) _appendEquipChange(added, { note: 'Ditambah' });
+      }
       _bumpEquipFlash();
       if(_equipEditReturnKind !== kind) return;
       _equipEditReturnKind = null;
@@ -21273,8 +21720,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // instead of only after a full reload. Not before: a non-empty list
       // would stop that first load from ever happening.
       const now = new Date();
-      if(equipmentRemovalLogs.value.length) equipmentRemovalLogs.value.unshift({ id: 'local-' + now.getTime() + '-' + Math.random().toString(36).slice(2,6), ...entry, removedAt: { toDate: () => now } });
+      let local = null;
+      if(equipmentRemovalLogs.value.length) {
+        equipmentRemovalLogs.value.unshift({ id: 'local-' + now.getTime() + '-' + Math.random().toString(36).slice(2,6), ...entry, removedAt: { toDate: () => now } });
+        local = equipmentRemovalLogs.value[0];
+      }
       return db.collection('equipmentRemovalLog').add({ ...entry, removedAt: firebase.firestore.FieldValue.serverTimestamp() })
+        // Swap in the real doc id — "Urus Log Mentah" deletes by id, and a
+        // delete of the placeholder id would leave the real entry behind.
+        .then(ref => { if(local) local.id = ref.id; })
         .catch(e => console.warn('Gagal log penyingkiran peralatan:', e));
     }
 
@@ -21293,12 +21747,47 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // it would otherwise be dropped on save (misc/server/tablet) or leak into
     // the next NEW item (the rest, via the form object). _afterEquipSave()
     // puts it back on the saved row by _uid.
+    // It also carries the row's `_changes` log (same rebuild problem) and a
+    // copy of the row as it was, so the save can record what changed.
     let _equipEditTemp = null;
+    // Returns true when this save was an edit (the carry matched), false for a plain add.
     function _reattachEquipTemp(kind) {
-      if(!_equipEditTemp || _equipEditTemp.key !== kind) return;
-      const it = (selSiteEquip.value[kind] || []).find(x => x._uid === _equipEditTemp.uid);
-      if(it && !it._temp) it._temp = _equipEditTemp.temp;
+      if(!_equipEditTemp || _equipEditTemp.key !== kind) return false;
+      const carry = _equipEditTemp;
       _equipEditTemp = null;
+      const it = (selSiteEquip.value[kind] || []).find(x => x._uid === carry.uid);
+      if(!it) return true;
+      if(carry.temp && !it._temp) it._temp = carry.temp;
+      it._changes = carry.changes;
+      const diffs = _diffEquip(carry.before, it);
+      if(diffs.length) _appendEquipChange(it, { diffs });
+      return true;
+    }
+
+    // ---- Per-item change log (`_changes` on each equipment row) ----
+    // Equipment saves are whole-site writes, so the audit log could only
+    // ever say "site X equipment updated" — not WHAT changed on WHICH unit.
+    // Each row keeps its own short history instead: field-level diffs on
+    // edit, plus add/import/bulk-edit/temp-swap/restore events. Shown in the
+    // 🕐 history timeline; never copied into a borang (see _stripEquipCreds).
+    // Capped per row so a busy unit can't grow the site doc unbounded.
+    const EQUIP_CHANGE_FIELDS = [['name','Nama'],['ip','IP'],['lanIp','LAN 1 IP'],['lan2Ip','LAN 2 IP'],['wifiIp','WiFi IP'],['serial','No. Siri'],['imei','IMEI'],['brand','Brand'],['model','Model'],['camType','Jenis'],['type','Jenis'],['role','Peranan'],['category','Kategori'],['nvrRef','NVR'],['redundantNvrRef','Redundance'],['capacity','Kapasiti'],['config','Konfigurasi'],['accessory','Aksesori'],['installDate','Tarikh Pasang'],['optagerMachineId','Machine ID'],['controlAppMachineId','Machine ID']];
+    const EQUIP_CHANGE_MAX = 10;
+    function _diffEquip(before, after) {
+      const out = [];
+      EQUIP_CHANGE_FIELDS.forEach(([k, label]) => {
+        const a = String(before?.[k] ?? '').trim(), b = String(after?.[k] ?? '').trim();
+        if(a !== b) out.push({ f: label, from: a, to: b });
+      });
+      // Credentials: that they changed, never their values (this log is
+      // stored with the equipment, which more roles can read).
+      if((before?.accessUser || '') !== (after?.accessUser || '') || (before?.accessPw || '') !== (after?.accessPw || ''))
+        out.push({ f: 'Kelayakan akses', from: '', to: '(dikemas kini)' });
+      return out;
+    }
+    function _appendEquipChange(item, { note = '', diffs = [] } = {}) {
+      const entry = { at: Date.now(), by: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '', note, diffs };
+      item._changes = [...(item._changes || []), entry].slice(-EQUIP_CHANGE_MAX);
     }
     const _TEMP_ORIG_FIELDS = [['name','Nama / Lokasi'],['category','Kategori'],['type','Jenis'],['camType','Jenis'],['brand','Brand'],['model','Model'],['serial','No. Siri'],['imei','IMEI'],['ip','IP Address'],['lanIp','LAN 1 IP'],['lan2Ip','LAN 2 IP'],['wifiIp','WiFi IP'],['nvrRef','NVR Berkaitan'],['redundantNvrRef','Redundance'],['accessory','Aksesori'],['capacity','Kapasiti'],['config','Konfigurasi'],['installDate','Tarikh Pasang']];
     function tempOrigRows(orig) {
@@ -21315,9 +21804,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return { list, idx: list ? list.findIndex(it => it._uid === tempReplaceModal.uid) : -1 };
     }
     function openTempReplace(key, idx) {
-      if(!canEditEquip.value) { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const item = (selSiteEquip.value[key] || [])[idx];
       if(!item) return;
+      // Viewing a stand-in's original record is read-only — open to every
+      // role (the "🔁 Sementara" badge is clickable for view-only accounts
+      // too). Swapping and restoring stay edit-only (also guarded below).
+      if(!item._temp && !canEditEquip.value) { showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!item._uid) item._uid = _genId(); // older rows may predate _uid — needed to find it again on save
       Object.assign(tempReplaceModal, {
         show: true, mode: item._temp ? 'info' : 'replace', key, uid: item._uid, siteId: selSite.value.id,
@@ -21327,6 +21819,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     function confirmTempReplace() {
       const m = tempReplaceModal;
+      if(!canEditEquip.value) { m.err = 'Anda tiada kebenaran untuk tindakan ini.'; return; }
       const brand = m.brand.trim(), model = m.model.trim(), serial = m.serial.trim(), ip = m.ip.trim();
       if(!brand || !model) { m.err = 'Brand dan Model unit pengganti wajib diisi.'; return; }
       if(m.hasIp && !isValidIp(ip)) { m.err = 'Format IP Address tidak sah (contoh: 192.168.0.11)'; return; }
@@ -21341,9 +21834,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(dup) { m.err = _dupErrMsg(dup); return; }
       // Credentials stay out of the snapshot (they live in their own
       // stricter-access collection), as does any stale _temp/_ts.
-      const { accessUser, accessPw, _temp, _ts, ...original } = cur;
+      // _changes stays with the row (the position's log), not the snapshot.
+      const { accessUser, accessPw, _temp, _ts, _changes, ...original } = cur;
       next._temp = { original, reason: m.reason.trim(), date: m.date, by: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '' };
       next._ts = Date.now();
+      _appendEquipChange(next, { note: 'Ganti sementara', diffs: _diffEquip(cur, next) });
       if(equipEditIdx[m.key] === idx) cancelEditEquip(m.key); // its form holds the pre-swap unit
       list[idx] = next;
       _logEquipRemoval(m.siteId, m.key, original, 'ganti-sementara', m.reason.trim());
@@ -21353,6 +21848,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
     async function restoreTempOriginal() {
       const m = tempReplaceModal;
+      if(!canEditEquip.value) { m.err = 'Anda tiada kebenaran untuk tindakan ini.'; return; }
       let { list, idx } = _tempTarget();
       if(idx === -1 || !list[idx]._temp?.original) { m.err = 'Rekod tidak dijumpai — mungkin telah diubah atau dipadam. Tutup dan cuba lagi.'; return; }
       const before = list[idx], beforeOrig = before._temp.original;
@@ -21363,7 +21859,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       ({ list, idx } = _tempTarget());
       if(idx === -1 || !list[idx]._temp?.original) { showToast('Rekod tidak dijumpai — mungkin telah diubah atau dipadam.', 'error'); return; }
       const cur = list[idx], orig = cur._temp.original;
-      const restored = { ...orig, _uid: cur._uid, _ts: Date.now() };
+      // The row's own log carries on (an older snapshot may hold a stale copy of it).
+      const restored = { ...orig, _uid: cur._uid, _ts: Date.now(), _changes: cur._changes || [] };
+      _appendEquipChange(restored, { note: 'Unit asal dipulihkan', diffs: _diffEquip(cur, restored) });
       // Keep whatever login is on the row now — the original's was never
       // snapshotted (see confirmTempReplace). Only set when present: a
       // Firestore write rejects undefined fields.
@@ -21421,7 +21919,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const editedUid = equipEditIdx[kind]!==null ? (list[equipEditIdx[kind]]||{})._uid : null;
       if(editedUid && sel.has(editedUid)) cancelEditEquip(kind);
       let count = 0;
-      list.forEach(it => { if(sel.has(it._uid)) { it[field] = value; it._ts = Date.now(); count++; } });
+      list.forEach(it => {
+        if(!sel.has(it._uid)) return;
+        const before = { ...it };
+        it[field] = value; it._ts = Date.now(); count++;
+        const diffs = _diffEquip(before, it);
+        if(diffs.length) _appendEquipChange(it, { note: 'Edit pukal', diffs });
+      });
       _bumpEquipFlash(); // the bulk-edited rows glow briefly (fresh _ts)
       bulkEditModal.show = false;
       showToast(`${bulkEditFieldsFor(kind)[field].label} dikemaskini untuk ${count} rekod! Jangan lupa klik "Simpan Semua".`);
@@ -21591,9 +22095,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!item) return;
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet, rooms:nRoom };
       Object.assign(refs[key], item);
-      // `_temp` stays off the form — see _equipEditTemp.
+      // `_temp`/`_changes` stay off the form — see _equipEditTemp.
       delete refs[key]._temp;
-      _equipEditTemp = item._temp ? { key, uid: item._uid, temp: item._temp } : null;
+      delete refs[key]._changes;
+      _equipEditTemp = key === 'rooms' ? null
+        : { key, uid: item._uid, temp: item._temp || null, changes: item._changes || [], before: { ...item } };
       // Object.assign skips keys the item doesn't have — a camera saved with
       // no note would otherwise keep the PREVIOUS row's note in the form and
       // save it onto this one.
@@ -21776,6 +22282,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           reasonLabel: REMOVAL_REASON_LABEL[l.reason] || l.reason,
           reasonCustom: l.reasonCustom || '',
         });
+      });
+      // This row's own Urus Peralatan edit log (see _appendEquipChange).
+      (item._changes || []).forEach(c => {
+        const d = new Date(c.at);
+        if(isNaN(d)) return;
+        rows.push({ rawDate: _localDateStr(d), dateLabel: fmtDateDash(_localDateStr(d)), ts: c.at, isChange: true, note: c.note || '', by: c.by || '', diffs: c.diffs || [] });
       });
       // PM/CM rows carry no time (ts 0), so a visit sorts before a swap/removal logged the same day.
       rows.sort((a,b) => (a.rawDate||'').localeCompare(b.rawDate||'') || ((a.ts||0) - (b.ts||0)));
@@ -22305,7 +22817,45 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
       return equipConflict.key === col + ':' + selSite.value.id;
     });
+    // Autosave status shown beside "Simpan Semua": pending (edit waiting for
+    // the 2s debounce) → saving → saved / offline (queued on this device,
+    // syncs when back online) / error. Keyed per site doc so another site's
+    // save never shows here; _equipSaveTok drops a stale result when two
+    // saves overlap.
+    const equipSaveStatus = reactive({ key: null, state: '', at: null });
+    let _equipSaveTok = 0;
+    function _equipDocKey() {
+      return selSite.value ? (currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment') + ':' + selSite.value.id : null;
+    }
+    function _setEquipSaveStatus(key, state, tok) {
+      if(tok !== undefined && tok !== _equipSaveTok) return;
+      Object.assign(equipSaveStatus, { key, state, at: state === 'saved' ? new Date() : equipSaveStatus.at });
+    }
+    const equipSaveStatusHere = computed(() => {
+      if(equipConflictHere.value || !equipSaveStatus.key || equipSaveStatus.key !== _equipDocKey()) return '';
+      return equipSaveStatus.state;
+    });
+    const equipSaveStatusText = computed(() => ({
+      pending: '✎ Belum disimpan…',
+      saving: '⏳ Menyimpan…',
+      saved: '✓ Disimpan ' + (equipSaveStatus.at ? equipSaveStatus.at.toLocaleTimeString('ms-MY', { hour: '2-digit', minute: '2-digit' }) : ''),
+      offline: '📴 Disimpan dalam peranti — disegerak bila online',
+      error: '⚠️ Gagal disimpan — cuba Simpan Semua',
+    })[equipSaveStatusHere.value] || '');
+    window.addEventListener('offline', () => { if(equipSaveStatus.state === 'saving') equipSaveStatus.state = 'offline'; });
     function _clearEquipConflict() { Object.assign(equipConflict, { key:null, siteName:'', by:'', at:null }); }
+    // Same stamp for an equipment doc written OUTSIDE _writeSiteEquipToFirestore
+    // (backup restore): without it, a CCTV restore (plain .set) wiped _rev
+    // so the restoring session then flagged its own restore as a conflict,
+    // and a VIR restore (merge) kept the OLD _rev so another session still
+    // holding pre-restore data could autosave straight over the restore.
+    function _equipRevStamp(col, siteId, note) {
+      const rev = _genId();
+      _myEquipRevs.add(rev);
+      _equipRev[col + ':' + siteId] = rev;
+      const by = authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '';
+      return { _rev: rev, _revBy: note ? `${by} (${note})` : by, _revAt: firebase.firestore.FieldValue.serverTimestamp() };
+    }
     // "Muat semula": drop this session's unsaved equipment edits and take the
     // server's version. A full loadAll() reuses the one tested loader for
     // both projects' (room-scoped) shapes; it's rare enough not to matter.
@@ -22316,7 +22866,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       clearEquipDraftLocal();
       _clearEquipConflict();
       loading.value = true;
-      try { await loadAll(); showToast('Data peralatan terkini dimuat.'); }
+      try { if(await loadAll()) showToast('Data peralatan terkini dimuat.'); }
       finally { loading.value = false; }
     }
     async function resolveEquipConflictOverwrite() {
@@ -22338,6 +22888,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           _equipBlockToastAt = now;
           showToast('Data peralatan tidak dimuat sepenuhnya — perubahan TIDAK disimpan supaya data sedia ada tidak terpadam. Sila muat semula halaman (F5).', 'error');
         }
+        _setEquipSaveStatus(_equipDocKey(), ''); // the load-warning banner says why
         return;
       }
       const col = currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
@@ -22348,21 +22899,6 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // Held until the user resolves it (banner) — no point re-reading
       // every 2s just to find the same conflict again.
       if(!opts.force && equipConflict.key === revKey) return 'conflict';
-      if(!opts.force) {
-        // A failed read (offline with nothing cached) skips the check and
-        // saves as before — never block offline editing on it.
-        const live = await db.collection(col).doc(siteId).get().catch(() => null);
-        if(live) {
-          const liveRev = live.exists ? (live.data()._rev || null) : null;
-          if(liveRev !== (_equipRev[revKey] || null) && !_myEquipRevs.has(liveRev)) {
-            const ld = live.exists ? live.data() : {};
-            Object.assign(equipConflict, { key: revKey, siteName: siteLabel, by: ld._revBy || '', at: ld._revAt?.toDate ? ld._revAt.toDate() : null });
-            return 'conflict';
-          }
-        }
-      }
-      const rev = _genId();
-      const revMeta = { _rev: rev, _revBy: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '', _revAt: firebase.firestore.FieldValue.serverTimestamp() };
       // accessUser/accessPw are split out into a companion doc with its own
       // (stricter) read rule — see _splitCredentials — so the main doc
       // written here never carries them, regardless of who's saving.
@@ -22392,6 +22928,34 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const credData = currentProject.value === 'vir'
         ? { [equipVirSystem.value]: creds }
         : creds;
+      // Everything above is a synchronous snapshot of the site being saved —
+      // the conflict check below awaits a server read, and this function is
+      // also called as the user LEAVES (_flushEquipAutoSave) while the
+      // site/project/system/room switch runs. Reading any of that state
+      // after the await would build the save from the place they moved to.
+      if(!opts.force) {
+        // A failed read (offline with nothing cached) skips the check and
+        // saves as before — never block offline editing on it.
+        const live = await db.collection(col).doc(siteId).get().catch(() => null);
+        if(live) {
+          const liveRev = live.exists ? (live.data()._rev || null) : null;
+          if(liveRev !== (_equipRev[revKey] || null) && !_myEquipRevs.has(liveRev)) {
+            const ld = live.exists ? live.data() : {};
+            Object.assign(equipConflict, { key: revKey, siteName: siteLabel, by: ld._revBy || '', at: ld._revAt?.toDate ? ld._revAt.toDate() : null });
+            // Detected on the way out (navigation flush) — the banner is on a
+            // page they've left, so say it here instead of failing silently.
+            if(page.value !== 'site-equip' || selSite.value?.id !== siteId)
+              showToast(`Perubahan peralatan "${siteLabel}" BELUM disimpan — site ini telah diubah oleh ${ld._revBy || 'pengguna lain'}. Buka semula site tersebut untuk pilih tindakan.`, 'error');
+            return 'conflict';
+          }
+        }
+      }
+      const rev = _genId();
+      const revMeta = { _rev: rev, _revBy: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '', _revAt: firebase.firestore.FieldValue.serverTimestamp() };
+      // commit() only resolves on server ack, so offline the write sits in
+      // Firestore's local queue — say so instead of "Menyimpan…" forever.
+      const saveTok = ++_equipSaveTok;
+      _setEquipSaveStatus(revKey, navigator.onLine === false ? 'offline' : 'saving', saveTok);
       try {
         // Batched into one round-trip instead of two sequential awaited
         // .set() calls — this fires on every auto-save (every ~2s of
@@ -22409,6 +22973,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         _equipRev[revKey] = rev;
         if(equipConflict.key === revKey) _clearEquipConflict(); // a forced save resolves it
         await _fw(batch.commit());
+        _setEquipSaveStatus(revKey, 'saved', saveTok);
         logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
         // Checkmark only alongside the toast (i.e. never for the silent
@@ -22416,6 +22981,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // someone's actively typing would be constant visual noise, not delight.
         if(opts.toast !== false) { showToast('Peralatan berjaya disimpan!'); flashSavedCheckmark(); }
       } catch(e){
+        _setEquipSaveStatus(revKey, 'error', saveTok);
         showToast('Gagal simpan automatik: '+e.message,'error');
       }
     }
@@ -22443,9 +23009,35 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       _equipAutoSaveTimer = null;
       _writeSiteEquipToFirestore({ toast:false });
     }
+    // Navigation that switches project (openSites, openPMList, …) sets
+    // currentProject BEFORE page, so the page-leave flush ran with the NEW
+    // project: the pending save looked this site up in the other project's
+    // store, found nothing and threw — the last ≤2s of edits never reached
+    // the server. Flush synchronously instead, with the old project briefly
+    // put back; _writeSiteEquipToFirestore snapshots everything it needs
+    // before its first await. (Registered here, after _equipAutoSaveTimer,
+    // so a sync trigger can never hit it before it exists.)
+    let _projSwitchFlushing = false;
+    watch(currentProject, (nv, ov) => {
+      if(_projSwitchFlushing || !_equipAutoSaveTimer) return;
+      _projSwitchFlushing = true;
+      try { currentProject.value = ov; _flushEquipAutoSave(); }
+      finally { currentProject.value = nv; _projSwitchFlushing = false; }
+    }, { flush: 'sync' });
 
     // ---- PM Form ----
     function startNewPM(proj) {
+      // A new borang snapshots the site's equipment list (loadPMEquip /
+      // the Optager room snapshot). The dashboard can now render from
+      // cache before equipment has arrived from the server (see loadAll),
+      // so opening the form in that window would capture an EMPTY
+      // equipment list. Only blocks while a load is genuinely in flight —
+      // a failed equipment load (nothing left to wait for) behaves as before.
+      const _proj = proj || currentProject.value;
+      if(loadAllInFlight.value && !equipLoadState[_proj === 'vir' ? 'vir' : 'cctv']) {
+        showToast('Data peralatan masih dimuatkan — sila cuba sebentar lagi.', 'error');
+        return false;
+      }
       clearPmDraftLocal();
       pm._draftId = null; pm._createdAt = null; pm._isEdit = false; pm._submittedAt = null; pm._submittedBy = null; pm._createdBy = null; pm._cmStatus = null; pm._resolvedAt = null;
       if(proj) currentProject.value = proj;
@@ -22474,6 +23066,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       Object.assign(pm, _instSignDefaults());
       pmStep.value=1;
       page.value='new-pm';
+      return true;
     }
 
     // Borang HDD table shows one row per brand+model+capacity combo WITHIN
@@ -22542,6 +23135,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     function loadPMEquip() {
       if(!pm.siteId){showToast('Sila pilih site','error');return;}
+      // Defensive twin of startNewPM's guard — this is the point where the
+      // equipment snapshot is actually taken.
+      if(loadAllInFlight.value && !equipLoadState[currentProject.value === 'vir' ? 'vir' : 'cctv']) {
+        showToast('Data peralatan masih dimuatkan — sila cuba sebentar lagi.', 'error');
+        return;
+      }
       if(currentProject.value === 'vir') {
         // Without a room picked, onVirRoomChange() never fires — pm.virSystem
         // silently stays at its 'BCD' default and _loadPmOptagerEquipSnapshot
@@ -22590,7 +23189,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // alerts are an actual one-click action, not just a passive display.
     function startNewPMForSite(siteId) {
       const isVir = VIR_SITES.some(v => v.id === siteId);
-      startNewPM(isVir ? 'vir' : 'cctv');
+      if(!startNewPM(isVir ? 'vir' : 'cctv')) return; // blocked — see startNewPM's equipment-still-loading guard
       pm.siteId = siteId;
       loadPMEquip();
       showNotifPanel.value = false;
@@ -23313,7 +23912,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // file or a failed delete never blocks the purge. No-op for collections
     // without attachments (contracts, CM cases).
     function _deleteRecordFiles(rec) {
-      (rec?.serviceReports || []).forEach(f => { if(f?.path) storage.ref(f.path).delete().catch(() => {}); });
+      const paths = (rec?.serviceReports || []).map(f => f?.path).filter(Boolean);
+      if(!paths.length) return;
+      _ensureStorage().then(() => paths.forEach(p => storage.ref(p).delete().catch(() => {}))).catch(() => {});
     }
     async function _permanentlyDeleteFromTrash(deletedCollection, id, list) {
       const rec = list.value.find(r => r.id === id);
@@ -25866,7 +26467,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         // (visitDate isn't required at submit — see savePM()) — without
         // this fallback, a submitted record missing just that one field
         // would silently look like the team never showed up here.
-        const hasRecord = tDate && maintRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        const hasRecord = tDate && (pmRecordsBySite.value[t.siteId] || []).some(r => { const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         if(hasRecord) perTeam[team].completed++;
       });
       return Object.values(perTeam)
@@ -25890,7 +26491,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         if(!perTeamMonth[t.team]) perTeamMonth[t.team] = {};
         if(!perTeamMonth[t.team][mk]) perTeamMonth[t.team][mk] = { assigned:0, completed:0 };
         perTeamMonth[t.team][mk].assigned++;
-        const hasRecord = maintRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        const hasRecord = (pmRecordsBySite.value[t.siteId] || []).some(r => { const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         if(hasRecord) perTeamMonth[t.team][mk].completed++;
       });
       const result = {};
@@ -25930,7 +26531,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         // (visitDate isn't required at submit — see savePM()) — without
         // this fallback, a submitted record missing just that one field
         // would silently look like the team never showed up here.
-        const hasRecord = tDate && maintRecords.value.some(r => { if(r.siteId!==t.siteId) return false; const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        const hasRecord = tDate && (pmRecordsBySite.value[t.siteId] || []).some(r => { const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
         // Dedup by uid within this one assignment first — a malformed/
         // duplicate member entry on a single doc would otherwise inflate
         // that staff member's count for what is really one assignment.
@@ -26562,7 +27163,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         _ptrActive = false;
         if(ptrState.distance > 60 && !ptrState.refreshing) {
           ptrState.refreshing = true;
-          try { await loadAll(); showToast('Data disegerakkan!'); } finally { ptrState.refreshing = false; }
+          try { const ok = await loadAll(); await _refreshCurrentPageCollection(); if(ok) showToast('Data disegerakkan!'); } finally { ptrState.refreshing = false; }
         }
         ptrState.pulling = false;
         ptrState.distance = 0;
@@ -26868,7 +27469,13 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       // Never on Urus Peralatan — loadAll() would replace siteEquip in memory
       // underneath any edit the debounced autosave hasn't written yet.
       clearInterval(_tvRefresh);
-      _tvRefresh = setInterval(() => { if(page.value !== 'site-equip' && isOnline.value && !loading.value) loadAll(); }, 5 * 60 * 1000);
+      // 15 min (was 5): each tick is a full pmRecords + teamAssignments +
+      // equipment re-read, and a TV is typically left on all day — a wall
+      // display doesn't need minute-level freshness for health scores.
+      // loadCmCases too: cmCases isn't part of loadAll(), so the "Kes CM
+      // Aktif" count and ticker otherwise stayed frozen at whatever was
+      // loaded when TV mode was opened, for as long as the screen stayed on.
+      _tvRefresh = setInterval(() => { if(page.value !== 'site-equip' && isOnline.value && !loading.value) { loadAll(); loadCmCases(true); } }, 15 * 60 * 1000);
       tvPoke();
       await nextTick();
       try { await tvRootEl.value?.requestFullscreen?.({ navigationUI:'hide' }); } catch(e) { /* refused → stays a full-window overlay */ }
@@ -26906,7 +27513,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       firebase.initializeApp(FIREBASE_CONFIG);
       db = firebase.firestore();
       auth = firebase.auth();
-      storage = firebase.storage();
+      // storage is initialised lazily by _ensureStorage() on first use.
 
       // Offline persistence — data cached locally, writes queued & auto-synced when back online
       db.enablePersistence({ synchronizeTabs: true }).catch(e => {
@@ -27040,7 +27647,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     return {
-      page, authUser, authProfile, loading, initialLoading, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, syncStatus, syncAgoLabel, syncPillTitle, refreshDataFromPill, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
+      page, authUser, authProfile, loading, initialLoading, listDataReady, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, syncStatus, syncAgoLabel, syncPillTitle, refreshDataFromPill, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, pmVirItemsBySection, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
@@ -27126,6 +27733,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       tempEquipmentReport, tempEquipSiteCount, tempEquipFilterProj, exportTempEquipExcel, exportTempEquipPdf,
       EQUIP_FILTER_FIELDS, equipFilter, equipView, equipFilterKind, equipFilterOptions, equipFilterActive, clearEquipFilter, equipHasTemp,
       kontraktorFocusId, kontraktorFocusFlash,
+      equipSort, toggleEquipSort, equipSortIcon, equipFormShown, toggleEquipForm,
+      searchActiveIdx, onGlobalSearchKey, focusEquipForm,
+      equipHideableCols, equipHiddenCols, equipColPickerOpen, isEquipColHidden, toggleEquipCol, resetEquipCols,
+      equipSaveStatusHere, equipSaveStatusText, equipIpClash, equipFormIpClash, ipCellTitle, copyIp,
+      licenseExpiryState, licenseExpiryNote, equipLicenseAlert,
       brandOptionsFor, modelOptionsFor, isRecentEquip, equipAgeColor, equipAgeTitle,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       customEquipCleanupBrandIsCustom, removeCustomBrand,
