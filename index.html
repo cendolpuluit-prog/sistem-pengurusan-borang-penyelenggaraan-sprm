@@ -9308,7 +9308,10 @@ function _loadScript(src) {
       const s = document.createElement('script');
       s.src = src;
       s.onload = () => resolve();
-      s.onerror = () => reject(new Error('Gagal muat pustaka: ' + src));
+      // Forget a FAILED load (and drop the dead <script> tag) — the promise
+      // cache used to keep the rejection forever, so after one network blip
+      // every retry got the same failure back until a full page reload.
+      s.onerror = () => { delete window.__loadedScripts[src]; s.remove(); reject(new Error('Gagal muat pustaka: ' + src)); };
       document.head.appendChild(s);
     });
   }
@@ -9323,28 +9326,29 @@ function _ensureXLSX() {
     // xlsx-js-style overwrites window.XLSX with the styled version.
     _xlsxReady = _loadScript('https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js')
       .then(() => { window.XLSX_TEMPLATE = window.XLSX; })
-      .then(() => _loadScript('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js'));
+      .then(() => _loadScript('https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js'))
+      .catch(e => { _xlsxReady = null; throw e; });
   }
   return _xlsxReady;
 }
 let _tesseractReady = null;
 function _ensureTesseract() {
-  if(!_tesseractReady) _tesseractReady = _loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+  if(!_tesseractReady) _tesseractReady = _loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js').catch(e => { _tesseractReady = null; throw e; });
   return _tesseractReady;
 }
 let _pdfjsReady = null;
 function _ensurePdfjs() {
-  if(!_pdfjsReady) _pdfjsReady = _loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js');
+  if(!_pdfjsReady) _pdfjsReady = _loadScript('https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js').catch(e => { _pdfjsReady = null; throw e; });
   return _pdfjsReady;
 }
 let _jspdfReady = null;
 function _ensureJspdf() {
-  if(!_jspdfReady) _jspdfReady = _loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
+  if(!_jspdfReady) _jspdfReady = _loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js').catch(e => { _jspdfReady = null; throw e; });
   return _jspdfReady;
 }
 let _docxReady = null;
 function _ensureDocx() {
-  if(!_docxReady) _docxReady = _loadScript('https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js');
+  if(!_docxReady) _docxReady = _loadScript('https://cdn.jsdelivr.net/npm/docx@8.6.0/build/index.umd.js').catch(e => { _docxReady = null; throw e; });
   return _docxReady;
 }
 let _chartjsReady = null;
@@ -9366,7 +9370,7 @@ function _applyChartDarkDefaults() {
   Chart.defaults.scale.grid.color = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 }
 function _ensureChartjs() {
-  if(!_chartjsReady) _chartjsReady = _loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js');
+  if(!_chartjsReady) _chartjsReady = _loadScript('https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js').catch(e => { _chartjsReady = null; throw e; });
   return _chartjsReady.then(() => { _registerChartPolishOnce(); _applyChartDarkDefaults(); });
 }
 // ── Chart polish (one global plugin, so none of the ~10 charts needed
@@ -9456,13 +9460,14 @@ function _registerChartPolishOnce() {
 }
 let _mammothReady = null;
 function _ensureMammoth() {
-  if(!_mammothReady) _mammothReady = _loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js');
+  if(!_mammothReady) _mammothReady = _loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js').catch(e => { _mammothReady = null; throw e; });
   return _mammothReady;
 }
 let _d3Ready = null;
 function _ensureD3() {
   if(!_d3Ready) _d3Ready = _loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js')
-    .then(() => _loadScript('https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js'));
+    .then(() => _loadScript('https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js'))
+    .catch(e => { _d3Ready = null; throw e; });
   return _d3Ready;
 }
 
@@ -21230,6 +21235,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return !!f && (!!f.q.trim() || f.temp || !!f.uid || EQUIP_FILTER_FIELDS[kind].some(x => f[x.key]));
     }
     function clearEquipFilter(kind) { Object.assign(equipFilter[kind], _blankEquipFilter()); }
+    // Changing a list's filter drops that list's bulk selection — selected
+    // rows otherwise stayed selected while hidden by the new filter, and
+    // "Padam Terpilih (N)" / Edit Pukal then acted on rows no longer on
+    // screen (bulk delete skips the reason prompt and autosaves within ~2s).
+    // Same rule as the Log Audit selection.
+    Object.keys(EQUIP_FILTER_FIELDS).forEach(kind => {
+      watch(() => equipFilter[kind], () => { equipSelected[kind]?.clear(); }, { deep: true });
+    });
     function equipFilterOptions(kind, key) {
       const counts = new Map();
       (selSiteEquip.value[kind] || []).forEach(it => { const v = _equipFilterVal(it, key); counts.set(v, (counts.get(v) || 0) + 1); });
@@ -22880,6 +22893,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       Object.keys(equipEditIdx).forEach(k => { if(equipEditIdx[k] !== null) cancelEditEquip(k); });
       clearEquipDraftLocal();
       _clearEquipConflict();
+      // The edits it was holding are gone — drop their "Belum disimpan…" too
+      // (the reload replaces the whole list, which the edit watcher skips).
+      ++_equipSaveTok; _setEquipSaveStatus(null, '');
       loading.value = true;
       try { if(await loadAll()) showToast('Data peralatan terkini dimuat.'); }
       finally { loading.value = false; }
