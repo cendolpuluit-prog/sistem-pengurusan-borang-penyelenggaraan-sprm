@@ -7046,7 +7046,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="tempReplaceModal.serial" @input="tempReplaceModal.err=''"></div>
             <div v-if="tempReplaceModal.hasIp" class="form-group"><label>IP Address</label><input class="form-control mono-data" v-model="tempReplaceModal.ip" @input="tempReplaceModal.err=''"></div>
             <div class="form-group"><label>Tarikh Ganti *</label><input class="form-control" type="date" v-model="tempReplaceModal.date"></div>
-            <div class="form-group"><label>Sebab / Catatan <span class="text-muted text-sm">(dalaman — tidak dicetak pada borang)</span></label><textarea class="form-control" rows="3" v-model="tempReplaceModal.reason"></textarea></div>
+            <div class="form-group"><label>Sebab Ganti Sementara *</label>
+              <select class="form-control" v-model="tempReplaceModal.cause" @change="tempReplaceModal.err=''">
+                <option value="" disabled>-- Pilih sebab --</option>
+                <option v-for="c in TEMP_CAUSES" :key="c[0]" :value="c[0]">{{c[1]}}</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Catatan<span v-if="tempReplaceModal.cause==='lain'"> *</span> <span class="text-muted text-sm">(dalaman — tidak dicetak pada borang)</span></label><textarea class="form-control" rows="3" v-model="tempReplaceModal.reason" :placeholder="tempReplaceModal.cause==='lain' ? 'Nyatakan sebab' : ''" @input="tempReplaceModal.err=''"></textarea></div>
             <p v-if="tempReplaceModal.err" class="text-sm mb-12" style="color:#c62828">{{tempReplaceModal.err}}</p>
             <div class="flex gap-8">
               <button class="btn btn-outline" @click="tempReplaceModal.show=false">Batal</button>
@@ -7062,7 +7068,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tr v-for="row in tempOrigRows(tempReplaceModal.current?._temp?.original)" :key="row[0]"><td>{{row[0]}}</td><td>{{row[1]}}</td></tr>
               </table>
               <div class="text-sm text-muted" style="margin-top:6px">Diganti pada {{fmtDate(tempReplaceModal.current?._temp?.date)}}<span v-if="tempReplaceModal.current?._temp?.by"> oleh {{tempReplaceModal.current._temp.by}}</span></div>
-              <div v-if="tempReplaceModal.current?._temp?.reason" class="text-sm" style="margin-top:6px;white-space:pre-wrap"><b>Sebab / Catatan (dalaman):</b> {{tempReplaceModal.current._temp.reason}}</div>
+              <div v-if="tempReplaceModal.current?._temp?.cause" class="text-sm" style="margin-top:6px"><b>Sebab:</b> {{tempCauseLabel(tempReplaceModal.current._temp.cause)}}</div>
+              <div v-if="tempReplaceModal.current?._temp?.reason" class="text-sm" style="margin-top:6px;white-space:pre-wrap"><b>Catatan (dalaman):</b> {{tempReplaceModal.current._temp.reason}}</div>
             </div>
             <p v-if="canEditEquip" class="text-sm text-muted mb-12">Untuk betulkan butiran unit sementara, guna butang ✏️ Edit pada baris tersebut.</p>
             <p v-if="tempReplaceModal.err" class="text-sm mb-12" style="color:#c62828">{{tempReplaceModal.err}}</p>
@@ -8260,18 +8267,19 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <p class="text-sm text-muted mb-12">Dikira daripada sebab yang dipilih setiap kali rekod peralatan dibuang di "Urus Peralatan Site" — pilih sebab "Rosak" bila padam rekod supaya kekerapan kerosakan ikut site/kategori direkod dengan tepat.</p>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>🔧 Rosak</th><th>🔄 Ganti Baru</th><th>📋 Lain-lain</th><th>Jumlah</th></tr></thead>
+                <thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>🔧 Rosak</th><th>🔁 Rosak (Ganti Sementara)</th><th>🔄 Ganti Baru</th><th>📋 Lain-lain</th><th>Jumlah</th></tr></thead>
                 <tbody>
                   <tr v-for="r in failureReport" :key="r.siteId+'|'+r.category">
                     <td>{{r.siteName}}</td>
                     <td><span :class="'proj-badge proj-'+r.project">{{r.project.toUpperCase()}}</span></td>
                     <td>{{r.category}}</td>
                     <td><span class="badge badge-red">{{r.rosak}}</span></td>
+                    <td><span class="badge badge-red">{{r.rosakTemp}}</span></td>
                     <td>{{r.gantiBaru}}</td>
                     <td>{{r.lain}}</td>
                     <td><b>{{r.total}}</b></td>
                   </tr>
-                  <tr v-if="!failureReport.length"><td colspan="7" class="empty">Tiada rekod penyingkiran peralatan lagi.</td></tr>
+                  <tr v-if="!failureReport.length"><td colspan="8" class="empty">Tiada rekod penyingkiran peralatan lagi.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -8290,7 +8298,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <td><span :class="'proj-badge proj-'+l.project">{{(l.project||'cctv').toUpperCase()}}</span></td>
                     <td>{{l.category}}</td>
                     <td>{{l.itemName}} <span class="text-muted text-sm">({{l.brand}} {{l.model}})</span></td>
-                    <td>{{REMOVAL_REASON_LABEL[l.reason]||l.reason}}</td>
+                    <td>{{REMOVAL_REASON_LABEL[l.reason]||l.reason}}<span v-if="l.tempCause" class="text-muted text-sm"> ({{tempCauseLabel(l.tempCause)}})</span></td>
                     <td style="font-size:.78rem">{{l.removedBy}}</td>
                     <td><button :disabled="loading" class="btn btn-danger btn-sm btn-icon" @click="deleteEquipmentRemovalLog(l)" title="Padam">🗑</button></td>
                   </tr>
@@ -21724,7 +21732,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const REMOVAL_REASON_LABEL = { rosak:'🔧 Rosak', 'ganti-baru':'🔄 Ganti Baru/Naik Taraf', tersilap:'✏️ Tersilap Masuk', lain:'📋 Lain-lain', 'ganti-sementara':'🔁 Ganti Sementara', 'pulih-asal':'↩️ Unit Sementara Dipulangkan', 'rekod-asal':'📦 Rekod Unit Asal' };
     // One equipmentRemovalLog entry. Best-effort, never throws — a failed log
     // must never look like the equipment change itself failed.
-    function _logEquipRemoval(siteId, key, snap, reason, reasonCustom) {
+    function _logEquipRemoval(siteId, key, snap, reason, reasonCustom, extra = {}) {
       const entry = {
         project: currentProject.value,
         siteId, siteName: selSite.value?.name || siteId,
@@ -21741,6 +21749,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         brand: snap.brand || '-', model: snap.model || '-', serial: snap.serial || '-',
         reason, reasonCustom: reasonCustom || '',
         removedBy: authUser.value?.email || '',
+        ...extra,
       };
       // The log is read once per session (see openEquipHistory /
       // loadEquipmentRemovalLogs) — once it's loaded, patch this entry in so
@@ -21769,7 +21778,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // restored later; borang copies only ever get an isTemp flag (see
     // _toPmTempFields). Unlike a delete, this never touches the original
     // unit's warranty record. The reason is free text and internal only.
-    const tempReplaceModal = reactive({ show:false, mode:'replace', key:null, uid:null, siteId:null, current:null, brand:'', model:'', serial:'', ip:'', hasIp:false, date:'', reason:'', err:'' });
+    const tempReplaceModal = reactive({ show:false, mode:'replace', key:null, uid:null, siteId:null, current:null, brand:'', model:'', serial:'', ip:'', hasIp:false, date:'', cause:'', reason:'', err:'' });
+    // Why the unit was swapped out. Stored on `_temp.cause` and on the
+    // removal-log entry (`tempCause`) — the Ganti/Rosak report counts
+    // TEMP_CAUSES_FAULT (and older swaps logged before this existed) under
+    // its own "Rosak (Ganti Sementara)" column; 'lain' stays in Lain-lain.
+    const TEMP_CAUSES = [['rosak','Rosak'],['servis','Hantar servis / pembaikan'],['waranti','Tuntutan waranti'],['lain','Lain-lain']];
+    const TEMP_CAUSES_FAULT = ['rosak','servis','waranti'];
+    function tempCauseLabel(c) { return (TEMP_CAUSES.find(x => x[0] === c) || [])[1] || ''; }
     // editEquipItem() parks an edited row's `_temp` here instead of copying
     // it into the form — every add*() rebuilds the item from form fields, so
     // it would otherwise be dropped on save (misc/server/tablet) or leak into
@@ -21842,7 +21858,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       Object.assign(tempReplaceModal, {
         show: true, mode: item._temp ? 'info' : 'replace', key, uid: item._uid, siteId: selSite.value.id,
         current: { ...item }, brand: '', model: '', serial: '', ip: item.ip || '', hasIp: 'ip' in item,
-        date: _localDateStr(), reason: '', err: '',
+        date: _localDateStr(), cause: '', reason: '', err: '',
       });
     }
     function confirmTempReplace() {
@@ -21852,6 +21868,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!brand || !model) { m.err = 'Brand dan Model unit pengganti wajib diisi.'; return; }
       if(m.hasIp && !isValidIp(ip)) { m.err = 'Format IP Address tidak sah (contoh: 192.168.0.11)'; return; }
       if(!m.date) { m.err = 'Sila pilih Tarikh Ganti.'; return; }
+      if(!m.cause) { m.err = 'Sila pilih Sebab Ganti Sementara.'; return; }
+      if(m.cause === 'lain' && !m.reason.trim()) { m.err = 'Sila nyatakan sebab dalam Catatan.'; return; }
       const { list, idx } = _tempTarget();
       if(idx === -1) { m.err = 'Rekod tidak dijumpai — mungkin telah diubah atau dipadam. Tutup dan cuba lagi.'; return; }
       const cur = list[idx];
@@ -21864,12 +21882,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // stricter-access collection), as does any stale _temp/_ts.
       // _changes stays with the row (the position's log), not the snapshot.
       const { accessUser, accessPw, _temp, _ts, _changes, ...original } = cur;
-      next._temp = { original, reason: m.reason.trim(), date: m.date, by: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '' };
+      next._temp = { original, cause: m.cause, reason: m.reason.trim(), date: m.date, by: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '' };
       next._ts = Date.now();
       _appendEquipChange(next, { note: 'Ganti sementara', diffs: _diffEquip(cur, next) });
       if(equipEditIdx[m.key] === idx) cancelEditEquip(m.key); // its form holds the pre-swap unit
       list[idx] = next;
-      _logEquipRemoval(m.siteId, m.key, original, 'ganti-sementara', m.reason.trim());
+      _logEquipRemoval(m.siteId, m.key, original, 'ganti-sementara', m.reason.trim(), { tempCause: m.cause });
       _bumpEquipFlash();
       m.show = false;
       showToast('Unit sementara direkodkan — butiran unit asal disimpan. Jangan lupa klik "Simpan Semua".');
@@ -22308,7 +22326,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           swapLabel: l.reason === 'pulih-asal' ? '↩️ Unit asal dipulihkan' : '🔁 Ganti sementara',
           unit: `${l.brand||'-'} ${l.model && l.model !== '-' ? l.model : ''}`.trim() + (l.serial && l.serial !== '-' ? ` (SN ${l.serial})` : ''),
           reasonLabel: REMOVAL_REASON_LABEL[l.reason] || l.reason,
-          reasonCustom: l.reasonCustom || '',
+          reasonCustom: [l.tempCause ? tempCauseLabel(l.tempCause) : '', l.reasonCustom || ''].filter(Boolean).join(' — '),
         });
       });
       // This row's own Urus Peralatan edit log (see _appendEquipChange).
@@ -26947,13 +26965,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         // deleted — the original was already counted at swap time.
         if(l.reason === 'rekod-asal') return;
         const key = l.siteId + '|' + l.category;
-        if(!groups[key]) groups[key] = { siteId:l.siteId, siteName:l.siteName||l.siteId, category:l.category, project:l.project||'cctv', rosak:0, gantiBaru:0, lain:0, total:0 };
+        if(!groups[key]) groups[key] = { siteId:l.siteId, siteName:l.siteName||l.siteId, category:l.category, project:l.project||'cctv', rosak:0, rosakTemp:0, gantiBaru:0, lain:0, total:0 };
         groups[key].total++;
         if(l.reason === 'rosak') groups[key].rosak++;
+        // Swaps logged before the cause dropdown existed have no tempCause —
+        // counted as faults too (a stand-in nearly always means a broken unit).
+        else if(l.reason === 'ganti-sementara' && (!l.tempCause || TEMP_CAUSES_FAULT.includes(l.tempCause))) groups[key].rosakTemp++;
         else if(l.reason === 'ganti-baru') groups[key].gantiBaru++;
         else groups[key].lain++;
       });
-      return Object.values(groups).sort((a,b) => b.rosak - a.rosak);
+      return Object.values(groups).sort((a,b) => (b.rosak + b.rosakTemp) - (a.rosak + a.rosakTemp));
     });
     // Admin+-only raw-log view/cleanup — lets a bad/test entry (e.g. staff
     // trying the delete flow out) be removed individually instead of
@@ -26981,7 +27002,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       await _ensureXLSX();
       const rows = failureReport.value.map((r,i) => ({
         '#': i+1, Site: r.siteName, Projek: r.project.toUpperCase(), Kategori: r.category,
-        'Rosak': r.rosak, 'Ganti Baru': r.gantiBaru, 'Lain-lain': r.lain, 'Jumlah': r.total,
+        'Rosak': r.rosak, 'Rosak (Ganti Sementara)': r.rosakTemp, 'Ganti Baru': r.gantiBaru, 'Lain-lain': r.lain, 'Jumlah': r.total,
       }));
       const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
@@ -26995,7 +27016,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const list = failureReport.value;
       const tableRows = list.map(r => `<tr>
         <td>${esc(r.siteName||'-')}</td><td>${r.project.toUpperCase()}</td><td>${esc(r.category||'-')}</td>
-        <td>${r.rosak}</td><td>${r.gantiBaru}</td><td>${r.lain}</td><td><b>${r.total}</b></td>
+        <td>${r.rosak}</td><td>${r.rosakTemp}</td><td>${r.gantiBaru}</td><td>${r.lain}</td><td><b>${r.total}</b></td>
       </tr>`).join('');
       const w = window.open('','_blank','width=1100,height=750');
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
@@ -27027,7 +27048,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} baris</p>
           </div>
         </div>
-        <table><thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>Rosak</th><th>Ganti Baru</th><th>Lain-lain</th><th>Jumlah</th></tr></thead>
+        <table><thead><tr><th>Site</th><th>Projek</th><th>Kategori</th><th>Rosak</th><th>Rosak (Ganti Sementara)</th><th>Ganti Baru</th><th>Lain-lain</th><th>Jumlah</th></tr></thead>
         <tbody>${tableRows}</tbody></table>
       </body></html>`);
       w.document.close();
@@ -27192,7 +27213,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       el.addEventListener('touchend', async () => {
         if(!_ptrActive) return;
         _ptrActive = false;
-        if(ptrState.distance > 60 && !ptrState.refreshing) {
+        // Same guard as refreshDataFromPill: loadAll() replaces siteEquip in
+        // memory, dropping unsaved equipment edits and leaving an open
+        // "Kemaskini" (equipEditIdx) pointing at a shifted row.
+        if(ptrState.distance > 60 && !ptrState.refreshing && page.value === 'site-equip') {
+          showToast('Tidak boleh segar semula di halaman Urus Peralatan — keluar dari halaman ini dahulu supaya perubahan yang belum disimpan tidak hilang.', 'error');
+        } else if(ptrState.distance > 60 && !ptrState.refreshing) {
           ptrState.refreshing = true;
           try { const ok = await loadAll(); await _refreshCurrentPageCollection(); if(ok) showToast('Data disegerakkan!'); } finally { ptrState.refreshing = false; }
         }
@@ -27759,7 +27785,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       sonyRoomChoicesForSite, pickSonyRoom, openSonyRoomEquip, roomChoicesForModal, pickRoomForModal,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       removeReasonModal, confirmRemoveItem,
-      tempReplaceModal, openTempReplace, confirmTempReplace, restoreTempOriginal, tempOrigRows, tempBadgeTitle, pmHasTemp,
+      tempReplaceModal, openTempReplace, confirmTempReplace, restoreTempOriginal, tempOrigRows, tempBadgeTitle, pmHasTemp, TEMP_CAUSES, tempCauseLabel,
       equipConflict, equipConflictHere, resolveEquipConflictReload, resolveEquipConflictOverwrite,
       tempEquipmentReport, tempEquipSiteCount, tempEquipFilterProj, exportTempEquipExcel, exportTempEquipPdf,
       EQUIP_FILTER_FIELDS, equipFilter, equipView, equipFilterKind, equipFilterOptions, equipFilterActive, clearEquipFilter, equipHasTemp,
