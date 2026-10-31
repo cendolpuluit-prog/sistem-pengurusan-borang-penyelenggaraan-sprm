@@ -4016,7 +4016,6 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="card-title" style="margin:0;border:none;padding:0">Senarai NVR <span v-if="equipFilterActive('nvr')" class="equip-filter-status">· ditapis {{equipView.nvr.length}}/{{(selSiteEquip.nvr||[]).length}} <a href="#" @click.prevent="clearEquipFilter('nvr')" title="Kosongkan penapis">✕</a></span></div>
               <div class="flex gap-8">
                 <button v-if="(selSiteEquip.nvr||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByIp('nvr')">🔀 Susun ikut IP</button>
-                <button v-if="(selSiteEquip.nvr||[]).length>1" class="btn btn-outline btn-sm" @click="sortEquipListByName('nvr')">🔀 Susun ikut Nama</button>
                 <button v-if="equipSelected.nvr.size" class="btn btn-outline btn-sm" @click="openBulkEdit('nvr')">✏️ Edit Pukal ({{equipSelected.nvr.size}})</button>
                 <button :disabled="loading" v-if="equipSelected.nvr.size" class="btn btn-danger btn-sm" @click="bulkDeleteEquip('nvr')">🗑 Padam Terpilih ({{equipSelected.nvr.size}})</button>
               </div>
@@ -12505,9 +12504,18 @@ createApp({
         const zone = getSiteZone(teamModal.data.siteId);
         if(zone) {
           const zoneName = ZONES[zone]?.label || zone;
+          // Counted WITHOUT the assignment being edited (re-saving it, e.g.
+          // just its notes, warned against itself), and only when this save
+          // adds a new month — a second PM in a month already counted for
+          // this zone doesn't raise the visit count.
+          const ym = teamModal.data.date.slice(0, 7);
+          const exclId = teamModal.editing ? teamModal.current?.id : null;
+          const zoneMonths = uid => new Set(teamAssignments.value
+            .filter(a => a.id !== exclId && (a.maintType||'PM') === 'PM' && a.siteId && a.date && getSiteZone(a.siteId) === zone && (a.members||[]).some(m => m.uid === uid))
+            .map(a => a.date.slice(0, 7)));
           const dueStaff = teamModal.selectedUids
             .map(uid => allStaff.value.find(u => u.id === uid))
-            .filter(u => u && staffZoneVisits(u.id, zone) >= ROTATION_LIMIT)
+            .filter(u => { if(!u) return false; const ms = zoneMonths(u.id); return !ms.has(ym) && ms.size >= ROTATION_LIMIT; })
             .map(u => u.name||u.username);
           if(dueStaff.length) {
             const ok = await askConfirm(`⚠ Amaran Rotasi PM — Zon ${zoneName}\n\nStaff berikut telah mencapai had ${ROTATION_LIMIT}x kunjungan PM ke zon ini:\n• ${dueStaff.join('\n• ')}\n\nMereka perlu dirotasi ke zon lain. Teruskan simpan?`);
@@ -13364,6 +13372,20 @@ createApp({
       if(authProfile.value?.role !== 'superadmin') return;
       if(!isValidEmail(profileEdit.email)){ showToast('Format emel tidak sah.','error'); return; }
       if(!isValidPhone(profileEdit.phone)){ showToast('Format no. telefon tidak sah.','error'); return; }
+      profileEdit.email = (profileEdit.email||'').trim();
+      // Same lock-out as submitUser's email-change warning: a Firestore-
+      // registered superadmin signs in with this stored email (doLogin), but
+      // it can't change the Firebase Auth account's own email. Built-in
+      // USER_MAP accounts sign in with their fixed email, so they're exempt.
+      const _origEmail = (authProfile.value?.email||'').trim().toLowerCase();
+      const _isBuiltIn = Object.prototype.hasOwnProperty.call(USER_MAP, (authProfile.value?.username||'').trim().toLowerCase());
+      if(!_isBuiltIn && _origEmail && profileEdit.email.toLowerCase() !== _origEmail) {
+        if(!await askConfirm(`⚠ Emel ini digunakan untuk LOG MASUK akaun anda.
+
+Menukarnya di sini TIDAK menukar emel akaun log masuk. Anda TIDAK akan dapat log masuk (dan reset kata laluan tidak akan sampai) kecuali emel yang sama juga ditukar di Firebase Console → Authentication.
+
+Teruskan tukar emel?`)) return;
+      }
       loading.value=true;
       try {
         const uid = auth.currentUser.uid;
@@ -15726,7 +15748,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href = url;
-        a.download = 'backup_pm_full_' + new Date().toISOString().slice(0,16).replace('T','_').replace(/:/g,'-') + '.json';
+        // Local time (toISOString is UTC — 8 hours behind in Malaysia).
+        const _bn = new Date();
+        a.download = 'backup_pm_full_' + _localDateStr(_bn) + '_' + String(_bn.getHours()).padStart(2,'0') + '-' + String(_bn.getMinutes()).padStart(2,'0') + '.json';
         a.click();
         URL.revokeObjectURL(url);
         showToast('Backup manual (semua data) berjaya dimuat turun!');
@@ -19338,7 +19362,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       });
       // Same auto-sort as manual add/edit for these 4 tabs — a bulk import
       // is exactly when entries are most likely to land out of order.
-      if(['nvr','switches','alarms','misc'].includes(kind)) _sortByName(list);
+      // The sort shifts indices, so an edit-in-place open on this list
+      // (equipEditIdx = array INDEX) is re-synced by _uid — otherwise
+      // "Kemaskini" would overwrite a different row.
+      const editedUid = equipEditIdx[kind] != null ? (list[equipEditIdx[kind]] || {})._uid : null;
+      if(kind === 'nvr') _sortNvr(list);
+      else if(['switches','alarms','misc'].includes(kind)) _sortByName(list);
+      if(editedUid) equipEditIdx[kind] = list.findIndex(it => it._uid === editedUid);
       return { added, duplicates };
     }
 
@@ -19472,6 +19502,35 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!list || list.length < 2) return;
       list.sort((a,b) => String(a.name||'').localeCompare(String(b.name||''), undefined, { numeric:true, sensitivity:'base' }));
     }
+    // NVR/servers sort by IP Address (numeric), name only as tie-break/for
+    // rows without a valid IP — a name sort put e.g. "NS/NVR/02" above
+    // "NS/NVR/MGMT/01" (digit before letter), so the main server (.2) landed
+    // below the second one (.3) in the printed borang.
+    function _sortNvr(list) {
+      if(!list || list.length < 2) return;
+      list.sort((a,b) => {
+        const ka = _ipSortKey(a.ip), kb = _ipSortKey(b.ip);
+        for(let i=0;i<4;i++){ if(ka[i]!==kb[i]) return ka[i] < kb[i] ? -1 : 1; }
+        return String(a.name||'').localeCompare(String(b.name||''), undefined, { numeric:true, sensitivity:'base' });
+      });
+    }
+    // Camera/HDD "group by NVR" headings follow that same NVR IP order (the
+    // group key is the NVR's name via nvrRef) — a plain name sort put the
+    // main server's cameras under the second server's. Names not in the NVR
+    // list come after, naturally sorted; "Tiada NVR" is always last.
+    function _nvrGroupNames(groups, nvrList) {
+      const sortedNvr = [...(nvrList || [])];
+      _sortNvr(sortedNvr);
+      const rank = new Map();
+      sortedNvr.forEach((n, i) => { const k = String(n?.name || '').trim(); if(k && !rank.has(k)) rank.set(k, i); });
+      const names = Object.keys(groups).filter(k => k !== 'Tiada NVR').sort((a, b) => {
+        const ra = rank.has(a) ? rank.get(a) : Infinity, rb = rank.has(b) ? rank.get(b) : Infinity;
+        if(ra !== rb) return ra < rb ? -1 : 1;
+        return a.localeCompare(b, undefined, { numeric:true, sensitivity:'base' });
+      });
+      if(groups['Tiada NVR']) names.push('Tiada NVR');
+      return names;
+    }
     // Applied to every site's equipment object right after loadAll() reads
     // it from Firestore — tidies up any list that was saved out of order
     // before auto-sort-on-add/edit existed, so it's never left to sit
@@ -19485,7 +19544,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           return 0;
         });
       }
-      ['nvr','switches','alarms','misc'].forEach(k => _sortByName(eq[k]));
+      _sortNvr(eq.nvr);
+      ['switches','alarms','misc'].forEach(k => _sortByName(eq[k]));
     }
 
     // ── Credential separation (accessUser/accessPw) ─────────────────────
@@ -20124,6 +20184,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!userModal.editing && !userModal.data.password){ userModal.err='Kata laluan wajib diisi.'; return; }
       if(!isValidEmail(userModal.data.email)){ userModal.err='Format emel tidak sah.'; return; }
       if(!isValidPhone(userModal.data.phone)){ userModal.err='Format no. telefon tidak sah.'; return; }
+      // "Sementara" with no end date was saved as-is — and every expiry
+      // check (login, heartbeat, userExpiryStatus) treats a blank date as
+      // no expiry, so the account silently became permanent.
+      if(userModal.data.accessType === 'temporary' && !userModal.data.expiryDate){ userModal.err='Sila tetapkan tarikh tamat untuk akses Sementara.'; return; }
       const resolvedJabatan = (userModal.data.jabatan==='Lain-lain' && userModal.data.jabatanCustom.trim()) ? userModal.data.jabatanCustom.trim() : userModal.data.jabatan;
       // doLogin signs in with THIS stored email, but editing it here can't
       // change the Firebase Auth account's own email (needs the Admin SDK /
@@ -20154,13 +20218,20 @@ Teruskan tukar emel?`)) return;
         if(!userModal.editing) {
           // Create Firebase Auth user via secondary app instance
           const sec = firebase.initializeApp(FIREBASE_CONFIG, 'secondary_'+Date.now());
-          const secAuth = sec.auth();
-          const cred = await secAuth.createUserWithEmailAndPassword(
-            userModal.data.email, userModal.data.password
-          );
-          const uid = cred.user.uid;
-          await secAuth.signOut();
-          await sec.delete();
+          let uid;
+          // finally: a failed create (email taken, weak password, offline)
+          // used to skip sec.delete(), leaving one more stray app instance
+          // behind on every failed attempt.
+          try {
+            const secAuth = sec.auth();
+            const cred = await secAuth.createUserWithEmailAndPassword(
+              userModal.data.email, userModal.data.password
+            );
+            uid = cred.user.uid;
+            await secAuth.signOut();
+          } finally {
+            try { await sec.delete(); } catch(_) {}
+          }
           // Save profile to Firestore
           await db.collection('users').doc(uid).set({
             username: userModal.data.username,
@@ -20835,6 +20906,10 @@ Teruskan tukar emel?`)) return;
       if(!await askConfirm(`Padam pengguna @${u.username}? Tindakan ini tidak boleh dibatalkan.`)) return;
       try {
         await db.collection('users').doc(u.id).delete();
+        // Their avatar file would otherwise stay in Storage forever (its
+        // download URL still working). Best-effort, same as uploadPhoto's
+        // old-avatar cleanup — never blocks the delete itself.
+        if(u.photoPath) _ensureStorage().then(() => storage.ref(u.photoPath).delete()).catch(()=>{});
         allUsers.value = allUsers.value.filter(x=>x.id!==u.id);
         await logAudit('USER_DELETE', u.username);
         showToast('Pengguna dipadam.');
@@ -21361,7 +21436,7 @@ Teruskan tukar emel?`)) return;
     // sensitivity reasons) — "Tiada NVR" bucket sorted last catches items
     // with no NVR assigned. _idx preserves each item's REAL index in the
     // unfiltered array so edit/delete still target the correct record.
-    function _groupByNvr(list) {
+    function _groupByNvr(list, nvrList) {
       // Rows from equipView already carry their real _idx — keep it; the
       // position in a FILTERED list is not the item's index.
       const indexed = (list || []).map((it, idx) => it._idx !== undefined ? it : ({ ...it, _idx: idx }));
@@ -21371,9 +21446,7 @@ Teruskan tukar emel?`)) return;
         if(!groups[key]) groups[key] = [];
         groups[key].push(it);
       });
-      const names = Object.keys(groups).filter(k => k !== 'Tiada NVR').sort();
-      if(groups['Tiada NVR']) names.push('Tiada NVR');
-      return names.map(name => ({ name, items: groups[name] }));
+      return _nvrGroupNames(groups, nvrList).map(name => ({ name, items: groups[name] }));
     }
     // ---- Urus Peralatan table filters ----
     // Per-tab dropdowns (built from the values actually present at this
@@ -21590,8 +21663,8 @@ Teruskan tukar emel?`)) return;
       Object.keys(equipFilter).forEach(clearEquipFilter);
       Object.keys(equipFormOpen).forEach(k => { equipFormOpen[k] = false; });
     });
-    const hddGroupedByNvr = computed(() => _groupByNvr(equipView.value.hdd));
-    const camerasGroupedByNvr = computed(() => _groupByNvr(equipView.value.cameras));
+    const hddGroupedByNvr = computed(() => _groupByNvr(equipView.value.hdd, selSiteEquip.value.nvr));
+    const camerasGroupedByNvr = computed(() => _groupByNvr(equipView.value.cameras, selSiteEquip.value.nvr));
     // "Senarai Bilik" filter — the list otherwise always shows every room
     // for the site regardless of system, which is correct for management
     // but can look like a bug when a room of the "wrong" system shows up
@@ -22576,6 +22649,29 @@ Teruskan tukar emel?`)) return;
       _afterEquipSave('cameras');
       resetForm('nCam');
     }
+    // Cameras/HDD link to their NVR by NAME (nvrRef / redundantNvrRef), so
+    // renaming an NVR used to orphan every unit under it — they kept the
+    // old name, showed up as a separate group for an NVR that no longer
+    // exists, and their edit form fell back to "Lain-lain". Relink them,
+    // unless another NVR at this site still carries the old name.
+    // Returns how many units were relinked.
+    function _renameNvrRefs(siteId, nvrList, oldName, newName) {
+      if(!oldName || !newName || oldName === newName) return 0;
+      if(nvrList.some(n => String(n?.name || '').trim() === oldName)) return 0;
+      const eq = activeEquip()[siteId] || {};
+      let count = 0;
+      ['cameras', 'hdd'].forEach(kind => (eq[kind] || []).forEach(it => {
+        const diffs = [];
+        if(String(it.nvrRef || '').trim() === oldName) { it.nvrRef = newName; diffs.push({ f:'NVR', from:oldName, to:newName }); }
+        if(String(it.redundantNvrRef || '').trim() === oldName) { it.redundantNvrRef = newName; diffs.push({ f:'Redundance', from:oldName, to:newName }); }
+        if(diffs.length) { it._ts = Date.now(); _appendEquipChange(it, { note:'NVR dinamakan semula', diffs }); count++; }
+      }));
+      // An open camera/HDD edit form still holds the old name — follow it,
+      // so its "Kemaskini" doesn't write the stale link back.
+      [nCam, nHDD].forEach(f => { if(String(f.nvrRef || '').trim() === oldName) f.nvrRef = newName; });
+      if(String(nCam.redundantNvrRef || '').trim() === oldName) nCam.redundantNvrRef = newName;
+      return count;
+    }
     function addNVR() {
       if(!nNVR.name?.trim()){showToast('Sila masukkan nama NVR','error');return;}
       if(!nNVR.type){showToast('Sila pilih Jenis','error');return;}
@@ -22585,9 +22681,15 @@ Teruskan tukar emel?`)) return;
       const list = activeEquip()[selSite.value.id].nvr;
       const dup = _findDupConflict('nvr', list, resolved, equipEditIdx.nvr);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
-      if(equipEditIdx.nvr !== null) { list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId(), _ts:Date.now()}; equipEditIdx.nvr = null; showToast('NVR dikemaskini!'); }
+      if(equipEditIdx.nvr !== null) {
+        const oldName = String(list[equipEditIdx.nvr]?.name || '').trim();
+        list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId(), _ts:Date.now()};
+        equipEditIdx.nvr = null;
+        const relinked = _renameNvrRefs(selSite.value.id, list, oldName, String(resolved.name || '').trim());
+        showToast(relinked ? `NVR dikemaskini! ${relinked} kamera/HDD dipautkan ke nama baru.` : 'NVR dikemaskini!');
+      }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('NVR berjaya ditambah!'); }
-      _sortByName(list);
+      _sortNvr(list);
       _maybeAddCustomBrand('NVR_BRANDS', resolved.brand);
       _maybeAddCustomModel('nvr', resolved.brand, resolved.model);
       _afterEquipSave('nvr');
@@ -23341,19 +23443,17 @@ Teruskan tukar emel?`)) return;
     // a lokap typically run a separate NVR per gender for sensitivity
     // reasons, so grouping by NVR here doubles as making that separation
     // visually explicit in the printed borang.
-    function _groupCamerasByNvrRef(list) {
+    function _groupCamerasByNvrRef(list, nvrList) {
       const groups = {};
       (list || []).forEach(c => {
         const key = c.nvrRef && c.nvrRef.trim() ? c.nvrRef.trim() : 'Tiada NVR';
         if(!groups[key]) groups[key] = [];
         groups[key].push(c);
       });
-      const names = Object.keys(groups).filter(k => k !== 'Tiada NVR').sort();
-      if(groups['Tiada NVR']) names.push('Tiada NVR');
-      return names.map(name => ({ name, items: groups[name] }));
+      return _nvrGroupNames(groups, nvrList).map(name => ({ name, items: groups[name] }));
     }
-    const pmCamerasGrouped = computed(() => _groupCamerasByNvrRef(pm.cameras));
-    const viewPMCamerasGrouped = computed(() => _groupCamerasByNvrRef(viewPM.value?.cameras));
+    const pmCamerasGrouped = computed(() => _groupCamerasByNvrRef(pm.cameras, pm.nvr));
+    const viewPMCamerasGrouped = computed(() => _groupCamerasByNvrRef(viewPM.value?.cameras, viewPM.value?.nvr));
     // Same grouping helper reused for the printed borang's HDD table (#3) —
     // HDD already carries its own nvrRef field (set via "NVR Berkaitan" at
     // Urus Peralatan Site, same as cameras), just wasn't grouped by it in
@@ -23361,7 +23461,7 @@ Teruskan tukar emel?`)) return;
     // HDD row can represent several physical drives via totalUnit (e.g.
     // "10TB x3 unit"), so the group's unit count sums totalUnit across its
     // rows instead of just counting rows.
-    const viewPMHddGrouped = computed(() => _groupCamerasByNvrRef(viewPM.value?.hdd).map(grp => ({
+    const viewPMHddGrouped = computed(() => _groupCamerasByNvrRef(viewPM.value?.hdd, viewPM.value?.nvr).map(grp => ({
       ...grp,
       totalUnits: grp.items.reduce((sum, h) => sum + (parseInt(h.totalUnit, 10) || 1), 0),
     })));
@@ -23418,7 +23518,7 @@ Teruskan tukar emel?`)) return;
         for(let i=0;i<4;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; }
         return 0;
       });
-      _sortByName(pm.nvr);
+      _sortNvr(pm.nvr);
       _sortByName(pm.switches);
       _sortByName(pm.alarms);
       _sortByName(pm.misc);
@@ -23697,7 +23797,8 @@ Teruskan tukar emel?`)) return;
           return 0;
         });
       }
-      ['nvr','switches','alarms','misc'].forEach(k => {
+      if(Array.isArray(r.nvr)) { sorted.nvr = [...r.nvr]; _sortNvr(sorted.nvr); }
+      ['switches','alarms','misc'].forEach(k => {
         if(Array.isArray(r[k])) { sorted[k] = [...r[k]]; _sortByName(sorted[k]); }
       });
       return sorted;
@@ -23855,7 +23956,7 @@ Teruskan tukar emel?`)) return;
           for(let i=0;i<4;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; }
           return 0;
         });
-        _sortByName(pm.nvr); _sortByName(pm.switches); _sortByName(pm.alarms); _sortByName(pm.misc);
+        _sortNvr(pm.nvr); _sortByName(pm.switches); _sortByName(pm.alarms); _sortByName(pm.misc);
         pm.support = r.support ? JSON.parse(JSON.stringify(r.support)) : [
           {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
           {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -24652,7 +24753,7 @@ Teruskan tukar emel?`)) return;
         // ── 1. Kamera ──
         children.push(sectionHdr(`1.  PEMERIKSAAN KAMERA (${r.cameras?.length||0} unit)`));
         if (r.cameras?.length) {
-          _groupCamerasByNvrRef(r.cameras).forEach(grp => {
+          _groupCamerasByNvrRef(r.cameras, r.nvr).forEach(grp => {
             children.push(new Paragraph({
               children: [new TextRun({ text: `${grp.name==='Tiada NVR'?'Tiada NVR Berkaitan':grp.name} (${grp.items.length} unit)`, size: 16, bold: true, color: BLUE })],
               spacing: { before: 60, after: 40 },
