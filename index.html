@@ -1626,6 +1626,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .equip-filter-status{font-size:.78rem;color:#e65100;white-space:nowrap}
 .equip-filter-status a{color:#c62828;font-weight:700;text-decoration:none}
 .equip-temp-badge{background:#fff3e0;color:#e65100;border:1px solid #ffcc80;font-size:.65rem;cursor:pointer;white-space:nowrap}
+.equip-oos-badge{background:#eceff1;color:#455a64;border:1px solid #cfd8dc;font-size:.65rem;white-space:nowrap}
+.equip-oos-check{display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer}
 .temp-orig-box{background:rgba(255,152,0,.08);border:1px solid rgba(255,152,0,.35);border-radius:8px;padding:8px 10px}
 .temp-orig-tbl{width:100%;font-size:.8rem;border-collapse:collapse}
 .temp-orig-tbl td{padding:2px 4px;vertical-align:top}
@@ -1680,6 +1682,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 /* Dark-mode twins for the Urus Peralatan additions (temp badge/box, filter
    bar, form toggle) — they were light-only and glared on the dark theme. */
 .dark-mode .equip-temp-badge{background:#3d2a12;color:#ffcc80;border-color:#b26a00}
+.dark-mode .equip-oos-badge{background:#263238;color:#b0bec5;border-color:#455a64}
 .dark-mode .temp-orig-box{background:rgba(255,152,0,.10);border-color:rgba(255,183,77,.35)}
 .dark-mode .temp-orig-tbl td:first-child{color:#9aa4b2}
 .dark-mode .equip-filter-bar{background:rgba(255,255,255,.03);border-color:rgba(255,255,255,.1)}
@@ -3802,6 +3805,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           </select>
           <input class="form-control equip-filter-q" v-model="equipFilter[equipFilterKind].q" placeholder="Cari nama / IP / no. siri">
           <label v-if="equipHasTemp(equipFilterKind)" class="equip-filter-temp"><input type="checkbox" v-model="equipFilter[equipFilterKind].temp"> 🔁 Sementara sahaja</label>
+          <select v-if="equipHasOos(equipFilterKind) || equipFilter[equipFilterKind].scope" class="form-control" v-model="equipFilter[equipFilterKind].scope">
+            <option value="">Skop: Semua</option>
+            <option value="in">Dalam Skop</option>
+            <option value="out">Luar Skop</option>
+          </select>
           <span v-if="equipFilterActive(equipFilterKind)" class="equip-filter-status">Menapis: <b>{{equipView[equipFilterKind].length}}</b> daripada {{(selSiteEquip[equipFilterKind]||[]).length}} · <a href="#" @click.prevent="clearEquipFilter(equipFilterKind)">✕ Kosongkan</a></span>
           <div class="equip-col-picker" style="margin-left:auto">
             <button type="button" class="btn btn-outline btn-sm" @click="equipColPickerOpen=!equipColPickerOpen" :aria-expanded="equipColPickerOpen">⚙ Lajur<span v-if="(equipHiddenCols[equipFilterKind]||[]).length"> · {{equipHiddenCols[equipFilterKind].length}} disembunyi</span></button>
@@ -3896,6 +3904,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 </template>
               </div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nCam.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.accessUser" autocomplete="off"></div>
                 <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nCam.accessPw" autocomplete="new-password"></div>
@@ -3926,7 +3935,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="[{'highlight-row':equipEditIdx.cameras===c._idx}, equipRowFx(c)]" :data-equip-uid="c._uid">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="c.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(c.ip,'cameras',c._uid||c._idx).length}" :title="ipCellTitle(c.ip,'cameras',c._uid||c._idx)" @click="copyIp(c.ip)">{{c.ip}}</span></td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="c.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="c.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(c.ip,'cameras',c._uid||c._idx).length}" :title="ipCellTitle(c.ip,'cameras',c._uid||c._idx)" @click="copyIp(c.ip)">{{c.ip}}</span></td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data">{{c.serial}}</td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="c.equipNota">{{c.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
@@ -3990,6 +3999,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.ip"><div v-if="equipFormIpClash('nvr',nNVR.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('nvr',nNVR.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nNVR.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.accessUser" autocomplete="off"></div>
@@ -4017,7 +4027,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(n,i) in equipView.nvr" :key="n._uid||n._idx" :class="[{'highlight-row':equipEditIdx.nvr===n._idx}, equipRowFx(n)]" :data-equip-uid="n._uid">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data">{{n.serial}}</td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="n.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data">{{n.serial}}</td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -4082,6 +4092,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <input v-if="nHDD.nvrRef==='Lain-lain'" class="form-control" v-model="nHDD.nvrRefCustom" placeholder="Nyatakan NVR" style="margin-top:6px">
               </div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nHDD.installDate"></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nHDD.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addHDD">{{equipEditIdx.hdd!==null?'✓ Kemaskini HDD':'+ Tambah HDD'}}</button>
@@ -4106,7 +4117,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="[{'highlight-row':equipEditIdx.hdd===h._idx}, equipRowFx(h)]" :data-equip-uid="h._uid">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
-                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}}</td><td>{{h.model}} <span v-if="h._temp" class="badge equip-temp-badge" @click="openTempReplace('hdd',h._idx)" :title="tempBadgeTitle(h)">🔁 Sementara</span> <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}} <span v-if="h.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{h.model}} <span v-if="h._temp" class="badge equip-temp-badge" @click="openTempReplace('hdd',h._idx)" :title="tempBadgeTitle(h)">🔁 Sementara</span> <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{h.serial}}</td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('hdd',h._idx)" :title="h._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button>
@@ -4150,6 +4161,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.ip" placeholder="cth: 192.168.1.10"><div v-if="equipFormIpClash('switches',nSW.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('switches',nSW.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nSW.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.accessUser" autocomplete="off"></div>
@@ -4176,7 +4188,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(s,i) in equipView.switches" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.switches===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}}</td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data"><span v-if="s.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.ip,'switches',s._uid||s._idx).length}" :title="ipCellTitle(s.ip,'switches',s._uid||s._idx)" @click="copyIp(s.ip)">{{s.ip}}</span></td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}} <span v-if="s.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data">{{s.serial}}</td><td class="mono-data"><span v-if="s.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.ip,'switches',s._uid||s._idx).length}" :title="ipCellTitle(s.ip,'switches',s._uid||s._idx)" @click="copyIp(s.ip)">{{s.ip}}</span></td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -4236,6 +4248,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.ip" placeholder="cth: 192.168.1.20"><div v-if="equipFormIpClash('alarms',nALM.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('alarms',nALM.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nALM.installDate"></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nALM.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.accessUser" autocomplete="off"></div>
                 <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nALM.accessPw" autocomplete="new-password"></div>
@@ -4261,7 +4274,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(a,i) in equipView.alarms" :key="a._uid||a._idx" :class="[{'highlight-row':equipEditIdx.alarms===a._idx}, equipRowFx(a)]" :data-equip-uid="a._uid">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
-                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td>{{a.serial}}</td><td><span v-if="a.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(a.ip,'alarms',a._uid||a._idx).length}" :title="ipCellTitle(a.ip,'alarms',a._uid||a._idx)" @click="copyIp(a.ip)">{{a.ip}}</span></td>
+                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="a.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td>{{a.serial}}</td><td><span v-if="a.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(a.ip,'alarms',a._uid||a._idx).length}" :title="ipCellTitle(a.ip,'alarms',a._uid||a._idx)" @click="copyIp(a.ip)">{{a.ip}}</span></td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
@@ -4534,6 +4547,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="form-group"><label>No. Siri / Kuantiti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.ip" placeholder="cth: 192.168.1.30"><div v-if="equipFormIpClash('misc',nMISC.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('misc',nMISC.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nMISC.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan, cth: PC)</span></label><input class="form-control" v-model="nMISC.accessUser" autocomplete="off"></div>
                 <div class="form-group"><label>Password Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="password" v-model="nMISC.accessPw" autocomplete="new-password"></div>
@@ -4560,7 +4574,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(m,i) in equipView.misc" :key="m._uid||m._idx" :class="[{'highlight-row':equipEditIdx.misc===m._idx}, equipRowFx(m)]" :data-equip-uid="m._uid">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
-                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td><span v-if="m.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(m.ip,'misc',m._uid||m._idx).length}" :title="ipCellTitle(m.ip,'misc',m._uid||m._idx)" @click="copyIp(m.ip)">{{m.ip}}</span></td>
+                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="m.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td><span v-if="m.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(m.ip,'misc',m._uid||m._idx).length}" :title="ipCellTitle(m.ip,'misc',m._uid||m._idx)" @click="copyIp(m.ip)">{{m.ip}}</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -5052,6 +5066,22 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </table>
             </div>
           </div>
+          <div v-if="(pm.outOfScope||[]).length" class="card">
+            <div class="card-title">📋 Peralatan Di Luar Skop Penyelenggaraan <span class="text-muted text-sm">(rekod sahaja)</span></div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Jenis</th><th>Nama/Lokasi</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>IP Address</th><th>Status</th><th>Nota</th></tr></thead>
+                <tbody>
+                  <tr v-for="(o,i) in pm.outOfScope" :key="o._uid||i">
+                    <td>{{i+1}}</td><td>{{oosKindLabel(o)}}</td><td>{{oosName(o)}}</td><td>{{o.brand}}</td><td>{{o.model}}</td><td>{{o.serial}}</td><td>{{o.ip||'-'}}</td>
+                    <td><select class="status-sel" v-model="o.status" :class="o.status==='Baik'?'status-ok':'status-no'"><option>Baik</option><option>Tidak</option></select></td>
+                    <td><input class="form-control" style="min-width:100px" v-model="o.nota" placeholder="nota..."></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-sm text-muted" style="margin-top:6px">Peralatan tambahan atas permintaan SPRM — bukan dalam skop penyelenggaraan kontrak. Status direkod sebagai maklumat sahaja.</p>
+          </div>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="pmStep=3">← Balik</button>
             <button class="btn btn-primary" @click="pmStep=5">Seterusnya →</button>
@@ -5424,6 +5454,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <span class="pm-cam-chip">IR Cam: <b>{{viewPM?.cameras?.filter(c=>c.camType==='IR Cam').length||0}}</b></span>
                 <span class="pm-cam-chip">PTZ: <b>{{viewPM?.cameras?.filter(c=>c.camType==='PTZ').length||0}}</b></span>
                 <span class="pm-cam-total">JUMLAH KAMERA: {{viewPM?.cameras?.length||0}} unit</span>
+                <span v-if="oosCount(viewPM,'cameras')" class="pm-cam-chip">+{{oosCount(viewPM,'cameras')}} di luar skop</span>
               </div>
             </div>
             <!-- Rumusan Peralatan VIR — Optager HD4000/VCS/SONY (room-scoped
@@ -5750,6 +5781,22 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <tr v-if="!viewPM?.support?.length"><td colspan="4" class="ctr" style="padding:8px;color:#888">Tiada rekod</td></tr>
             </tbody>
           </table>
+          </div>
+
+          <!-- 8. DI LUAR SKOP — only on a borang that has any (see loadPMEquip) -->
+          <div v-if="viewPM?.outOfScope?.length" class="pm-section-block">
+          <div class="pm-section-hdr">8. &nbsp;PERALATAN DI LUAR SKOP PENYELENGGARAAN (REKOD SAHAJA)</div>
+          <table class="pm-tbl">
+            <thead><tr><th style="width:5%">No.</th><th style="width:10%">Jenis</th><th style="width:19%">Nama/Lokasi</th><th style="width:10%">Brand</th><th style="width:13%">Model</th><th style="width:14%">No. Siri</th><th style="width:12%">IP Address</th><th style="width:8%">Status</th><th style="width:9%">Nota</th></tr></thead>
+            <tbody>
+              <tr v-for="(o,i) in viewPM.outOfScope" :key="i">
+                <td class="ctr">{{i+1}}</td><td class="ctr">{{oosKindLabel(o)}}</td><td>{{oosName(o)}}</td><td class="ctr">{{o.brand}}</td>
+                <td class="ctr">{{o.model}}<span v-if="o.isTemp">*</span></td><td class="ctr">{{o.serial}}</td><td class="ctr">{{o.ip||'-'}}</td>
+                <td :class="o.status==='Baik'?'ok':'no'">{{o.status}}</td><td>{{o.nota}}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="pm-temp-note">Peralatan tambahan atas permintaan SPRM — bukan dalam skop penyelenggaraan kontrak. Status direkod sebagai maklumat sahaja.<span v-if="pmHasTemp(viewPM.outOfScope)"> * Unit gantian sementara.</span></p>
           </div>
 
           </template><!-- end CCTV-only -->
@@ -8234,7 +8281,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <td>{{r.orig}}<div class="text-muted text-sm mono-data">SN: {{r.origSerial}}</div></td>
                     <td>{{r.cur}}<div class="text-muted text-sm mono-data">SN: {{r.curSerial}}</div></td>
                     <td style="white-space:nowrap">{{r.date ? fmtDate(r.date) : '-'}}</td>
-                    <td style="white-space:nowrap">{{r.days !== null ? r.days + ' hari' : '-'}}</td>
+                    <td style="white-space:nowrap"><span v-if="r.days !== null && r.days >= TEMP_EQUIP_ALERT_DAYS" class="badge badge-red" :title="'Melebihi ' + TEMP_EQUIP_ALERT_DAYS + ' hari'">{{r.days}} hari</span><template v-else>{{r.days !== null ? r.days + ' hari' : '-'}}</template></td>
                     <td style="font-size:.8rem">{{r.by||'-'}}</td>
                   </tr>
                   <tr v-if="!tempEquipmentReport.length"><td colspan="10" class="empty">Tiada peralatan gantian sementara.</td></tr>
@@ -8258,6 +8305,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <select class="form-control" style="width:auto;min-width:220px" v-model="failureFilterSite">
                   <option value="">Semua Site</option>
                   <option v-for="s in failureFilterSiteOptions" :key="s.id" :value="s.id">{{s.name}}</option>
+                </select>
+                <select class="form-control" style="width:auto;min-width:120px" v-model="failureFilterYear">
+                  <option value="">Semua Tahun</option>
+                  <option v-for="y in failureFilterYearOptions" :key="y" :value="y">{{y}}</option>
+                </select>
+                <select class="form-control" style="width:auto;min-width:130px" v-model="failureFilterMonth" :disabled="!failureFilterYear">
+                  <option value="">Semua Bulan</option>
+                  <option v-for="(mn,mi) in MONTH_NAMES_MS" :key="mi" :value="mi+1">{{mn}}</option>
                 </select>
                 <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportFailureReportExcel">📊 Export Excel</button>
                 <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-danger" @click="exportFailureReportPdf">🖨️ Export PDF</button>
@@ -8297,7 +8352,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <td>{{l.siteName}}</td>
                     <td><span :class="'proj-badge proj-'+l.project">{{(l.project||'cctv').toUpperCase()}}</span></td>
                     <td>{{l.category}}</td>
-                    <td>{{l.itemName}} <span class="text-muted text-sm">({{l.brand}} {{l.model}})</span></td>
+                    <td>{{l.itemName}} <span class="text-muted text-sm">({{l.brand}} {{l.model}})</span> <span v-if="l.outOfScope" class="badge equip-oos-badge" title="Tidak dikira dalam laporan di atas">Luar Skop</span></td>
                     <td>{{REMOVAL_REASON_LABEL[l.reason]||l.reason}}<span v-if="l.tempCause" class="text-muted text-sm"> ({{tempCauseLabel(l.tempCause)}})</span></td>
                     <td style="font-size:.78rem">{{l.removedBy}}</td>
                     <td><button :disabled="loading" class="btn btn-danger btn-sm btn-icon" @click="deleteEquipmentRemovalLog(l)" title="Padam">🗑</button></td>
@@ -9371,9 +9426,14 @@ let _chartjsReady = null;
 // watcher below). Re-applied on every call (not just first load) via the
 // .then() below, so a chart (re)initialized after a dark-mode toggle still
 // picks up the current state.
+// localStorage access THROWS (not just returns null) when the browser blocks
+// site storage — every read/write of a UI preference goes through these so
+// a blocked or corrupted store can never blank the whole app at startup.
+function _lsGet(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }
+function _lsSet(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
 function _applyChartDarkDefaults() {
   if(typeof Chart === 'undefined') return;
-  const dark = localStorage.getItem('pm_darkmode') === '1';
+  const dark = _lsGet('pm_darkmode') === '1';
   Chart.defaults.color = dark ? '#c9d1d9' : '#666';
   Chart.defaults.scale.grid.color = dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
 }
@@ -11178,6 +11238,7 @@ createApp({
       visitDate:'',
       // CCTV fields
       cameras:[], nvr:[], hdd:[], switches:[], alarms:[], misc:[],
+      outOfScope:[], // items flagged "di luar skop" — see loadPMEquip
       support:[
         {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
         {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -11463,6 +11524,7 @@ createApp({
       if(await askConfirm(`Ada borang PM belum siap dari sesi lepas (${siteLabel}, disimpan ${when}) — kemungkinan tak sempat disubmit sebab sambungan/tab terputus.\n\nNak sambung borang ni semula?`, {danger:false})) {
         currentProject.value = draft.project || 'cctv';
         Object.assign(pm, draft.pm);
+        if(!Array.isArray(draft.pm.outOfScope)) pm.outOfScope = []; // draft saved before this list existed
         // Same localStorage-round-trip issue already handled for _createdAt
         // in savePM() (JSON strips the Timestamp class down to a plain
         // {seconds,nanoseconds} object) — but here it silently breaks the
@@ -12505,13 +12567,19 @@ createApp({
           updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
+        // The local copy can't keep the serverTimestamp() sentinel as its
+        // updatedAt: a FieldValue has .isEqual too, so the concurrent-edit
+        // check above treated it as comparable and warned "diubah oleh orang
+        // lain" on every re-edit of this assignment in the same session.
+        // Same plain placeholder savePM uses (not comparable → no check).
+        const localData = { ...data, updatedAt: _fakeServerTimestamp() };
         if(teamModal.editing && teamModal.current?.id) {
           await _fw(db.collection('teamAssignments').doc(teamModal.current.id).set(data, {merge:true}));
           const idx = teamAssignments.value.findIndex(t => t.id === teamModal.current.id);
-          if(idx > -1) teamAssignments.value[idx] = { id: teamModal.current.id, ...data };
+          if(idx > -1) teamAssignments.value[idx] = { id: teamModal.current.id, ...localData };
         } else {
           const ref2 = await _fw(db.collection('teamAssignments').add(data));
-          teamAssignments.value.push({ id: ref2.id, ...data });
+          teamAssignments.value.push({ id: ref2.id, ...localData });
         }
         teamModal.show = false;
         await logAudit('TEAM_ASSIGN_SAVE', `Team ${data.team} — ${data.siteName} (${data.date})`);
@@ -14489,8 +14557,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // In-app preview (PDF/gambar render terus dalam modal via iframe/img —
     // DOC/DOCX tiada native browser viewer, jadi buka tab baharu je terus).
     const filePreviewModal = reactive({ show:false, url:'', name:'', type:'', zoom:1 });
+    // Attachment entries are plain fields on the record (staff may update
+    // serviceReports), so the stored url is only ever opened when it is a
+    // real https link — a "javascript:" url in the preview iframe / new tab
+    // would run script with this app's access.
+    function _isHttpsUrl(u) { try { return new URL(String(u||'')).protocol === 'https:'; } catch(e) { return false; } }
     function previewServiceReport(r) {
-      const ext = r.name.split('.').pop().toLowerCase();
+      if(!_isHttpsUrl(r?.url)) { showToast('Pautan fail tidak sah.', 'error'); return; }
+      const ext = String(r.name||'').split('.').pop().toLowerCase();
       if(ext === 'pdf') { filePreviewModal.type = 'pdf'; }
       else if(['jpg','jpeg','png'].includes(ext)) { filePreviewModal.type = 'image'; }
       else { window.open(r.url, '_blank'); return; }
@@ -14510,7 +14584,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
       w.document.write(`<!DOCTYPE html><html><head><title>${esc(filePreviewModal.name)}</title>
         <style>body{margin:0;display:flex;justify-content:center}img{max-width:100%;height:auto}</style>
-      </head><body><img src="${filePreviewModal.url}" onload="setTimeout(()=>{window.print();window.close();},200)"></body></html>`);
+      </head><body><img src="${esc(filePreviewModal.url)}" onload="setTimeout(()=>{window.print();window.close();},200)"></body></html>`);
       w.document.close();
     }
     // Agregat semua fail servis merentasi site/vendor — utk paparan ringkas
@@ -14907,13 +14981,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
 
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
-      nCam:  {name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''},
-      nNVR:  {name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
-      nHDD:  {brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
-      nSW:   {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nCam:  {outOfScope:false,name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''},
+      nNVR:  {outOfScope:false,name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nHDD:  {outOfScope:false,brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
+      nSW:   {outOfScope:false,name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
-      nALM:  {name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
-      nMISC: {name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:'',equipNota:''},
+      nALM:  {outOfScope:false,name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',type:'',typeCustom:'',ip:'',installDate:'',accessUser:'',accessPw:''},
+      nMISC: {outOfScope:false,name:'',category:'',categoryCustom:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',accessUser:'',accessPw:'',equipNota:''},
       nServer: {name:'', brand:'OPTAGER', model:'HD4000', brandCustom:'', modelCustom:'', serial:'',
         processor:'', processorCustom:'', ram:'', ramCustom:'', storage:[],
         gpu:'', gpuCustom:'', mobo:'', moboCustom:'', moboType:'', moboTypeCustom:'', lanIp:'', lan2Ip:'', wifiIp:'',
@@ -15396,6 +15470,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         virSiteEquipBCD: virSiteEquipBCD.value,
         virSiteEquipOptager: virSiteEquipOptager.value,
         virSiteEquipVCS: virSiteEquipVCS.value,
+        virSiteEquipSony: virSiteEquipSony.value,
         pmRecords: pmRecords.value,
       };
     }
@@ -15519,7 +15594,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // can't be edited (rules: update false) — they're purged within 3 days,
     // and restoreDeletedRecord()/applyRestore() strip on the way back in.
     const credCleanup = reactive({ running:false, done:false, changedDocs:0, changedItems:0 });
-    const PM_EQUIP_ARRAY_KEYS = ['cameras','nvr','switches','alarms','misc','servers','tablets'];
+    const PM_EQUIP_ARRAY_KEYS = ['cameras','nvr','switches','alarms','misc','servers','tablets','outOfScope'];
     function _hasCreds(it) { return !!it && typeof it === 'object' && ('accessUser' in it || 'accessPw' in it); }
     async function cleanupPmRecordCredentials() {
       if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
@@ -15736,6 +15811,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             ...Object.keys(data.virSiteEquipVCS||{}),
             ...Object.keys(data.virSiteEquipSony||{}),
           ]);
+          // A system missing from the backup file (every backup taken before
+          // SONY was added to collectBackupData, or before VCS existed) must
+          // be left as it is — writing its empty normalized shape wiped that
+          // system's equipment for every restored site.
+          const hasSys = { rooms: !!data.virSiteEquip, BCD: !!data.virSiteEquipBCD, Optager: !!data.virSiteEquipOptager, VCS: !!data.virSiteEquipVCS, SONY: !!data.virSiteEquipSony };
           ids.forEach(id => {
             const rooms = data.virSiteEquip?.[id]?.rooms || [];
             const bcd = {...EQUIP_SHAPE_VIR, ...(data.virSiteEquipBCD?.[id] || {})};
@@ -15756,8 +15836,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
             const optagerSplit = _splitOptagerByRoom(optager);
             const vcsSplit = _splitVcsByRoom(vcs);
             const sonySplit = _splitSonyByRoom(sony);
-            _batchSetChunked(db.collection('virSiteEquipment').doc(id), { rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped, ..._equipRevStamp('virSiteEquipment', id, 'restore backup') }, { merge: true });
-            _batchSetChunked(db.collection('virSiteEquipmentCredentials').doc(id), { BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds, SONY: sonySplit.creds }, { merge: true });
+            _batchSetChunked(db.collection('virSiteEquipment').doc(id), {
+              ...(hasSys.rooms ? { rooms } : {}),
+              ...(hasSys.BCD ? { BCD: bcdSplit.stripped } : {}),
+              ...(hasSys.Optager ? { 'Optager HD4000': optagerSplit.stripped } : {}),
+              ...(hasSys.VCS ? { VCS: vcsSplit.stripped } : {}),
+              ...(hasSys.SONY ? { SONY: sonySplit.stripped } : {}),
+              ..._equipRevStamp('virSiteEquipment', id, 'restore backup') }, { merge: true });
+            _batchSetChunked(db.collection('virSiteEquipmentCredentials').doc(id), {
+              ...(hasSys.BCD ? { BCD: bcdSplit.creds } : {}),
+              ...(hasSys.Optager ? { 'Optager HD4000': optagerSplit.creds } : {}),
+              ...(hasSys.VCS ? { VCS: vcsSplit.creds } : {}),
+              ...(hasSys.SONY ? { SONY: sonySplit.creds } : {}) }, { merge: true });
           });
         }
         _pendingBatches.push(batch);
@@ -15775,11 +15865,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // Only mutate local state after Firestore write confirmed
         if(data.siteEquip) { siteEquip.value = restoredSiteEquip; equipLoadState.cctv = true; }
         if(data.virSiteEquip || data.virSiteEquipBCD || data.virSiteEquipOptager || data.virSiteEquipVCS || data.virSiteEquipSony) {
-          virSiteEquip.value = restoredVirRooms;
-          virSiteEquipBCD.value = restoredVirBcd;
-          virSiteEquipOptager.value = restoredVirOptager;
-          virSiteEquipVCS.value = restoredVirVcs;
-          virSiteEquipSony.value = restoredVirSony;
+          // Systems absent from the backup were not written (see hasSys) —
+          // keep what's in memory for them too.
+          if(data.virSiteEquip) virSiteEquip.value = restoredVirRooms;
+          if(data.virSiteEquipBCD) virSiteEquipBCD.value = restoredVirBcd;
+          if(data.virSiteEquipOptager) virSiteEquipOptager.value = restoredVirOptager;
+          if(data.virSiteEquipVCS) virSiteEquipVCS.value = restoredVirVcs;
+          if(data.virSiteEquipSony) virSiteEquipSony.value = restoredVirSony;
           equipLoadState.vir = true;
         }
 
@@ -15935,13 +16027,27 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const optagerSplit = _splitOptagerByRoom(optager);
           const vcsSplit = _splitVcsByRoom(vcs);
           const sonySplit = _splitSonyByRoom(sony);
-          await _fw(db.collection('virSiteEquipment').doc(id).set({ rooms, BCD: bcdSplit.stripped, 'Optager HD4000': optagerSplit.stripped, VCS: vcsSplit.stripped, SONY: sonySplit.stripped, ..._equipRevStamp('virSiteEquipment', id, 'restore backup') }, { merge: true }));
-          await _fw(db.collection('virSiteEquipmentCredentials').doc(id).set({ BCD: bcdSplit.creds, 'Optager HD4000': optagerSplit.creds, VCS: vcsSplit.creds, SONY: sonySplit.creds }, { merge: true }));
-          virSiteEquip.value = { ...virSiteEquip.value, [id]: { rooms } };
-          virSiteEquipBCD.value = { ...virSiteEquipBCD.value, [id]: bcd };
-          virSiteEquipOptager.value = { ...virSiteEquipOptager.value, [id]: optager };
-          virSiteEquipVCS.value = { ...virSiteEquipVCS.value, [id]: vcs };
-          virSiteEquipSony.value = { ...virSiteEquipSony.value, [id]: sony };
+          // Same as the full restore: a system the backup file doesn't have
+          // is left untouched instead of being overwritten with nothing.
+          const d = singleSiteRestore.data;
+          const hasSys = { rooms: !!d.virSiteEquip, BCD: !!d.virSiteEquipBCD, Optager: !!d.virSiteEquipOptager, VCS: !!d.virSiteEquipVCS, SONY: !!d.virSiteEquipSony };
+          await _fw(db.collection('virSiteEquipment').doc(id).set({
+            ...(hasSys.rooms ? { rooms } : {}),
+            ...(hasSys.BCD ? { BCD: bcdSplit.stripped } : {}),
+            ...(hasSys.Optager ? { 'Optager HD4000': optagerSplit.stripped } : {}),
+            ...(hasSys.VCS ? { VCS: vcsSplit.stripped } : {}),
+            ...(hasSys.SONY ? { SONY: sonySplit.stripped } : {}),
+            ..._equipRevStamp('virSiteEquipment', id, 'restore backup') }, { merge: true }));
+          await _fw(db.collection('virSiteEquipmentCredentials').doc(id).set({
+            ...(hasSys.BCD ? { BCD: bcdSplit.creds } : {}),
+            ...(hasSys.Optager ? { 'Optager HD4000': optagerSplit.creds } : {}),
+            ...(hasSys.VCS ? { VCS: vcsSplit.creds } : {}),
+            ...(hasSys.SONY ? { SONY: sonySplit.creds } : {}) }, { merge: true }));
+          if(hasSys.rooms) virSiteEquip.value = { ...virSiteEquip.value, [id]: { rooms } };
+          if(hasSys.BCD) virSiteEquipBCD.value = { ...virSiteEquipBCD.value, [id]: bcd };
+          if(hasSys.Optager) virSiteEquipOptager.value = { ...virSiteEquipOptager.value, [id]: optager };
+          if(hasSys.VCS) virSiteEquipVCS.value = { ...virSiteEquipVCS.value, [id]: vcs };
+          if(hasSys.SONY) virSiteEquipSony.value = { ...virSiteEquipSony.value, [id]: sony };
         } else {
           const EQUIP_SHAPE_CCTV = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
           const merged = {...EQUIP_SHAPE_CCTV, ...(singleSiteRestore.data.siteEquip?.[id] || {})};
@@ -16072,10 +16178,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // two charts below to a single year; health-score/overdue/approaching
     // stay unfiltered since those are always relative to "today". ----
     const dashboardYear = ref(new Date().getFullYear());
-    const dashboardCompact = ref(localStorage.getItem('pm_dashboard_compact')==='1');
+    const dashboardCompact = ref(_lsGet('pm_dashboard_compact')==='1');
     function toggleDashboardCompact() {
       dashboardCompact.value = !dashboardCompact.value;
-      localStorage.setItem('pm_dashboard_compact', dashboardCompact.value ? '1' : '0');
+      _lsSet('pm_dashboard_compact', dashboardCompact.value ? '1' : '0');
     }
     const dashboardYears = computed(() => {
       const years = new Set(maintRecords.value.map(r=>r.year).filter(Boolean));
@@ -17005,11 +17111,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // Site Health Score grid. Per-browser (localStorage), not per-account —
     // simplest useful scope, matches how dashboardCompact/darkMode are
     // already stored in this file.
-    const favoriteSiteIds = reactive(new Set(JSON.parse(localStorage.getItem('pm_favorite_sites') || '[]')));
+    // Parsed defensively — a corrupted/non-array value used to throw right
+    // here, inside setup(), and blank the whole app.
+    const favoriteSiteIds = reactive(new Set((() => {
+      try { const v = JSON.parse(_lsGet('pm_favorite_sites') || '[]'); return Array.isArray(v) ? v : []; } catch(e) { return []; }
+    })()));
     function toggleFavoriteSite(id) {
       if(favoriteSiteIds.has(id)) favoriteSiteIds.delete(id);
       else favoriteSiteIds.add(id);
-      localStorage.setItem('pm_favorite_sites', JSON.stringify([...favoriteSiteIds]));
+      _lsSet('pm_favorite_sites', JSON.stringify([...favoriteSiteIds]));
     }
     const sitesForHealthGrid = computed(() => {
       const list = currentProject.value === 'cctv' ? SITES : VIR_SITES;
@@ -17672,11 +17782,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       try {
         // Track resolvedAt only the moment status first becomes 'resolved' —
         // used for the Time-to-Resolution report (createdAt -> resolvedAt).
+        // (An already-resolved record keeps its original resolvedAt —
+        // re-stamping it would shift its Time-to-Resolution.)
+        const stampResolved = status === 'resolved' && rec.cmStatus !== 'resolved';
         const updates = { cmStatus: status };
-        if(status === 'resolved') updates.resolvedAt = firebase.firestore.FieldValue.serverTimestamp();
+        if(stampResolved) updates.resolvedAt = firebase.firestore.FieldValue.serverTimestamp();
         await _fw(db.collection('pmRecords').doc(recordId).update(updates));
         const idx = pmRecords.value.findIndex(r => r.id === recordId);
-        if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: status, ...(status==='resolved' ? {resolvedAt:_fakeServerTimestamp()} : {}) };
+        if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: status, ...(stampResolved ? {resolvedAt:_fakeServerTimestamp()} : {}) };
         await logAudit('CM_STATUS_UPDATE', `${recordId} → ${status}`);
         // Second confetti milestone (alongside savePM's "100% PM pematuhan"
         // one above) — celebrates the moment this site's CM backlog hits
@@ -17718,6 +17831,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       try {
         const bulkUpdates = { cmStatus: bulkCmStatus.value };
         if(bulkCmStatus.value === 'resolved') bulkUpdates.resolvedAt = firebase.firestore.FieldValue.serverTimestamp();
+        // Records already "Selesai" in the selection keep their original
+        // resolvedAt (same rule as updateCMStatus) — only cmStatus is written.
+        const _wasResolved = new Set(ids.filter(id => pmRecords.value.find(r => r.id === id)?.cmStatus === 'resolved'));
+        const _updFor = id => _wasResolved.has(id) ? { cmStatus: bulkCmStatus.value } : bulkUpdates;
         // Firestore batched writes cap at 500 ops — chunk defensively, same
         // as bulkDeleteAuditLogs() above. The "select all" checkbox on the
         // filtered PM list (see filteredPM.map(...) in the template) can
@@ -17726,13 +17843,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         // whole batch.commit() outright.
         for(let i=0; i<ids.length; i+=500) {
           const batch = db.batch();
-          ids.slice(i, i+500).forEach(id => batch.update(db.collection('pmRecords').doc(id), bulkUpdates));
+          ids.slice(i, i+500).forEach(id => batch.update(db.collection('pmRecords').doc(id), _updFor(id)));
           await _fw(batch.commit());
         }
         // update local state only after commit
         ids.forEach(id => {
           const idx = pmRecords.value.findIndex(r => r.id === id);
-          if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: bulkCmStatus.value, ...(bulkCmStatus.value==='resolved' ? {resolvedAt:_fakeServerTimestamp()} : {}) };
+          if(idx > -1) pmRecords.value[idx] = { ...pmRecords.value[idx], cmStatus: bulkCmStatus.value, ...(bulkCmStatus.value==='resolved' && !_wasResolved.has(id) ? {resolvedAt:_fakeServerTimestamp()} : {}) };
         });
         await logAudit('BULK_CM_STATUS', `${ids.length} rekod → ${bulkCmStatus.value}`);
         showToast(`${ids.length} rekod CM dikemaskini kepada "${statusLabel}"`);
@@ -17769,7 +17886,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     }
 
     function _lastActivity() {
-      const v = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
+      const v = Number(_lsGet(LAST_ACTIVITY_KEY));
       return v || Date.now();
     }
 
@@ -18456,7 +18573,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           // changelog instead — first-time users get the tutorial, which
           // already covers everything a changelog would repeat.
           setTimeout(() => {
-            if(localStorage.getItem('pm_tutorial_seen_v1')) maybeShowWhatsNew();
+            if(_lsGet('pm_tutorial_seen_v1')) maybeShowWhatsNew();
             else maybeShowTutorial();
           }, 10500); // after the 10s welcome popup auto-dismisses
         }, 1300);
@@ -18480,12 +18597,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     ];
     const whatsNewModal = reactive({ show:false });
     function maybeShowWhatsNew() {
-      if(localStorage.getItem('pm_whatsnew_seen') === WHATS_NEW_VERSION) return;
+      if(_lsGet('pm_whatsnew_seen') === WHATS_NEW_VERSION) return;
       whatsNewModal.show = true;
     }
     function closeWhatsNew() {
       whatsNewModal.show = false;
-      localStorage.setItem('pm_whatsnew_seen', WHATS_NEW_VERSION);
+      _lsSet('pm_whatsnew_seen', WHATS_NEW_VERSION);
     }
 
     // ── ONBOARDING TUTORIAL ──
@@ -18500,13 +18617,13 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     ];
     const tutorialModal = reactive({ show:false, step:0 });
     function maybeShowTutorial() {
-      if(localStorage.getItem('pm_tutorial_seen_v1')) return;
+      if(_lsGet('pm_tutorial_seen_v1')) return;
       openTutorial();
     }
     function openTutorial() { tutorialModal.step = 0; tutorialModal.show = true; }
     function closeTutorial() {
       tutorialModal.show = false;
-      localStorage.setItem('pm_tutorial_seen_v1', '1');
+      _lsSet('pm_tutorial_seen_v1', '1');
     }
     function tutorialNext() {
       if(tutorialModal.step < TUTORIAL_STEPS.length - 1) tutorialModal.step++;
@@ -18571,7 +18688,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           if(saDoc.exists) {
             authProfile.value = { id: saDoc.id, uid: saUid, ...saDoc.data() };
           } else {
-            authProfile.value = { ...builtIn, name: builtIn.name||uid, uid: saUid };
+            // id too — Profil's photo upload, Jadual notifications etc. key on authProfile.id.
+            authProfile.value = { ...builtIn, name: builtIn.name||uid, id: saUid, uid: saUid };
             await db.collection('users').doc(saUid).set({ username:uid, email, name:builtIn.name, role:builtIn.role, disabled:false, accessType:'permanent', expiryDate:'' }, {merge:true});
           }
         } else {
@@ -19234,6 +19352,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       importState._targetProj = currentProject.value;
       importState._targetSiteId = selSite.value.id;
       importState._targetSiteName = selSite.value.name;
+      // VIR imports land in activeEquip() — whichever system/room is open at
+      // CONFIRM time — so pin those too and refuse if they've changed.
+      importState._targetSlot = _importSlotKey();
       importState.kind = kind; importState.err = ''; importState.loading = true;
       importState.rows = []; importState.added = 0; importState.duplicates = []; importState.ocrProgress = 0;
       importState.show = true;
@@ -19426,6 +19547,19 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return { ...rest, isTemp: true, tempOrigBrand: _temp.original?.brand || '' };
     }
     function pmHasTemp(list) { return (list || []).some(x => x?.isTemp); }
+    // A camera counts as failed in the failure reports when its borang
+    // status is "Tidak" — the only camera status the form offers (Baik/
+    // Tidak). The old check looked for display 'Rosak' (never a form value)
+    // or icam 'Tidak' (always 'Baik' — no input), so camera failures were
+    // never counted. Both legacy values are still honoured for old records.
+    function _camFailed(c) { return c?.display === 'Tidak' || c?.display === 'Rosak' || c?.icam === 'Tidak'; }
+    // Borang "Peralatan Di Luar Skop" list — one combined table for every
+    // kind; each entry keeps its kind in _kind.
+    const OOS_KIND_LABEL = { cameras:'Kamera', nvr:'NVR', hdd:'HDD', switches:'Switch', alarms:'Alarm', misc:'Lain-lain' };
+    function oosKindLabel(o) { return o?._kind === 'misc' ? (o.category || 'Lain-lain') : (OOS_KIND_LABEL[o?._kind] || '-'); }
+    function oosName(o) { return o?.name || o?.nvrRef || '-'; }
+    function oosCount(r, kind) { return (r?.outOfScope || []).filter(o => o?._kind === kind).length; }
+    const _oosSfx = it => it?.outOfScope ? ' (Luar Skop)' : '';
     function _mergeCredentials(equipObj, creds) {
       if(!equipObj || !creds) return equipObj;
       CRED_EQUIP_KINDS.forEach(kind => {
@@ -19606,8 +19740,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       delete siteRec.byRoom[roomUid];
     }
 
+    function _importSlotKey() {
+      return [currentProject.value, selSite.value?.id || '', currentProject.value === 'vir' ? equipVirSystem.value : '', currentProject.value === 'vir' ? (equipVirRoomUid.value || '') : ''].join('|');
+    }
     function confirmImportRows() {
       const kind = importState.kind;
+      if(importState._targetSlot && importState._targetSlot !== _importSlotKey()) {
+        showToast(`Halaman peralatan telah bertukar sejak fail dibaca — buka semula "${importState._targetSiteName}" (sistem/bilik yang sama) dan import semula.`, 'error');
+        return;
+      }
       const rows = importState.rows.filter(r => r._include);
       if(!rows.length) { showToast('Tiada rekod dipilih untuk import.', 'error'); return; }
       // Same IMEI rule as addTablet() — an imported bad IMEI would otherwise
@@ -19909,6 +20050,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         userModal.data.jabatanCustom = u.jabatan;
       }
       userModal._editId = u.id;
+      userModal._origEmail = (u.email||'').trim().toLowerCase(); // see submitUser's email-change check
       userModal.show=true;
     }
 
@@ -19983,6 +20125,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!isValidEmail(userModal.data.email)){ userModal.err='Format emel tidak sah.'; return; }
       if(!isValidPhone(userModal.data.phone)){ userModal.err='Format no. telefon tidak sah.'; return; }
       const resolvedJabatan = (userModal.data.jabatan==='Lain-lain' && userModal.data.jabatanCustom.trim()) ? userModal.data.jabatanCustom.trim() : userModal.data.jabatan;
+      // doLogin signs in with THIS stored email, but editing it here can't
+      // change the Firebase Auth account's own email (needs the Admin SDK /
+      // Firebase Console) — so the user is locked out (and reset-password
+      // mails go nowhere) unless the Auth email is changed to match.
+      if(userModal.editing && userModal._origEmail && userModal.data.email.toLowerCase() !== userModal._origEmail) {
+        if(!await askConfirm(`⚠ Emel ini digunakan untuk LOG MASUK akaun "${userModal.data.username}".
+
+Menukarnya di sini TIDAK menukar emel akaun log masuk. Pengguna ini TIDAK akan dapat log masuk (dan reset kata laluan tidak akan sampai) kecuali emel yang sama juga ditukar di Firebase Console → Authentication.
+
+Teruskan tukar emel?`)) return;
+      }
       loading.value=true;
       try {
         // Re-check against Firestore itself (not the cached allUsers list)
@@ -20044,7 +20197,10 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         userModal.show=false;
         await loadUsers();
       } catch(e) {
-        userModal.err = e.code==='auth/email-already-in-use'?'Username sudah digunakan.':'Ralat: '+e.message;
+        // Username clashes are caught above — this one is the EMAIL already
+        // owning a Firebase Auth account (e.g. a user deleted from this list:
+        // deleteUser removes the profile, not the Auth account).
+        userModal.err = e.code==='auth/email-already-in-use'?'Emel ini sudah didaftarkan pada akaun log masuk lain (termasuk akaun yang pernah dipadam). Sila guna emel lain.':'Ralat: '+e.message;
       }
       loading.value=false;
     }
@@ -20799,13 +20955,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           img.src = raw;
         });
         const blob = await (await fetch(dataURL)).blob();
-        const oldPath = allUsers.value.find(u => u.id === uid)?.photoPath || authProfile.value?.photoPath;
+        // The fallback to the viewer's own profile is ONLY for their own
+        // photo — it used to apply to anyone, so a superadmin setting the
+        // first photo of a user with none deleted their OWN avatar file.
+        const isSelf = authProfile.value?.id === uid || authProfile.value?.uid === uid;
+        const oldPath = allUsers.value.find(u => u.id === uid)?.photoPath || (isSelf ? authProfile.value?.photoPath : null);
         const path = `profile-photos/${uid}/${Date.now()}_avatar.jpg`;
         await _ensureStorage();
         const snap = await storage.ref(path).put(blob, { contentType: 'image/jpeg' });
         const url = await snap.ref.getDownloadURL();
         await db.collection('users').doc(uid).update({ photoURL: url, photoPath: path });
-        if(authProfile.value?.uid === uid) { authProfile.value.photoURL = url; authProfile.value.photoPath = path; }
+        if(isSelf) { authProfile.value.photoURL = url; authProfile.value.photoPath = path; }
         const idx = allUsers.value.findIndex(u => u.id === uid);
         if(idx > -1) { allUsers.value[idx].photoURL = url; allUsers.value[idx].photoPath = path; }
         // Old avatar is now orphaned in Storage — clean it up. Best-effort:
@@ -21235,13 +21395,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const EQUIP_SEARCH_FIELDS = ['name','ip','lanIp','lan2Ip','wifiIp','serial','imei','model','brand','nvrRef','category','type','camType','equipNota','nota'];
     const _NO_VALUE = '(Tiada)';
     // uid: set only by a global-search click (see _focusEquipSearchHit) — one exact item.
-    const _blankEquipFilter = () => ({ brand:'', camType:'', type:'', capacity:'', category:'', q:'', temp:false, uid:'' });
+    const _blankEquipFilter = () => ({ brand:'', camType:'', type:'', capacity:'', category:'', q:'', temp:false, uid:'', scope:'' });
     const equipFilter = reactive(Object.fromEntries(Object.keys(EQUIP_FILTER_FIELDS).map(k => [k, _blankEquipFilter()])));
     const _equipFilterVal = (it, key) => String(it?.[key] ?? '').trim() || _NO_VALUE;
     function equipFilterActive(kind) {
       const f = equipFilter[kind];
-      return !!f && (!!f.q.trim() || f.temp || !!f.uid || EQUIP_FILTER_FIELDS[kind].some(x => f[x.key]));
+      return !!f && (!!f.q.trim() || f.temp || !!f.uid || !!f.scope || EQUIP_FILTER_FIELDS[kind].some(x => f[x.key]));
     }
+    function equipHasOos(kind) { return (selSiteEquip.value[kind] || []).some(x => x?.outOfScope); }
     function clearEquipFilter(kind) { Object.assign(equipFilter[kind], _blankEquipFilter()); }
     // Changing a list's filter drops that list's bulk selection — selected
     // rows otherwise stayed selected while hidden by the new filter, and
@@ -21382,6 +21543,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const rows = (selSiteEquip.value[kind] || []).map((it, idx) => ({ ...it, _idx: idx })).filter(it => {
           if(f.uid && it._uid !== f.uid) return false;
           if(f.temp && !it._temp) return false;
+          if(f.scope && !!it.outOfScope !== (f.scope === 'out')) return false;
           if(EQUIP_FILTER_FIELDS[kind].some(x => f[x.key] && _equipFilterVal(it, x.key) !== f[x.key])) return false;
           return !q || EQUIP_SEARCH_FIELDS.some(k => String(it[k] || '').toLowerCase().includes(q));
         });
@@ -21749,6 +21911,9 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         brand: snap.brand || '-', model: snap.model || '-', serial: snap.serial || '-',
         reason, reasonCustom: reasonCustom || '',
         removedBy: authUser.value?.email || '',
+        // Out-of-scope units are logged (history) but never counted as our
+        // failures — see failureReport.
+        ...(snap.outOfScope ? { outOfScope: true } : {}),
         ...extra,
       };
       // The log is read once per session (see openEquipHistory /
@@ -21827,6 +21992,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // stored with the equipment, which more roles can read).
       if((before?.accessUser || '') !== (after?.accessUser || '') || (before?.accessPw || '') !== (after?.accessPw || ''))
         out.push({ f: 'Kelayakan akses', from: '', to: '(dikemas kini)' });
+      if(!!before?.outOfScope !== !!after?.outOfScope)
+        out.push({ f: 'Skop', from: before?.outOfScope ? 'Luar skop' : 'Dalam skop', to: after?.outOfScope ? 'Luar skop' : 'Dalam skop' });
       return out;
     }
     function _appendEquipChange(item, { note = '', diffs = [] } = {}) {
@@ -22140,6 +22307,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const item = (selSiteEquip.value[key]||[])[idx];
       if(!item) return;
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet, rooms:nRoom };
+      // Start from a blank form: Object.assign skips keys the item doesn't
+      // have, so a row with no saved login (or outOfScope flag, etc.) kept
+      // the PREVIOUS edited row's values in the form and saved them onto
+      // this one — e.g. one camera's password copied onto another.
+      Object.assign(refs[key], FORM_DEFAULTS[EQUIP_KEY_TO_FORM[key]]);
       Object.assign(refs[key], item);
       // `_temp`/`_changes` stay off the form — see _equipEditTemp.
       delete refs[key]._temp;
@@ -22270,7 +22442,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const rows = pmRecords.value
         .filter(r => r.siteId === siteId && (r.project||'cctv') === proj && r.status === 'submitted')
         .map(r => {
-          const list = r[kind] || [];
+          const list = [...(r[kind] || []), ...(r.outOfScope || []).filter(x => x?._kind === kind).map(x => ({ ...x, [statusField]: x.status }))];
           let match = item._uid ? list.find(x => x._uid === item._uid) : null;
           if(!match && item.ip) match = list.find(x => x.ip && x.ip === item.ip);
           if(!match && itemSerialKey) match = list.find(x => _realSerialKey(x.serial) === itemSerialKey);
@@ -22356,6 +22528,15 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // "Lain-lain" only if they left the custom box empty) — and never let
     // the scratch `brandCustom`/`modelCustom` fields themselves leak into
     // the saved equipment record.
+    // "Di luar skop" (CCTV only) — the item stays in its own tab like any
+    // other, but loadPMEquip moves it out of the borang's maintenance
+    // tables into the separate pm.outOfScope list. Stored only when true,
+    // so every existing row is left exactly as it was.
+    function _applyScopeFlag(item, form) {
+      if(form.outOfScope && currentProject.value !== 'vir') item.outOfScope = true;
+      else delete item.outOfScope;
+      return item;
+    }
     function _resolveBrandModel(formObj) {
       const { brandCustom, modelCustom, ...rest } = formObj;
       const brand = (rest.brand === 'Lain-lain' && brandCustom && brandCustom.trim()) ? brandCustom.trim() : rest.brand;
@@ -22383,6 +22564,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const equipNota = (camResolved.equipNota||'').trim();
       if(equipNota && currentProject.value !== 'vir') camResolved.equipNota = equipNota;
       else delete camResolved.equipNota;
+      _applyScopeFlag(camResolved, nCam);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].cameras;
       const dup = _findDupConflict('cameras', list, camResolved, equipEditIdx.cameras);
@@ -22398,7 +22580,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!nNVR.name?.trim()){showToast('Sila masukkan nama NVR','error');return;}
       if(!nNVR.type){showToast('Sila pilih Jenis','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
-      const resolved = _resolveBrandModel(nNVR);
+      const resolved = _applyScopeFlag(_resolveBrandModel(nNVR), nNVR);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
       const dup = _findDupConflict('nvr', list, resolved, equipEditIdx.nvr);
@@ -22420,6 +22602,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       resolved.capacity = _resolveDropdownCustom(nHDD.capacity, nHDD.capacityCustom);
       delete resolved.nvrRefCustom;
       delete resolved.capacityCustom;
+      _applyScopeFlag(resolved, nHDD);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].hdd;
       const dup = _findDupConflict('hdd', list, resolved, equipEditIdx.hdd);
@@ -22435,7 +22618,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(!nSW.brand?.trim()){showToast('Sila masukkan brand switch','error');return;}
       if(!nSW.model?.trim()){showToast('Sila masukkan model switch','error');return;}
       if(!isValidIp(nSW.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
-      const resolved = _resolveBrandModel(nSW);
+      const resolved = _applyScopeFlag(_resolveBrandModel(nSW), nSW);
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].switches;
       const dup = _findDupConflict('switches', list, resolved, equipEditIdx.switches);
@@ -22519,6 +22702,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const list = activeEquip()[selSite.value.id].alarms;
       const { typeCustom, ...resolved } = _resolveBrandModel(nALM);
       resolved.type = (resolved.type === 'Lain-lain' && typeCustom && typeCustom.trim()) ? typeCustom.trim() : resolved.type;
+      _applyScopeFlag(resolved, nALM);
       const dup = _findDupConflict('alarms', list, resolved, equipEditIdx.alarms);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.alarms !== null) { list[equipEditIdx.alarms] = {...resolved, _uid:list[equipEditIdx.alarms]._uid||_genId(), _ts:Date.now()}; equipEditIdx.alarms = null; showToast('Alarm dikemaskini!'); }
@@ -22549,6 +22733,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // CCTV only (input hidden for VIR) — stored only when non-empty.
       const equipNota = (nMISC.equipNota||'').trim();
       if(equipNota && currentProject.value !== 'vir') item.equipNota = equipNota;
+      _applyScopeFlag(item, nMISC);
       const dup = _findDupConflict('misc', list, item, equipEditIdx.misc);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
       if(equipEditIdx.misc !== null) { item._uid = list[equipEditIdx.misc]._uid||_genId(); list[equipEditIdx.misc] = item; equipEditIdx.misc = null; showToast('Peralatan dikemaskini!'); }
@@ -23096,7 +23281,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       pm.virItems = VIR_CHECKLIST_TEMPLATE_BCD.map(t=>({...t, status:'ok', nota:''}));
       pm.siteId=''; pm.siteName=''; pm.refNo=''; refNoSuffix.value='';
       pm.month=null; pm.year=null;
-      pm.visitDate=''; pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[]; pm.servers=[]; pm.tablets=[];
+      pm.visitDate=''; pm.cameras=[]; pm.nvr=[]; pm.hdd=[]; pm.switches=[]; pm.alarms=[]; pm.misc=[]; pm.servers=[]; pm.tablets=[]; pm.outOfScope=[];
       pm.support=[
         {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
         {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -23206,7 +23391,14 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       }
       const site = SITES.find(s=>s.id===pm.siteId);
       pm.siteName = site?.name||'';
-      const eq = siteEquip.value[pm.siteId] || {};
+      const eqAll = siteEquip.value[pm.siteId] || {};
+      // Items flagged "di luar skop" never enter the maintenance tables (or
+      // their counts) — they go to pm.outOfScope, one combined table at the
+      // end of the borang. Status there is recorded as information only.
+      const eq = {};
+      Object.keys(OOS_KIND_LABEL).forEach(k => { eq[k] = (eqAll[k] || []).filter(x => !x?.outOfScope); });
+      pm.outOfScope = Object.keys(OOS_KIND_LABEL).flatMap(k =>
+        _stripEquipCreds((eqAll[k] || []).filter(x => x?.outOfScope)).map(({ equipNota, ...x }) => ({ ...x, _kind:k, status:'Baik', nota:'' })));
 
       // equipNota (Urus Peralatan's internal camera note) is stripped — it
       // must never reach the PM/CM borang or the saved record.
@@ -23391,7 +23583,11 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           // same reason as cmStatus above — this form never sets it itself
           // (only updateCMStatus()/bulkUpdateCMStatus() do), so it would
           // otherwise be silently dropped by the .set(data) overwrite.
-          ...(pm._resolvedAt ? {resolvedAt: pm._resolvedAt} : {}),
+          // A local copy holds a plain {seconds} placeholder (resolved this
+          // session) or a JSON-stripped one (draft recovery) — write it back
+          // as a real Timestamp, never as a bare map.
+          ...(pm._resolvedAt?.toDate ? {resolvedAt: pm._resolvedAt}
+            : Number(pm._resolvedAt?.seconds) > 0 ? {resolvedAt: firebase.firestore.Timestamp.fromMillis(Number(pm._resolvedAt.seconds) * 1000)} : {}),
           // pm._createdAt round-trips through localStorage JSON if the crash-recovery
           // draft (checkPmDraftRecovery) saved it mid-edit — that strips the Firestore
           // Timestamp class down to a plain {seconds,nanoseconds} object. Only trust it
@@ -23424,6 +23620,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           } : {
             cameras:_stripEquipCreds(pm.cameras), nvr:_stripEquipCreds(pm.nvr), hdd:[...pm.hdd],
             switches:_stripEquipCreds(pm.switches), alarms:_stripEquipCreds(pm.alarms), misc:_stripEquipCreds(pm.misc),
+            outOfScope:_stripEquipCreds(pm.outOfScope||[]),
             support:JSON.parse(JSON.stringify(pm.support)),
           })
         };
@@ -23635,7 +23832,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         pm.switches = r.switches ? JSON.parse(JSON.stringify(r.switches)) : [];
         pm.tablets = r.tablets ? JSON.parse(JSON.stringify(r.tablets)) : [];
         pm.misc = r.misc ? JSON.parse(JSON.stringify(r.misc)) : [];
-        pm.nvr=[]; pm.hdd=[]; pm.alarms=[];
+        pm.nvr=[]; pm.hdd=[]; pm.alarms=[]; pm.outOfScope=[];
         pm.support=[
           {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
           {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -23650,6 +23847,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         pm.switches = r.switches ? JSON.parse(JSON.stringify(r.switches)) : [];
         pm.alarms = r.alarms ? JSON.parse(JSON.stringify(r.alarms)) : [];
         pm.misc = r.misc ? JSON.parse(JSON.stringify(r.misc)) : [];
+        pm.outOfScope = r.outOfScope ? JSON.parse(JSON.stringify(r.outOfScope)) : [];
         // Same tidy-order guarantee as loadPMEquip() — older records may
         // have been saved before auto-sort existed.
         pm.cameras.sort((a,b) => {
@@ -24467,7 +24665,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const ic=r.cameras.filter(c=>c.camType==='Indoor').length, oc=r.cameras.filter(c=>c.camType==='Outdoor').length,
                 ir=r.cameras.filter(c=>c.camType==='IR Cam').length, pt=r.cameras.filter(c=>c.camType==='PTZ').length;
           children.push(new Paragraph({
-            children: [new TextRun({ text: `Indoor: ${ic}  |  Outdoor: ${oc}  |  IR Cam: ${ir}  |  PTZ: ${pt}  |  JUMLAH KAMERA: ${r.cameras.length} unit`, size: 15, bold: true })],
+            children: [new TextRun({ text: `Indoor: ${ic}  |  Outdoor: ${oc}  |  IR Cam: ${ir}  |  PTZ: ${pt}  |  JUMLAH KAMERA: ${r.cameras.length} unit${oosCount(r,'cameras') ? `  (+${oosCount(r,'cameras')} di luar skop)` : ''}`, size: 15, bold: true })],
             shading: { type: ShadingType.SOLID, color: 'F0F4FF' },
             indent: { left: 80 },
             spacing: { before: 40, after: 100 },
@@ -24534,6 +24732,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           ));
         } else { children.push(emptyNote('Tiada rekod Perkara Lain-lain.')); }
         children.push(spacer());
+
+        // ── 8. Di luar skop (only when the borang has any) ──
+        if (r.outOfScope?.length) {
+          children.push(sectionHdr('8.  PERALATAN DI LUAR SKOP PENYELENGGARAAN (REKOD SAHAJA)'));
+          children.push(makeTable(
+            ['No.','Jenis','Nama/Lokasi','Brand','Model','No. Siri','IP Address','Status','Nota'],
+            r.outOfScope.map((o,i)=>[i+1,oosKindLabel(o),oosName(o),o.brand,(o.model||'')+(o.isTemp?'*':''),o.serial,o.ip||'-',o.status,o.nota||''])
+          ));
+          children.push(emptyNote('Peralatan tambahan atas permintaan SPRM — bukan dalam skop penyelenggaraan kontrak. Status direkod sebagai maklumat sahaja.' + (pmHasTemp(r.outOfScope) ? ' * Unit gantian sementara.' : '')));
+          children.push(spacer());
+        }
 
       } else {
         // ── VIR Checklist ──
@@ -24719,6 +24928,16 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           }
         });
       }
+      // Temporary stand-in units still in place after TEMP_EQUIP_ALERT_DAYS.
+      // Id includes the swap date, so a later swap on the same row is a new
+      // notification rather than one already marked read.
+      if(canViewCredentials.value) {
+        _tempEquipAll.value.forEach(r => {
+          if(r.days === null || r.days < TEMP_EQUIP_ALERT_DAYS) return;
+          list.push({ id:'temp-'+(r.uid || r.siteName+'|'+r.name)+'-'+r.date, icon:'🔁', type:'temp', title:'Unit Sementara: '+r.siteName,
+            body:`${r.cat} ${r.name} guna unit sementara ${r.days} hari — unit asal ${r.orig} belum dipulihkan`, time: now, read:false, action:'laporan-lanjutan', project: r.proj.toLowerCase() });
+        });
+      }
       // Preserve read-state across rebuilds — ids are stable (e.g.
       // 'overdue-'+siteId), but this function reruns on every pmRecords
       // change and previously hardcoded read:false on every item, silently
@@ -24802,6 +25021,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(n.type === 'contract' && n.project) {
         currentProject.value = n.project;
       }
+      if(n.type === 'temp') { reportTab.value = 'sementara'; tempEquipFilterProj.value = 'all'; }
       showNotifPanel.value = false;
       if(n.action) page.value = n.action;
     }
@@ -24988,7 +25208,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       // Chart 4: Equipment failures
       const failMap = { Kamera:0, NVR:0, HDD:0, Switch:0, Penggera:0, Sokongan:0 };
       recs.filter(r=>r.maintType==='CM').forEach(r => {
-        (r.cameras||[]).forEach(c => { if(c.icam==='Tidak'||c.display==='Rosak') failMap.Kamera++; });
+        (r.cameras||[]).forEach(c => { if(_camFailed(c)) failMap.Kamera++; });
         (r.nvr||[]).forEach(n => { if(n.asmOp==='Tidak') failMap.NVR++; });
         (r.hdd||[]).forEach(h => { if(h.status==='Tidak') failMap.HDD++; });
         (r.switches||[]).forEach(s => { if(s.portStatus==='Tidak') failMap.Switch++; });
@@ -25524,7 +25744,7 @@ ${allIssues.length > 0 ? `
       // Aggregate equipment failures across all CM
       const failMap = { Kamera:0, NVR:0, HDD:0, Switch:0, Penggera:0, Sokongan:0 };
       recs.filter(r => r.maintType === 'CM').forEach(r => {
-        (r.cameras||[]).forEach(c => { if(c.icam==='Tidak'||c.display==='Rosak') failMap.Kamera++; });
+        (r.cameras||[]).forEach(c => { if(_camFailed(c)) failMap.Kamera++; });
         (r.nvr||[]).forEach(n => { if(n.asmOp==='Tidak') failMap.NVR++; });
         (r.hdd||[]).forEach(h => { if(h.status==='Tidak') failMap.HDD++; });
         (r.switches||[]).forEach(s => { if(s.portStatus==='Tidak') failMap.Switch++; });
@@ -25691,12 +25911,12 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const rows = [];
       const pushSite = (site, proj, eqSrc) => {
         const eq = eqSrc[site.id] || {};
-        (eq.cameras||[]).forEach(c => rows.push({ site:site.name, proj, cat:'Kamera', name:c.name||'-', brand:c.brand||'-', model:c.model||'-', serial:c.serial||'-', extra:c.ip||c.camType||'-' }));
-        (eq.nvr||[]).forEach(n => rows.push({ site:site.name, proj, cat:'NVR', name:n.name||'-', brand:n.brand||'-', model:n.model||'-', serial:n.serial||'-', extra:n.ip||n.type||'-' }));
-        (eq.hdd||[]).forEach(h => rows.push({ site:site.name, proj, cat:'HDD', name:h.nvrRef||'-', brand:h.brand||'-', model:h.model||'-', serial:h.serial||'-', extra:h.capacity||'-' }));
-        (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch', name:s.name||'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:'-' }));
-        (eq.alarms||[]).forEach(a => rows.push({ site:site.name, proj, cat:'Alarm', name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
-        (eq.misc||[]).forEach(m => rows.push({ site:site.name, proj, cat:'Lain-lain', name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
+        (eq.cameras||[]).forEach(c => rows.push({ site:site.name, proj, cat:'Kamera'+_oosSfx(c), name:c.name||'-', brand:c.brand||'-', model:c.model||'-', serial:c.serial||'-', extra:c.ip||c.camType||'-' }));
+        (eq.nvr||[]).forEach(n => rows.push({ site:site.name, proj, cat:'NVR'+_oosSfx(n), name:n.name||'-', brand:n.brand||'-', model:n.model||'-', serial:n.serial||'-', extra:n.ip||n.type||'-' }));
+        (eq.hdd||[]).forEach(h => rows.push({ site:site.name, proj, cat:'HDD'+_oosSfx(h), name:h.nvrRef||'-', brand:h.brand||'-', model:h.model||'-', serial:h.serial||'-', extra:h.capacity||'-' }));
+        (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch'+_oosSfx(s), name:s.name||'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:'-' }));
+        (eq.alarms||[]).forEach(a => rows.push({ site:site.name, proj, cat:'Alarm'+_oosSfx(a), name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
+        (eq.misc||[]).forEach(m => rows.push({ site:site.name, proj, cat:'Lain-lain'+_oosSfx(m), name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
       VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
@@ -25861,12 +26081,12 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         if(!row) { row = { _key:key, jenis, brand, model, jumlah:0 }; rows.push(row); }
         row.jumlah += qty;
       };
-      (eq.cameras||[]).forEach(c => push('📷 Kamera', c.brand||'-', c.model||'-', 1));
-      (eq.nvr||[]).forEach(n => push('🖥️ NVR/Server', n.brand||'-', n.model||'-', 1));
-      (eq.hdd||[]).forEach(h => push('💾 Hard Disk', h.brand||'-', `${h.model||'-'}${h.capacity ? ' ('+h.capacity+')' : ''}`, Number(h.totalUnit)||1));
-      (eq.switches||[]).forEach(s => push('🔌 Switch', s.brand||'-', s.model||'-', 1));
-      (eq.alarms||[]).forEach(a => push('🔔 Alarm', a.brand||'-', a.model||'-', 1));
-      (eq.misc||[]).forEach(m => push(`📦 Lain-lain — ${m.category||'Lain-lain'}`, m.brand||'-', m.model||'-', 1));
+      (eq.cameras||[]).forEach(c => push('📷 Kamera'+_oosSfx(c), c.brand||'-', c.model||'-', 1));
+      (eq.nvr||[]).forEach(n => push('🖥️ NVR/Server'+_oosSfx(n), n.brand||'-', n.model||'-', 1));
+      (eq.hdd||[]).forEach(h => push('💾 Hard Disk'+_oosSfx(h), h.brand||'-', `${h.model||'-'}${h.capacity ? ' ('+h.capacity+')' : ''}`, Number(h.totalUnit)||1));
+      (eq.switches||[]).forEach(s => push('🔌 Switch'+_oosSfx(s), s.brand||'-', s.model||'-', 1));
+      (eq.alarms||[]).forEach(a => push('🔔 Alarm'+_oosSfx(a), a.brand||'-', a.model||'-', 1));
+      (eq.misc||[]).forEach(m => push(`📦 Lain-lain — ${m.category||'Lain-lain'}`+_oosSfx(m), m.brand||'-', m.model||'-', 1));
       const filtered = inventoryJenisFilter.value.length
         ? rows.filter(r => inventoryJenisFilter.value.some(f => r.jenis === f || r.jenis.startsWith(f + ' —')))
         : rows;
@@ -26289,7 +26509,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const map = {};
       const bump = (brand, model) => { const k = (brand||'Tidak diketahui')+' — '+(model||'Tidak diketahui'); map[k]=(map[k]||0)+1; };
       pmRecords.value.filter(r=>r.maintType==='CM').forEach(r => {
-        (r.cameras||[]).forEach(c => { if(c.icam==='Tidak'||c.display==='Rosak') bump(c.brand,c.model); });
+        (r.cameras||[]).forEach(c => { if(_camFailed(c)) bump(c.brand,c.model); });
         (r.nvr||[]).forEach(n => { if(n.asmOp==='Tidak'||n.status==='Tidak') bump(n.brand,n.model); });
         (r.hdd||[]).forEach(h => { if(h.status==='Tidak') bump(h.brand,h.model); });
         (r.switches||[]).forEach(s => { if(s.portStatus==='Tidak'||s.status==='Tidak') bump(s.brand,s.model); });
@@ -26314,7 +26534,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         if(!r.siteId) return;
         if(!bySite[r.siteId]) bySite[r.siteId] = { siteId:r.siteId, siteName:r.siteName||'-', Kamera:0, NVR:0, HDD:0, Switch:0 };
         const row = bySite[r.siteId];
-        (r.cameras||[]).forEach(c => { if(c.icam==='Tidak'||c.display==='Rosak') row.Kamera++; });
+        (r.cameras||[]).forEach(c => { if(_camFailed(c)) row.Kamera++; });
         (r.nvr||[]).forEach(n => { if(n.asmOp==='Tidak'||n.status==='Tidak') row.NVR++; });
         (r.hdd||[]).forEach(h => { if(h.status==='Tidak') row.HDD++; });
         (r.switches||[]).forEach(s => { if(s.portStatus==='Tidak'||s.status==='Tidak') row.Switch++; });
@@ -26782,7 +27002,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         ];
         cats.forEach(([key,label]) => {
           (eq[key]||[]).forEach(item => {
-            if(!item.installDate) return;
+            if(!item.installDate || item.outOfScope) return; // out-of-scope: record only, not ours to replace
             const ageYears = (now - new Date(item.installDate).getTime()) / (365.25*86400000);
             if(ageYears >= EQUIPMENT_LIFESPAN_YEARS) {
               rows.push({ site:site.name, proj, cat:label, name:item.name||item.nvrRef||'-', brand:item.brand||'-', model:item.model||'-', serial:item.serial||'-', installDate:item.installDate, ageYears: Math.round(ageYears*10)/10 });
@@ -26820,7 +27040,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // meetings with the client. ──
     const TEMP_REPORT_CATS = [['cameras','Kamera'],['nvr','NVR'],['hdd','HDD'],['switches','Switch'],['alarms','Alarm'],['misc','Lain-lain'],['servers','Appliance'],['tablets','Tablet']];
     const tempEquipFilterProj = ref('all');
-    const tempEquipmentReport = computed(() => {
+    // A stand-in still in place after this many days gets a notification
+    // (see buildNotifications) and a red "Tempoh" badge in the report.
+    const TEMP_EQUIP_ALERT_DAYS = 30;
+    // Every stand-in across both projects, unfiltered — the report below
+    // filters/sorts it; buildNotifications reads it as is.
+    const _tempEquipAll = computed(() => {
       const rows = [];
       const today = _parseLocalDate(_localDateStr());
       const push = (siteName, proj, eq) => {
@@ -26834,7 +27059,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
             orig: `${o.brand||'-'} ${o.model||''}`.trim(), origSerial: o.serial || '-',
             cur: `${it.brand||'-'} ${it.model||''}`.trim(), curSerial: it.serial || '-',
             date: it._temp.date || '', days: since ? Math.max(0, Math.round((today - since) / 86400000)) : null,
-            by: it._temp.by || '',
+            by: it._temp.by || '', uid: it._uid || '',
           });
         }));
       };
@@ -26850,10 +27075,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           });
         });
       });
-      return rows
-        .filter(r => tempEquipFilterProj.value === 'all' || r.proj.toLowerCase() === tempEquipFilterProj.value)
-        .sort((a, b) => a.siteName.localeCompare(b.siteName) || a.date.localeCompare(b.date));
+      return rows;
     });
+    const tempEquipmentReport = computed(() => _tempEquipAll.value
+      .filter(r => tempEquipFilterProj.value === 'all' || r.proj.toLowerCase() === tempEquipFilterProj.value)
+      .sort((a, b) => a.siteName.localeCompare(b.siteName) || a.date.localeCompare(b.date)));
     const tempEquipSiteCount = computed(() => new Set(tempEquipmentReport.value.map(r => r.siteName)).size);
     async function exportTempEquipExcel() {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
@@ -26947,11 +27173,34 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // under CCTV wouldn't exist in the VIR list (or vice versa), so leaving
     // it set would silently filter the report down to nothing.
     watch(failureFilterProj, () => { failureFilterSite.value = ''; });
+    // Period filter (Tahun / Bulan) on the log's removedAt — local time, so
+    // an entry logged just after midnight lands in the right month.
+    const MONTH_NAMES_MS = ['Januari','Februari','Mac','April','Mei','Jun','Julai','Ogos','September','Oktober','November','Disember'];
+    const failureFilterYear = ref('');
+    const failureFilterMonth = ref('');
+    watch(failureFilterYear, (y) => { if(!y) failureFilterMonth.value = ''; });
+    function _logDate(l) { return l.removedAt?.toDate ? l.removedAt.toDate() : null; }
+    const failureFilterYearOptions = computed(() => {
+      const ys = new Set([new Date().getFullYear()]);
+      equipmentRemovalLogs.value.forEach(l => { const d = _logDate(l); if(d) ys.add(d.getFullYear()); });
+      return [...ys].sort((a, b) => b - a);
+    });
+    function _inFailurePeriod(l) {
+      if(!failureFilterYear.value) return true;
+      const d = _logDate(l);
+      if(!d || d.getFullYear() !== Number(failureFilterYear.value)) return false;
+      return !failureFilterMonth.value || d.getMonth() + 1 === Number(failureFilterMonth.value);
+    }
+    // e.g. "Mac 2026" / "2026" / "" — for export titles and file names.
+    const failurePeriodLabel = computed(() => !failureFilterYear.value ? ''
+      : (failureFilterMonth.value ? MONTH_NAMES_MS[failureFilterMonth.value - 1] + ' ' : '') + failureFilterYear.value);
     const failureReport = computed(() => {
       const groups = {};
       equipmentRemovalLogs.value.forEach(l => {
         if(failureFilterProj.value !== 'all' && l.project !== failureFilterProj.value) return;
         if(failureFilterSite.value && l.siteId !== failureFilterSite.value) return;
+        if(!_inFailurePeriod(l)) return;
+        if(l.outOfScope) return; // "di luar skop" unit — not under our maintenance
         // "Tersilap Masuk" (data-entry mistakes, e.g. staff testing add/
         // delete) is deliberately excluded from this report entirely — it's
         // still logged (see confirmRemoveItem) in case the raw data is ever
@@ -26959,7 +27208,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         // skew the rosak/ganti-baru/lain-lain figures.
         if(l.reason === 'tersilap') return;
         // A stand-in going back out isn't a failure — its swap-in was
-        // already counted (as 'ganti-sementara', under Lain-lain).
+        // already counted (as 'ganti-sementara', see rosakTemp below).
         if(l.reason === 'pulih-asal') return;
         // Informational copy of an original kept when its stand-in row was
         // deleted — the original was already counted at swap time.
@@ -26986,7 +27235,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     const failureLogRaw = computed(() => equipmentRemovalLogs.value.filter(l => {
       if(failureFilterProj.value !== 'all' && l.project !== failureFilterProj.value) return false;
       if(failureFilterSite.value && l.siteId !== failureFilterSite.value) return false;
-      return true;
+      return _inFailurePeriod(l);
     }));
     async function deleteEquipmentRemovalLog(log) {
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
@@ -27008,7 +27257,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Ganti-Rosak Peralatan');
-      XLSX.writeFile(wb, `sejarah_ganti_rosak_peralatan_${_localDateStr()}.xlsx`);
+      const periodSlug = failurePeriodLabel.value ? '_' + failurePeriodLabel.value.replace(/\s+/g, '_') : '';
+      XLSX.writeFile(wb, `sejarah_ganti_rosak_peralatan${periodSlug}_${_localDateStr()}.xlsx`);
       await logAudit('EXPORT_FAILURE_REPORT_EXCEL', `${rows.length} baris`);
     }
     async function exportFailureReportPdf() {
@@ -27040,7 +27290,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         <div class="header">
           <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
-            <h2>Sejarah Ganti/Rosak Peralatan</h2>
+            <h2>Sejarah Ganti/Rosak Peralatan${failurePeriodLabel.value ? ' — ' + esc(failurePeriodLabel.value) : ''}</h2>
             <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
           </div>
           <div class="header-side">
@@ -27361,12 +27611,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     }
 
     // ── Feature 8: Dark Mode ──
-    const darkMode = ref(localStorage.getItem('pm_darkmode')==='1');
+    const darkMode = ref(_lsGet('pm_darkmode')==='1');
     const themeIconSpin = ref(false);
     document.body.classList.toggle('dark-mode', darkMode.value);
     watch(darkMode, val => {
       document.body.classList.toggle('dark-mode', val);
-      localStorage.setItem('pm_darkmode', val?'1':'0');
+      _lsSet('pm_darkmode', val?'1':'0');
     });
     // Circular "reveal" theme switch — the new theme spreads out from the
     // toggle button as a growing circle (View Transitions API + a clip-path
@@ -27785,9 +28035,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       sonyRoomChoicesForSite, pickSonyRoom, openSonyRoomEquip, roomChoicesForModal, pickRoomForModal,
       removeItem, saveSiteEquip, equipEditIdx, editEquipItem, cancelEditEquip,
       removeReasonModal, confirmRemoveItem,
-      tempReplaceModal, openTempReplace, confirmTempReplace, restoreTempOriginal, tempOrigRows, tempBadgeTitle, pmHasTemp, TEMP_CAUSES, tempCauseLabel,
+      tempReplaceModal, openTempReplace, confirmTempReplace, restoreTempOriginal, tempOrigRows, tempBadgeTitle, pmHasTemp, oosKindLabel, oosName, oosCount, equipHasOos, TEMP_CAUSES, tempCauseLabel,
       equipConflict, equipConflictHere, resolveEquipConflictReload, resolveEquipConflictOverwrite,
-      tempEquipmentReport, tempEquipSiteCount, tempEquipFilterProj, exportTempEquipExcel, exportTempEquipPdf,
+      tempEquipmentReport, tempEquipSiteCount, tempEquipFilterProj, exportTempEquipExcel, exportTempEquipPdf, TEMP_EQUIP_ALERT_DAYS,
       EQUIP_FILTER_FIELDS, equipFilter, equipView, equipFilterKind, equipFilterOptions, equipFilterActive, clearEquipFilter, equipHasTemp,
       kontraktorFocusId, kontraktorFocusFlash,
       equipSort, toggleEquipSort, equipSortIcon, equipFormShown, toggleEquipForm,
@@ -27848,7 +28098,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       siteCompareSelected, toggleSiteCompare, siteCompareRows, seasonalCmByMonth, heatmapSiteId, heatmapData, heatmapCellColor, siteAnomalies, yoyStats,
       yearTrendData, tindakanBreakdown, resolutionTimeData, resolutionResolvedCount, rootCauseBreakdown, equipmentLifespan,
       EQUIPMENT_LIFESPAN_YEARS, ROOT_CAUSE_CATEGORIES, VIR_ROOM_OPTIONS,
-      equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureFilterSite, failureFilterSiteOptions, failureReport, exportFailureReportExcel, exportFailureReportPdf,
+      equipmentRemovalLogs, loadEquipmentRemovalLogs, failureFilterProj, failureFilterSite, failureFilterSiteOptions, failureReport, failureFilterYear, failureFilterMonth, failureFilterYearOptions, MONTH_NAMES_MS, exportFailureReportExcel, exportFailureReportPdf,
       showRawFailureLog, failureLogRaw, deleteEquipmentRemovalLog, REMOVAL_REASON_LABEL,
       contactPersons, cpModal, loadContactPersons, openCpModal, saveCpModal, addCpModalContact, exportContactCsv, exportContactPdf, canEditContact, cpSites,
       kontraktorLuar, kontraktorLuarLoading, kontraktorLuarProject, kModal, MALAYSIA_NEGERI, kModalKawasanOptions, kModalSubKawasanOptions, canEditKontraktor, loadKontraktorLuar, openKModal, saveKModal, deleteKontraktor, exportKontraktorPdf,
