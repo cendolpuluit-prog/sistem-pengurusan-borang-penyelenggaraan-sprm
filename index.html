@@ -2352,7 +2352,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <span class="icon">🛡️</span> Waranti Peralatan
         <span v-if="warrantyExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{warrantyExpiringCount}}</span>
       </div>
-      <div class="nav-item" :class="{active:page==='rma'&&currentProject==='cctv'}" @click="currentProject='cctv';loadRmaRecords();page='rma'">
+      <div class="nav-item" :class="{active:page==='rma'&&currentProject==='cctv'}" @click="currentProject='cctv';rmaFilterStatus='';loadRmaRecords();page='rma'">
         <span class="icon">📦</span> Rekod RMA
         <span v-if="rmaCountsByProject.cctv.open>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem" :title="rmaNavBadgeTitle('cctv')">{{rmaCountsByProject.cctv.open}}</span>
       </div>
@@ -2377,7 +2377,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <span class="icon">🛡️</span> Waranti Peralatan
         <span v-if="virWarrantyExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{virWarrantyExpiringCount}}</span>
       </div>
-      <div class="nav-item" :class="{active:page==='rma'&&currentProject==='vir'}" @click="currentProject='vir';loadRmaRecords();page='rma'">
+      <div class="nav-item" :class="{active:page==='rma'&&currentProject==='vir'}" @click="currentProject='vir';rmaFilterStatus='';loadRmaRecords();page='rma'">
         <span class="icon">📦</span> Rekod RMA
         <span v-if="rmaCountsByProject.vir.open>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem" :title="rmaNavBadgeTitle('vir')">{{rmaCountsByProject.vir.open}}</span>
       </div>
@@ -3584,9 +3584,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 
         <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
           <select class="form-control" style="width:auto;min-width:160px" v-model="rmaFilterStatus">
+            <option value="">Semua Status</option>
             <option value="open">🟡 Belum Pulang</option>
             <option value="closed">✅ Sudah Pulang</option>
-            <option value="">Semua Status</option>
           </select>
           <select class="form-control" style="width:auto;min-width:200px" v-model="rmaFilterSite">
             <option value="">Semua Site</option>
@@ -14597,7 +14597,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const _RMA_CLOSED = ['diterima','ditolak'];
     const _RMA_EQUIP_FORMS = () => ({ cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet });
     const rmaRecords = ref([]);
-    const rmaFilterStatus = ref('open');
+    const rmaFilterStatus = ref('');
     const rmaFilterSite = ref('');
     const rmaSearch = ref('');
     const canAddRma = computed(()=> isAdminRole() || authProfile.value?.role==='staff');
@@ -14609,7 +14609,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       warrantyState:'', status:'dihantar', returnDate:'', result:'', returnSerial:'', cost:'', notes:'',
       serialPromptedFor:'',
     });
-    const rmaModal = reactive({ show:false, editing:false, err:'', _editId:null, data:_RMA_BLANK() });
+    const rmaModal = reactive({ show:false, editing:false, err:'', _editId:null, _loadedUpdatedAt:null, data:_RMA_BLANK() });
 
     function rmaLabel(list, v) { return (list.find(x => x[0] === v) || [])[1] || ''; }
     function rmaIsOpen(r) { return !_RMA_CLOSED.includes(r?.status); }
@@ -14813,7 +14813,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function openAddRma(prefill) {
       if(!canAddRma.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       _rmaLoadRefs();
-      Object.assign(rmaModal, { editing:false, err:'', _editId:null });
+      Object.assign(rmaModal, { editing:false, err:'', _editId:null, _loadedUpdatedAt:null });
       rmaModal.data = { ..._RMA_BLANK(), project: currentProject.value === 'vir' ? 'vir' : 'cctv', sendDate:_localDateStr(), sentBy: authProfile.value?.name || authProfile.value?.username || '', ...(prefill || {}) };
       rmaModal.show = true;
       if(prefill?.equipKey) nextTick(onRmaEquipPick);
@@ -14821,7 +14821,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     function openEditRma(r) {
       if(!canAddRma.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       _rmaLoadRefs();
-      Object.assign(rmaModal, { editing:true, err:'', _editId:r.id });
+      // updatedAt as loaded — submitRma compares it with the live one.
+      Object.assign(rmaModal, { editing:true, err:'', _editId:r.id, _loadedUpdatedAt: r.updatedAt || null });
       const { id, createdAt, createdBy, updatedAt, updatedBy, serviceReports, ...rest } = r;
       rmaModal.data = { ..._RMA_BLANK(), ...rest, equipKey:'' };
       rmaModal.show = true; // rmaEquipOptions is only built while the modal is open
@@ -14889,17 +14890,39 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           logAudit('RMA_ADD', label);
           showToast(data.equipRef ? 'Rekod RMA ditambah. Jika unit sementara dipasang, guna butang 🔁 pada peralatan tersebut.' : 'Rekod RMA ditambah!');
         } else {
+          // Two people can have the same RMA open. This update rewrites every
+          // field from the modal's copy, so saving a stale copy put back the
+          // status/return details someone else had just saved (e.g. "Diterima
+          // Semula" back to "Dalam Proses") with no warning. Same guard as
+          // savePM: compare the live updatedAt with the one loaded.
+          const liveSnap = await db.collection('rmaRecords').doc(rmaModal._editId).get();
+          if(!liveSnap.exists) { rmaModal.err = 'Rekod RMA ini telah dipadam oleh orang lain.'; loading.value = false; return; }
+          const live = liveSnap.data(), loadedV = rmaModal._loadedUpdatedAt;
+          if(live.updatedAt?.isEqual && loadedV?.isEqual && !live.updatedAt.isEqual(loadedV)
+            && !await askConfirm(`Rekod RMA ini telah dikemas kini oleh ${live.updatedBy || 'orang lain'} sejak anda membukanya (status kini: ${rmaLabel(RMA_STATUSES, live.status) || '-'}).\n\nTeruskan simpan? Perubahan mereka akan digantikan dengan versi anda — tutup dan buka semula rekod ini jika mahu semak dahulu.`)) {
+            loading.value = false; return;
+          }
           await _fw(db.collection('rmaRecords').doc(rmaModal._editId).update(data));
           _localUpsert(rmaRecords, rmaModal._editId, { ...data, updatedAt: _fakeServerTimestamp() }, sortBySendDesc);
           logAudit('RMA_EDIT', `${label} — ${rmaLabel(RMA_STATUSES, data.status)}`);
           showToast('Rekod RMA dikemaskini!');
         }
         rmaModal.show = false;
+        _rmaRefreshLocal(savedId);
       } catch(e) { rmaModal.err = 'Ralat: ' + e.message; loading.value = false; return; }
       loading.value = false;
       if(offerSerial && await askConfirm(`Vendor ganti unit baru (No. Siri ${data.returnSerial}).\n\nKemas kini No. Siri peralatan "${data.equipName || data.model || '-'}" di ${data.siteName} daripada ${data.serial || '(kosong)'} kepada ${data.returnSerial}?\n\nHalaman peralatan site akan dibuka untuk dikemas kini.`)) {
         _rmaOpenEquipForSerial({ id: savedId, ...data });
       }
+    }
+    // Re-reads a just-saved RMA so the local copy carries the real server
+    // updatedAt instead of the placeholder — otherwise re-editing it in the
+    // same session would skip submitRma's concurrent-edit check.
+    async function _rmaRefreshLocal(id) {
+      try {
+        const snap = await db.collection('rmaRecords').doc(id).get();
+        if(snap.exists) _localUpsert(rmaRecords, id, snap.data(), (a,b) => (b.sendDate||'').localeCompare(a.sendDate||''));
+      } catch(e) { /* keeps the placeholder copy */ }
     }
     // Opens the site's equipment page on the RMA's unit, in its edit form,
     // with the replacement serial already typed in. Saving stays the normal
@@ -16158,7 +16181,19 @@ tr.late td{background:#fff3e0}
     // Firestore batches cap out at 500 writes — chunk so collections that
     // grow past that (audit logs, PM records over the years) don't silently
     // fail to restore.
+    // Append-only collections (firestore.rules: update: if false). Writing a
+    // backup doc that still exists counts as an UPDATE and is rejected,
+    // which failed its whole batch — and threw out of the restore, so every
+    // collection after it (warranty, Surat & Memo, Log CM, Tong Sampah,
+    // RMA...) was silently never restored. Only re-create the docs that
+    // are actually gone; existing ones are already identical anyway.
+    const _APPEND_ONLY_COLLS = new Set(['auditLogs','equipmentRemovalLog','deletedPmRecords','deletedContracts',
+      'deletedEquipmentWarranty','deletedVirEquipmentWarranty','deletedSuratMemo','deletedCmCases','deletedRmaRecords']);
     async function _batchRestoreCollection(coll, docs) {
+      if(_APPEND_ONLY_COLLS.has(coll)) {
+        const have = new Set((await db.collection(coll).get()).docs.map(d => d.id));
+        docs = docs.filter(r => r.id && !have.has(r.id));
+      }
       const CHUNK = 450;
       for(let i=0; i<docs.length; i+=CHUNK) {
         const b = db.batch();
@@ -16396,13 +16431,26 @@ tr.late td{background:#fff3e0}
 
     let _notifWatcher = null;
 
+    // Backup files are JSON, so every Firestore Timestamp in them was saved
+    // as a plain {seconds, nanoseconds} object (newer SDKs add a `type` tag).
+    // Turn those back into real Timestamps while parsing — written back as
+    // bare maps they no longer sort or filter as dates (Log Audit's 30-day
+    // purge never matches them, Tong Sampah/list ordering goes wrong).
+    function _backupJsonReviver(key, v) {
+      if(v && typeof v === 'object' && !Array.isArray(v)
+        && Number.isInteger(v.seconds) && Number.isInteger(v.nanoseconds)
+        && Object.keys(v).every(k => k === 'seconds' || k === 'nanoseconds' || k === 'type')) {
+        try { return new firebase.firestore.Timestamp(v.seconds, v.nanoseconds); } catch(e) { return v; }
+      }
+      return v;
+    }
     function restoreFromFile(evt) {
       const file = evt.target.files[0];
       if(!file) return;
       const reader = new FileReader();
       reader.onload = e => {
         try {
-          const data = JSON.parse(e.target.result);
+          const data = JSON.parse(e.target.result, _backupJsonReviver);
           applyRestore(data);
         } catch(ex) { showToast('Fail tidak sah!','error'); }
       };
@@ -16607,7 +16655,7 @@ tr.late td{background:#fff3e0}
       const reader = new FileReader();
       reader.onload = e => {
         try {
-          singleSiteRestore.data = JSON.parse(e.target.result);
+          singleSiteRestore.data = JSON.parse(e.target.result, _backupJsonReviver);
           singleSiteRestore.siteId = '';
           showToast('Fail backup berjaya dibaca. Sila pilih projek dan site.');
         } catch(ex) { singleSiteRestore.data = null; showToast('Fail tidak sah!', 'error'); }
@@ -17908,7 +17956,10 @@ tr.late td{background:#fff3e0}
     async function logAudit(action, detail) {
       try {
         await db.collection('auditLogs').add({
-          userId: authUser.value?.uid || '',
+          // auth.currentUser first: it is set the moment sign-in resolves,
+          // while authUser (onAuthStateChanged) can lag behind finishLogin's
+          // LOGIN entry — and firestore.rules requires userId == the signer.
+          userId: auth?.currentUser?.uid || authUser.value?.uid || '',
           userName: authProfile.value?.name || authUser.value?.email || '',
           userRole: authProfile.value?.role || '',
           action,
@@ -20931,7 +20982,14 @@ Teruskan tukar emel?`)) return;
     // contactPersons[siteId] is an array of {id,name,phone,label} — a site
     // can have more than one contact (e.g. a primary + backup officer).
     const contactPersons = ref({});
-    const cpModal = reactive({ show:false, siteId:null, siteName:'', contacts:[], err:'' });
+    const cpModal = reactive({ show:false, siteId:null, siteName:'', contacts:[], err:'', _loadedSig:'' });
+    // Field-order-independent fingerprint of a site's contact list, for
+    // saveCpModal's "changed by someone else since opened" check. Leaves out
+    // id: _normalizeContactData gives legacy single-contact sites a fresh
+    // random id on every read, which would make every comparison differ.
+    function _cpSig(list) {
+      return JSON.stringify((list || []).map(c => [c.name||'', c.phone||'', c.label||'']));
+    }
     const cpSites = computed(() => currentProject.value === 'vir' ? VIR_SITES : SITES);
 
     // Migrate legacy single-contact shape ({name,phone}) into the new
@@ -20973,6 +21031,7 @@ Teruskan tukar emel?`)) return;
       cpModal.err = '';
       // Deep-copy so edits are local until "Simpan" is pressed.
       cpModal.contacts = (contactPersons.value[site.id] || []).map(c => ({...c}));
+      cpModal._loadedSig = _cpSig(contactPersons.value[site.id]);
       cpModal.show = true;
     }
 
@@ -20995,6 +21054,14 @@ Teruskan tukar emel?`)) return;
       const update = {};
       update[cpModal.siteId] = cleaned;
       try {
+        // The site's whole list is replaced by this modal's copy — if someone
+        // else saved this site's officers after it was opened, theirs would
+        // vanish silently. Warn first (same idea as savePM/submitRma).
+        // Same normalized read openCpModal used, so legacy-shaped data
+        // compares like-for-like.
+        const fresh = (await _fetchContactPersons(currentProject.value))[cpModal.siteId] || [];
+        if(_cpSig(fresh) !== cpModal._loadedSig
+          && !await askConfirm(`Senarai pegawai ${cpModal.siteName} telah dikemas kini oleh pengguna lain sejak anda membukanya (kini ${fresh.length} pegawai).\n\nTeruskan simpan? Senarai mereka akan digantikan dengan senarai anda — tutup dan buka semula jika mahu semak dahulu.`)) return;
         await _fw(db.collection('contactPersons').doc(currentProject.value).set(update, { merge: true }));
         contactPersons.value[cpModal.siteId] = cleaned;
         await logAudit('CONTACT_PERSON_EDIT', `[${currentProject.value.toUpperCase()}] ${cpModal.siteName} → ${cleaned.length} pegawai`);
@@ -24369,6 +24436,15 @@ Teruskan tukar emel?`)) return;
                 return;
               }
             }
+            // Status CM is never edited in this form — only by the Rekod
+            // Borang dropdown / bulk action (updateCMStatus), which doesn't
+            // touch updatedAt, so the check above can't see it. Carry the
+            // LIVE value forward: an edit opened while the CM was "Terbuka"
+            // and saved after someone marked it "Selesai" used to flip it
+            // back to "Terbuka" and drop its resolvedAt.
+            const live = liveSnap.data();
+            if(live.cmStatus) pm._cmStatus = live.cmStatus;
+            if(live.resolvedAt) pm._resolvedAt = live.resolvedAt;
           }
         }
         const isVir = currentProject.value === 'vir';
