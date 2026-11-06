@@ -6218,7 +6218,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       </div>
 
       <!-- ====== TEAM MODAL ====== -->
-      <div v-if="teamModal.show" class="modal-bg" @click.self="teamModal.show=false">
+      <div v-if="teamModal.show" class="modal-bg">
         <div class="modal" style="max-width:520px">
           <h3>{{teamModal.editing?'Edit':'Tambah'}} Penugasan Team</h3>
           <div class="form-row form-row-2">
@@ -6630,6 +6630,24 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         </div>
 
         <div class="card">
+          <div class="card-title">🧩 Pulihkan Peralatan VIR Tersembunyi</div>
+          <p style="color:#555;font-size:.88rem;margin-bottom:14px">Sebelum pembaikan terkini, memadam atau menukar sistem bilik Optager/VCS/SONY dari tab <b>Bilik &amp; Sistem</b> tidak menyimpan pemindahan peralatannya ke "Data Lama" — peralatan itu kekal di bawah bilik yang sudah tiada dan tidak kelihatan di mana-mana. Senarai di bawah dikesan secara automatik; klik <b>Pulihkan</b> untuk pindahkannya ke "Data Lama (Belum Diagihkan Ikut Bilik)" site berkenaan (disimpan automatik).</p>
+          <div v-if="!virOrphanBuckets.length" class="text-sm" style="color:#198754">✅ Tiada peralatan VIR tersembunyi dikesan.</div>
+          <div v-else class="tbl-wrap">
+            <table>
+              <thead><tr><th>Site</th><th>Sistem</th><th>Peralatan</th><th>Contoh No. Siri / Nama</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="o in virOrphanBuckets" :key="o.key">
+                  <td>{{o.siteName}}</td><td>{{o.system}}</td><td style="text-align:center">{{o.count}}</td>
+                  <td class="mono-data" style="font-size:.78rem">{{o.sample||'-'}}</td>
+                  <td><button :disabled="loading" class="btn btn-sm btn-primary" @click="recoverVirOrphan(o)">🧩 Pulihkan</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
           <div class="card-title">💾 Backup Manual</div>
           <p style="color:#555;font-size:.88rem;margin-bottom:14px">Muat turun <b>SEMUA</b> data sistem (peralatan, rekod PM, pengguna, kontrak & SLA, contact person, jadual, log audit, senarai custom) sebagai fail JSON untuk simpanan luar.</p>
           <button class="btn btn-primary" @click="doManualBackup" :disabled="loading">
@@ -6696,7 +6714,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       </div>
 
       <!-- ====== IMPORT EQUIPMENT FILE MODAL ====== -->
-      <div v-if="importState.show" class="modal-bg" @click.self="importState.show=false">
+      <div v-if="importState.show" class="modal-bg">
         <div class="modal modal-wide" :style="importState.rows.length?'--modal-max-width:900px':'--modal-max-width:640px'">
           <h3>📄 Import Peralatan</h3>
           <div v-if="importState.loading" class="empty">⏳ Menganalisa fail{{importState.ocrProgress?' (OCR '+importState.ocrProgress+'%)':'...'}}</div>
@@ -6754,7 +6772,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       </div>
 
       <!-- ====== ADD/EDIT USER MODAL ====== -->
-      <div v-if="userModal.show" class="modal-bg" @click.self="userModal.show=false">
+      <div v-if="userModal.show" class="modal-bg">
         <div class="modal">
           <h3>{{userModal.editing?'Edit Pengguna':'Tambah Pengguna Baru'}}</h3>
           <div class="form-row form-row-2">
@@ -6834,7 +6852,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       </div>
 
       <!-- ====== CONTACT PERSON MODAL (multi-contact per site) ====== -->
-      <div v-if="cpModal.show" class="modal-bg" @click.self="cpModal.show=false">
+      <div v-if="cpModal.show" class="modal-bg">
         <div class="modal">
           <h3>📞 Pegawai Hubungan — {{cpModal.siteName}}</h3>
           <div v-if="!cpModal.contacts.length" class="empty" style="padding:16px">Tiada pegawai hubungan lagi. Tambah di bawah.</div>
@@ -6858,7 +6876,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       </div>
 
       <!-- ====== ADD/EDIT CONTRACT MODAL ====== -->
-      <div v-if="contractModal.show" class="modal-bg" @click.self="contractModal.show=false">
+      <div v-if="contractModal.show" class="modal-bg">
         <div class="modal">
           <h3>{{contractModal.editing?'Edit Kontrak':'Tambah Kontrak Baru'}}</h3>
           <div class="form-row form-row-2">
@@ -7321,7 +7339,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         </div>
       </div>
 
-      <div v-if="bulkEditModal.show" class="modal-bg" @click.self="bulkEditModal.show=false">
+      <div v-if="bulkEditModal.show" class="modal-bg">
         <div class="modal">
           <h3>✏️ Edit Pukal — {{equipSelected[bulkEditModal.kind]?.size||0}} rekod terpilih</h3>
           <div class="form-group"><label>Field</label>
@@ -7699,7 +7717,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <p v-if="kModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{kModal.err}}</p>
           <div class="flex gap-8 justify-end">
             <button class="btn btn-outline" @click="kModal.show=false">Batal</button>
-            <button class="btn btn-primary" @click="saveKModal">Simpan</button>
+            <button class="btn btn-primary" @click="saveKModal" :disabled="loading">{{loading?'Menyimpan...':'Simpan'}}</button>
           </div>
         </div>
       </div>
@@ -9819,6 +9837,13 @@ const LiveClock = {
 createApp({
   components: { LiveClock },
   setup() {
+    // Today's local date (YYYY-MM-DD) as a reactive value. A computed that
+    // reads "today" through new Date() alone has no reactive dependency on
+    // the clock, so in a tab left open past midnight (TV mode, an office PC)
+    // it kept showing yesterday: topbar date, overdue sites, Jadual hari ini,
+    // RMA/temp-unit day counts... _localDateStr() reads this, and the 15s
+    // syncNow tick below bumps it when the date changes.
+    const _dayKey = ref((d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)(new Date()));
     // ---- User registry (username → firebase email) ----
     const USER_MAP = {
       'mohdasrul': { email: 'asrul@dayaone.com.my', name: 'Mohd Asrul', role: 'superadmin' }
@@ -10126,7 +10151,11 @@ createApp({
     // autosave hasn't written yet.
     const lastDataSyncAt = ref(null);
     const syncNow = ref(Date.now());
-    setInterval(() => { syncNow.value = Date.now(); }, 15000);
+    setInterval(() => {
+      syncNow.value = Date.now();
+      const k = _localDateStr(new Date());
+      if(k !== _dayKey.value) _dayKey.value = k; // date rolled over
+    }, 15000);
     const syncStatus = computed(() => {
       if(!isOnline.value) return { state:'offline', label:'LUAR TALIAN' };
       if(pendingWrites.value > 0) return { state:'saving', label:'MENYEGERAK…' };
@@ -13288,7 +13317,7 @@ createApp({
     // time between 00:00–08:00 — using it for "today" date-string
     // comparisons (contract/user expiry, schedule filters) misclassifies
     // things as not-yet-expired for that 8-hour window every day.
-    function _localDateStr(d){ const dt=d||new Date(); const y=dt.getFullYear(); const m=String(dt.getMonth()+1).padStart(2,'0'); const day=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+    function _localDateStr(d){ if(!d) void _dayKey.value; const dt=d||new Date(); const y=dt.getFullYear(); const m=String(dt.getMonth()+1).padStart(2,'0'); const day=String(dt.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
     // Inverse of _localDateStr — parses a "YYYY-MM-DD" string as a LOCAL
     // midnight Date, not `new Date(str)`'s UTC-midnight parse (which lags a
     // calendar day behind MYT for the first 8 hours of every day and can
@@ -15845,17 +15874,24 @@ tr.late td{background:#fff3e0}
       const list = customBrands[listKey] || [];
       const idx = list.findIndex(x => x.trim().toLowerCase() === brand.trim().toLowerCase());
       if(idx === -1) return;
+      // The match above ignores case/spacing, but arrayRemove only removes an
+      // exactly-equal string — remove the item as actually stored, or a
+      // variant ("Hikvision " vs "Hikvision") vanished here yet stayed saved.
+      const stored = list[idx];
       list.splice(idx, 1);
       try {
         await db.collection(CUSTOM_EQUIP_OPTIONS_COLLECTION).doc('brand__'+listKey).set({
           kind: 'brand', listKey,
-          items: firebase.firestore.FieldValue.arrayRemove(brand),
+          items: firebase.firestore.FieldValue.arrayRemove(stored),
           updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
         }, { merge: true });
         await logAudit('CUSTOM_BRAND_DELETE', `${listKey}: ${brand}`);
         showToast('Brand custom dipadam.');
         customEquipCleanup.brand = '';
-      } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
+      } catch(e) {
+        if(!list.includes(stored)) list.splice(Math.min(idx, list.length), 0, stored); // put it back — still saved
+        showToast('Gagal padam: ' + e.message, 'error');
+      }
     }
     const customEquipCleanupList = computed(() => {
       const { equipType, project, brand } = customEquipCleanup;
@@ -15877,7 +15913,12 @@ tr.late td{background:#fff3e0}
         }, { merge: true });
         await logAudit('CUSTOM_MODEL_DELETE', `[${project.toUpperCase()}] ${equipType}/${brand}: ${model}`);
         showToast('Model custom dipadam.');
-      } catch(e) { showToast('Gagal padam: ' + e.message, 'error'); }
+      } catch(e) {
+        // Removed from the list before the write — put it back, or the
+        // screen shows it gone while it's still saved in Firestore.
+        if(!list.includes(model)) list.splice(Math.min(idx, list.length), 0, model);
+        showToast('Gagal padam: ' + e.message, 'error');
+      }
     }
     async function clearAllCustomModels() {
       if(authProfile.value?.role !== 'superadmin') return;
@@ -16026,15 +16067,21 @@ tr.late td{background:#fff3e0}
         const switched = id !== _equipWatchId;
         _equipWatchId = id;
         if(switched || (ov && nv !== ov)) return;
-        clearTimeout(_equipDraftTimer);
-        _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
-        // Debounced auto-save to Firestore — pushed back on every further
-        // edit so rapid typing doesn't hammer the database; fires once the
-        // user pauses for 2s.
-        clearTimeout(_equipAutoSaveTimer);
-        _equipAutoSaveTimer = setTimeout(() => { _equipAutoSaveTimer = null; _writeSiteEquipToFirestore({ toast:false }); }, 2000);
-        if(canEditEquip.value && equipWritable.value) { ++_equipSaveTok; _setEquipSaveStatus(_equipDocKey(), 'pending'); }
+        _scheduleEquipAutoSave();
       }, { deep: true });
+    }
+    // Debounced auto-save to Firestore — pushed back on every further edit
+    // so rapid typing doesn't hammer the database; fires once the user
+    // pauses for 2s. Also called directly by VIR room add/edit/delete: the
+    // room list (virSiteEquip[site].rooms) lives outside the bucket the deep
+    // watch above follows, so room changes never autosaved — leaving the page
+    // without "Simpan Semua" silently dropped them.
+    function _scheduleEquipAutoSave() {
+      clearTimeout(_equipDraftTimer);
+      _equipDraftTimer = setTimeout(_saveEquipDraftLocal, 800);
+      clearTimeout(_equipAutoSaveTimer);
+      _equipAutoSaveTimer = setTimeout(() => { _equipAutoSaveTimer = null; _writeSiteEquipToFirestore({ toast:false }); }, 2000);
+      if(canEditEquip.value && equipWritable.value) { ++_equipSaveTok; _setEquipSaveStatus(_equipDocKey(), 'pending'); }
     }
     watch(page, (p) => {
       if(p === 'site-equip') _startEquipDeepWatch();
@@ -16287,7 +16334,60 @@ tr.late td{background:#fff3e0}
     // can't be edited (rules: update false) — they're purged within 3 days,
     // and restoreDeletedRecord()/applyRestore() strip on the way back in.
     const credCleanup = reactive({ running:false, done:false, changedDocs:0, changedItems:0 });
-    const PM_EQUIP_ARRAY_KEYS = ['cameras','nvr','switches','alarms','misc','servers','tablets','outOfScope'];
+
+    // ── Pulihkan peralatan VIR "yatim" (superadmin) ──
+    // Before the room-move fix (see _virRoomMoves), deleting / re-tagging an
+    // Optager, VCS or SONY room from the Bilik & Sistem tab never saved the
+    // move to "Data Lama", so that room's equipment stayed in Firestore under
+    // a room id that no longer exists for that system — loaded, but shown
+    // nowhere. Lists every such non-empty bucket; recovering one moves its
+    // items into Data Lama (skipping any already there) and saves through
+    // the normal equipment autosave on that site's page.
+    const _VIR_ROOM_STORES = () => [['Optager HD4000', virSiteEquipOptager.value], ['VCS', virSiteEquipVCS.value], ['SONY', virSiteEquipSony.value]];
+    const virOrphanBuckets = computed(() => {
+      const out = [];
+      for(const [system, store] of _VIR_ROOM_STORES()) {
+        for(const siteId of Object.keys(store || {})) {
+          const roomUids = new Set((virSiteEquip.value[siteId]?.rooms || []).filter(r => r.system === system).map(r => r._uid));
+          for(const [roomUid, bucket] of Object.entries(store[siteId]?.byRoom || {})) {
+            if(roomUid === 'legacyUnassigned' || roomUids.has(roomUid)) continue;
+            const items = EQUIP_KINDS.flatMap(k => bucket?.[k] || []);
+            if(!items.length) continue;
+            out.push({ key: system + '|' + siteId + '|' + roomUid, system, siteId, roomUid, count: items.length,
+              siteName: VIR_SITES.find(s => s.id === siteId)?.name || siteId,
+              sample: items.map(x => x.serial || x.name).filter(Boolean).slice(0, 3).join(', ') });
+          }
+        }
+      }
+      return out;
+    });
+    async function recoverVirOrphan(o) {
+      if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!equipLoadState.vir) { showToast('Data peralatan VIR belum dimuat sepenuhnya — cuba sebentar lagi.', 'error'); return; }
+      const site = VIR_SITES.find(s => s.id === o.siteId);
+      const store = _VIR_ROOM_STORES().find(([sys]) => sys === o.system)?.[1];
+      const siteRec = store?.[o.siteId];
+      const bucket = siteRec?.byRoom?.[o.roomUid];
+      if(!site || !bucket) { showToast('Rekod tidak dijumpai — mungkin telah dipulihkan.', 'error'); return; }
+      if(!await askConfirm(`Pulihkan ${o.count} peralatan ${o.system} di ${o.siteName} ke "Data Lama (Belum Diagihkan Ikut Bilik)"?\n\nHalaman peralatan site ini akan dibuka dan perubahan disimpan secara automatik.`)) return;
+      // Same site, room-scoped page as a normal edit — the save below uses
+      // its context (and its conflict check).
+      currentProject.value = 'vir';
+      openSiteEquip(site, 'rooms');
+      if(!siteRec.byRoom.legacyUnassigned) siteRec.byRoom.legacyUnassigned = {...VIR_ROOM_EQUIP_SHAPE};
+      const un = siteRec.byRoom.legacyUnassigned;
+      const idOf = x => x?._uid || x?.serial || JSON.stringify(x);
+      EQUIP_KINDS.forEach(k => {
+        const have = new Set((un[k] || []).map(idOf));
+        un[k] = [...(un[k] || []), ...(bucket[k] || []).filter(x => !have.has(idOf(x)))];
+      });
+      delete siteRec.byRoom[o.roomUid];
+      _noteVirRoomMove(o.siteId, o.system, o.roomUid);
+      _scheduleEquipAutoSave();
+      await logAudit('VIR_ORPHAN_RECOVER', `${o.siteName} — ${o.system} — ${o.count} peralatan`);
+      showToast(`${o.count} peralatan dipulihkan ke "Data Lama" ${o.system} — disimpan automatik.`);
+    }
+    const PM_EQUIP_ARRAY_KEYS =['cameras','nvr','switches','alarms','misc','servers','tablets','outOfScope'];
     function _hasCreds(it) { return !!it && typeof it === 'object' && ('accessUser' in it || 'accessPw' in it); }
     async function cleanupPmRecordCredentials() {
       if(authProfile.value?.role !== 'superadmin'){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
@@ -16865,7 +16965,7 @@ tr.late td{background:#fff3e0}
       'surat-memo': 'Surat & Memo', 'rma': 'Rekod RMA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
     }[page.value]||''));
 
-    const today = computed(() => new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'}));
+    const today = computed(() => (void _dayKey.value, new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'})));
     // Live clock itself now lives in the isolated <live-clock> component (see
     // LiveClock above, before createApp) so its 30s tick doesn't re-run this
     // whole component's render function.
@@ -16880,7 +16980,7 @@ tr.late td{background:#fff3e0}
       return countFromBCD(virSiteEquipBCD.value) + countFromOptager(virSiteEquipOptager.value) + countFromOptager(virSiteEquipVCS.value) + countFromOptager(virSiteEquipSony.value);
     });
 
-    const pmThisYear = computed(() => maintRecords.value.filter(r=>r.year===new Date().getFullYear()).length);
+    const pmThisYear = computed(() => (void _dayKey.value, maintRecords.value.filter(r=>r.year===new Date().getFullYear()).length));
     const pmCCTV = computed(() => maintRecords.value.filter(r=>(r.project||'cctv')==='cctv'));
     const pmVIR  = computed(() => maintRecords.value.filter(r=>r.project==='vir'));
 
@@ -16894,6 +16994,7 @@ tr.late td{background:#fff3e0}
       _lsSet('pm_dashboard_compact', dashboardCompact.value ? '1' : '0');
     }
     const dashboardYears = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const years = new Set(maintRecords.value.map(r=>r.year).filter(Boolean));
       years.add(new Date().getFullYear());
       return [...years].sort((a,b)=>b-a);
@@ -17481,6 +17582,7 @@ tr.late td{background:#fff3e0}
     }
 
     const overdueMap = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const now = new Date();
       const result = {};
       SITES.forEach(s => {
@@ -17565,6 +17667,7 @@ tr.late td{background:#fff3e0}
 
     // Sites within 4 weeks of next PM due (not yet overdue but approaching)
     const siteNextPmMap = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const now = new Date();
       const result = {};
       const buildEntry = (s, project) => {
@@ -17610,6 +17713,7 @@ tr.late td{background:#fff3e0}
     // to the old calendar-year window so scoring still works, just less
     // precisely, until a contract is recorded.
     const siteHealthScores = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const now = new Date();
       const scores = {};
       const calc = (s, project) => {
@@ -18617,6 +18721,27 @@ tr.late td{background:#fff3e0}
       const el = document.getElementById('sessionWarningOverlay');
       if(el) el.style.display = 'none';
     }));
+    // "Tinggalkan laman?" — the browser's own leave prompt while something
+    // would be lost: a dialog form open (its typed contents live only in
+    // memory — unlike the PM borang and equipment, which keep local drafts),
+    // a file upload in progress, or a save still on its way. Offline, queued
+    // writes don't count: Firestore keeps them on disk and sends them the
+    // next time the app opens. The browser shows its own standard text —
+    // a custom message isn't supported.
+    function _hasUnsavedWork() {
+      if(!authUser.value) return false;
+      const formOpen = [userModal, contractModal, warrantyModal, virWarrantyModal, letterMemoModal, cmCaseModal,
+        rmaModal, teamModal, cpModal, kModal, removeReasonModal, tempReplaceModal, bulkEditModal].some(m => m?.show);
+      const cmNoteTyped = cmCaseDetail.show && !!cmCaseDetail.newEntryNote.trim();
+      const importing = importState.show && (importState.loading || (importState.rows || []).length > 0);
+      return formOpen || cmNoteTyped || importing || serviceReportModal.uploading
+        || (pendingWrites.value > 0 && isOnline.value) || !!_equipAutoSaveTimer;
+    }
+    window.addEventListener('beforeunload', e => {
+      if(!_hasUnsavedWork()) return;
+      e.preventDefault();
+      e.returnValue = ''; // older browsers need returnValue set to show the prompt
+    });
     function _startSessionWarning() {
       if(!authUser.value || sessionWarning.show) return;
       sessionWarning.show = true;
@@ -19513,6 +19638,25 @@ tr.late td{background:#fff3e0}
     async function doLogout() {
       const _logName = authProfile.value?.name || authProfile.value?.username || '';
       await logAudit('LOGOUT', _logName);
+      // Close every dialog. On a shared PC an idle auto-logout used to leave
+      // a half-filled form (RMA, user, kontrak, peralatan...) or a pending
+      // "Padam ...?" confirmation open, and the NEXT person to sign in got
+      // it still filled in — able to submit or confirm it under their own
+      // account. A pending confirmation resolves as "Batal".
+      respondConfirmModal(false);
+      [userModal, contractModal, warrantyModal, virWarrantyModal, letterMemoModal, cmCaseModal, cmCaseDetail,
+       rmaModal, serviceReportModal, filePreviewModal, teamModal, cpModal, kModal, importState, removeReasonModal,
+       tempReplaceModal, bulkEditModal, equipHistoryModal, resetPwModal, forcePwModal, virRoomPickerModal,
+       migrateHanwhaModal, dayDetailModal, staffRotationModal, timelapseModal, infoModal, whatsNewModal,
+       tutorialModal, sessionWarning].forEach(m => { if(m) m.show = false; });
+      mobileNavOpen.value = false; equipColPickerOpen.value = false;
+      showNotifPanel.value = false; showSearchResults.value = false;
+      // Selections and search text are the previous user's too — a kept
+      // Rekod Borang selection would let the next user run a bulk delete /
+      // bulk CM status change on records they never picked.
+      batchSelected.value = []; auditLogSelected.clear();
+      compareList.value = []; compareMode.value = false;
+      globalSearch.value = ''; globalSearchDebounced.value = '';
       // "Secure Session Wipe" — brief CRT-style black wipe while the actual
       // teardown below happens hidden underneath it. Deliberately a plain
       // body-appended overlay (see .logout-wipe-overlay), NOT a CSS
@@ -19573,7 +19717,8 @@ tr.late td{background:#fff3e0}
       _clearEquipConflict(); // a held conflict belongs to this session's unsaved edits — never the next user's
       listCachePainted.value = false;
       contracts.value = []; warranty.value = []; virWarranty.value = [];
-      letterMemos.value = []; cmCases.value = [];
+      letterMemos.value = []; cmCases.value = []; rmaRecords.value = []; contactPersons.value = {};
+      _notifSettling = false;
       auditLogs.value = []; recentAuditLogs.value = []; kontraktorLuar.value = { cctv:[], vir:[] };
       notifications.value = [];
       // _knownNotifIds is a plain module-level `let`, not a reactive ref —
@@ -20281,7 +20426,11 @@ tr.late td{background:#fff3e0}
       return (list || []).map(it => {
         if(!it || typeof it !== 'object') return it;
         // _changes is the Urus Peralatan edit log — internal, never part of a borang.
-        const { accessUser, accessPw, _changes, ...rest } = _toPmTempFields(it);
+        // Licence files (whole .lic file as base64) and product/licence keys
+        // on Optager appliances / VIR tablets: no borang view or print uses
+        // them, and copying them into every borang bloated each record
+        // (all of which load at login) and spread the keys further.
+        const { accessUser, accessPw, _changes, optagerLicenseFile, controlAppLicenseFile, osProductKey, controlAppLicenseKey, ...rest } = _toPmTempFields(it);
         return rest;
       });
     }
@@ -20378,6 +20527,17 @@ tr.late td{background:#fff3e0}
     // room with recorded equipment is deleted, or re-tagged away from
     // Optager HD4000. Keeps the data reachable/reviewable rather than
     // silently orphaning real recorded serial numbers.
+    // Room-scoped VIR buckets changed by a room delete / system re-tag
+    // (_migrate*RoomToUnassigned below): siteId → { system → Set(old roomUid) }.
+    // The VIR save only sends the system currently open, so a move made from
+    // the Bilik & Sistem tab never reached Firestore — after a reload the
+    // equipment sat under a room that no longer exists, invisible. The save
+    // now includes these systems and deletes the old byRoom bucket (its
+    // merge write would otherwise keep it as a hidden duplicate).
+    const _virRoomMoves = {};
+    function _noteVirRoomMove(siteId, system, roomUid) {
+      ((_virRoomMoves[siteId] ||= {})[system] ||= new Set()).add(roomUid);
+    }
     function _migrateOptagerRoomToUnassigned(siteId, roomUid) {
       if(roomUid === 'legacyUnassigned') return; // already there
       const siteRec = virSiteEquipOptager.value[siteId];
@@ -20387,6 +20547,7 @@ tr.late td{background:#fff3e0}
       const unassigned = siteRec.byRoom.legacyUnassigned;
       EQUIP_KINDS.forEach(k => { unassigned[k] = [...(unassigned[k]||[]), ...(bucket[k]||[])]; });
       delete siteRec.byRoom[roomUid];
+      _noteVirRoomMove(siteId, 'Optager HD4000', roomUid);
     }
 
     // ── VCS room-scoped equipment helpers ────────────────────────────────
@@ -20437,6 +20598,7 @@ tr.late td{background:#fff3e0}
       const unassigned = siteRec.byRoom.legacyUnassigned;
       EQUIP_KINDS.forEach(k => { unassigned[k] = [...(unassigned[k]||[]), ...(bucket[k]||[])]; });
       delete siteRec.byRoom[roomUid];
+      _noteVirRoomMove(siteId, 'VCS', roomUid);
     }
 
     // ── SONY room-scoped equipment helpers ───────────────────────────────
@@ -20487,6 +20649,7 @@ tr.late td{background:#fff3e0}
       const unassigned = siteRec.byRoom.legacyUnassigned;
       EQUIP_KINDS.forEach(k => { unassigned[k] = [...(unassigned[k]||[]), ...(bucket[k]||[])]; });
       delete siteRec.byRoom[roomUid];
+      _noteVirRoomMove(siteId, 'SONY', roomUid);
     }
 
     function _importSlotKey() {
@@ -20930,25 +21093,35 @@ Teruskan tukar emel?`)) return;
               userModal.data.email, userModal.data.password
             );
             uid = cred.user.uid;
+            // Save profile to Firestore — while the new login is still
+            // signed in on the secondary app. If this write failed after the
+            // signOut below (network drop), the Auth account was left with
+            // no profile: that person couldn't sign in, and the email could
+            // never be registered again ("already in use") short of deleting
+            // it in Firebase Console. Undo the login instead, so a retry works.
+            try {
+              await db.collection('users').doc(uid).set({
+                username: userModal.data.username,
+                email: userModal.data.email,
+                name: userModal.data.name,
+                role: userModal.data.role,
+                jawatan: userModal.data.jawatan,
+                jabatan: resolvedJabatan,
+                phone: userModal.data.phone,
+                accessType: userModal.data.accessType || 'permanent',
+                expiryDate: userModal.data.accessType === 'temporary' ? (userModal.data.expiryDate || '') : '',
+                permissionOverrides: userModal.data.permissionOverrides || {},
+                disabled: false,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+            } catch(profileErr) {
+              try { await cred.user.delete(); } catch(_) {}
+              throw profileErr;
+            }
             await secAuth.signOut();
           } finally {
             try { await sec.delete(); } catch(_) {}
           }
-          // Save profile to Firestore
-          await db.collection('users').doc(uid).set({
-            username: userModal.data.username,
-            email: userModal.data.email,
-            name: userModal.data.name,
-            role: userModal.data.role,
-            jawatan: userModal.data.jawatan,
-            jabatan: resolvedJabatan,
-            phone: userModal.data.phone,
-            accessType: userModal.data.accessType || 'permanent',
-            expiryDate: userModal.data.accessType === 'temporary' ? (userModal.data.expiryDate || '') : '',
-            permissionOverrides: userModal.data.permissionOverrides || {},
-            disabled: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
           await logAudit('USER_CREATE', userModal.data.username);
           showToast('Pengguna berjaya didaftarkan!');
         } else {
@@ -21053,6 +21226,11 @@ Teruskan tukar emel?`)) return;
         .filter(c => c.name || c.phone);
       const update = {};
       update[cpModal.siteId] = cleaned;
+      // The Simpan button is :disabled="loading" but nothing set it — a
+      // double-click saved twice, and the 2nd run's check below saw the
+      // 1st run's write as "changed by another user".
+      if(loading.value) return;
+      loading.value = true;
       try {
         // The site's whole list is replaced by this modal's copy — if someone
         // else saved this site's officers after it was opened, theirs would
@@ -21068,6 +21246,7 @@ Teruskan tukar emel?`)) return;
         cpModal.show = false;
         showToast('Maklumat pegawai dikemas kini!', 'success');
       } catch(e) { cpModal.err = 'Gagal simpan: ' + e.message; }
+      finally { loading.value = false; }
     }
 
     async function exportContactCsv() {
@@ -21489,6 +21668,10 @@ Teruskan tukar emel?`)) return;
       const areaParts = [kModal.subKawasan, kModal.kawasan, kModal.negeri].filter(Boolean);
       const areaService = areaParts.join(', ');
       const entry = { id: kModal.editId || _genId(), name: kModal.name.trim(), bidangKerja: kModal.bidangKerja.trim(), areaService, negeri: kModal.negeri, kawasan: kModal.kawasan, subKawasan: kModal.subKawasan, phone: kModal.phone.trim() };
+      // A double-click on Simpan used to run this twice — each run mints its
+      // own id for a new contractor, so the list got the same one twice.
+      if(loading.value) return;
+      loading.value = true;
       try {
         // The whole list lives in ONE doc and Firestore replaces arrays on
         // write (merge:true doesn't merge array items). Building it from the
@@ -21506,6 +21689,7 @@ Teruskan tukar emel?`)) return;
         kModal.show = false;
         showToast('Kontraktor disimpan!', 'success');
       } catch(e) { kModal.err = 'Gagal simpan: ' + e.message; }
+      finally { loading.value = false; }
     }
 
     async function deleteKontraktor(id, itemProj) {
@@ -22983,10 +23167,18 @@ Teruskan tukar emel?`)) return;
       bulkEditModal.value = '';
       bulkEditModal.show = true;
     }
-    function applyBulkEdit() {
-      const { kind, field, value } = bulkEditModal;
+    async function applyBulkEdit() {
+      const { kind, field } = bulkEditModal;
       const sel = equipSelected[kind];
       if(!sel.size) { bulkEditModal.show = false; return; }
+      const fieldDef = bulkEditFieldsFor(kind)[field];
+      const value = fieldDef.type === 'password' ? bulkEditModal.value : String(bulkEditModal.value ?? '').trim();
+      // The modal opens on Tarikh Pasang with an empty value, so one stray
+      // "Terapkan" wiped every selected row's install date (or brand /
+      // login) — saved by autosave, no undo. Blank is only a deliberate
+      // choice for "Tiada NVR"; anything else must be confirmed.
+      if(!value && field !== 'nvrRef'
+        && !await askConfirm(`Nilai baru kosong — ${fieldDef.label} akan DIKOSONGKAN untuk ${sel.size} rekod terpilih.\n\nTeruskan?`)) return;
       const list = activeEquip()[selSite.value.id][kind];
       // If the row currently open in the "Kemaskini" inline-edit form is
       // part of this bulk selection, its form still holds a stale copy
@@ -23574,6 +23766,7 @@ Teruskan tukar emel?`)) return;
       }
       else { list.push({...resolved, _uid:_genId(), _ts:Date.now()}); showToast('Bilik berjaya ditambah!'); }
       resetForm('nRoom');
+      _scheduleEquipAutoSave();
     }
     // Always reassigns nRoom.excludedGroups to a brand-new array (never
     // .push/.splice in place) — resetForm() Object.assign's FORM_DEFAULTS.nRoom
@@ -23825,6 +24018,7 @@ Teruskan tukar emel?`)) return;
           if(newIdx === -1) cancelEditEquip(key);
           else equipEditIdx[key] = newIdx;
         }
+        _scheduleEquipAutoSave();
         return;
       }
       // Physical equipment: ask WHY before deleting (rosak/ganti-baru/
@@ -24055,6 +24249,22 @@ Teruskan tukar emel?`)) return;
       const credData = currentProject.value === 'vir'
         ? { [equipVirSystem.value]: creds }
         : creds;
+      // Room moves still waiting to be saved (see _virRoomMoves). Snapshotted
+      // here, cleared only once the commit lands.
+      const _moves = currentProject.value === 'vir' ? (_virRoomMoves[siteId] || {}) : {};
+      const _movesSent = Object.keys(_moves).map(sys => [sys, new Set(_moves[sys])]);
+      _movesSent.forEach(([sys, uids]) => {
+        if(sys !== equipVirSystem.value) {
+          const split = sys === 'Optager HD4000' ? _splitOptagerByRoom(virSiteEquipOptager.value[siteId])
+            : sys === 'VCS' ? _splitVcsByRoom(virSiteEquipVCS.value[siteId])
+            : _splitSonyByRoom(virSiteEquipSony.value[siteId]);
+          data[sys] = split.stripped; credData[sys] = split.creds;
+        }
+        uids.forEach(uid => {
+          if(data[sys]?.byRoom) data[sys].byRoom[uid] = firebase.firestore.FieldValue.delete();
+          if(credData[sys]?.byRoom) credData[sys].byRoom[uid] = firebase.firestore.FieldValue.delete();
+        });
+      });
       // Everything above is a synchronous snapshot of the site being saved —
       // the conflict check below awaits a server read, and this function is
       // also called as the user LEAVES (_flushEquipAutoSave) while the
@@ -24100,6 +24310,10 @@ Teruskan tukar emel?`)) return;
         _equipRev[revKey] = rev;
         if(equipConflict.key === revKey) _clearEquipConflict(); // a forced save resolves it
         await _fw(batch.commit());
+        _movesSent.forEach(([sys, uids]) => {
+          uids.forEach(uid => _moves[sys]?.delete(uid));
+          if(_moves[sys] && !_moves[sys].size) delete _moves[sys];
+        });
         _setEquipSaveStatus(revKey, 'saved', saveTok);
         logAudit('EQUIPMENT_UPDATE', siteLabel);
         clearEquipDraftLocal(); // Firestore now holds the authoritative copy
@@ -24512,10 +24726,12 @@ Teruskan tukar emel?`)) return;
             // Optager HD4000-only — stays [] for BCD records (see
             // _loadPmOptagerEquipSnapshot), so a BCD borang never carries
             // these snapshots even accidentally.
-            servers: JSON.parse(JSON.stringify(pm.servers||[])),
+            // Stripped here too (not only at snapshot time) so re-saving an
+            // older borang drops licence files / keys it still carries.
+            servers: _stripEquipCreds(JSON.parse(JSON.stringify(pm.servers||[]))),
             cameras: _stripEquipCreds(JSON.parse(JSON.stringify(pm.cameras||[]))),
             switches: _stripEquipCreds(JSON.parse(JSON.stringify(pm.switches||[]))),
-            tablets: JSON.parse(JSON.stringify(pm.tablets||[])).map(({ imei, ...t }) => t),
+            tablets: _stripEquipCreds(JSON.parse(JSON.stringify(pm.tablets||[]))).map(({ imei, ...t }) => t),
             misc: _stripEquipCreds(JSON.parse(JSON.stringify(pm.misc||[]))),
           } : {
             cameras:_stripEquipCreds(pm.cameras), nvr:_stripEquipCreds(pm.nvr), hdd:[...pm.hdd],
@@ -27305,6 +27521,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     // file just to see a paragraph of text that's otherwise sitting right
     // there in already-loaded reactive data.
     const liveNarrativeSummary = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const cctvCompliance = SITES.length ? Math.round(SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/SITES.length) : 0;
       const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
       const totalOverdue = overdueSortedCctv.value.length + overdueSortedVir.value.length;
@@ -27628,6 +27845,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // busy having its usual 3 — comparing against the fleet or a fixed
     // threshold would miss that distinction entirely.
     const siteAnomalies = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const now = new Date();
       const thisKey = now.getFullYear()+'-'+now.getMonth();
       const all = [...SITES.map(s=>({...s,project:'cctv'})), ...VIR_SITES.map(s=>({...s,project:'vir'}))];
@@ -27659,6 +27877,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // tahun lepas (bukan diikat kepada filter Tempoh Laporan, supaya
     // perbandingan sentiasa tahun-penuh vs tahun-penuh). ──
     const yoyStats = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const thisYear = new Date().getFullYear();
       const lastYear = thisYear - 1;
       const countFor = (yr, isCm) => maintRecords.value.filter(r => {
@@ -27708,6 +27927,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // bucketed by month instead of summed across all history.
     function _monthKeyOf(d) { return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
     const teamPerformanceTrend = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const now = new Date();
       const months = [];
       for(let i=5;i>=0;i--) months.push(_monthKeyOf(new Date(now.getFullYear(), now.getMonth()-i, 1)));
@@ -27952,6 +28172,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // ── 11. Jangka Hayat Peralatan (equipment install-date age report) ──
     const EQUIPMENT_LIFESPAN_YEARS = 5;
     const equipmentLifespan = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const rows = [];
       const now = Date.now();
       const pushSite = (site, proj, eqSrc) => {
@@ -28140,6 +28361,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     watch(failureFilterYear, (y) => { if(!y) failureFilterMonth.value = ''; });
     function _logDate(l) { return l.removedAt?.toDate ? l.removedAt.toDate() : null; }
     const failureFilterYearOptions = computed(() => {
+      void _dayKey.value; // recompute when the date rolls over
       const ys = new Set([new Date().getFullYear()]);
       equipmentRemovalLogs.value.forEach(l => { const d = _logDate(l); if(d) ys.add(d.getFullYear()); });
       return [...ys].sort((a, b) => b - a);
@@ -28857,6 +29079,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 
       auth.onAuthStateChanged(async user=>{
         authUser.value = user;
+        let profileGone = false;
         try {
           if(user) {
             // Login screen (clock tick + rotating tips) isn't shown while
@@ -28881,13 +29104,25 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
                 // Fallback: check USER_MAP by email (superadmin created before Firestore doc exists)
                 const builtIn = Object.values(USER_MAP).find(u => u.email === user.email);
                 if(builtIn) authProfile.value = { ...builtIn, uid: user.uid };
+                // Confirmed by the server (not a cache miss): no profile.
+                else if(!profileDoc.metadata.fromCache) profileGone = true;
               }
             } catch(e) { console.warn('Profile load error:', e); }
+            // Account deleted by Superadmin while this browser still held its
+            // session: restoring it used to carry on into the app with a null
+            // profile — the heartbeat's "akaun dipadam" check needs a profile
+            // id, so it never fired — and every isSignedIn() read (borang,
+            // RMA, kontrak, waranti...) kept working. Sign it out instead.
+            // An offline / unreadable profile isn't treated as deleted.
+            if(profileGone) {
+              showToast('Akaun anda tidak lagi wujud dalam sistem. Sila hubungi Superadmin.', 'error');
+              await auth.signOut();
+            }
             // Superadmin session (fresh login OR restored by a page refresh)
             // that hasn't passed the PIN on this device: raise the PIN gate
             // and defer the data load until it passes (_passPinGate runs
             // _postAuthLoad). Every other role goes straight through as before.
-            if(authProfile.value?.role === 'superadmin' && !_pinOkForUid(user.uid)) {
+            else if(authProfile.value?.role === 'superadmin' && !_pinOkForUid(user.uid)) {
               _pinPostAuthPending = true;
               await _openPinGate(user.uid);
             } else {
@@ -28907,7 +29142,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           authChecking.value = false;
           // Skipped while gated — app-wrap isn't mounted yet; _passPinGate()
           // runs this once the app actually renders.
-          if(user && !pinGate.value) _afterAppMountedUi();
+          if(user && !pinGate.value && !profileGone) _afterAppMountedUi();
         }
       });
     });
@@ -29013,7 +29248,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       bulkEditModal, bulkEditFieldOptions, openBulkEdit, applyBulkEdit,
       infoModal, showInfo,
       openSites, openPMList, openBackup,
-      backupProgress, doManualBackup, credCleanup, cleanupPmRecordCredentials,
+      backupProgress, doManualBackup, credCleanup, cleanupPmRecordCredentials, virOrphanBuckets, recoverVirOrphan,
       dbStorage, calcDbStorageEstimate, fmtBytes, FIRESTORE_FREE_TIER_BYTES,
       migrateHanwhaModal, migrateHanwhaBrandName,
       restoreFromFile,
