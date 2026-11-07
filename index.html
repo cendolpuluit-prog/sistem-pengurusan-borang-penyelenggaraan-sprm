@@ -426,6 +426,10 @@ html.theme-vt .site-morph-name{view-transition-name:none!important}
 .dark-mode .sync-pill:hover:not(:disabled){background:rgba(255,255,255,.1)}
 .dark-mode .sync-ago{color:#94a3b8}
 .dark-mode .sync-offline{color:#fca5a5}
+.sync-stale .sync-dot{background:#f59e0b}
+.sync-stale .sync-dot::after{animation:none}
+.sync-stale{color:#b45309;border-color:rgba(245,158,11,.5)}
+.dark-mode .sync-stale{color:#fcd34d}
 @media (max-width:768px){.sync-pill .sync-label,.sync-pill .sync-ago{display:none}.sync-pill{padding:0 10px}}
 @media (prefers-reduced-motion: reduce){.sync-dot::after{animation:none}}
 .app-footer{text-align:center;padding:16px 24px;font-size:.76rem;color:#8a95a8;border-top:1px solid rgba(0,51,102,.08)}
@@ -1680,6 +1684,22 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .dark-mode .lic-expired{color:#ff8a80}
 .dark-mode .tab-alert{background:#4a1f1f;color:#ff8a80}
 .dark-mode .tab-alert.soon{background:#3d2a12;color:#ffcc80}
+/* NVR camera-licence capacity (CCTV) — see nvrLicenseRows */
+.lic-cap-card{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:12px;padding:8px 12px;border:1px solid #dbe3ef;border-radius:8px;background:#f7f9fc;font-size:.82rem}
+.lic-cap-title{font-weight:700;color:#003366}
+.lic-cap-chip{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.78rem;font-weight:600;white-space:nowrap;background:#e8f5e9;color:#2e7d32}
+.lic-cap-chip.is-low{background:#fff3e0;color:#b26a00}
+.lic-cap-chip.is-full,.lic-cap-chip.is-over{background:#fdecea;color:#c62828}
+.lic-cap-warn{color:#b26a00;font-size:.78rem;cursor:pointer}
+.dark-mode .lic-cap-card{background:#1a2230;border-color:#2c3a50}
+.dark-mode .lic-cap-title{color:#90caf9}
+.dark-mode .lic-cap-chip{background:#1e3a24;color:#81c784}
+.dark-mode .lic-cap-chip.is-low{background:#3d2a12;color:#ffcc80}
+.dark-mode .lic-cap-chip.is-full,.dark-mode .lic-cap-chip.is-over{background:#4a1f1f;color:#ff8a80}
+.dark-mode .lic-cap-warn{color:#ffb74d}
+.site-list-tbl td:nth-child(n+4):not(:last-child){white-space:nowrap}
+.site-list-total td{font-weight:700;border-top:2px solid #003366;background:#f0f4ff}
+.dark-mode .site-list-total td{border-top-color:#90caf9;background:#1a2230}
 .topbar-search-wrap .search-active{background:#eef4ff}
 .dark-mode .topbar-search-wrap .search-active{background:#1f2a3a}
 /* Dark-mode twins for the Urus Peralatan additions (temp badge/box, filter
@@ -2262,11 +2282,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           {{equipHistoryModal.playing?'⏸ Jeda':'▶ Main Time-lapse'}}
         </button>
       </div>
-      <div v-if="!equipHistoryModal.rows.length" class="empty">Tiada rekod PM/CM (submitted) dijumpai untuk item ini.</div>
+      <div v-if="!equipHistoryModal.rows.length" class="empty">Tiada rekod PM/CM, RMA atau perubahan dijumpai untuk item ini.</div>
       <div v-else class="equip-history-timeline">
         <div v-for="(row,i) in equipHistoryModal.rows" v-show="equipHistoryModal.playIdx<0 || i<=equipHistoryModal.playIdx" :key="i"
           class="equip-history-item" :class="{'timelapse-reveal':equipHistoryModal.playIdx>=0 && i===equipHistoryModal.playIdx,'timelapse-current':equipHistoryModal.playing && i===equipHistoryModal.playIdx, no:(row.isRemoval && !row.isSwap)||row.status==='Tidak'}">
-          <div class="equip-history-dot" :class="(row.isSwap||row.isChange)?'':(row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':'')))"></div>
+          <div class="equip-history-dot" :class="(row.isSwap||row.isChange||row.isRma)?'':(row.isRemoval?'no':(row.status==='Baik'?'ok':(row.status==='Tidak'?'no':'')))"></div>
           <div class="equip-history-content">
             <template v-if="row.isChange">
               <div class="flex items-center gap-8" style="flex-wrap:wrap">
@@ -2275,6 +2295,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <span v-if="row.by" class="text-sm text-muted">oleh {{row.by}}</span>
               </div>
               <div v-for="(d,di) in row.diffs" :key="di" class="text-sm text-muted" style="margin-top:2px">{{d.f}}: <span class="mono-data">{{d.from || '—'}}</span> → <span class="mono-data">{{d.to || '—'}}</span></div>
+            </template>
+            <template v-else-if="row.isRma">
+              <div class="flex items-center gap-8" style="flex-wrap:wrap">
+                <b>{{row.dateLabel}}</b>
+                <span class="badge badge-blue" style="font-size:.68rem">{{row.rmaBadge}}</span>
+              </div>
+              <div v-if="row.unit" class="text-sm text-muted" style="margin-top:2px">{{row.unit}}</div>
+              <div v-if="row.rmaLine" class="text-sm text-muted" style="margin-top:2px">{{row.rmaLine}}</div>
             </template>
             <template v-else-if="row.isSwap">
               <div class="flex items-center gap-8" style="flex-wrap:wrap">
@@ -2465,6 +2493,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div style="font-weight:700;font-size:.85rem;color:#002244">🔧 <span v-html="highlightQuery(r.label, globalSearch)"></span></div>
               <div style="font-size:.75rem;color:#666">{{r.siteName}} ({{r.proj==='vir'?'VIR':'CCTV'}}) &nbsp;·&nbsp; {{r.detail || 'klik untuk urus peralatan'}}</div>
             </template>
+            <template v-else-if="r._kind==='rma'">
+              <div style="font-weight:700;font-size:.85rem;color:#002244">📦 <span v-html="highlightQuery(r.label, globalSearch)"></span></div>
+              <div style="font-size:.75rem;color:#666">Rekod RMA ({{r.proj==='vir'?'VIR':'CCTV'}}) &nbsp;·&nbsp; {{r.detail}}</div>
+            </template>
             <template v-else-if="r._kind==='kontraktor'">
               <div style="font-weight:700;font-size:.85rem;color:#002244">🛠️ <span v-html="highlightQuery(r.name, globalSearch)"></span></div>
               <div style="font-size:.75rem;color:#666">{{r.bidangKerja||'Kontraktor/Kedai'}} ({{r.proj==='vir'?'VIR':'CCTV'}}) &nbsp;·&nbsp; {{r.areaService||'—'}}</div>
@@ -2547,6 +2579,12 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       </div>
     </div>
     <div class="content">
+      <!-- Records came from this device's offline cache, not the server (see dataStale) -->
+      <div v-if="dataStale && authUser" class="equip-load-warning no-print" role="alert">
+        ⚠️ <b>Data mungkin lapuk.</b> Sistem tidak dapat sambung ke pelayan, jadi rekod dipaparkan dari salinan lama dalam peranti ini — borang/rekod terbaru mungkin <b>tiada</b> dalam senarai.
+        Semak sambungan internet dan <b>jam/tarikh PC</b>, kemudian
+        <button class="btn btn-outline btn-sm" style="margin-left:4px" :disabled="loading" @click="refreshDataFromPill">🔄 Cuba lagi</button>
+      </div>
 
       <!-- ====== DASHBOARD ====== -->
       <!-- DASHBOARD SKELETON (shown while initial data load is in-flight) -->
@@ -3730,18 +3768,30 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             Senarai Site SPRM Di Bawah Kontrak Penyelenggaraan Daya One Resources Sdn. Bhd. <span style="font-weight:400;color:#888">({{SITES.length}} Site)</span>
           </div>
           <div class="tbl-wrap">
-            <table>
-              <thead><tr><th>#</th><th>Nama Site</th><th>Kod</th><th>Kamera</th><th>NVR</th><th>Tindakan</th></tr></thead>
+            <table class="site-list-tbl">
+              <thead><tr><th>#</th><th>Nama Site</th><th>Kod</th><th>Kamera</th><th>NVR</th><th>Lesen Kamera</th><th>HDD</th><th>POE Switch</th><th>Tindakan</th></tr></thead>
               <tbody>
                 <tr v-for="(s,i) in SITES" :key="s.id">
                   <td>{{i+1}}</td>
                   <td><span class="site-morph-name" :style="morphSiteId===s.id ? 'view-transition-name:site-hero' : ''">{{s.name}}</span> <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
-                  <td>{{(siteEquip[s.id]?.cameras||[]).length}} unit</td>
-                  <td>{{(siteEquip[s.id]?.nvr||[]).length}} unit</td>
+                  <td>{{cctvSiteStats.bySite[s.id].cams}} unit</td>
+                  <td>{{cctvSiteStats.bySite[s.id].nvr}} unit</td>
+                  <td><span v-if="cctvSiteStats.bySite[s.id].lic" class="lic-cap-chip" :class="'is-'+cctvSiteStats.bySite[s.id].lic.state" :title="cctvSiteStats.bySite[s.id].lic.title">{{cctvSiteStats.bySite[s.id].lic.used}}/{{cctvSiteStats.bySite[s.id].lic.lic}} · {{cctvSiteStats.bySite[s.id].lic.label}}</span><span v-else class="text-muted text-sm" title="Lesen kamera belum diisi pada NVR site ini">–</span></td>
+                  <td>{{cctvSiteStats.bySite[s.id].hdd}} unit</td>
+                  <td>{{cctvSiteStats.bySite[s.id].sw}} unit</td>
                   <td><button class="btn btn-sm btn-primary" @click="openSiteEquip(s)">Urus Peralatan</button></td>
                 </tr>
               </tbody>
+              <tfoot><tr class="site-list-total">
+                <td></td><td>JUMLAH ({{SITES.length}} site)</td><td></td>
+                <td>{{cctvSiteStats.tot.cams}} unit</td>
+                <td>{{cctvSiteStats.tot.nvr}} unit</td>
+                <td><span v-if="cctvSiteStats.tot.licSites" :title="cctvSiteStats.tot.licSites+' daripada '+SITES.length+' site ada maklumat lesen'">{{cctvSiteStats.tot.used}}/{{cctvSiteStats.tot.lic}} · baki {{cctvSiteStats.tot.left}}</span><span v-else class="text-muted text-sm">–</span></td>
+                <td>{{cctvSiteStats.tot.hdd}} unit</td>
+                <td>{{cctvSiteStats.tot.sw}} unit</td>
+                <td></td>
+              </tr></tfoot>
             </table>
           </div>
         </div>
@@ -3874,6 +3924,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <button class="btn btn-outline btn-sm" :disabled="loading" @click="resolveEquipConflictReload">🔄 Muat semula data terkini (buang perubahan saya)</button>
             <button class="btn btn-danger btn-sm" :disabled="loading" @click="resolveEquipConflictOverwrite">💾 Simpan versi saya (gantikan versi mereka)</button>
           </div>
+        </div>
+        <div v-if="equipLicenseSummary.rows.length" class="lic-cap-card">
+          <span class="lic-cap-title">📹 Lesen Kamera:</span>
+          <span v-for="r in equipLicenseSummary.rows" :key="r.uid||r.name" class="lic-cap-chip" :class="'is-'+r.state" :title="licenseCapTitle(r)">{{r.name}} · {{r.used}}/{{r.lic}} · {{licenseCapLabel(r)}}</span>
+          <span v-if="equipLicenseSummary.unlinked" class="lic-cap-warn" @click="eqTab='cameras'; clearEquipFilter('cameras')" title="Kamera tanpa &quot;NVR Berkaitan&quot;, atau dipautkan ke NVR yang tiada lagi di site ini, tidak dikira dalam mana-mana lesen — klik untuk lihat">⚠ {{equipLicenseSummary.unlinked}} kamera tidak dipautkan ke NVR site ini (tidak dikira)</span>
         </div>
         <div class="tabs">
           <div v-if="currentProject==='vir' && (equipVirSystem==='Optager HD4000'||equipVirSystem==='VCS')" class="tab" :class="{active:eqTab==='servers'}" @click="eqTab='servers'">🖥️ Appliance ({{(selSiteEquip.servers||[]).length}})<span v-if="equipLicenseAlert.expired" class="tab-alert" :title="equipLicenseAlert.expired+' lesen Optager telah tamat'">⚠ {{equipLicenseAlert.expired}}</span><span v-else-if="equipLicenseAlert.soon" class="tab-alert soon" :title="equipLicenseAlert.soon+' lesen Optager akan tamat dalam 60 hari'">⏰ {{equipLicenseAlert.soon}}</span></div>
@@ -4022,6 +4077,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="flex items-center gap-8 mb-8">
                 <strong>{{grp.name==='Tiada NVR' ? '⚠️ Tiada NVR Berkaitan' : '📼 '+grp.name}}</strong>
                 <span class="badge">{{grp.items.length}} Kamera</span>
+                <span v-if="equipLicenseSummary.byName[grp.name]" class="lic-cap-chip" :class="'is-'+equipLicenseSummary.byName[grp.name].state" :title="licenseCapTitle(equipLicenseSummary.byName[grp.name])">Lesen {{equipLicenseSummary.byName[grp.name].used}}/{{equipLicenseSummary.byName[grp.name].lic}} · {{licenseCapLabel(equipLicenseSummary.byName[grp.name])}}</span>
               </div>
               <table class="equip-table equip-table-sticky equip-tbl-cameras">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('cameras','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.cameras.key==='name'}">{{equipSortIcon('cameras','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.cameras.key==='ip'}">{{equipSortIcon('cameras','ip')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','camType')">Jenis<span class="sort-ind" :class="{on:equipSort.cameras.key==='camType'}">{{equipSortIcon('cameras','camType')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','brand')">Brand<span class="sort-ind" :class="{on:equipSort.cameras.key==='brand'}">{{equipSortIcon('cameras','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','model')">Model<span class="sort-ind" :class="{on:equipSort.cameras.key==='model'}">{{equipSortIcon('cameras','model')}}</span></th><th v-if="currentProject!=='vir'">Aksesori</th><th class="th-sort" @click="toggleEquipSort('cameras','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.cameras.key==='serial'}">{{equipSortIcon('cameras','serial')}}</span></th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
@@ -4092,6 +4148,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"><div v-if="equipFormSerialClash('nvr',nNVR.serial).length" class="ip-clash-hint">⚠️ No. Siri ini sudah wujud: {{equipFormSerialClash('nvr',nNVR.serial).join(', ')}}</div></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.ip"><div v-if="equipFormIpClash('nvr',nNVR.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('nvr',nNVR.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label>Lesen Kamera (channel) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="number" min="1" step="1" v-model="nNVR.channelLicense" placeholder="cth: 68"><div class="text-muted text-sm">Jumlah kamera yang dibenarkan oleh lesen NVR/server ini. Penggunaan dikira automatik dari kamera yang "NVR Berkaitan"-nya NVR ini.</div></div>
               <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nNVR.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
@@ -4115,11 +4172,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table equip-table-sticky equip-tbl-nvr">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('nvr','name')">Nama<span class="sort-ind" :class="{on:equipSort.nvr.key==='name'}">{{equipSortIcon('nvr','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','type')">Jenis<span class="sort-ind" :class="{on:equipSort.nvr.key==='type'}">{{equipSortIcon('nvr','type')}}</span></th><th>Peranan</th><th class="th-sort" @click="toggleEquipSort('nvr','brand')">Brand<span class="sort-ind" :class="{on:equipSort.nvr.key==='brand'}">{{equipSortIcon('nvr','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','model')">Model<span class="sort-ind" :class="{on:equipSort.nvr.key==='model'}">{{equipSortIcon('nvr','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.nvr.key==='serial'}">{{equipSortIcon('nvr','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','ip')">IP<span class="sort-ind" :class="{on:equipSort.nvr.key==='ip'}">{{equipSortIcon('nvr','ip')}}</span></th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('nvr','name')">Nama<span class="sort-ind" :class="{on:equipSort.nvr.key==='name'}">{{equipSortIcon('nvr','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','type')">Jenis<span class="sort-ind" :class="{on:equipSort.nvr.key==='type'}">{{equipSortIcon('nvr','type')}}</span></th><th>Peranan</th><th class="th-sort" @click="toggleEquipSort('nvr','brand')">Brand<span class="sort-ind" :class="{on:equipSort.nvr.key==='brand'}">{{equipSortIcon('nvr','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','model')">Model<span class="sort-ind" :class="{on:equipSort.nvr.key==='model'}">{{equipSortIcon('nvr','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.nvr.key==='serial'}">{{equipSortIcon('nvr','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','ip')">IP<span class="sort-ind" :class="{on:equipSort.nvr.key==='ip'}">{{equipSortIcon('nvr','ip')}}</span></th><th v-if="currentProject!=='vir'">Lesen Kamera</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in equipView.nvr" :key="n._uid||n._idx" :class="[{'highlight-row':equipEditIdx.nvr===n._idx}, equipRowFx(n)]" :data-equip-uid="n._uid">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="n.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data"><span v-if="n.serial" :class="{'ip-dup':equipSerialClash(n.serial,'nvr',n._uid||n._idx).length}" :title="serialCellTitle(n.serial,'nvr',n._uid||n._idx)">{{n.serial}}</span></td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="n.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data"><span v-if="n.serial" :class="{'ip-dup':equipSerialClash(n.serial,'nvr',n._uid||n._idx).length}" :title="serialCellTitle(n.serial,'nvr',n._uid||n._idx)">{{n.serial}}</span></td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td v-if="currentProject!=='vir'"><span v-if="nvrLicenseOf(n)" class="lic-cap-chip" :class="'is-'+nvrLicenseOf(n).state" :title="licenseCapTitle(nvrLicenseOf(n))">{{nvrLicenseOf(n).used}}/{{nvrLicenseOf(n).lic}} · {{licenseCapLabel(nvrLicenseOf(n))}}</span><span v-else class="text-muted text-sm">-</span></td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -4132,7 +4189,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                       <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',n._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
-                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td :colspan="canViewCredentials?12:10" class="empty">Tiada NVR lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('nvr')">+ Tambah NVR</button></td></tr><tr v-if="(selSiteEquip.nvr||[]).length && !equipView.nvr.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('nvr')">Kosongkan penapis</a></td></tr>
+                  <tr v-if="!(selSiteEquip.nvr||[]).length"><td colspan="99" class="empty">Tiada NVR lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('nvr')">+ Tambah NVR</button></td></tr><tr v-if="(selSiteEquip.nvr||[]).length && !equipView.nvr.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('nvr')">Kosongkan penapis</a></td></tr>
                 </tbody>
               </table>
             </div>
@@ -6755,7 +6812,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <p style="color:#c62828;font-size:.85rem;font-weight:600;margin-bottom:8px">⚠️ {{importState.duplicates.length}} rekod dilangkau — sudah wujud dalam senarai:</p>
                 <div class="tbl-wrap" style="max-height:40vh">
                   <table class="equip-table">
-                    <thead><tr><th>{{importState.duplicates[0] && importState.duplicates[0].field==='ip' ? 'IP Address' : 'No. Siri'}}</th><th>Sudah wujud pada</th></tr></thead>
+                    <thead><tr><th>{{[...new Set(importState.duplicates.map(d => ({ip:'IP Address',serial:'No. Siri',name:'Nama NVR'})[d.field]))].join(' / ')}}</th><th>Sudah wujud pada</th></tr></thead>
                     <tbody>
                       <tr v-for="(d,i) in importState.duplicates" :key="i"><td>{{d.value}}</td><td>{{d.label}}</td></tr>
                     </tbody>
@@ -7270,6 +7327,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <div class="modal" style="max-width:420px">
           <h3>🗑 Padam Peralatan</h3>
           <p class="text-sm text-muted mb-12">Kenapa "{{removeReasonModal.itemSnapshot?.name || removeReasonModal.itemSnapshot?.nvrRef || '-'}}" ini dibuang? Maklumat ini digunakan untuk laporan kekerapan ganti/rosak peralatan.</p>
+          <div v-if="removeNvrLinked" class="equip-load-warning" role="alert" style="margin-bottom:12px">⚠️ <b>{{removeNvrLinked}} kamera/HDD masih dipautkan ke NVR ini.</b> Selepas dipadam, pautan mereka terputus (kamera tidak lagi dikira dalam lesen kamera) sehingga "NVR Berkaitan" dikemas kini. Jika NVR ini diganti dengan unit baru, beri nama yang sama supaya kamera/HDD dipautkan semula secara automatik.</div>
           <div class="form-group">
             <label>Sebab</label>
             <select class="form-control" v-model="removeReasonModal.reason">
@@ -8068,6 +8126,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <div class="tab" :class="{active:reportTab==='jangkahayat'}" @click="reportTab='jangkahayat'">📅 Jangka Hayat</div>
           <div class="tab" :class="{active:reportTab==='gantirosak'}" @click="reportTab='gantirosak'; loadEquipmentRemovalLogs()">♻️ Sejarah Ganti/Rosak</div>
           <div class="tab" :class="{active:reportTab==='sementara'}" @click="reportTab='sementara'">🔁 Peralatan Sementara</div>
+          <div class="tab" :class="{active:reportTab==='lesen'}" @click="reportTab='lesen'">📹 Kapasiti Lesen Kamera</div>
           <div class="tab" :class="{active:reportTab==='perbandingan'}" @click="reportTab='perbandingan'">⚖️ Perbandingan Site</div>
           <div class="tab" :class="{active:reportTab==='musim'}" @click="reportTab='musim'">🌦️ Corak Musim</div>
           <div class="tab" :class="{active:reportTab==='heatmap'}" @click="reportTab='heatmap'">🗓️ Heatmap Pematuhan</div>
@@ -8335,7 +8394,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <div v-if="reportTab==='team'" class="tab-content-fade">
           <div class="card">
             <div class="card-title">Laporan Prestasi Team</div>
-            <p class="text-sm text-muted mb-12">"Kadar Siap" = peratus penugasan yang ada rekod PM/CM sepadan (dalam lingkungan 7 hari dari tarikh jadual) berbanding jumlah penugasan.</p>
+            <p class="text-sm text-muted mb-12">"Kadar Siap" = peratus penugasan yang ada rekod PM/CM sepadan (dalam lingkungan 7 hari dari tarikh jadual). Penugasan akan datang, atau yang masih dalam tempoh 7 hari tanpa rekod, belum dinilai dan tidak dikira dalam kadar.</p>
             <div class="tbl-wrap">
               <table>
                 <thead><tr><th>Team</th><th>Anggota</th><th>Jumlah Penugasan</th><th>Siap</th><th>Kadar Siap</th><th>Trend (6 Bulan)</th></tr></thead>
@@ -8343,7 +8402,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <tr v-for="t in teamPerformance" :key="t.team">
                     <td><span :class="['team-badge','badge-'+t.team]">{{t.team}}</span></td>
                     <td style="font-size:.78rem">{{t.members.join(', ')||'—'}}</td>
-                    <td>{{t.assigned}}</td><td>{{t.completed}}</td>
+                    <td>{{t.assigned}}<span v-if="t.pending" class="text-muted text-sm" :title="t.pending+' penugasan belum dinilai (akan datang / masih dalam tempoh 7 hari)'"> ({{t.pending}} belum dinilai)</span></td><td>{{t.completed}}</td>
                     <td><span :class="'badge badge-'+(t.rate>=80?'green':t.rate>=50?'blue':'red')">{{t.rate}}%</span></td>
                     <td>
                       <div v-if="teamPerformanceTrend[t.team]" style="display:flex;align-items:center;gap:6px">
@@ -8380,7 +8439,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <td>{{s.total}}</td>
                     <td><span class="badge badge-blue">{{s.pm}}</span></td>
                     <td><span class="badge badge-red">{{s.cm}}</span></td>
-                    <td><span :class="'badge badge-'+(s.rate>=80?'green':s.rate>=50?'gray':'red')">{{s.completed}}/{{s.total}} ({{s.rate}}%)</span></td>
+                    <td><span :class="'badge badge-'+(s.rate>=80?'green':s.rate>=50?'gray':'red')">{{s.completed}}/{{s.judged}} ({{s.rate}}%)</span><span v-if="s.total > s.judged" class="text-muted text-sm" :title="(s.total - s.judged)+' penugasan belum dinilai (akan datang / masih dalam tempoh 7 hari)'"> +{{s.total - s.judged}} belum dinilai</span></td>
                     <td>{{s.siteCount}}</td>
                     <td>
                       <span v-if="staffStreaks[s.name]>=3" class="badge badge-green" title="Bilangan PM berturut-turut tanpa CM susulan">🔥 {{staffStreaks[s.name]}}</span>
@@ -8520,6 +8579,39 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <td style="font-size:.8rem">{{r.by||'-'}}</td>
                   </tr>
                   <tr v-if="!tempEquipmentReport.length"><td colspan="10" class="empty">Tiada peralatan gantian sementara.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: KAPASITI LESEN KAMERA (CCTV — see licenseCapacityReport) -->
+        <div v-if="reportTab==='lesen'" class="tab-content-fade">
+          <div class="card">
+            <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:10px">
+              <div class="card-title" style="margin:0;border:none;padding:0">Kapasiti Lesen Kamera (CCTV)</div>
+              <div class="flex gap-8" style="flex-wrap:wrap">
+                <select class="form-control" style="width:auto;min-width:160px" v-model="licenseCapFilter">
+                  <option value="all">Semua NVR</option>
+                  <option value="tight">Hampir penuh / penuh</option>
+                  <option value="room">Ada baki</option>
+                </select>
+                <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportLicenseCapExcel">📊 Export Excel</button>
+                <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-danger" @click="exportLicenseCapPdf">🖨️ Export PDF</button>
+              </div>
+            </div>
+            <p class="text-sm text-muted mb-12">Lesen kamera setiap NVR/server (diisi di Urus Peralatan → Server/NVR/SAN). "Digunakan" = kamera yang "NVR Berkaitan"-nya NVR itu, termasuk kamera luar skop; backup ke server redundancy tidak dikira. <b>{{licenseCapTotals.nvrs}}</b> NVR di <b>{{licenseCapTotals.sites}}</b> site · lesen {{licenseCapTotals.lic}}, digunakan {{licenseCapTotals.used}}, baki <b>{{licenseCapTotals.left}}</b>.<span v-if="licenseCapTotals.noData">{{' ' + licenseCapTotals.noData}} site belum ada maklumat lesen.</span></p>
+            <div v-if="licenseCapTotals.unlinkedSites.length" class="text-sm mb-12" style="color:#b26a00">⚠ Kamera tidak dipautkan ke NVR site (tidak dikira): {{licenseCapTotals.unlinkedSites.map(x => x.site+' ('+x.n+')').join(', ')}}</div>
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Site</th><th>NVR / Server</th><th>Brand / Model</th><th>Lesen</th><th>Digunakan</th><th>Baki</th></tr></thead>
+                <tbody>
+                  <tr v-for="(r,i) in licenseCapacityReport" :key="r.siteId+'|'+(r.uid||r.name)">
+                    <td>{{i+1}}</td><td>{{r.site}}</td><td>{{r.name}}</td><td>{{[r.brand,r.model].filter(Boolean).join(' ') || '-'}}</td>
+                    <td>{{r.lic}}</td><td>{{r.used}}</td>
+                    <td><span class="lic-cap-chip" :class="'is-'+r.state" :title="licenseCapTitle(r)">{{licenseCapLabel(r)}}</span></td>
+                  </tr>
+                  <tr v-if="!licenseCapacityReport.length"><td colspan="7" class="empty">{{licenseCapTotals.nvrs ? 'Tiada NVR sepadan dengan penapis.' : 'Belum ada lesen kamera direkodkan. Isi "Lesen Kamera (channel)" pada NVR di Urus Peralatan → Server/NVR/SAN.'}}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -10150,6 +10242,12 @@ createApp({
     // would replace siteEquip in memory and could drop edits the debounced
     // autosave hasn't written yet.
     const lastDataSyncAt = ref(null);
+    // True when the last loadAll() got its records from this device's
+    // offline cache instead of the server. A plain .get() does that SILENTLY
+    // whenever Firestore can't reach the backend (bad PC clock, blocked
+    // network, flaky line) — no error, so a PC unused for weeks showed its
+    // old list as if current, with newer borang simply missing.
+    const dataStale = ref(false);
     const syncNow = ref(Date.now());
     setInterval(() => {
       syncNow.value = Date.now();
@@ -10159,6 +10257,7 @@ createApp({
     const syncStatus = computed(() => {
       if(!isOnline.value) return { state:'offline', label:'LUAR TALIAN' };
       if(pendingWrites.value > 0) return { state:'saving', label:'MENYEGERAK…' };
+      if(dataStale.value) return { state:'stale', label:'DATA LAPUK' };
       return { state:'online', label:'ONLINE' };
     });
     const syncAgoLabel = computed(() => {
@@ -10174,7 +10273,8 @@ createApp({
       if(syncStatus.value.state === 'offline') return 'Tiada sambungan internet — perubahan disimpan tempatan dan akan disegerakkan bila talian pulih.';
       if(syncStatus.value.state === 'saving') return 'Sedang menghantar perubahan ke pelayan…';
       const t = lastDataSyncAt.value ? new Date(lastDataSyncAt.value).toLocaleTimeString('ms-MY', { hour:'2-digit', minute:'2-digit' }) : '—';
-      return `Data terakhir dimuat dari pelayan pada ${t}. Klik untuk segar semula.`;
+      if(syncStatus.value.state === 'stale') return 'Tidak dapat sambung ke pelayan — data dipaparkan dari salinan lama dalam peranti ini, rekod terbaru mungkin tiada. Klik untuk cuba lagi.';
+      return `Data terakhir dimuat dari pelayan pada ${t}.${pmLiveActive.value ? ' Rekod borang dikemas kini secara langsung.' : ''} Klik untuk segar semula.`;
     });
     let db, auth, storage;
     // Firebase Storage SDK is loaded on first use instead of in <head> (see
@@ -10227,7 +10327,7 @@ createApp({
     // use `nota` for the inspector's problem notes, and loadPMEquip() copies
     // every camera field into the borang — it strips equipNota there.
     const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''});
-    const nNVR = reactive({name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
+    const nNVR = reactive({name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:'',channelLicense:''});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nRoom = reactive({name:'', nameCustom:'', system:'BCD', excludedGroups:[]});
@@ -11613,7 +11713,11 @@ createApp({
       // correctly restored. Same class of bug as the year-preservation and
       // auto-suggest-suffix fixes above.
       if(pm._isEdit) return;
-      pm.refNo = refNoPrefix.value ? refNoPrefix.value + refNoSuffix.value : '';
+      // An emptied running number used to save the bare prefix
+      // ("…/PM/") as if it were an official ref no. — no number means no
+      // ref no. Stray spaces ("001 ") are dropped too.
+      const sfx = String(refNoSuffix.value || '').trim();
+      pm.refNo = refNoPrefix.value && sfx ? refNoPrefix.value + sfx : '';
     });
     // ...but a number the user deliberately retypes while editing (e.g.
     // closing the gap a deleted 006 left by renumbering 007 → 006) must
@@ -11622,8 +11726,15 @@ createApp({
     // the running-number segment is swapped; the historical prefix (year/
     // room/type) stays exactly as issued. editRecord() setting the suffix
     // from the record's own refNo is a no-op here (same segment).
-    watch(refNoSuffix, (sfx) => {
-      if(!pm._isEdit || !pm.refNo) return;
+    watch(refNoSuffix, (raw) => {
+      // Clearing the box while editing keeps the record's issued number
+      // rather than cutting it down to "…/PM/".
+      const sfx = String(raw || '').trim();
+      if(!pm._isEdit || !sfx) return;
+      // A borang saved WITHOUT a number (savePM allows that after a confirm)
+      // gets one now — it has no issued prefix to keep, so it's built the
+      // same way a new borang's is.
+      if(!pm.refNo) { if(refNoPrefix.value) pm.refNo = refNoPrefix.value + sfx; return; }
       const segs = pm.refNo.split('/');
       if(segs.length < 2 || segs[segs.length-1] === sfx) return;
       segs[segs.length-1] = sfx;
@@ -12784,6 +12895,12 @@ createApp({
         // against. Only warns (never blocks) on an inconclusive comparison.
         if(teamModal.editing && teamModal.current?.id) {
           const liveSnap = await db.collection('teamAssignments').doc(teamModal.current.id).get();
+          // Deleted by someone else while this form was open — the set(merge)
+          // below would quietly bring it back. Ask, like savePM does.
+          if(!liveSnap.exists && !await askConfirm(`Penugasan "Team ${teamModal.data.team}" telah dipadam oleh orang lain sejak anda membuka borang ini.\n\nSimpan semula sebagai penugasan baru?`)) {
+            loading.value = false;
+            return;
+          }
           if(liveSnap.exists) {
             const liveVersion = liveSnap.data().updatedAt || null;
             const loadedVersion = teamModal.current.updatedAt || null;
@@ -12832,6 +12949,7 @@ createApp({
           await _fw(db.collection('teamAssignments').doc(teamModal.current.id).set(data, {merge:true}));
           const idx = teamAssignments.value.findIndex(t => t.id === teamModal.current.id);
           if(idx > -1) teamAssignments.value[idx] = { id: teamModal.current.id, ...localData };
+          else teamAssignments.value.push({ id: teamModal.current.id, ...localData }); // re-saved after a delete elsewhere
         } else {
           const ref2 = await _fw(db.collection('teamAssignments').add(data));
           teamAssignments.value.push({ id: ref2.id, ...localData });
@@ -13713,6 +13831,7 @@ Teruskan tukar emel?`)) return;
         // only project this feature supported at the time).
         contracts.value = snap.docs.map(d => ({id:d.id, project:'cctv', ...d.data()}));
         _markCollLoaded('contracts');
+        _startLive('contracts', db.collection('contracts').orderBy('endDate','asc'), s => { contracts.value = s.docs.map(d => ({ project:'cctv', ..._liveDoc(d) })); });
       } catch(e) { console.warn('loadContracts failed:', e); }
       contractsLoading.value = false;
     }
@@ -13807,12 +13926,16 @@ Teruskan tukar emel?`)) return;
     async function deleteContract(c) {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!await askConfirm(`Padam kontrak "${c.title}"? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      // Its button is :disabled="loading" — set it, or a second click while
+      // this runs starts a duplicate delete (same fix as deleteCmCase).
+      loading.value = true;
       try {
         const data = await _softDeleteToTrash('contracts', 'deletedContracts', c.id);
         contracts.value = contracts.value.filter(x => x.id !== c.id);
         await logAudit('CONTRACT_DELETE', c.title);
         showUndoToast('Kontrak dipindah ke Tong Sampah.', () => _undoSoftDelete('contracts', 'deletedContracts', c.id, data, contracts));
       } catch(e) { showToast('Gagal padam kontrak: ' + e.message, 'error'); }
+      loading.value = false;
     }
 
     // Excel/CSV formula injection guard — free-text fields (equipment name/
@@ -13937,6 +14060,7 @@ Teruskan tukar emel?`)) return;
         const snap = await _retryOnPermDenied(() => db.collection('equipmentWarranty').orderBy('endDate','asc').get());
         warranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
         _markCollLoaded('warranty');
+        _startLive('warranty', db.collection('equipmentWarranty').orderBy('endDate','asc'), s => { warranty.value = s.docs.map(_liveDoc); });
       } catch(e) { showToast('Gagal muat waranti peralatan: ' + e.message, 'error'); }
       warrantyLoading.value = false;
       await loadVendorContracts();
@@ -13953,6 +14077,9 @@ Teruskan tukar emel?`)) return;
         const map = {};
         snap.docs.forEach(d => { map[d.id] = d.data().contractEndDate || ''; });
         vendorContracts.value = map;
+        _startLive('vendorContracts', db.collection('warrantyVendorContracts'), s => {
+          const m = {}; s.docs.forEach(d => { m[d.id] = d.data().contractEndDate || ''; }); vendorContracts.value = m;
+        });
       } catch(e) { showToast('Gagal muat tempoh jaminan kontrak: ' + e.message, 'error'); }
     }
     function onVendorContractPick() {
@@ -14145,12 +14272,14 @@ Teruskan tukar emel?`)) return;
     async function deleteWarranty(w) {
       if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!await askConfirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      loading.value = true; // see deleteContract
       try {
         const data = await _softDeleteToTrash('equipmentWarranty', 'deletedEquipmentWarranty', w.id);
         warranty.value = warranty.value.filter(x => x.id !== w.id);
         await logAudit('WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
         showUndoToast('Rekod waranti dipindah ke Tong Sampah.', () => _undoSoftDelete('equipmentWarranty', 'deletedEquipmentWarranty', w.id, data, warranty));
       } catch(e) { showToast('Gagal padam rekod waranti: ' + e.message, 'error'); }
+      loading.value = false;
     }
     // ── Surat & Memo — general correspondence repository, NOT scoped to one
     // project or even a site: equipment handover memos (Daya One <-> SPRM),
@@ -14202,6 +14331,7 @@ Teruskan tukar emel?`)) return;
         const snap = await db.collection('suratMemo').orderBy('letterDate','desc').get();
         letterMemos.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
         _markCollLoaded('letterMemos');
+        _startLive('letterMemos', db.collection('suratMemo').orderBy('letterDate','desc'), s => { letterMemos.value = s.docs.map(_liveDoc); });
       } catch(e) { showToast('Gagal muat surat & memo: ' + e.message, 'error'); }
     }
     const letterMemosFiltered = computed(() => letterMemos.value.filter(m =>
@@ -14250,10 +14380,15 @@ Teruskan tukar emel?`)) return;
       if(!d.category || !d.letterDate || !d.perihal.trim()) {
         letterMemoModal.err = 'Kategori, tarikh surat dan perihal/butiran wajib diisi.'; return;
       }
+      if(d.category === 'lain' && !d.categoryCustom.trim()) {
+        letterMemoModal.err = 'Sila nyatakan kategori untuk "Lain-lain".'; return;
+      }
       loading.value = true;
       try {
         const category = (d.category === 'lain' && d.categoryCustom.trim()) ? d.categoryCustom.trim() : d.category;
-        const data = { ...d, category };
+        // categoryCustom is form-only — the custom text is saved AS category.
+        const { categoryCustom, ...fields } = d;
+        const data = { ...fields, category };
         const sortByLetterDateDesc = (a,b) => (b.letterDate||'').localeCompare(a.letterDate||'');
         if(!letterMemoModal.editing) {
           const ref = await _fw(db.collection('suratMemo').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' }));
@@ -14273,12 +14408,14 @@ Teruskan tukar emel?`)) return;
     async function deleteLetterMemo(m) {
       if(!canEditLetterMemo.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!await askConfirm(`Padam rekod surat/memo "${letterMemoCategoryLabel(m.category)}" (${fmtDate(m.letterDate)})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      loading.value = true; // see deleteContract
       try {
         const data = await _softDeleteToTrash('suratMemo', 'deletedSuratMemo', m.id);
         letterMemos.value = letterMemos.value.filter(x => x.id !== m.id);
         await logAudit('LETTER_MEMO_DELETE', `${letterMemoCategoryLabel(m.category)} — ${m.letterDate}`);
         showUndoToast('Rekod surat/memo dipindah ke Tong Sampah.', () => _undoSoftDelete('suratMemo', 'deletedSuratMemo', m.id, data, letterMemos));
       } catch(e) { showToast('Gagal padam rekod surat/memo: ' + e.message, 'error'); }
+      loading.value = false;
     }
 
     // ── Log Kes CM — pending corrective-maintenance case timeline ──
@@ -14310,6 +14447,7 @@ Teruskan tukar emel?`)) return;
         const snap = await db.collection('cmCases').orderBy('openedDate','desc').get();
         cmCases.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
         _markCollLoaded('cmCases');
+        _startLive('cmCases', db.collection('cmCases').orderBy('openedDate','desc'), s => { cmCases.value = s.docs.map(_liveDoc); });
       } catch(e) { showToast('Gagal muat Log Kes CM: ' + e.message, 'error'); }
     }
     const cmCasesFiltered = computed(() => cmCases.value.filter(k =>
@@ -14349,6 +14487,14 @@ Teruskan tukar emel?`)) return;
     // cmCases (not a snapshot copy) so a newly-added/removed entry shows
     // up immediately without a full reload.
     const cmCaseDetailCase = computed(() => cmCases.value.find(k => k.id === cmCaseDetail.id) || null);
+    // The case list is live: a case deleted elsewhere while its timeline is
+    // open made the dialog vanish with no word (and any note being typed).
+    watch(cmCaseDetailCase, (k, old) => {
+      if(!k && old && cmCaseDetail.show) {
+        cmCaseDetail.show = false;
+        showToast(`Kes CM "${old.title || old.siteName || '-'}" telah dipadam oleh pengguna lain.`, 'error');
+      }
+    });
 
     function onCmCaseProjectChange() {
       cmCaseModal.data.siteId = ''; cmCaseModal.data.siteName = '';
@@ -14378,6 +14524,12 @@ Teruskan tukar emel?`)) return;
       const d = cmCaseModal.data;
       if(!d.siteId || !d.title.trim() || !d.openedDate) {
         cmCaseModal.err = 'Site, tajuk kes dan tarikh dibuka wajib diisi.'; return;
+      }
+      // A resolved case's opened date can't move past its resolution — the
+      // Masa Selesai stats would quietly drop it (negative days).
+      const resolvedDate = cmCaseModal.editing ? (cmCases.value.find(x => x.id === cmCaseModal._editId)?.resolvedDate || '') : '';
+      if(resolvedDate && d.openedDate > resolvedDate) {
+        cmCaseModal.err = `Tarikh dibuka tidak boleh selepas tarikh kes diselesaikan (${fmtDate(resolvedDate)}).`; return;
       }
       loading.value = true;
       try {
@@ -14657,6 +14809,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
         const snap = await db.collection('rmaRecords').orderBy('sendDate','desc').get();
         rmaRecords.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
         _markCollLoaded('rmaRecords');
+        _startLive('rmaRecords', db.collection('rmaRecords').orderBy('sendDate','desc'), s => { rmaRecords.value = s.docs.map(_liveDoc); });
       } catch(e) { showToast('Gagal muat Rekod RMA: ' + e.message, 'error'); }
     }
     // The Rekod RMA page sits under each project in the sidebar (like Kontrak
@@ -15213,6 +15366,9 @@ tr.late td{background:#fff3e0}
       }
       const w = serviceReportModal.warranty;
       serviceReportModal.uploading = true; serviceReportModal.err = '';
+      // Set once the file is in Storage, cleared once the record lists it —
+      // if listing it fails, the file is removed again (see catch).
+      let uploadedRef = null;
       try {
         const compressedFile = ext === 'pdf' ? await _maybeCompressScannedPdf(file)
           : ['jpg','jpeg','png'].includes(ext) ? await _compressImageFile(file) : file;
@@ -15227,6 +15383,7 @@ tr.late td{background:#fff3e0}
         const path = `${serviceReportModal.storagePrefix}/${w.id}/${Date.now()}_${uploadFile.name}`;
         await _ensureStorage();
         const snap = await storage.ref(path).put(uploadFile);
+        uploadedRef = snap.ref;
         const url = await snap.ref.getDownloadURL();
         const entry = {
           name: uploadFile.name, url, path, size: uploadFile.size,
@@ -15235,11 +15392,20 @@ tr.late td{background:#fff3e0}
         await db.collection(serviceReportModal.collection).doc(w.id).update({
           serviceReports: firebase.firestore.FieldValue.arrayUnion(entry),
         });
+        uploadedRef = null; // listed on the record — it stays
         if(!w.serviceReports) w.serviceReports = [];
         w.serviceReports.push(entry);
         await logAudit('WARRANTY_SERVICE_REPORT_UPLOAD', `${w.equipmentName || w.equipName || w.perihal || '-'} — ${w.siteName} — ${uploadFile.name}`);
         showToast('Fail servis berjaya dimuat naik!');
-      } catch(e) { serviceReportModal.err = 'Ralat muat naik: ' + e.message; }
+      } catch(e) {
+        // The file reached Storage but the record couldn't list it (record
+        // deleted meanwhile, connection dropped) — otherwise it stayed there
+        // unreferenced, using quota, its download link still live.
+        if(uploadedRef) uploadedRef.delete().catch(() => {});
+        serviceReportModal.err = e?.code === 'not-found'
+          ? 'Rekod ini telah dipadam oleh pengguna lain — fail tidak disimpan.'
+          : 'Ralat muat naik: ' + e.message;
+      }
       serviceReportModal.uploading = false;
     }
     async function deleteServiceReport(report) {
@@ -15342,6 +15508,7 @@ tr.late td{background:#fff3e0}
         const snap = await db.collection('virEquipmentWarranty').orderBy('endDate','asc').get();
         virWarranty.value = snap.docs.map(d => ({id:d.id, ...d.data()}));
         _markCollLoaded('virWarranty');
+        _startLive('virWarranty', db.collection('virEquipmentWarranty').orderBy('endDate','asc'), s => { virWarranty.value = s.docs.map(_liveDoc); });
       } catch(e) { showToast('Gagal muat waranti peralatan VIR: ' + e.message, 'error'); }
     }
     function virWarrantyStatus(w) { return warrantyStatus(w); } // same active/expiring/expired logic, reused
@@ -15441,12 +15608,14 @@ tr.late td{background:#fff3e0}
     async function deleteVirWarranty(w) {
       if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!await askConfirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      loading.value = true; // see deleteContract
       try {
         const data = await _softDeleteToTrash('virEquipmentWarranty', 'deletedVirEquipmentWarranty', w.id);
         virWarranty.value = virWarranty.value.filter(x => x.id !== w.id);
         await logAudit('VIR_WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName}`);
         showUndoToast('Rekod waranti VIR dipindah ke Tong Sampah.', () => _undoSoftDelete('virEquipmentWarranty', 'deletedVirEquipmentWarranty', w.id, data, virWarranty));
       } catch(e) { showToast('Gagal padam rekod waranti VIR: ' + e.message, 'error'); }
+      loading.value = false;
     }
     // Waranti Peralatan's Excel/Word export temporarily disabled (both CCTV
     // and VIR) per admin request — buttons stay visible/clickable, just
@@ -15692,7 +15861,7 @@ tr.late td{background:#fff3e0}
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
       nCam:  {outOfScope:false,name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''},
-      nNVR:  {outOfScope:false,name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
+      nNVR:  {outOfScope:false,name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:'',channelLicense:''},
       nHDD:  {outOfScope:false,brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
       nSW:   {outOfScope:false,name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
@@ -16961,7 +17130,8 @@ tr.late td{background:#fff3e0}
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
       'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
       'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV'),
-      'kontraktor-luar': 'Senarai Kontraktor/Supplier Luar', 'warranty': 'Waranti Peralatan (CCTV)',
+      'kontraktor-luar': 'Senarai Kontraktor/Supplier Luar', 'warranty': 'Waranti Peralatan (CCTV)', 'vir-warranty': 'Waranti Peralatan (VIR)',
+      'log-cm': 'Log Kes CM', 'trash': 'Tong Sampah',
       'surat-memo': 'Surat & Memo', 'rma': 'Rekod RMA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
     }[page.value]||''));
 
@@ -17321,7 +17491,16 @@ tr.late td{background:#fff3e0}
         .filter(c => (!c.visible || c.visible()) && c.kw.includes(q))
         .map(c => ({ _kind:'command', id:c.id, label:c.label(), run:c.run }));
 
-      return [...commandMatches, ...siteMatches, ...recordMatches, ...equipMatches, ...kontraktorMatches];
+      // Rekod RMA — by serial (unit sent or the one the vendor sent back),
+      // No. RMA, tracking no., equipment name or vendor.
+      const rmaMatches = rmaRecords.value
+        .filter(r => [r.serial, r.returnSerial, r.rmaNo, r.trackingNo, r.equipName, r.vendor].filter(Boolean).join(' ').toLowerCase().includes(q))
+        .slice(0, 5)
+        .map(r => ({ _kind:'rma', id:'rma-'+r.id, rma:r, proj: r.project === 'vir' ? 'vir' : 'cctv',
+          label: [r.equipName || r.model || r.category, r.serial && 'SN ' + r.serial].filter(Boolean).join(' · ') || '-',
+          detail: [r.siteName, r.vendor, r.rmaNo && 'RMA ' + r.rmaNo, rmaLabel(RMA_STATUSES, r.status)].filter(Boolean).join(' · ') }));
+
+      return [...commandMatches, ...siteMatches, ...recordMatches, ...equipMatches, ...rmaMatches, ...kontraktorMatches];
     });
 
     // Keyboard drive for the global search dropdown: ↑/↓ move the highlight,
@@ -17372,6 +17551,13 @@ tr.late td{background:#fff3e0}
           eqTab.value = EQUIP_KIND_TO_TAB[item.kind] || eqTab.value;
           _focusEquipSearchHit(item);
         }
+      } else if(item._kind === 'rma') {
+        const r = item.rma;
+        currentProject.value = item.proj; // its watcher clears the site filter
+        rmaFilterStatus.value = '';
+        rmaSearch.value = r.rmaNo || r.serial || r.equipName || '';
+        loadRmaRecords();
+        page.value = 'rma';
       } else if(item._kind === 'kontraktor') {
         kontraktorLuarProject.value = item.proj;
         page.value = 'kontraktor-luar';
@@ -17402,6 +17588,14 @@ tr.late td{background:#fff3e0}
       { start:'2027-07-01', end:'2027-08-31' }, // PM #3 (2027)
       { start:'2028-03-01', end:'2028-04-30' }, // PM #4 (2028)
     ];
+    // The current VIR contract begins with its first window (1 Aug 2026).
+    // PM visits before that belong to the previous contract and must not
+    // fill this one's windows — counted all-time, a site last visited in
+    // June 2026 showed PM #1 (2026) as done and was never flagged overdue.
+    const VIR_CONTRACT_START = _parseLocalDate(VIR_PM_WINDOWS[0].start);
+    function _isVirContractPm(r) {
+      return (r.maintType||'PM') === 'PM' && !!_recDate(r) && _recDate(r) >= VIR_CONTRACT_START;
+    }
     // Matches a VIR site's PM visits (chronological) to windows in order —
     // the Nth PM visit fulfils the Nth window, regardless of whether its
     // exact date falls inside that window's date range (a technician
@@ -17427,7 +17621,10 @@ tr.late td{background:#fff3e0}
     });
 
     function _virWindowStatus(siteId) {
-      const now = new Date();
+      // Today at local midnight, not "now": window dates are midnights, so
+      // comparing against the current time flagged a site overdue all
+      // through the window's own last day.
+      const now = _parseLocalDate(_localDateStr());
       // VIR requires pm.virRoomNo on every PM submission, so ONE physical
       // visit to a site with N rooms produces N separate same-dated
       // pmRecords docs. Without deduping to one entry per calendar day
@@ -17436,16 +17633,17 @@ tr.late td{background:#fff3e0}
       // local-midnight Dates from the same visitDate string (or the same
       // year/month fallback), so same-day records collapse to an
       // identical .getTime() and Set naturally dedupes them.
+      // Future-dated borangs (prepared ahead) don't fulfil a window yet — see _lastPmDate.
       const pmDates = [...new Set(
         (pmRecordsBySite.value[siteId] || [])
-          .filter(r => (r.maintType||'PM') === 'PM' && _recDate(r))
+          .filter(r => _isVirContractPm(r) && _recDate(r) <= now)
           .map(r => _recDate(r).getTime())
       )].sort((a,b) => a-b).map(ms => new Date(ms));
       const windows = VIR_PM_WINDOWS.map((w,i) => ({ start:_parseLocalDate(w.start), end:_parseLocalDate(w.end), fulfilled: !!pmDates[i] }));
       const fulfilledCount = windows.filter(w => w.fulfilled).length;
       const overdue = windows.some(w => w.end < now && !w.fulfilled);
       const currentWindow = windows.find(w => !w.fulfilled) || null;
-      const daysUntilDue = currentWindow ? Math.floor((currentWindow.end - now) / 86400000) : null;
+      const daysUntilDue = currentWindow ? Math.round((currentWindow.end - now) / 86400000) : null;
       const approaching = currentWindow ? (daysUntilDue >= 0 && daysUntilDue <= 28) : false;
       return { windows, fulfilledCount, overdue, currentWindow, daysUntilDue, approaching, totalWindows: windows.length };
     }
@@ -17512,7 +17710,7 @@ tr.late td{background:#fff3e0}
     function _virSiteCycleStatus(siteId) {
       const status = _virWindowStatus(siteId);
       const recs = (pmRecordsBySite.value[siteId] || [])
-        .filter(r => (r.maintType||'PM') === 'PM' && _recDate(r))
+        .filter(_isVirContractPm) // same contract-period visits _virWindowStatus counts
         .sort((a,b) => _recDate(a) - _recDate(b));
       // VIR submits one pmRecords doc PER ROOM (pm.virRoomNo is required on
       // the VIR PM form) — a single physical visit to a 4-room site is 4
@@ -17562,9 +17760,12 @@ tr.late td{background:#fff3e0}
     function _lastPmDate(siteId) {
       const recs = (pmRecordsBySite.value[siteId] || []).filter(r => (r.maintType||'PM') === 'PM');
       if(!recs.length) return null;
+      // A borang prepared ahead with a future visit date isn't a visit yet —
+      // it mustn't clear "Lampau" before the technician has been.
+      const today = _parseLocalDate(_localDateStr());
       return recs.reduce((best, r) => {
         const d = r.visitDate ? _parseLocalDate(r.visitDate) : (r.year && r.month ? new Date(r.year, r.month-1, 1) : null);
-        return d && (!best || d > best) ? d : best;
+        return d && d <= today && (!best || d > best) ? d : best;
       }, null);
     }
 
@@ -17577,13 +17778,20 @@ tr.late td{background:#fff3e0}
       if(!relevant.length) return null;
       const todayStr = _localDateStr();
       const active = relevant.find(c => c.startDate <= todayStr && (!c.endDate || c.endDate >= todayStr));
-      const chosen = active || relevant.slice().sort((a,b) => a.startDate.localeCompare(b.startDate))[0];
+      // No active contract (old one ended, renewal not keyed in yet): use the
+      // most recent one that has started — the earliest of several expired
+      // contracts anchored the PM cycle to it and, for VIR, counted CMs all
+      // the way back to it. Only if none has started yet, the earliest.
+      const byStart = relevant.slice().sort((a,b) => a.startDate.localeCompare(b.startDate));
+      const chosen = active || byStart.filter(c => c.startDate <= todayStr).pop() || byStart[0];
       return chosen.startDate ? _parseLocalDate(chosen.startDate) : null;
     }
 
     const overdueMap = computed(() => {
       void _dayKey.value; // recompute when the date rolls over
-      const now = new Date();
+      // Whole days: PM dates are local midnights, so measuring from "now"
+      // flagged a site overdue on its due date itself (exactly N months).
+      const now = _parseLocalDate(_localDateStr());
       const result = {};
       SITES.forEach(s => {
         const threshold = new Date(now); threshold.setMonth(threshold.getMonth() - PM_INTERVAL.cctv);
@@ -17668,13 +17876,13 @@ tr.late td{background:#fff3e0}
     // Sites within 4 weeks of next PM due (not yet overdue but approaching)
     const siteNextPmMap = computed(() => {
       void _dayKey.value; // recompute when the date rolls over
-      const now = new Date();
+      const now = _parseLocalDate(_localDateStr()); // whole days — see overdueMap
       const result = {};
       const buildEntry = (s, project) => {
         if(project === 'vir') {
           const vw = _virWindowStatus(s.id);
           const latest = _lastPmDate(s.id);
-          const daysSince = latest ? Math.floor((now - latest) / 86400000) : null;
+          const daysSince = latest ? Math.round((now - latest) / 86400000) : null;
           result[s.id] = { nextDue: vw.currentWindow?.end || null, daysSince, daysUntilDue: vw.daysUntilDue, approaching: vw.approaching, overdue: vw.overdue, project };
           return;
         }
@@ -17684,7 +17892,7 @@ tr.late td{background:#fff3e0}
           const cStart = _projectContractStart(project);
           if(cStart) {
             const nextDue = new Date(cStart); nextDue.setMonth(nextDue.getMonth() + intervalMonths);
-            const daysUntilDue = Math.floor((nextDue - now) / 86400000);
+            const daysUntilDue = Math.round((nextDue - now) / 86400000);
             result[s.id] = { nextDue, daysSince: null, daysUntilDue, approaching: daysUntilDue >= 0 && daysUntilDue <= 28, overdue: daysUntilDue < 0, project };
           } else {
             result[s.id] = { nextDue: null, daysSince: null, daysUntilDue: null, approaching: false, overdue: true, project };
@@ -17692,8 +17900,8 @@ tr.late td{background:#fff3e0}
           return;
         }
         const nextDue = new Date(latest); nextDue.setMonth(nextDue.getMonth() + intervalMonths);
-        const daysSince = Math.floor((now - latest) / 86400000);
-        const daysUntilDue = Math.floor((nextDue - now) / 86400000);
+        const daysSince = Math.round((now - latest) / 86400000);
+        const daysUntilDue = Math.round((nextDue - now) / 86400000);
         result[s.id] = { nextDue, daysSince, daysUntilDue, approaching: daysUntilDue >= 0 && daysUntilDue <= 28, overdue: daysUntilDue < 0, project };
       };
       SITES.forEach(s => buildEntry(s, 'cctv'));
@@ -17714,7 +17922,9 @@ tr.late td{background:#fff3e0}
     // precisely, until a contract is recorded.
     const siteHealthScores = computed(() => {
       void _dayKey.value; // recompute when the date rolls over
-      const now = new Date();
+      // Whole days, like overdueMap/_virWindowStatus — a VIR window counted
+      // as "closed" (and the score docked) all through its own last day.
+      const now = _parseLocalDate(_localDateStr());
       const scores = {};
       const calc = (s, project) => {
         // VIR: the contract's 4 total visits aren't a flat per-year quota
@@ -17735,7 +17945,11 @@ tr.late td{background:#fff3e0}
           const recency = recencyRatio * 30;
 
           const cStart = _projectContractStart('vir');
-          const cmCount = allRecs.filter(r => r.maintType==='CM' && _recDate(r) && (!cStart || _recDate(r) >= cStart) && _recDate(r) <= now).length;
+          // No contract recorded in Kontrak & SLA: count from the current VIR
+          // contract's start (its first PM window) — counting every CM ever
+          // left a site with an old CM history penalised for good.
+          const cmFrom = cStart || VIR_CONTRACT_START;
+          const cmCount = allRecs.filter(r => r.maintType==='CM' && _recDate(r) && _recDate(r) >= cmFrom && _recDate(r) <= now).length;
           const cmPenalty = Math.max(0, 20 - cmCount * 4);
 
           const score = Math.round(compliance + recency + cmPenalty);
@@ -17989,6 +18203,14 @@ tr.late td{background:#fff3e0}
     const batchSelected = ref([]);
     const batchPrintMode = ref(false);
     const batchPrintRecords = computed(() => pmRecords.value.filter(r => batchSelected.value.includes(r.id)));
+    // A borang deleted elsewhere (live list) leaves the selection with it,
+    // so the "(N)" counts on the bulk buttons stay true.
+    watch(pmRecords, list => {
+      if(!batchSelected.value.length) return;
+      const ids = new Set(list.map(r => r.id));
+      const kept = batchSelected.value.filter(id => ids.has(id));
+      if(kept.length !== batchSelected.value.length) batchSelected.value = kept;
+    });
 
     async function printBatch() {
       if(!batchSelected.value.length) return;
@@ -19110,7 +19332,43 @@ tr.late td{background:#fff3e0}
     // changes, which a manual refresh now always fetches immediately.
     const COLL_CACHE_MS = 5 * 60 * 1000;
     const _collLoadedAt = {};
-    function _collFresh(key) { return _collLoadedAt[key] && (Date.now() - _collLoadedAt[key] < COLL_CACHE_MS); }
+    // ── Live (real-time) collections ──
+    // Once a collection's loader has run, an onSnapshot listener keeps it
+    // current — another user's add/edit/delete shows up without a refresh.
+    // Started lazily by each loader (a page nobody opens costs nothing),
+    // stopped on logout. Cost: one full read when it attaches, then one read
+    // per changed document. Log Audit and Tong Sampah stay manual-refresh.
+    // A live collection counts as always fresh (no re-read on page nav); a
+    // forced load (sync pill) still reads it.
+    const _liveUnsubs = {};
+    function _startLive(key, query, onData) {
+      if(_liveUnsubs[key] || !authUser.value) return;
+      let synced = false;
+      _liveUnsubs[key] = query.onSnapshot(snap => {
+        // A cache-only snapshot (offline / reconnecting) can be older than
+        // what's on screen — wait for the server's.
+        if(snap.metadata.fromCache) return;
+        const first = !synced;
+        synced = true;
+        onData(snap, first);
+      }, err => {
+        // Signed out / account frozen / no read permission — fall back to
+        // manual refresh for this one.
+        console.warn(`Live "${key}" stopped:`, err);
+        _stopLive(key);
+      });
+    }
+    function _stopLive(key) {
+      const u = _liveUnsubs[key];
+      delete _liveUnsubs[key];
+      if(u) { try { u(); } catch(e) {} }
+      if(key === 'pmRecords') pmLiveActive.value = false; // sync-pill tooltip
+    }
+    function _stopAllLive() { Object.keys(_liveUnsubs).forEach(_stopLive); }
+    // 'estimate': a just-saved doc's serverTimestamp() fields would otherwise
+    // read as null until the server confirms them.
+    function _liveDoc(d) { return { id: d.id, ...d.data({ serverTimestamps:'estimate' }) }; }
+    function _collFresh(key) { return !!_liveUnsubs[key] || (_collLoadedAt[key] && (Date.now() - _collLoadedAt[key] < COLL_CACHE_MS)); }
     function _markCollLoaded(key) { _collLoadedAt[key] = Date.now(); }
     // Manual refresh (sync pill / pull-to-refresh) must always fetch fresh,
     // not be swallowed by the skip-window above. loadAll() covers pmRecords/
@@ -19687,6 +19945,7 @@ tr.late td{background:#fff3e0}
       // bypassing the nav item's v-if). _canLandOnPage() now also blocks
       // that, but clearing the key removes the cross-session leak itself.
       try { localStorage.removeItem(LAST_PAGE_KEY); } catch(e) {}
+      _stopAllLive(); // before signOut, or every listener errors on the lost permission
       auth.signOut();
       authProfile.value=null;
       loginUser.value=''; loginPass.value='';
@@ -19715,7 +19974,7 @@ tr.late td{background:#fff3e0}
       siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {}; virSiteEquipSony.value = {};
       equipLoadState.cctv = false; equipLoadState.vir = false;
       _clearEquipConflict(); // a held conflict belongs to this session's unsaved edits — never the next user's
-      listCachePainted.value = false;
+      listCachePainted.value = false; dataStale.value = false;
       contracts.value = []; warranty.value = []; virWarranty.value = [];
       letterMemos.value = []; cmCases.value = []; rmaRecords.value = []; contactPersons.value = {};
       _notifSettling = false;
@@ -20174,11 +20433,25 @@ tr.late td{background:#fff3e0}
       const seen = new Map(list.map(x => [String(x[dupField]||'').trim().toLowerCase(), x]).filter(([k])=>k));
       let added = 0;
       const duplicates = [];
+      // NVR names must stay unique per site, same rule as addNVR — cameras/
+      // HDD link to an NVR by name.
+      const _nm = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+      const nvrNames = kind === 'nvr' ? new Map(list.map(n => [_nm(n.name), n]).filter(([k]) => k)) : null;
       rows.forEach(r => {
         const key = String(r[dupField]||'').trim().toLowerCase();
         if(key && seen.has(key)) {
           const existing = seen.get(key);
           duplicates.push({ field: dupField, value: r[dupField], label: existing.name || existing.model || existing.serial || '(tiada nama)' });
+          return;
+        }
+        // addNVR requires a name; an unnamed NVR can't have cameras linked to it.
+        if(nvrNames && !_nm(r.name)) {
+          duplicates.push({ field: 'name', value: r.ip || r.serial || '(baris tanpa nama)', label: 'Nama NVR kosong — isi nama dalam pratonton sebelum import' });
+          return;
+        }
+        if(nvrNames && nvrNames.has(_nm(r.name))) {
+          const existing = nvrNames.get(_nm(r.name));
+          duplicates.push({ field: 'name', value: r.name, label: `${existing.name}${existing.ip ? ' (' + existing.ip + ')' : ''} — nama NVR mesti berbeza` });
           return;
         }
         const item = { _uid: _genId(), _ts: Date.now() };
@@ -20189,9 +20462,11 @@ tr.late td{background:#fff3e0}
         if(kind === 'alarms' && !item.type) item.type = 'SMS Alert System';
         if(kind === 'misc' && !item.category) item.category = 'Monitor';
         if(kind === 'tablets') { const imei = String(item.imei||'').replace(/[\s-]/g, ''); if(imei) item.imei = imei; else delete item.imei; } // same shape as addTablet()
+        if((kind === 'cameras' || kind === 'hdd') && item.nvrRef) item.nvrRef = _snapNvrName(store[targetSiteId].nvr, item.nvrRef);
         _appendEquipChange(item, { note: 'Ditambah (import fail)' });
         list.push(item);
         if(key) seen.set(key, item);
+        if(nvrNames && _nm(item.name)) nvrNames.set(_nm(item.name), item);
         added++;
       });
       // Same auto-sort as manual add/edit for these 4 tabs — a bulk import
@@ -20676,6 +20951,178 @@ tr.late td{background:#fff3e0}
       if(result.added) showToast(`${result.added} rekod berjaya ditambah ke "${importState._targetSiteName}"! Jangan lupa klik "Simpan Semua".`);
     }
 
+    // ---- Rekod borang secara langsung ----
+    // pmRecords also gets a real-time listener once loadAll() has run, so a
+    // borang another user creates, edits or deletes shows up without a
+    // refresh. (Equipment has its own listener, _startEquipLive, which holds
+    // back while the open site has unsaved edits.) The PM form edits its own copy (pm), never
+    // pmRecords, and savePM's concurrent-edit check still guards saves.
+    // Cost: one full read when it attaches, then one read per changed borang.
+    // (Uses the shared _startLive helper — see _liveUnsubs. When the line
+    // comes back after a cache-only load, the first server snapshot also
+    // replaces the stale cached list.)
+    const pmLiveActive = ref(false);
+    function _startPmRecordsLive() {
+      _startLive('pmRecords', db.collection('pmRecords').orderBy('createdAt','desc'), (snap, first) => {
+        if(!first) {
+          // Someone else's new borang: a short heads-up (own saves and the
+          // first sync stay quiet).
+          const me = authUser.value?.email || '';
+          const added = snap.docChanges().filter(c => c.type === 'added' && !c.doc.metadata.hasPendingWrites && (c.doc.data().createdBy || '') !== me);
+          if(added.length === 1) {
+            const r = added[0].doc.data();
+            showToast(`📄 Borang baru diterima: ${r.maintType || 'PM'} — ${r.siteName || '-'}${r.refNo ? ' (' + r.refNo + ')' : ''}`);
+          } else if(added.length > 1) showToast(`📄 ${added.length} borang baru diterima.`);
+        }
+        pmRecords.value = snap.docs.map(_liveDoc);
+        pmLiveActive.value = true;
+        // A server snapshot means the server is reachable again after a
+        // cache-only load — the other live lists sync the same way, so the
+        // "data lapuk" banner can go (it had no other way to clear without
+        // a browser "online" event or a manual retry).
+        if(dataStale.value) {
+          dataStale.value = false;
+          lastDataSyncAt.value = Date.now();
+          showToast('Sambungan ke pelayan pulih — data terkini dimuat.');
+        }
+      });
+    }
+    // Everything loadAll() itself loads goes live once it has run.
+    function _startCoreLive() {
+      _startPmRecordsLive();
+      _startLive('teamAssignments', db.collection('teamAssignments').orderBy('date','asc'), s => {
+        teamAssignments.value = s.docs.map(_liveDoc);
+        _lastTeamAssignFetch = Date.now(); // the hourly re-pull has nothing left to catch
+        buildNotifications(); // a new "Penugasan" alert shows as it's assigned
+      });
+      _startEquipLive();
+    }
+
+    // ── Peralatan site secara langsung ──
+    // Another user's equipment save reaches this session as it lands:
+    //   - a site not open here is replaced with the new copy;
+    //   - the site open on Urus Peralatan with nothing unsaved is replaced
+    //     too, with a toast naming who saved it;
+    //   - the open site WITH unsaved edits (or an edit form / dialog on it)
+    //     is left alone and gets the existing conflict banner at once —
+    //     before, that only showed when this session tried to save, after
+    //     more edits had piled up on the stale copy.
+    // Own saves echoing back are recognised by their _rev (_myEquipRevs).
+    // The latest raw doc of each collection is kept per site, so a
+    // credentials-only change rebuilds the site with its latest main doc
+    // and vice versa. Every server snapshot is compared doc by doc (not only
+    // its docChanges) — after an offline stretch, changes relative to a
+    // skipped cache snapshot would otherwise slip through.
+    const _liveEquipRaw = { siteEquipment:{}, siteEquipmentCredentials:{}, virSiteEquipment:{}, virSiteEquipmentCredentials:{} };
+    const _liveEquipSig = { siteEquipment:{}, siteEquipmentCredentials:{}, virSiteEquipment:{}, virSiteEquipmentCredentials:{} };
+    const _freshEquipShape = vir => vir
+      ? {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]}
+      : {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[]};
+    // One site shaped exactly as loadAll() shapes it.
+    function _buildCctvSite(main, creds) {
+      const { _rev, _revBy, _revAt, ...d } = main;
+      const e = { ..._freshEquipShape(false), ...d };
+      _sortAllEquipLists(e);
+      if(creds) _mergeCredentials(e, creds);
+      return e;
+    }
+    function _buildVirSite(d, creds) {
+      const legacy = !d.BCD && (d.cameras || d.nvr || d.hdd || d.switches || d.alarms)
+        ? {cameras:d.cameras||[], nvr:d.nvr||[], hdd:d.hdd||[], switches:d.switches||[], alarms:d.alarms||[]}
+        : null;
+      const out = {
+        rooms: { rooms: d.rooms || [] },
+        bcd: { ..._freshEquipShape(true), ...(d.BCD || legacy || {}) },
+        optager: _normalizeOptagerRec(d['Optager HD4000']),
+        vcs: _normalizeVcsRec(d['VCS']),
+        sony: _normalizeSonyRec(d['SONY']),
+      };
+      _sortAllEquipLists(out.bcd);
+      [out.optager, out.vcs, out.sony].forEach(rec => Object.values(rec.byRoom).forEach(_sortAllEquipLists));
+      if(creds) {
+        _mergeCredentials(out.bcd, creds['BCD']);
+        [[out.optager,'Optager HD4000'], [out.vcs,'VCS'], [out.sony,'SONY']].forEach(([rec, sys]) => {
+          const byRoom = creds[sys]?.byRoom || {};
+          Object.keys(rec.byRoom).forEach(uid => _mergeCredentials(rec.byRoom[uid], byRoom[uid]));
+        });
+      }
+      return out;
+    }
+    // Anything on the open equipment page that a replaced copy would lose.
+    function _equipPageBusy() {
+      return !!_equipAutoSaveTimer
+        // 'error': the last save failed, so its edits exist only here.
+        || (equipSaveStatus.key === _equipDocKey() && ['pending','saving','offline','error'].includes(equipSaveStatus.state))
+        || Object.values(equipEditIdx).some(v => v !== null)
+        || tempReplaceModal.show || removeReasonModal.show || bulkEditModal.show || importState.show;
+    }
+    function _liveApplyEquip(proj, siteId) {
+      const vir = proj === 'vir';
+      if(!equipLoadState[vir ? 'vir' : 'cctv']) return; // incomplete load — loadAll() owns it
+      const col = vir ? 'virSiteEquipment' : 'siteEquipment';
+      const main = _liveEquipRaw[col][siteId];
+      if(!main) return;
+      const creds = _liveEquipRaw[col + 'Credentials'][siteId] || null;
+      const key = col + ':' + siteId;
+      const rev = main._rev || null;
+      const theirs = rev !== (_equipRev[key] || null) && !_myEquipRevs.has(rev);
+      const open = page.value === 'site-equip' && selSite.value?.id === siteId && (currentProject.value === 'vir') === vir;
+      if(open) {
+        if(!theirs) return; // this session's own save (or its credentials) coming back
+        if(_equipPageBusy() || equipConflict.key === key) {
+          if(equipConflict.key !== key) Object.assign(equipConflict, { key, siteName: selSite.value?.name || siteId, by: main._revBy || '', at: main._revAt?.toDate ? main._revAt.toDate() : null });
+          return;
+        }
+      }
+      if(vir) {
+        const b = _buildVirSite(main, creds);
+        virSiteEquip.value[siteId] = b.rooms;
+        virSiteEquipBCD.value[siteId] = b.bcd;
+        virSiteEquipOptager.value[siteId] = b.optager;
+        virSiteEquipVCS.value[siteId] = b.vcs;
+        virSiteEquipSony.value[siteId] = b.sony;
+      } else {
+        siteEquip.value[siteId] = _buildCctvSite(main, creds);
+      }
+      _equipRev[key] = rev;
+      if(open) {
+        // Rows removed by the other save drop out of the bulk selection too.
+        const eq = selSiteEquip.value || {};
+        Object.keys(equipSelected).forEach(k => {
+          const uids = new Set((eq[k] || []).map(it => it._uid));
+          [...equipSelected[k]].forEach(u => { if(!uids.has(u)) equipSelected[k].delete(u); });
+        });
+        showToast(`🔄 Peralatan site ini dikemas kini oleh ${main._revBy || 'pengguna lain'}.`);
+      }
+    }
+    function _startEquipLive() {
+      [['cctv','siteEquipment'], ['vir','virSiteEquipment']].forEach(([proj, col]) => {
+        const watchColl = (c, readable) => {
+          if(!readable || _liveUnsubs[c]) return;
+          _liveEquipRaw[c] = {}; _liveEquipSig[c] = {};
+          // Started after a cache-only loadAll() (dataStale): what's on screen
+          // is the device's old copy, so the first server sync is applied
+          // like any later change (open site with edits → conflict banner)
+          // instead of being taken as "what loadAll just loaded".
+          const firstIsNews = dataStale.value;
+          _startLive(c, db.collection(c), (snap, first) => {
+            snap.docs.forEach(d => {
+              if(d.metadata.hasPendingWrites) return; // this session's own write, not yet confirmed
+              const data = d.data({ serverTimestamps:'estimate' });
+              const sig = JSON.stringify(data);
+              if(_liveEquipSig[c][d.id] === sig) return;
+              _liveEquipSig[c][d.id] = sig;
+              _liveEquipRaw[c][d.id] = data;
+              if(!first || firstIsNews) _liveApplyEquip(proj, d.id);
+            });
+          });
+        };
+        watchColl(col, true);
+        // Internship can't read credentials — skipped, as in loadAll().
+        watchColl(col + 'Credentials', canViewCredentials.value);
+      });
+    }
+
     // ---- Load data ----
     // Resolves true only for a fully successful load — callers show their own
     // "✅ disegerakkan/dimuat" toast on that alone, since a failed or partial
@@ -20918,8 +21365,18 @@ tr.late td{background:#fff3e0}
         if(_loadAllPartialFail) {
           showToast('Sebahagian data gagal dimuat — cuba muat semula halaman.', 'error');
         }
-        _loadOk = !_loadAllPartialFail;
-        lastDataSyncAt.value = Date.now(); syncNow.value = Date.now(); // topbar sync pill
+        // Answered from the offline cache rather than the server (see dataStale).
+        const _fromCache = [snap, vsnap, pmSnap, tSnap].some(s => s?.metadata?.fromCache);
+        dataStale.value = _fromCache;
+        if(_fromCache && !_loadAllPartialFail) {
+          showToast('Tidak dapat sambung ke pelayan — data dipaparkan dari salinan lama dalam peranti ini. Rekod terbaru mungkin tiada.', 'error');
+        }
+        _loadOk = !_loadAllPartialFail && !_fromCache;
+        // "Data N min lalu" is time since the last SERVER copy — a cache-only
+        // load doesn't reset it.
+        if(!_fromCache) lastDataSyncAt.value = Date.now();
+        syncNow.value = Date.now(); // topbar sync pill
+        _startCoreLive(); // no-op once attached (see _startLive)
       } catch(e) {
         console.error(e);
         showToast('Gagal memuatkan data: ' + e.message + '. Semak sambungan internet.', 'error');
@@ -21181,8 +21638,17 @@ Teruskan tukar emel?`)) return;
       return _normalizeContactData(doc.exists ? { ...doc.data() } : {});
     }
     async function loadContactPersons() {
+      const proj = currentProject.value;
       try {
-        contactPersons.value = await _fetchContactPersons(currentProject.value);
+        contactPersons.value = await _fetchContactPersons(proj);
+        // Live for the project on screen only (one doc per project) — the
+        // other project's listener goes, so a late snapshot of it can't
+        // replace this project's list.
+        _stopLive('contactPersons:' + (proj === 'vir' ? 'cctv' : 'vir'));
+        _startLive('contactPersons:' + proj, db.collection('contactPersons').doc(proj), d => {
+          if(currentProject.value !== proj) return;
+          contactPersons.value = _normalizeContactData(d.exists ? { ...d.data() } : {});
+        });
       } catch(e) { console.warn('loadContactPersons:', e); }
     }
 
@@ -21601,6 +22067,9 @@ Teruskan tukar emel?`)) return;
           cctv: cctvDoc.exists ? (cctvDoc.data().list || []) : [],
           vir: virDoc.exists ? (virDoc.data().list || []) : [],
         };
+        ['cctv','vir'].forEach(p => _startLive('kontraktorLuar:' + p, db.collection('kontraktorLuar').doc(p), d => {
+          kontraktorLuar.value = { ...kontraktorLuar.value, [p]: d.exists ? (d.data().list || []) : [] };
+        }));
       } catch(e) { console.warn('loadKontraktorLuar:', e); }
       kontraktorLuarLoading.value = false;
     }
@@ -22439,7 +22908,7 @@ Teruskan tukar emel?`)) return;
       const cctv = currentProject.value !== 'vir', cred = canViewCredentials.value;
       const cols = {
         cameras:  ['Nama/Lokasi','IP Address','Jenis','Brand','Model', cctv && 'Aksesori','No. Siri','Redundance', cctv && 'Nota', cred && 'Username', cred && 'Password'],
-        nvr:      ['Nama','Jenis','Peranan','Brand','Model','No. Siri','IP','Nota', cred && 'Username', cred && 'Password'],
+        nvr:      ['Nama','Jenis','Peranan','Brand','Model','No. Siri','IP', cctv && 'Lesen Kamera','Nota', cred && 'Username', cred && 'Password'],
         hdd:      ['Brand','Model','No. Siri','Kapasiti','Jumlah Unit','Config'],
         switches: ['Nama','Brand','Model','No. Siri','IP Address','Nota', cred && 'Username', cred && 'Password'],
         alarms:   ['Nama','Jenis','Brand','Model','No. Siri','IP Address', cred && 'Username', cred && 'Password'],
@@ -22567,6 +23036,42 @@ Teruskan tukar emel?`)) return;
     });
     const hddGroupedByNvr = computed(() => _groupByNvr(equipView.value.hdd, selSiteEquip.value.nvr));
     const camerasGroupedByNvr = computed(() => _groupByNvr(equipView.value.cameras, selSiteEquip.value.nvr));
+    // ---- Camera licence capacity per NVR/server (CCTV) ----
+    // Each NVR's licence caps how many cameras it may record (a lokap NVR
+    // has its own). Usage = cameras whose "NVR Berkaitan" is that NVR —
+    // out-of-scope and stand-in units included, since they still take a
+    // channel; a redundancy backup (redundantNvrRef) takes none.
+    function nvrLicenseRows(eq) {
+      const nvrs = eq?.nvr || [];
+      const names = new Set(nvrs.map(n => String(n?.name || '').trim()).filter(Boolean));
+      const used = {};
+      let unlinked = 0;
+      (eq?.cameras || []).forEach(c => {
+        const ref = String(c?.nvrRef || '').trim();
+        if(names.has(ref)) used[ref] = (used[ref] || 0) + 1; else unlinked++;
+      });
+      const rows = nvrs.filter(n => +n?.channelLicense > 0).map(n => {
+        const name = String(n.name || '').trim(), lic = +n.channelLicense, u = used[name] || 0, left = lic - u;
+        const state = left < 0 ? 'over' : left === 0 ? 'full' : left <= Math.max(2, Math.ceil(lic * 0.1)) ? 'low' : 'ok';
+        return { uid: n._uid || '', name, brand: n.brand || '', model: n.model || '', lic, used: u, left, state };
+      });
+      return { rows, unlinked };
+    }
+    function licenseCapLabel(r) {
+      return r.state === 'over' ? `melebihi ${-r.left}` : r.state === 'full' ? 'penuh' : `baki ${r.left}`;
+    }
+    function licenseCapTitle(r) {
+      return `${r.name}: ${r.used} kamera disambung daripada ${r.lic} lesen` + (r.left > 0 ? ` — boleh tambah ${r.left} kamera lagi.` : r.left === 0 ? ' — lesen penuh.' : ` — melebihi lesen sebanyak ${-r.left}.`);
+    }
+    const equipLicenseSummary = computed(() => {
+      if(currentProject.value === 'vir') return { rows: [], unlinked: 0, byUid: {}, byName: {} };
+      const s = nvrLicenseRows(selSiteEquip.value);
+      return { ...s, byUid: Object.fromEntries(s.rows.filter(r => r.uid).map(r => [r.uid, r])), byName: Object.fromEntries(s.rows.map(r => [r.name, r])) };
+    });
+    function nvrLicenseOf(n) {
+      const m = equipLicenseSummary.value;
+      return (n?._uid && m.byUid[n._uid]) || m.byName[String(n?.name || '').trim()] || null;
+    }
     // "Senarai Bilik" filter — the list otherwise always shows every room
     // for the site regardless of system, which is correct for management
     // but can look like a bug when a room of the "wrong" system shows up
@@ -22867,7 +23372,10 @@ Teruskan tukar emel?`)) return;
     async function bulkDeleteEquip(kind) {
       const sel = equipSelected[kind];
       if(!sel.size) return;
-      if(!(await askConfirm(`Padam ${sel.size} rekod terpilih?`))) return;
+      const linked = kind === 'nvr'
+        ? _nvrLinkedCount(selSite.value.id, (activeEquip()[selSite.value.id]?.nvr || []).filter(n => sel.has(n._uid)).map(n => n.name)) : 0;
+      const linkedNote = linked ? `\n\n⚠️ ${linked} kamera/HDD masih dipautkan ke NVR ini — selepas dipadam, pautan mereka terputus (kamera tidak lagi dikira dalam lesen kamera) sehingga "NVR Berkaitan" dikemas kini.` : '';
+      if(!(await askConfirm(`Padam ${sel.size} rekod terpilih?${linkedNote}`))) return;
       const list = activeEquip()[selSite.value.id][kind];
       const fadeUids = [...sel];
       await _fadeOutEquipRows(fadeUids); // brief fade-out first (UI polish) — splice below is already _uid-based
@@ -23028,7 +23536,7 @@ Teruskan tukar emel?`)) return;
     // edit, plus add/import/bulk-edit/temp-swap/restore events. Shown in the
     // 🕐 history timeline; never copied into a borang (see _stripEquipCreds).
     // Capped per row so a busy unit can't grow the site doc unbounded.
-    const EQUIP_CHANGE_FIELDS = [['name','Nama'],['ip','IP'],['lanIp','LAN 1 IP'],['lan2Ip','LAN 2 IP'],['wifiIp','WiFi IP'],['serial','No. Siri'],['imei','IMEI'],['brand','Brand'],['model','Model'],['camType','Jenis'],['type','Jenis'],['role','Peranan'],['category','Kategori'],['nvrRef','NVR'],['redundantNvrRef','Redundance'],['capacity','Kapasiti'],['config','Konfigurasi'],['accessory','Aksesori'],['installDate','Tarikh Pasang'],['optagerMachineId','Machine ID'],['controlAppMachineId','Machine ID']];
+    const EQUIP_CHANGE_FIELDS = [['name','Nama'],['ip','IP'],['lanIp','LAN 1 IP'],['lan2Ip','LAN 2 IP'],['wifiIp','WiFi IP'],['serial','No. Siri'],['imei','IMEI'],['brand','Brand'],['model','Model'],['camType','Jenis'],['type','Jenis'],['role','Peranan'],['category','Kategori'],['nvrRef','NVR'],['redundantNvrRef','Redundance'],['capacity','Kapasiti'],['config','Konfigurasi'],['accessory','Aksesori'],['installDate','Tarikh Pasang'],['optagerMachineId','Machine ID'],['controlAppMachineId','Machine ID'],['channelLicense','Lesen Kamera']];
     const EQUIP_CHANGE_MAX = 10;
     function _diffEquip(before, after) {
       const out = [];
@@ -23122,6 +23630,17 @@ Teruskan tukar emel?`)) return;
       const cur = list[idx], orig = cur._temp.original;
       // The row's own log carries on (an older snapshot may hold a stale copy of it).
       const restored = { ...orig, _uid: cur._uid, _ts: Date.now(), _changes: cur._changes || [] };
+      // Links belong to the position, not the unit — keep them as they are
+      // now (they may have changed while the stand-in was in place). An NVR
+      // keeps its current name (cameras/HDD point at it by name; the old
+      // one could even belong to another NVR by now) and camera licence; a
+      // camera/HDD keeps its current NVR.
+      if(m.key === 'nvr') {
+        restored.name = cur.name;
+        if(cur.channelLicense) restored.channelLicense = cur.channelLicense; else delete restored.channelLicense;
+      }
+      if(m.key === 'cameras' || m.key === 'hdd') restored.nvrRef = cur.nvrRef || '';
+      if(m.key === 'cameras') restored.redundantNvrRef = cur.redundantNvrRef || '';
       _appendEquipChange(restored, { note: 'Unit asal dipulihkan', diffs: _diffEquip(cur, restored) });
       // Keep whatever login is on the row now — the original's was never
       // snapshotted (see confirmTempReplace). Only set when present: a
@@ -23558,6 +24077,24 @@ Teruskan tukar emel?`)) return;
         });
       });
       // This row's own Urus Peralatan edit log (see _appendEquipChange).
+      // Rekod RMA for this unit — matched by its _uid, else by serial (incl.
+      // the original of a 🔁 stand-in). Lain-lain only by _uid: its field
+      // doubles as a quantity ("2 unit").
+      rmaRecords.value.filter(r => (r.project === 'vir' ? 'vir' : 'cctv') === proj && r.siteId === siteId &&
+        ((item._uid && r.equipRef?.uid === item._uid) ||
+         (kind !== 'misc' && serialKeys.size && (serialKeys.has(_realSerialKey(r.serial)) || serialKeys.has(_realSerialKey(r.returnSerial))))))
+        .forEach(r => {
+          rows.push({ rawDate: r.sendDate || '', dateLabel: r.sendDate ? fmtDateDash(r.sendDate) : '-', ts: 0, isRma: true,
+            rmaBadge: '📦 Dihantar RMA',
+            rmaLine: [r.vendor, r.rmaNo && 'No. RMA ' + r.rmaNo, r.fault].filter(Boolean).join(' — '),
+            unit: [r.brand, r.model].filter(Boolean).join(' ') + (r.serial ? ` (SN ${r.serial})` : '') });
+          if(r.returnDate && _RMA_CLOSED.includes(r.status)) {
+            rows.push({ rawDate: r.returnDate, dateLabel: fmtDateDash(r.returnDate), ts: 1, isRma: true,
+              rmaBadge: r.status === 'ditolak' ? '📦 Dipulangkan (ditolak)' : '📦 Pulang dari RMA',
+              rmaLine: [rmaLabel(RMA_RESULTS, r.result), r.returnSerial && 'SN baru ' + r.returnSerial, rmaDays(r) != null && rmaDays(r) + ' hari di vendor'].filter(Boolean).join(' — '),
+              unit: '' });
+          }
+        });
       (item._changes || []).forEach(c => {
         const d = new Date(c.at);
         if(isNaN(d)) return;
@@ -23610,12 +24147,12 @@ Teruskan tukar emel?`)) return;
       // camera-only field, so it's handled separately here.
       const { accessoryCustom, nvrRefCustom, redundantNvrRefCustom, hasRedundancy, ...camResolved } = resolved;
       camResolved.accessory = (camResolved.accessory === 'Lain-lain' && accessoryCustom && accessoryCustom.trim()) ? accessoryCustom.trim() : camResolved.accessory;
-      camResolved.nvrRef = _resolveDropdownCustom(nCam.nvrRef, nvrRefCustom);
+      camResolved.nvrRef = _snapNvrName(selSiteEquip.value.nvr, _resolveDropdownCustom(nCam.nvrRef, nvrRefCustom));
       // Redundance/replicator server is optional (only some cameras get
       // backed up) — hasRedundancy is a transient UI-only checkbox (never
       // persisted), so an unchecked box always clears redundantNvrRef
       // regardless of whatever the dropdown still shows underneath it.
-      camResolved.redundantNvrRef = hasRedundancy ? _resolveDropdownCustom(nCam.redundantNvrRef, redundantNvrRefCustom) : '';
+      camResolved.redundantNvrRef = hasRedundancy ? _snapNvrName(selSiteEquip.value.nvr, _resolveDropdownCustom(nCam.redundantNvrRef, redundantNvrRefCustom)) : '';
       // CCTV only (the input is hidden for VIR) — stored only when non-empty.
       const equipNota = (camResolved.equipNota||'').trim();
       if(equipNota && currentProject.value !== 'vir') camResolved.equipNota = equipNota;
@@ -23638,6 +24175,24 @@ Teruskan tukar emel?`)) return;
     // exists, and their edit form fell back to "Lain-lain". Relink them,
     // unless another NVR at this site still carries the old name.
     // Returns how many units were relinked.
+    // Typed NVR links ("Lain-lain" text, import files) snap to this site's
+    // NVR name when only case/spacing differs — otherwise the unit groups
+    // under a look-alike NVR and counts towards no camera licence.
+    function _snapNvrName(nvrList, value) {
+      const t = String(value || '').trim().replace(/\s+/g, ' ');
+      if(!t) return '';
+      const hit = (nvrList || []).map(n => String(n?.name || '').trim()).find(n => n.replace(/\s+/g, ' ').toLowerCase() === t.toLowerCase());
+      return hit || t;
+    }
+    // Cameras/HDD still pointing (by name) at these NVRs — deleting them
+    // leaves those units unlinked.
+    function _nvrLinkedCount(siteId, names) {
+      const set = new Set((names || []).map(n => String(n || '').trim()).filter(Boolean));
+      if(!set.size) return 0;
+      const eq = activeEquip()[siteId] || {};
+      return ['cameras', 'hdd'].reduce((a, k) => a + (eq[k] || []).filter(it =>
+        set.has(String(it?.nvrRef || '').trim()) || set.has(String(it?.redundantNvrRef || '').trim())).length, 0);
+    }
     function _renameNvrRefs(siteId, nvrList, oldName, newName) {
       if(!oldName || !newName || oldName === newName) return 0;
       if(nvrList.some(n => String(n?.name || '').trim() === oldName)) return 0;
@@ -23647,6 +24202,13 @@ Teruskan tukar emel?`)) return;
         const diffs = [];
         if(String(it.nvrRef || '').trim() === oldName) { it.nvrRef = newName; diffs.push({ f:'NVR', from:oldName, to:newName }); }
         if(String(it.redundantNvrRef || '').trim() === oldName) { it.redundantNvrRef = newName; diffs.push({ f:'Redundance', from:oldName, to:newName }); }
+        // A unit on a stand-in keeps its original's snapshot — relink that
+        // too, or "Pulihkan unit asal" would bring back the old NVR name.
+        const o = it._temp?.original;
+        if(o) {
+          if(String(o.nvrRef || '').trim() === oldName) o.nvrRef = newName;
+          if(String(o.redundantNvrRef || '').trim() === oldName) o.redundantNvrRef = newName;
+        }
         if(diffs.length) { it._ts = Date.now(); _appendEquipChange(it, { note:'NVR dinamakan semula', diffs }); count++; }
       }));
       // An open camera/HDD edit form still holds the old name — follow it,
@@ -23660,10 +24222,25 @@ Teruskan tukar emel?`)) return;
       if(!nNVR.type){showToast('Sila pilih Jenis','error');return;}
       if(!isValidIp(nNVR.ip)){showToast('Format IP Address tidak sah (contoh: 192.168.0.11)','error');return;}
       const resolved = _applyScopeFlag(_resolveBrandModel(nNVR), nNVR);
+      // Camera licence (channels allowed on this NVR/server) — CCTV only,
+      // a whole number > 0 or not stored at all ("not recorded").
+      const lic = String(nNVR.channelLicense ?? '').trim();
+      if(lic && !/^\d+$/.test(lic)) { showToast('Lesen Kamera mesti nombor bulat (cth: 68)','error'); return; }
+      if(+lic > 0 && currentProject.value !== 'vir') resolved.channelLicense = +lic;
+      else delete resolved.channelLicense;
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
       const dup = _findDupConflict('nvr', list, resolved, equipEditIdx.nvr);
       if(dup) { showToast(_dupErrMsg(dup),'error'); return; }
+      // Cameras/HDD link to their NVR by name, so two NVRs sharing one would
+      // pool their cameras (and double-count camera licences). Only a new or
+      // renamed NVR is checked — an existing row keeping its name still saves.
+      const _nm = s => String(s || '').trim().toLowerCase();
+      const newNm = _nm(resolved.name);
+      if((equipEditIdx.nvr === null || _nm(list[equipEditIdx.nvr]?.name) !== newNm)
+        && list.some((n, i) => i !== equipEditIdx.nvr && _nm(n?.name) === newNm)) {
+        showToast(`Nama "${String(resolved.name).trim()}" sudah digunakan oleh NVR lain di site ini. Kamera/HDD dipautkan ikut nama NVR — sila guna nama berbeza.`,'error'); return;
+      }
       if(equipEditIdx.nvr !== null) {
         const oldName = String(list[equipEditIdx.nvr]?.name || '').trim();
         list[equipEditIdx.nvr] = {...resolved, _uid:list[equipEditIdx.nvr]._uid||_genId(), _ts:Date.now()};
@@ -23683,7 +24260,7 @@ Teruskan tukar emel?`)) return;
       if(!nHDD.model?.trim()){showToast('Sila masukkan model HDD','error');return;}
       if(!nHDD.config){showToast('Sila pilih Konfigurasi','error');return;}
       const resolved = _resolveBrandModel(nHDD);
-      resolved.nvrRef = _resolveDropdownCustom(nHDD.nvrRef, nHDD.nvrRefCustom);
+      resolved.nvrRef = _snapNvrName(selSiteEquip.value.nvr, _resolveDropdownCustom(nHDD.nvrRef, nHDD.nvrRefCustom));
       resolved.capacity = _resolveDropdownCustom(nHDD.capacity, nHDD.capacityCustom);
       delete resolved.nvrRefCustom;
       delete resolved.capacityCustom;
@@ -24037,6 +24614,8 @@ Teruskan tukar emel?`)) return;
         reason: 'rosak', reasonCustom: '',
       });
     }
+    const removeNvrLinked = computed(() => removeReasonModal.show && removeReasonModal.key === 'nvr'
+      ? _nvrLinkedCount(removeReasonModal.siteId, [removeReasonModal.itemSnapshot?.name]) : 0);
     // Runs the actual delete (same index-shift/edit-resync logic removeItem
     // always had) only after the user picks a reason in removeReasonModal —
     // called by the modal's "Padam" button.
@@ -24503,12 +25082,13 @@ Teruskan tukar emel?`)) return;
       const eq = {};
       Object.keys(OOS_KIND_LABEL).forEach(k => { eq[k] = (eqAll[k] || []).filter(x => !x?.outOfScope); });
       pm.outOfScope = Object.keys(OOS_KIND_LABEL).flatMap(k =>
-        _stripEquipCreds((eqAll[k] || []).filter(x => x?.outOfScope)).map(({ equipNota, ...x }) => ({ ...x, _kind:k, status:'Baik', nota:'' })));
+        _stripEquipCreds((eqAll[k] || []).filter(x => x?.outOfScope)).map(({ equipNota, channelLicense, ...x }) => ({ ...x, _kind:k, status:'Baik', nota:'' })));
 
       // equipNota (Urus Peralatan's internal camera note) is stripped — it
-      // must never reach the PM/CM borang or the saved record.
+      // must never reach the PM/CM borang or the saved record. Same for an
+      // NVR's camera licence count (internal capacity record, see nvrLicenseRows).
       pm.cameras = _stripEquipCreds(eq.cameras).map(({equipNota, ...c})=>({...c,display:'Baik',icam:'Baik',nota:''}));
-      pm.nvr = _stripEquipCreds(eq.nvr).map(n=>({...n,asmOp:'Baik',status:'Baik'}));
+      pm.nvr = _stripEquipCreds(eq.nvr).map(({channelLicense, ...n})=>({...n,asmOp:'Baik',status:'Baik'}));
       pm.hdd = _groupHddForPm(_stripEquipCreds(eq.hdd).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'})));
       pm.switches = _stripEquipCreds(eq.switches).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = _stripEquipCreds(eq.alarms).map(a=>({...a,func:'Baik',status:'Baik'}));
@@ -24595,6 +25175,13 @@ Teruskan tukar emel?`)) return;
         if(pm.maintType === 'INST' && !(currentProject.value === 'vir' && pm.virSystem === 'Optager HD4000')) { showToast('New Installation hanya untuk sistem VIR Optager HD4000.', 'error'); return; }
         if(!pm.month || !pm.year) { showToast('Sila pilih Bulan dan Tahun Penyelenggaraan.', 'error'); return; }
         if(pm.maintType === 'CM' && !pm.rootCause) { showToast('Sila isi Punca Masalah (Root Cause) untuk CM.', 'error'); return; }
+        // A future visit date is usually a typo (2027 for 2026) — and such a
+        // borang doesn't count as a visit until that date (see _lastPmDate),
+        // so the site would stay "Lampau" with no visible reason.
+        if(pm.visitDate && pm.visitDate > _localDateStr()
+          && !await askConfirm(`Tarikh lawatan (${fmtDate(pm.visitDate)}) adalah tarikh akan datang.\n\nBorang ini tidak dikira sebagai lawatan sehingga tarikh tersebut (status "Lampau" site tidak berubah). Teruskan?`)) return;
+        if(!pm._isEdit && refNoPrefix.value && !String(refNoSuffix.value || '').trim()
+          && !await askConfirm('No. Rujukan belum diisi (nombor larian kosong) — borang akan disimpan TANPA No. Rujukan.\n\nTeruskan?')) return;
         const nudgeIssues = _pmNudgeIssues();
         if(nudgeIssues.length) {
           const preview = nudgeIssues.slice(0,5).join(', ') + (nudgeIssues.length>5 ? `, dan ${nudgeIssues.length-5} lagi` : '');
@@ -26157,7 +26744,9 @@ Teruskan tukar emel?`)) return;
     // Skipped while the tab is hidden, same reasoning as the heartbeat.
     function _notifTick() {
       if(document.visibilityState === 'hidden') return;
-      if(Date.now() - _lastTeamAssignFetch >= TEAM_ASSIGN_REFETCH_MS) _refreshTeamAssignmentsForNotif();
+      // With the live listener attached (see _startCoreLive) the list is
+      // already current — a quiet hour must not trigger a full re-read.
+      if(!_liveUnsubs.teamAssignments && Date.now() - _lastTeamAssignFetch >= TEAM_ASSIGN_REFETCH_MS) _refreshTeamAssignmentsForNotif();
       else buildNotifications();
     }
 
@@ -26243,13 +26832,16 @@ Teruskan tukar emel?`)) return;
       // 29th–31st, where setMonth's overflow happened to cancel it out.
       const now = new Date();
       const cutoff = new Date(now.getFullYear(), now.getMonth() - (n-1), 1);
+      // …up to the end of THIS month, the chart's last bar — a record dated
+      // into a later month counted on the cards but in no bar.
+      const until = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       return maintRecords.value.filter(r => {
         if(laporanProject.value !== 'all' && (r.project||'cctv') !== laporanProject.value) return false;
         if(laporanSite.value !== 'all' && r.siteId !== laporanSite.value) return false;
         let d = null;
         if(r.visitDate) d = new Date(r.visitDate);
         else if(r.year && r.month) d = new Date(r.year, r.month-1, 1);
-        return d && d >= cutoff;
+        return d && d >= cutoff && d < until;
       }).sort((a, b) => {
         // Newest first (rank #1 = most recent) — pmRecords.value comes
         // ordered by createdAt (when the record was SAVED), which drifts
@@ -26896,12 +27488,27 @@ ${allIssues.length > 0 ? `
       // Per-site data builder
       const buildSiteData = (sites, project) => sites.map(s => {
         const sRecs = recs.filter(r => r.siteId === s.id);
-        const pmRecs = sRecs.filter(r => (r.maintType||'PM') === 'PM');
+        let pmRecs = sRecs.filter(r => (r.maintType||'PM') === 'PM');
+        // VIR: one visit is one record PER ROOM (a 4-room site's visit read as
+        // 4 PMs, i.e. 400%), and in a year of the current contract only its
+        // visits (from 1 Aug 2026) count against its windows — same rules as
+        // _virWindowStatus. Earlier years keep all their visits.
+        const virWindowsThisYear = project === 'vir' ? _virExpectedForYear(yr) : 0;
+        if(project === 'vir') {
+          const seenDay = new Set();
+          pmRecs = pmRecs.filter(r => !virWindowsThisYear || _isVirContractPm(r)).filter(r => {
+            const day = _recDate(r).getTime();
+            if(seenDay.has(day)) return false;
+            seenDay.add(day); return true;
+          });
+        }
         const cmRecs = sRecs.filter(r => r.maintType === 'CM');
         // VIR's real per-year split isn't flat (1/2/1 across 2026-2028, see
         // VIR_PM_WINDOWS) — using PM_PER_YEAR.vir=2 for every year would
         // misreport e.g. 2026 (1 expected) as only "50%" once its 1 PM is done.
-        const expected = project === 'vir' ? _virExpectedForYear(yr) : PM_PER_YEAR[project];
+        // A year before the current contract has no windows: judge it by the
+        // previous contract's flat 2x setahun instead of "0 expected".
+        const expected = project === 'vir' ? (virWindowsThisYear || PM_PER_YEAR.vir) : PM_PER_YEAR[project];
         const pct = Math.round(pmRecs.length / Math.max(1, expected) * 100);
         const issues = cmRecs.flatMap(r => _getNotaItems(r));
         // Get PM months
@@ -26930,8 +27537,8 @@ ${allIssues.length > 0 ? `
 
       const totalPM = recs.filter(r=>(r.maintType||'PM')==='PM').length;
       const totalCM = recs.filter(r=>r.maintType==='CM').length;
-      const cctvCompliance = SITES.length ? Math.round(cctvData.reduce((s,x)=>s+x.pct,0)/SITES.length) : 0;
-      const virCompliance = VIR_SITES.length ? Math.round(virData.reduce((s,x)=>s+x.pct,0)/VIR_SITES.length) : 0;
+      const cctvCompliance = SITES.length ? Math.round(cctvData.reduce((s,x)=>s+Math.min(100,x.pct),0)/SITES.length) : 0; // capped per site: an extra PM at one site mustn't hide a missed one elsewhere
+      const virCompliance = VIR_SITES.length ? Math.round(virData.reduce((s,x)=>s+Math.min(100,x.pct),0)/VIR_SITES.length) : 0;
       const worstSites = [...cctvData,...virData].filter(s=>s.pmCount<s.expected).sort((a,b)=>a.pct-b.pct).slice(0,5);
       const bestSites = [...cctvData,...virData].filter(s=>s.pmCount>=s.expected).slice(0,5);
 
@@ -27894,31 +28501,44 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       };
     });
 
+    // An assignment's outcome for the completion-rate reports: 'done' when a
+    // PM/CM record sits within ±7 days of it, 'missed' once that window has
+    // fully passed without one, else 'pending' (upcoming, or still inside
+    // its window). Pending ones stay out of every rate — counted as "not
+    // done", each newly scheduled visit dragged its team's rate down.
+    function _assignOutcome(t) {
+      // _parseLocalDate (local midnight), matching _recDate(r) on the other
+      // side of the ±7-day comparison below — new Date(t.date) parsed UTC
+      // midnight (08:00 MYT), skewing the window by 8h: a record exactly 7
+      // days BEFORE the assignment fell outside it, 7 days after didn't.
+      const tDate = t.date ? _parseLocalDate(t.date) : null;
+      // _recDate(r) falls back to month/year when visitDate is blank
+      // (visitDate isn't required at submit — see savePM()) — without
+      // this fallback, a submitted record missing just that one field
+      // would silently look like the team never showed up here.
+      const hasRecord = tDate && (pmRecordsBySite.value[t.siteId] || []).some(r => { const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+      if(hasRecord) return 'done';
+      if(tDate && tDate - _parseLocalDate(_localDateStr()) >= -7*86400000) return 'pending';
+      return 'missed';
+    }
     // ── 6. Laporan Prestasi Team ──
     const teamPerformance = computed(() => {
+      void _dayKey.value; // pending → missed as days pass
       const perTeam = {};
       // Non-SPRM assignments (DOSM/JPM-ICU/KLN/UTHM) are schedule-only (not
       // an SPRM CCTV/VIR project) — excluded from every report, this one included.
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST').forEach(t => {
         const team = t.team;
         if(!team) return;
-        if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, members:new Set() };
+        if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, pending:0, members:new Set() };
         perTeam[team].assigned++;
         (t.members||[]).forEach(m => perTeam[team].members.add(m.name));
-        // _parseLocalDate (local midnight), matching _recDate(r) on the other
-        // side of the ±7-day comparison below — new Date(t.date) parsed UTC
-        // midnight (08:00 MYT), skewing the window by 8h: a record exactly 7
-        // days BEFORE the assignment fell outside it, 7 days after didn't.
-        const tDate = t.date ? _parseLocalDate(t.date) : null;
-        // _recDate(r) falls back to month/year when visitDate is blank
-        // (visitDate isn't required at submit — see savePM()) — without
-        // this fallback, a submitted record missing just that one field
-        // would silently look like the team never showed up here.
-        const hasRecord = tDate && (pmRecordsBySite.value[t.siteId] || []).some(r => { const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
-        if(hasRecord) perTeam[team].completed++;
+        const o = _assignOutcome(t);
+        if(o === 'done') perTeam[team].completed++;
+        else if(o === 'pending') perTeam[team].pending++;
       });
       return Object.values(perTeam)
-        .map(x => ({ ...x, members:[...x.members], rate: x.assigned ? Math.round(x.completed/x.assigned*100) : 0 }))
+        .map(x => { const judged = x.assigned - x.pending; return { ...x, members:[...x.members], rate: judged ? Math.round(x.completed/judged*100) : 0 }; })
         .sort((a,b) => b.assigned - a.assigned);
     });
     // Last-6-calendar-months completion rate per team — teamPerformance above
@@ -27933,14 +28553,15 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       for(let i=5;i>=0;i--) months.push(_monthKeyOf(new Date(now.getFullYear(), now.getMonth()-i, 1)));
       const perTeamMonth = {};
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST' && t.team && t.date).forEach(t => {
-        const tDate = _parseLocalDate(t.date); // local midnight — see teamPerformance's tDate note
+        const tDate = _parseLocalDate(t.date); // local midnight — see _assignOutcome
         const mk = _monthKeyOf(tDate);
         if(!months.includes(mk)) return;
+        const o = _assignOutcome(t);
+        if(o === 'pending') return; // not judged yet — see _assignOutcome
         if(!perTeamMonth[t.team]) perTeamMonth[t.team] = {};
         if(!perTeamMonth[t.team][mk]) perTeamMonth[t.team][mk] = { assigned:0, completed:0 };
         perTeamMonth[t.team][mk].assigned++;
-        const hasRecord = (pmRecordsBySite.value[t.siteId] || []).some(r => { const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
-        if(hasRecord) perTeamMonth[t.team][mk].completed++;
+        if(o === 'done') perTeamMonth[t.team][mk].completed++;
       });
       const result = {};
       Object.keys(perTeamMonth).forEach(team => {
@@ -27967,34 +28588,27 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // them assignment-to-assignment, so a rate attributed to a team label
     // isn't really about any one person; this is the per-person equivalent. ──
     const staffWorkload = computed(() => {
+      void _dayKey.value; // pending → missed as days pass
       const per = {};
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST').forEach(t => {
         const isCm = t.maintType === 'CM';
-        // _parseLocalDate (local midnight), matching _recDate(r) on the other
-        // side of the ±7-day comparison below — new Date(t.date) parsed UTC
-        // midnight (08:00 MYT), skewing the window by 8h: a record exactly 7
-        // days BEFORE the assignment fell outside it, 7 days after didn't.
-        const tDate = t.date ? _parseLocalDate(t.date) : null;
-        // _recDate(r) falls back to month/year when visitDate is blank
-        // (visitDate isn't required at submit — see savePM()) — without
-        // this fallback, a submitted record missing just that one field
-        // would silently look like the team never showed up here.
-        const hasRecord = tDate && (pmRecordsBySite.value[t.siteId] || []).some(r => { const rd=_recDate(r); return rd && Math.abs(rd-tDate) <= 7*86400000; });
+        const o = _assignOutcome(t);
         // Dedup by uid within this one assignment first — a malformed/
         // duplicate member entry on a single doc would otherwise inflate
         // that staff member's count for what is really one assignment.
         const seenInThisAssignment = new Map();
         (t.members||[]).forEach(m => { if(m.uid && !seenInThisAssignment.has(m.uid)) seenInThisAssignment.set(m.uid, m); });
         seenInThisAssignment.forEach(m => {
-          if(!per[m.uid]) per[m.uid] = { uid:m.uid, name:m.name||'?', total:0, pm:0, cm:0, completed:0, sites:new Set() };
+          if(!per[m.uid]) per[m.uid] = { uid:m.uid, name:m.name||'?', total:0, pm:0, cm:0, completed:0, judged:0, sites:new Set() };
           per[m.uid].total++;
           if(isCm) per[m.uid].cm++; else per[m.uid].pm++;
-          if(hasRecord) per[m.uid].completed++;
+          if(o !== 'pending') per[m.uid].judged++;
+          if(o === 'done') per[m.uid].completed++;
           if(t.siteId) per[m.uid].sites.add(t.siteId);
         });
       });
       return Object.values(per)
-        .map(x => ({ ...x, siteCount: x.sites.size, rate: x.total ? Math.round(x.completed/x.total*100) : 0 }))
+        .map(x => ({ ...x, siteCount: x.sites.size, rate: x.judged ? Math.round(x.completed/x.judged*100) : 0 }))
         .sort((a,b) => b.total - a.total);
     });
     // Bar width denominator for the workload gauge below — scaled against the
@@ -28020,9 +28634,15 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const result = {};
       Object.entries(byStaff).forEach(([name, recs]) => {
         const sorted = recs.slice().sort((a,b) => (_recDate(b)?.getTime()||0) - (_recDate(a)?.getTime()||0));
+        // VIR files one borang per room, so one visit is several same-day
+        // records for the site — count it once (same idea as _virWindowStatus).
+        const seenVisit = new Set();
         let streak = 0;
         for(const r of sorted) {
           if((r.maintType||'PM')==='CM') break;
+          const visitKey = r.siteId + '|' + (_recDate(r)?.getTime() || r.id);
+          if(seenVisit.has(visitKey)) continue;
+          seenVisit.add(visitKey);
           streak++;
         }
         result[name] = streak;
@@ -28257,6 +28877,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       });
       return rows;
     });
+    // Equipment is live now: a stand-in restored (or swapped in) anywhere
+    // updates the 🔁 alerts as it lands, not on the next 5-minute tick.
+    watch(() => canViewCredentials.value ? _tempEquipAll.value.map(r => r.uid + '|' + r.date).join(',') : '', (nv, ov) => {
+      if(nv !== ov && authUser.value) buildNotifications();
+    });
     const tempEquipmentReport = computed(() => _tempEquipAll.value
       .filter(r => tempEquipFilterProj.value === 'all' || r.proj.toLowerCase() === tempEquipFilterProj.value)
       .sort((a, b) => a.siteName.localeCompare(b.siteName) || a.date.localeCompare(b.date)));
@@ -28326,6 +28951,126 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
       setTimeout(()=>{ w.print(); w.close(); }, 200);
       await logAudit('EXPORT_TEMP_EQUIP_PDF', `${list.length} baris`);
+    }
+
+    // ── Kapasiti Lesen Kamera — every CCTV NVR with a camera licence
+    // recorded, with how many cameras it already carries (nvrLicenseRows). ──
+    const licenseCapFilter = ref('all');
+    const _licenseCapAll = computed(() => {
+      const rows = [], unlinkedSites = [];
+      let noData = 0;
+      SITES.forEach(s => {
+        const r = nvrLicenseRows(siteEquip.value[s.id]);
+        if(!r.rows.length) { noData++; return; }
+        r.rows.forEach(x => rows.push({ ...x, siteId: s.id, site: s.name }));
+        if(r.unlinked) unlinkedSites.push({ site: s.name, n: r.unlinked });
+      });
+      return { rows, unlinkedSites, noData };
+    });
+    const licenseCapacityReport = computed(() => _licenseCapAll.value.rows.filter(r =>
+      licenseCapFilter.value === 'all' || (licenseCapFilter.value === 'tight' ? r.state !== 'ok' : r.left > 0)));
+    const licenseCapTotals = computed(() => {
+      const { rows, unlinkedSites, noData } = _licenseCapAll.value;
+      const lic = rows.reduce((a, r) => a + r.lic, 0), used = rows.reduce((a, r) => a + r.used, 0);
+      // Baki only sums the room left; an over-licence NVR doesn't cancel another's spare channels.
+      const left = rows.reduce((a, r) => a + Math.max(0, r.left), 0);
+      return { nvrs: rows.length, sites: new Set(rows.map(r => r.siteId)).size, lic, used, left, noData, unlinkedSites };
+    });
+
+    // ── Senarai Site (CCTV) — per-site counts + one total row. HDD counts
+    // physical drives (a row's totalUnit), like the PM borang does. The
+    // licence cell sums the site's licensed NVRs but takes its colour from
+    // the worst one: a site's spare channels on one NVR can't be used by
+    // cameras on another (e.g. the lokap NVR). ──
+    const _LIC_STATE_RANK = { ok: 0, low: 1, full: 2, over: 3 };
+    function _siteLicenseCell(eq) {
+      const { rows, unlinked } = nvrLicenseRows(eq);
+      if(!rows.length) return null;
+      const lic = rows.reduce((a, r) => a + r.lic, 0), used = rows.reduce((a, r) => a + r.used, 0);
+      const left = rows.reduce((a, r) => a + Math.max(0, r.left), 0);
+      const state = rows.reduce((w, r) => _LIC_STATE_RANK[r.state] > _LIC_STATE_RANK[w] ? r.state : w, 'ok');
+      const label = left > 0 ? `baki ${left}` : state === 'over' ? 'melebihi' : 'penuh';
+      const title = rows.map(r => `${r.name}: ${r.used}/${r.lic} · ${licenseCapLabel(r)}`).join('\n')
+        + (unlinked ? `\n⚠ ${unlinked} kamera tidak dipautkan ke NVR site ini (tidak dikira)` : '');
+      return { lic, used, left, state, label, title };
+    }
+    const cctvSiteStats = computed(() => {
+      const bySite = {}, tot = { cams: 0, nvr: 0, hdd: 0, sw: 0, lic: 0, used: 0, left: 0, licSites: 0 };
+      SITES.forEach(s => {
+        const eq = siteEquip.value[s.id] || {};
+        const st = {
+          cams: (eq.cameras || []).length, nvr: (eq.nvr || []).length,
+          hdd: (eq.hdd || []).reduce((a, h) => a + (parseInt(h.totalUnit, 10) || 1), 0),
+          sw: (eq.switches || []).length, lic: _siteLicenseCell(eq),
+        };
+        bySite[s.id] = st;
+        tot.cams += st.cams; tot.nvr += st.nvr; tot.hdd += st.hdd; tot.sw += st.sw;
+        if(st.lic) { tot.lic += st.lic.lic; tot.used += st.lic.used; tot.left += st.lic.left; tot.licSites++; }
+      });
+      return { bySite, tot };
+    });
+    async function exportLicenseCapExcel() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      await _ensureXLSX();
+      const rows = licenseCapacityReport.value.map((r, i) => ({
+        '#': i+1, Site: r.site, 'NVR / Server': r.name, Brand: r.brand, Model: r.model,
+        Lesen: r.lic, Digunakan: r.used, Baki: r.left, Status: licenseCapLabel(r),
+      }));
+      const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
+      _autoFitExcelCols(ws, rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Kapasiti Lesen');
+      XLSX.writeFile(wb, `kapasiti_lesen_kamera_${_localDateStr()}.xlsx`);
+      await logAudit('EXPORT_LICENSE_CAP_EXCEL', `${rows.length} baris`);
+    }
+    async function exportLicenseCapPdf() {
+      if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const list = licenseCapacityReport.value, t = licenseCapTotals.value;
+      const tableRows = list.map((r, i) => `<tr class="${r.state}">
+        <td>${i+1}</td><td>${esc(r.site)}</td><td>${esc(r.name)}</td><td>${esc([r.brand, r.model].filter(Boolean).join(' ') || '-')}</td>
+        <td>${r.lic}</td><td>${r.used}</td><td><b>${esc(licenseCapLabel(r))}</b></td>
+      </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:#888">Tiada rekod lesen kamera.</td></tr>';
+      const w = window.open('','_blank','width=1100,height=750');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Kapasiti_Lesen_Kamera_${_localDateStr()}</title>
+        <style>
+          @page{size:landscape;margin:12mm}
+          body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
+          h2{color:#003366;margin-bottom:2px}
+          p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
+          .header-side{flex-shrink:0;text-align:right}
+          .header-generated{font-style:italic;color:#888;font-size:7.5pt;margin:4px 0 0}
+          table{width:100%;border-collapse:collapse;margin-top:6px}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
+          td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt;vertical-align:top}
+          tr:nth-child(even) td{background:#f7f9fc}
+          tr.low td:last-child{color:#b26a00} tr.full td:last-child,tr.over td:last-child{color:#c62828}
+        </style>
+      </head><body>
+        <div class="header">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Kapasiti Lesen Kamera (CCTV)</h2>
+            <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
+          </div>
+          <div class="header-side">
+            <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
+            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${t.nvrs} NVR · ${t.sites} site · baki ${t.left} lesen</p>
+          </div>
+        </div>
+        <table><thead><tr><th>#</th><th>Site</th><th>NVR / Server</th><th>Brand / Model</th><th>Lesen</th><th>Digunakan</th><th>Baki</th></tr></thead>
+        <tbody>${tableRows}</tbody></table>
+      </body></html>`);
+      w.document.close();
+      w.focus();
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(()=>{ w.print(); w.close(); }, 200);
+      await logAudit('EXPORT_LICENSE_CAP_PDF', `${list.length} baris`);
     }
 
     // ── "Sejarah Ganti/Rosak Peralatan" — powered by equipmentRemovalLog,
@@ -28514,6 +29259,17 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     const compareMode = ref(false);
 
     const compareRecords = computed(() => compareList.value.map(id => pmRecords.value.find(r=>r.id===id)).filter(Boolean));
+    // Same as batchSelected: a borang deleted elsewhere (live list) drops out
+    // of the comparison, or the bar kept saying "2/2" for one record.
+    watch(pmRecords, list => {
+      if(!compareList.value.length) return;
+      const ids = new Set(list.map(r => r.id));
+      const kept = compareList.value.filter(id => ids.has(id));
+      if(kept.length !== compareList.value.length) {
+        compareList.value = kept;
+        if(page.value === 'compare' && kept.length < 2) { page.value = 'pm-list'; showToast('Salah satu borang yang dibandingkan telah dipadam oleh pengguna lain.', 'error'); }
+      }
+    });
 
     const compareFields = [
       { key:'siteName', label:'Site' },
@@ -28963,7 +29719,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       // loadCmCases too: cmCases isn't part of loadAll(), so the "Kes CM
       // Aktif" count and ticker otherwise stayed frozen at whatever was
       // loaded when TV mode was opened, for as long as the screen stayed on.
-      _tvRefresh = setInterval(() => { if(page.value !== 'site-equip' && isOnline.value && !loading.value) { loadAll(); loadCmCases(true); } }, 15 * 60 * 1000);
+      // Only as a fallback now: while the live listeners run (see _liveUnsubs)
+      // the screen is already current, and a full re-read every 15 min on a
+      // wall screen left on all day was ~100 reloads' worth of reads a day.
+      _tvRefresh = setInterval(() => {
+        if(page.value === 'site-equip' || !isOnline.value || loading.value) return;
+        if(!_liveUnsubs.pmRecords) loadAll();
+        if(!_liveUnsubs.cmCases) loadCmCases(true);
+      }, 15 * 60 * 1000);
       tvPoke();
       await nextTick();
       try { await tvRootEl.value?.requestFullscreen?.({ navigationUI:'hide' }); } catch(e) { /* refused → stays a full-window overlay */ }
@@ -29010,7 +29773,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       });
 
       // Track online/offline status
-      window.addEventListener('online',  () => { isOnline.value = true;  showToast('Sambungan pulih — data sedang disegerakkan.', 'success'); });
+      window.addEventListener('online',  () => {
+        isOnline.value = true;  showToast('Sambungan pulih — data sedang disegerakkan.', 'success');
+        // The list on screen came from the offline cache — fetch the real
+        // one now (not on Urus Peralatan: loadAll replaces siteEquip there).
+        if(dataStale.value && authUser.value && !loading.value && page.value !== 'site-equip') setTimeout(() => { if(dataStale.value && !loading.value) loadAll(); }, 1500);
+      });
       window.addEventListener('offline', () => { isOnline.value = false; showToast('Tiada sambungan internet. Data disimpan tempatan.', 'error'); });
 
       // Auto-close notif/online popups when clicking anywhere outside them
@@ -29129,6 +29897,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
               await _postAuthLoad();
             }
           } else {
+            _stopAllLive(); // signed out some other way (token revoked, other tab)
             authProfile.value = null;
             pinGate.value = false; _pinPostAuthPending = false; _pinFromLogin = false;
             _clearPinOk();
@@ -29148,7 +29917,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     });
 
     return {
-      page, authUser, authProfile, loading, initialLoading, listDataReady, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, syncStatus, syncAgoLabel, syncPillTitle, refreshDataFromPill, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
+      page, authUser, authProfile, loading, initialLoading, listDataReady, authChecking, loginUser, loginPass, loginErr, loginShake, loginHandshake, toasts, isOnline, pendingWrites, syncStatus, syncAgoLabel, syncPillTitle, refreshDataFromPill, dataStale, sessionWarning, extendSession, SHOW_SPRM_LOGO_LOGIN,
       loginClock, loginDateStr, loginGreeting, LOGIN_TIPS, loginTipIndex,
       SITES, VIR_SITES, VIR_CHECKLIST_TEMPLATE_BCD, VIR_CHECKLIST_TEMPLATE_OPTAGER, VIR_SYSTEMS, VIR_ROOM_NAME_OPTIONS, virChecklistFor, virSectionsFor, pmVirItemsBySection, virChecklistCols, virChecklistPages, virChecklistGroups, virChecklistItemColLabel, virChecklistNumbered, virEquipCombined, virDefaultSettingUnits, viewPMVirPrintSections, pmVirSiteRooms, onVirRoomChange, nRoom, addVirRoom, toggleRoomGroup, roomListFilter, filteredRoomList, MONTHS, BRANDS, CAMERA_MODELS, NVR_MODELS,
       HDD_BRANDS, HDD_MODELS, HDD_CAPACITIES, SWITCH_BRANDS, SWITCH_MODELS,
@@ -29239,6 +30008,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       equipHideableCols, equipHiddenCols, equipColPickerOpen, isEquipColHidden, toggleEquipCol, resetEquipCols,
       equipSaveStatusHere, equipSaveStatusText, equipIpClash, equipFormIpClash, ipCellTitle, copyIp, equipSerialClash, equipFormSerialClash, serialCellTitle,
       licenseExpiryState, licenseExpiryNote, equipLicenseAlert,
+      equipLicenseSummary, nvrLicenseOf, licenseCapLabel, licenseCapTitle,
+      licenseCapFilter, licenseCapacityReport, licenseCapTotals, exportLicenseCapExcel, exportLicenseCapPdf, cctvSiteStats, removeNvrLinked,
       brandOptionsFor, modelOptionsFor, isRecentEquip, equipAgeColor, equipAgeTitle,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
       customEquipCleanupBrandIsCustom, removeCustomBrand,
