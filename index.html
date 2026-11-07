@@ -1691,6 +1691,15 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .lic-cap-chip.is-low{background:#fff3e0;color:#b26a00}
 .lic-cap-chip.is-full,.lic-cap-chip.is-over{background:#fdecea;color:#c62828}
 .lic-cap-warn{color:#b26a00;font-size:.78rem;cursor:pointer}
+.lic-cap-note{color:#78828f;font-size:.76rem}
+.lic-cap-chip.is-covered{background:#eef2f8;color:#55606e;font-weight:500}
+.lic-cover-list{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 10px;border:1px solid #dbe3ef;border-radius:6px;background:#f7f9fc}
+.lic-cover-list label{display:flex;align-items:center;gap:6px;margin:0;font-weight:400;cursor:pointer}
+.lic-cover-self{opacity:.7;cursor:default!important}
+.site-cam-split{font-size:.72rem;color:#78828f;white-space:normal;max-width:220px;line-height:1.3;margin-top:2px}
+.dark-mode .lic-cap-note,.dark-mode .site-cam-split{color:#9aa4b2}
+.dark-mode .lic-cap-chip.is-covered{background:#232c3a;color:#b0bac8}
+.dark-mode .lic-cover-list{background:#1a2230;border-color:#2c3a50}
 .dark-mode .lic-cap-card{background:#1a2230;border-color:#2c3a50}
 .dark-mode .lic-cap-title{color:#90caf9}
 .dark-mode .lic-cap-chip{background:#1e3a24;color:#81c784}
@@ -1698,6 +1707,21 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .dark-mode .lic-cap-chip.is-full,.dark-mode .lic-cap-chip.is-over{background:#4a1f1f;color:#ff8a80}
 .dark-mode .lic-cap-warn{color:#ffb74d}
 .site-list-tbl td:nth-child(n+4):not(:last-child){white-space:nowrap}
+/* Waranti ← Urus Peralatan picker, and the 🛡 status on equipment rows */
+.warr-pick{margin:4px 0 14px;padding:10px 12px;border:1px solid #dbe3ef;border-radius:8px;background:#f7f9fc}
+.warr-bulk-list{max-height:260px;overflow-y:auto;border:1px solid #dbe3ef;border-radius:6px;background:#fff;padding:6px 10px}
+.warr-bulk-group+.warr-bulk-group{margin-top:8px;padding-top:8px;border-top:1px dashed #dbe3ef}
+.warr-bulk-head,.warr-bulk-item{display:flex;align-items:center;gap:6px;cursor:pointer;margin:0;font-size:.82rem}
+.warr-bulk-item{padding:2px 0 2px 20px;font-weight:400}
+.warr-shield{display:inline-block;padding:0 5px;border-radius:9px;font-size:.72rem;line-height:1.5;cursor:pointer;background:#e8f5e9;border:1px solid #a5d6a7}
+.warr-shield.is-expiring{background:#fff3e0;border-color:#ffcc80}
+.warr-shield.is-expired{background:#fdecea;border-color:#ef9a9a;filter:grayscale(.4)}
+.dark-mode .warr-pick{background:#1a2230;border-color:#2c3a50}
+.dark-mode .warr-bulk-list{background:#141b26;border-color:#2c3a50}
+.dark-mode .warr-bulk-group+.warr-bulk-group{border-top-color:#2c3a50}
+.dark-mode .warr-shield{background:#1e3a24;border-color:#2e6b3a}
+.dark-mode .warr-shield.is-expiring{background:#3d2a12;border-color:#8a5a1a}
+.dark-mode .warr-shield.is-expired{background:#4a1f1f;border-color:#8a3030}
 .site-list-total td{font-weight:700;border-top:2px solid #003366;background:#f0f4ff}
 .dark-mode .site-list-total td{border-top-color:#90caf9;background:#1a2230}
 .topbar-search-wrap .search-active{background:#eef4ff}
@@ -3775,7 +3799,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <td>{{i+1}}</td>
                   <td><span class="site-morph-name" :style="morphSiteId===s.id ? 'view-transition-name:site-hero' : ''">{{s.name}}</span> <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
-                  <td>{{cctvSiteStats.bySite[s.id].cams}} unit</td>
+                  <td>{{cctvSiteStats.bySite[s.id].cams}} unit<div v-if="cctvSiteStats.bySite[s.id].camsByNvr.length" class="site-cam-split">{{cctvSiteStats.bySite[s.id].camsByNvr.map(x => x.name + ' ' + x.count).join(' · ')}}</div></td>
                   <td>{{cctvSiteStats.bySite[s.id].nvr}} unit</td>
                   <td><span v-if="cctvSiteStats.bySite[s.id].lic" class="lic-cap-chip" :class="'is-'+cctvSiteStats.bySite[s.id].lic.state" :title="cctvSiteStats.bySite[s.id].lic.title">{{cctvSiteStats.bySite[s.id].lic.used}}/{{cctvSiteStats.bySite[s.id].lic.lic}} · {{cctvSiteStats.bySite[s.id].lic.label}}</span><span v-else class="text-muted text-sm" title="Lesen kamera belum diisi pada NVR site ini">–</span></td>
                   <td>{{cctvSiteStats.bySite[s.id].hdd}} unit</td>
@@ -3927,7 +3951,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         </div>
         <div v-if="equipLicenseSummary.rows.length" class="lic-cap-card">
           <span class="lic-cap-title">📹 Lesen Kamera:</span>
-          <span v-for="r in equipLicenseSummary.rows" :key="r.uid||r.name" class="lic-cap-chip" :class="'is-'+r.state" :title="licenseCapTitle(r)">{{r.name}} · {{r.used}}/{{r.lic}} · {{licenseCapLabel(r)}}</span>
+          <span v-for="r in equipLicenseSummary.rows" :key="r.uid||r.name" class="lic-cap-chip" :class="'is-'+r.state" :title="licenseCapTitle(r)">{{r.label}} · {{r.used}}/{{r.lic}} · {{licenseCapLabel(r)}}</span>
+          <span v-if="equipLicenseSummary.overlap.length" class="lic-cap-warn" style="cursor:help" title="Kamera NVR ini dikira dalam lebih daripada satu lesen — semak tanda &quot;Lesen ini turut meliputi&quot; pada NVR/server berkenaan">⚠ {{equipLicenseSummary.overlap.join(', ')}} dikira dalam 2 lesen</span>
+          <span v-for="x in equipLicenseSummary.noLicense" :key="'nl'+x.name" class="lic-cap-note">{{x.name}}: {{x.cams}} kamera (tiada lesen direkod)</span>
           <span v-if="equipLicenseSummary.unlinked" class="lic-cap-warn" @click="eqTab='cameras'; clearEquipFilter('cameras')" title="Kamera tanpa &quot;NVR Berkaitan&quot;, atau dipautkan ke NVR yang tiada lagi di site ini, tidak dikira dalam mana-mana lesen — klik untuk lihat">⚠ {{equipLicenseSummary.unlinked}} kamera tidak dipautkan ke NVR site ini (tidak dikira)</span>
         </div>
         <div class="tabs">
@@ -4077,14 +4103,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="flex items-center gap-8 mb-8">
                 <strong>{{grp.name==='Tiada NVR' ? '⚠️ Tiada NVR Berkaitan' : '📼 '+grp.name}}</strong>
                 <span class="badge">{{grp.items.length}} Kamera</span>
-                <span v-if="equipLicenseSummary.byName[grp.name]" class="lic-cap-chip" :class="'is-'+equipLicenseSummary.byName[grp.name].state" :title="licenseCapTitle(equipLicenseSummary.byName[grp.name])">Lesen {{equipLicenseSummary.byName[grp.name].used}}/{{equipLicenseSummary.byName[grp.name].lic}} · {{licenseCapLabel(equipLicenseSummary.byName[grp.name])}}</span>
+                <span v-if="nvrLicenseCovering(grp.name)" class="lic-cap-chip" :class="'is-'+nvrLicenseCovering(grp.name).state" :title="licenseCapTitle(nvrLicenseCovering(grp.name))">Lesen{{nvrLicenseCovering(grp.name).name !== grp.name ? ' ' + nvrLicenseCovering(grp.name).name : ''}} {{nvrLicenseCovering(grp.name).used}}/{{nvrLicenseCovering(grp.name).lic}} · {{licenseCapLabel(nvrLicenseCovering(grp.name))}}</span>
               </div>
               <table class="equip-table equip-table-sticky equip-tbl-cameras">
                 <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('cameras','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.cameras.key==='name'}">{{equipSortIcon('cameras','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.cameras.key==='ip'}">{{equipSortIcon('cameras','ip')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','camType')">Jenis<span class="sort-ind" :class="{on:equipSort.cameras.key==='camType'}">{{equipSortIcon('cameras','camType')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','brand')">Brand<span class="sort-ind" :class="{on:equipSort.cameras.key==='brand'}">{{equipSortIcon('cameras','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','model')">Model<span class="sort-ind" :class="{on:equipSort.cameras.key==='model'}">{{equipSortIcon('cameras','model')}}</span></th><th v-if="currentProject!=='vir'">Aksesori</th><th class="th-sort" @click="toggleEquipSort('cameras','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.cameras.key==='serial'}">{{equipSortIcon('cameras','serial')}}</span></th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="[{'highlight-row':equipEditIdx.cameras===c._idx}, equipRowFx(c)]" :data-equip-uid="c._uid">
                     <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
-                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="c.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="c.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(c.ip,'cameras',c._uid||c._idx).length}" :title="ipCellTitle(c.ip,'cameras',c._uid||c._idx)" @click="copyIp(c.ip)">{{c.ip}}</span></td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data"><span v-if="c.serial" :class="{'ip-dup':equipSerialClash(c.serial,'cameras',c._uid||c._idx).length}" :title="serialCellTitle(c.serial,'cameras',c._uid||c._idx)">{{c.serial}}</span></td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="c.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(c,'cameras')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(c,'cameras'))" :title="equipWarrantyTitle(equipWarrantyOf(c,'cameras'))" @click="openEquipWarranty(equipWarrantyOf(c,'cameras'))">🛡</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="c.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(c.ip,'cameras',c._uid||c._idx).length}" :title="ipCellTitle(c.ip,'cameras',c._uid||c._idx)" @click="copyIp(c.ip)">{{c.ip}}</span></td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data"><span v-if="c.serial" :class="{'ip-dup':equipSerialClash(c.serial,'cameras',c._uid||c._idx).length}" :title="serialCellTitle(c.serial,'cameras',c._uid||c._idx)">{{c.serial}}</span></td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="c.equipNota">{{c.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{c.accessUser||'-'}}</td>
@@ -4148,7 +4174,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"><div v-if="equipFormSerialClash('nvr',nNVR.serial).length" class="ip-clash-hint">⚠️ No. Siri ini sudah wujud: {{equipFormSerialClash('nvr',nNVR.serial).join(', ')}}</div></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.ip"><div v-if="equipFormIpClash('nvr',nNVR.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('nvr',nNVR.ip).join(', ')}}</div></div>
               <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
-              <div v-if="currentProject!=='vir'" class="form-group"><label>Lesen Kamera (channel) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="number" min="1" step="1" v-model="nNVR.channelLicense" placeholder="cth: 68"><div class="text-muted text-sm">Jumlah kamera yang dibenarkan oleh lesen NVR/server ini. Penggunaan dikira automatik dari kamera yang "NVR Berkaitan"-nya NVR ini.</div></div>
+              <div v-if="currentProject!=='vir'" class="form-group"><label>Lesen Kamera (channel) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="number" min="1" step="1" v-model="nNVR.channelLicense" placeholder="cth: 68"><div class="text-muted text-sm">Jumlah kamera yang dibenarkan oleh lesen NVR/server ini. Penggunaan dikira automatik dari kamera yang "NVR Berkaitan"-nya NVR ini (dan NVR lain yang ditanda di bawah, jika ada).</div></div>
+              <div v-if="currentProject!=='vir' && +nNVR.channelLicense > 0 && nvrCoverOptions.length" class="form-group" style="grid-column:1/-1"><label>Lesen ini turut meliputi kamera di <span class="text-muted text-sm">(pilihan)</span></label>
+                <div class="lic-cover-list">
+                  <label class="lic-cover-self"><input type="checkbox" checked disabled> {{nNVR.name || 'NVR/server ini'}} <span class="text-muted text-sm">(sentiasa)</span></label>
+                  <label v-for="o in nvrCoverOptions" :key="o.uid"><input type="checkbox" :value="o.uid" v-model="nNVR.licenseCovers"> {{o.name}} <span class="text-muted text-sm">({{o.cams}} kamera)</span></label>
+                </div>
+                <div class="text-muted text-sm">Tanda NVR lain jika satu lesen (cth. BVMS) turut mengira kamera di NVR tersebut — cth. lesen yang termasuk kamera lokap. Biarkan tidak bertanda jika NVR itu ada lesen sendiri atau tiada lesen.</div>
+              </div>
               <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nNVR.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
@@ -4176,7 +4209,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(n,i) in equipView.nvr" :key="n._uid||n._idx" :class="[{'highlight-row':equipEditIdx.nvr===n._idx}, equipRowFx(n)]" :data-equip-uid="n._uid">
                     <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="n.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data"><span v-if="n.serial" :class="{'ip-dup':equipSerialClash(n.serial,'nvr',n._uid||n._idx).length}" :title="serialCellTitle(n.serial,'nvr',n._uid||n._idx)">{{n.serial}}</span></td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td v-if="currentProject!=='vir'"><span v-if="nvrLicenseOf(n)" class="lic-cap-chip" :class="'is-'+nvrLicenseOf(n).state" :title="licenseCapTitle(nvrLicenseOf(n))">{{nvrLicenseOf(n).used}}/{{nvrLicenseOf(n).lic}} · {{licenseCapLabel(nvrLicenseOf(n))}}</span><span v-else class="text-muted text-sm">-</span></td><td>{{n.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="n.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(n,'nvr')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(n,'nvr'))" :title="equipWarrantyTitle(equipWarrantyOf(n,'nvr'))" @click="openEquipWarranty(equipWarrantyOf(n,'nvr'))">🛡</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data"><span v-if="n.serial" :class="{'ip-dup':equipSerialClash(n.serial,'nvr',n._uid||n._idx).length}" :title="serialCellTitle(n.serial,'nvr',n._uid||n._idx)">{{n.serial}}</span></td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td v-if="currentProject!=='vir'"><span v-if="nvrLicenseOf(n)" class="lic-cap-chip" :class="'is-'+nvrLicenseOf(n).state" :title="licenseCapTitle(nvrLicenseOf(n))">{{nvrLicenseOf(n).used}}/{{nvrLicenseOf(n).lic}} · {{licenseCapLabel(nvrLicenseOf(n))}}<template v-if="nvrLicenseOf(n).others.length"> · + {{nvrLicenseOf(n).others.join(' + ')}}</template></span><span v-else-if="nvrLicenseCovering(n.name)" class="lic-cap-chip is-covered" :title="'Kamera NVR ini dikira dalam lesen '+nvrLicenseCovering(n.name).label">dalam lesen {{nvrLicenseCovering(n.name).name}}</span><span v-else class="text-muted text-sm">-</span></td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{n.accessPw ? (revealedPw.nvr.has(n._uid) ? n.accessPw : '••••••') : '-'}}</span>
@@ -4266,7 +4299,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="[{'highlight-row':equipEditIdx.hdd===h._idx}, equipRowFx(h)]" :data-equip-uid="h._uid">
                     <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
-                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}} <span v-if="h.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{h.model}} <span v-if="h._temp" class="badge equip-temp-badge" @click="openTempReplace('hdd',h._idx)" :title="tempBadgeTitle(h)">🔁 Sementara</span> <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="h.serial" :class="{'ip-dup':equipSerialClash(h.serial,'hdd',h._uid||h._idx).length}" :title="serialCellTitle(h.serial,'hdd',h._uid||h._idx)">{{h.serial}}</span></td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
+                    <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}} <span v-if="h.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{h.model}} <span v-if="h._temp" class="badge equip-temp-badge" @click="openTempReplace('hdd',h._idx)" :title="tempBadgeTitle(h)">🔁 Sementara</span> <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(h,'hdd')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(h,'hdd'))" :title="equipWarrantyTitle(equipWarrantyOf(h,'hdd'))" @click="openEquipWarranty(equipWarrantyOf(h,'hdd'))">🛡</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="h.serial" :class="{'ip-dup':equipSerialClash(h.serial,'hdd',h._uid||h._idx).length}" :title="serialCellTitle(h.serial,'hdd',h._uid||h._idx)">{{h.serial}}</span></td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</a>
                       <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('hdd',h._idx)" :title="h._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(h,'hdd')}" @click="openRmaFromEquip('hdd',h._idx)" :title="rmaBtnTitle(h,'hdd')">📦</button>
@@ -4337,7 +4370,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(s,i) in equipView.switches" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.switches===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
                     <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
-                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}} <span v-if="s.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="s.serial" :class="{'ip-dup':equipSerialClash(s.serial,'switches',s._uid||s._idx).length}" :title="serialCellTitle(s.serial,'switches',s._uid||s._idx)">{{s.serial}}</span></td><td class="mono-data"><span v-if="s.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.ip,'switches',s._uid||s._idx).length}" :title="ipCellTitle(s.ip,'switches',s._uid||s._idx)" @click="copyIp(s.ip)">{{s.ip}}</span></td><td>{{s.nota}}</td>
+                    <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}} <span v-if="s.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(s,'switches')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(s,'switches'))" :title="equipWarrantyTitle(equipWarrantyOf(s,'switches'))" @click="openEquipWarranty(equipWarrantyOf(s,'switches'))">🛡</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="s.serial" :class="{'ip-dup':equipSerialClash(s.serial,'switches',s._uid||s._idx).length}" :title="serialCellTitle(s.serial,'switches',s._uid||s._idx)">{{s.serial}}</span></td><td class="mono-data"><span v-if="s.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.ip,'switches',s._uid||s._idx).length}" :title="ipCellTitle(s.ip,'switches',s._uid||s._idx)" @click="copyIp(s.ip)">{{s.ip}}</span></td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{s.accessPw ? (revealedPw.switches.has(s._uid) ? s.accessPw : '••••••') : '-'}}</span>
@@ -4423,7 +4456,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(a,i) in equipView.alarms" :key="a._uid||a._idx" :class="[{'highlight-row':equipEditIdx.alarms===a._idx}, equipRowFx(a)]" :data-equip-uid="a._uid">
                     <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
-                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="a.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td><span v-if="a.serial" :class="{'ip-dup':equipSerialClash(a.serial,'alarms',a._uid||a._idx).length}" :title="serialCellTitle(a.serial,'alarms',a._uid||a._idx)">{{a.serial}}</span></td><td><span v-if="a.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(a.ip,'alarms',a._uid||a._idx).length}" :title="ipCellTitle(a.ip,'alarms',a._uid||a._idx)" @click="copyIp(a.ip)">{{a.ip}}</span></td>
+                    <td>{{i+1}}</td><td>{{a.name}} <span v-if="a.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(a,'alarms')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(a,'alarms'))" :title="equipWarrantyTitle(equipWarrantyOf(a,'alarms'))" @click="openEquipWarranty(equipWarrantyOf(a,'alarms'))">🛡</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td><span v-if="a.serial" :class="{'ip-dup':equipSerialClash(a.serial,'alarms',a._uid||a._idx).length}" :title="serialCellTitle(a.serial,'alarms',a._uid||a._idx)">{{a.serial}}</span></td><td><span v-if="a.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(a.ip,'alarms',a._uid||a._idx).length}" :title="ipCellTitle(a.ip,'alarms',a._uid||a._idx)" @click="copyIp(a.ip)">{{a.ip}}</span></td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
                       <span>{{a.accessPw ? (revealedPw.alarms.has(a._uid) ? a.accessPw : '••••••') : '-'}}</span>
@@ -4723,7 +4756,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(m,i) in equipView.misc" :key="m._uid||m._idx" :class="[{'highlight-row':equipEditIdx.misc===m._idx}, equipRowFx(m)]" :data-equip-uid="m._uid">
                     <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
-                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="m.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td><span v-if="m.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(m.ip,'misc',m._uid||m._idx).length}" :title="ipCellTitle(m.ip,'misc',m._uid||m._idx)" @click="copyIp(m.ip)">{{m.ip}}</span></td>
+                    <td>{{i+1}}</td><td>{{m.name}} <span v-if="m.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(m,'misc')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(m,'misc'))" :title="equipWarrantyTitle(equipWarrantyOf(m,'misc'))" @click="openEquipWarranty(equipWarrantyOf(m,'misc'))">🛡</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td><span v-if="m.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(m.ip,'misc',m._uid||m._idx).length}" :title="ipCellTitle(m.ip,'misc',m._uid||m._idx)" @click="copyIp(m.ip)">{{m.ip}}</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -6971,10 +7004,40 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <option v-for="s in SITES" :key="s.id" :value="s.id">{{s.name}}</option>
               </select>
             </div>
-            <div class="form-group"><label>Nama Peralatan *</label><input class="form-control" v-model="warrantyModal.data.equipmentName" placeholder="cth: 24 Port PoE Switch, Disk Array Storage, Workstation"></div>
-            <div class="form-group"><label>Brand</label><input class="form-control" v-model="warrantyModal.data.brand" placeholder="cth: H3C, Dell"></div>
-            <div class="form-group"><label>Model</label><input class="form-control" v-model="warrantyModal.data.model" placeholder="cth: S5170-28S-HPWR-EI L2"></div>
-            <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="warrantyModal.data.serial" placeholder="Serial No. / Service Tag"></div>
+          </div>
+          <!-- Pick from Urus Peralatan Site (see warrantyEquipGroups) -->
+          <div v-if="warrantyModal.data.siteId" class="warr-pick">
+            <div class="flex justify-between items-center" style="gap:8px;flex-wrap:wrap;margin-bottom:6px">
+              <label style="margin:0;font-weight:600">Peralatan dari Urus Peralatan Site</label>
+              <label v-if="!warrantyModal.editing && warrantyEquipGroups.length" class="text-sm" style="cursor:pointer;display:flex;align-items:center;gap:6px;margin:0"><input type="checkbox" v-model="warrantyModal.bulk"> Pilih beberapa peralatan sekaligus</label>
+            </div>
+            <div v-if="!warrantyEquipGroups.length" class="text-muted text-sm">Tiada peralatan berdaftar untuk site ini — sila isi manual di bawah.</div>
+            <template v-else-if="!warrantyBulkActive">
+              <select class="form-control" v-model="warrantyModal.equipKey" @change="onWarrantyEquipPick">
+                <option value="">-- Isi manual (tiada dalam senarai) --</option>
+                <optgroup v-for="g in warrantyEquipGroups" :key="g.kind" :label="g.label">
+                  <option v-for="o in g.items" :key="o.key" :value="o.key">{{o.label}}</option>
+                </optgroup>
+              </select>
+              <div v-if="warrantyPickedExisting" class="ip-clash-hint">🛡 Peralatan ini sudah ada rekod waranti — tamat {{fmtDate(warrantyPickedExisting.endDate)}} ({{warrantyPickedExisting.vendor || '-'}}).</div>
+            </template>
+            <div v-else>
+              <div class="warr-bulk-list">
+                <div v-for="g in warrantyEquipGroups" :key="g.kind" class="warr-bulk-group">
+                  <label class="warr-bulk-head"><input type="checkbox" :checked="g.items.every(o => warrantyModal.bulkKeys.includes(o.key))" @change="toggleWarrantyBulkGroup(g)"> <b>{{g.label}}</b> <span class="text-muted text-sm">({{g.items.length}})</span></label>
+                  <label v-for="o in g.items" :key="o.key" class="warr-bulk-item"><input type="checkbox" :value="o.key" v-model="warrantyModal.bulkKeys"> {{o.label}}</label>
+                </div>
+              </div>
+              <div class="text-sm" style="margin-top:6px"><b>{{warrantyModal.bulkKeys.length}}</b> peralatan dipilih — satu rekod waranti dicipta untuk setiap satu, guna vendor &amp; tarikh di bawah. 🛡 = sudah ada rekod waranti.</div>
+            </div>
+          </div>
+          <div class="form-row form-row-2">
+            <template v-if="!warrantyBulkActive">
+              <div class="form-group"><label>Nama Peralatan *</label><input class="form-control" v-model="warrantyModal.data.equipmentName" placeholder="cth: 24 Port PoE Switch, Disk Array Storage, Workstation"></div>
+              <div class="form-group"><label>Brand</label><input class="form-control" v-model="warrantyModal.data.brand" placeholder="cth: H3C, Dell"></div>
+              <div class="form-group"><label>Model</label><input class="form-control" v-model="warrantyModal.data.model" placeholder="cth: S5170-28S-HPWR-EI L2"></div>
+              <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="warrantyModal.data.serial" placeholder="Serial No. / Service Tag"></div>
+            </template>
             <div class="form-group"><label>Jenis Waranti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="warrantyModal.data.warrantyType" placeholder="cth: Limited Lifetime Warranty with 10BD-Ship"></div>
             <div class="form-group"><label>Tarikh Mula Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.startDate"></div>
             <div class="form-group"><label>Tarikh Tamat Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.endDate"></div>
@@ -6984,7 +7047,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <p v-if="warrantyModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{warrantyModal.err}}</p>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="warrantyModal.show=false">Batal</button>
-            <button class="btn btn-primary" @click="submitWarranty" :disabled="loading">{{loading?'Menyimpan...':warrantyModal.editing?'Simpan Perubahan':'Tambah Peralatan'}}</button>
+            <button class="btn btn-primary" @click="submitWarranty" :disabled="loading">{{loading?'Menyimpan...':warrantyModal.editing?'Simpan Perubahan':warrantyBulkActive?'Tambah Waranti ('+warrantyModal.bulkKeys.length+' peralatan)':'Tambah Peralatan'}}</button>
           </div>
         </div>
       </div>
@@ -8602,12 +8665,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <p class="text-sm text-muted mb-12">Lesen kamera setiap NVR/server (diisi di Urus Peralatan → Server/NVR/SAN). "Digunakan" = kamera yang "NVR Berkaitan"-nya NVR itu, termasuk kamera luar skop; backup ke server redundancy tidak dikira. <b>{{licenseCapTotals.nvrs}}</b> NVR di <b>{{licenseCapTotals.sites}}</b> site · lesen {{licenseCapTotals.lic}}, digunakan {{licenseCapTotals.used}}, baki <b>{{licenseCapTotals.left}}</b>.<span v-if="licenseCapTotals.noData">{{' ' + licenseCapTotals.noData}} site belum ada maklumat lesen.</span></p>
             <div v-if="licenseCapTotals.unlinkedSites.length" class="text-sm mb-12" style="color:#b26a00">⚠ Kamera tidak dipautkan ke NVR site (tidak dikira): {{licenseCapTotals.unlinkedSites.map(x => x.site+' ('+x.n+')').join(', ')}}</div>
+            <div v-if="licenseCapTotals.overlap.length" class="text-sm mb-12" style="color:#b26a00">⚠ NVR dikira dalam lebih daripada satu lesen: {{licenseCapTotals.overlap.map(x => x.site+' — '+x.nvrs.join(', ')).join('; ')}}</div>
+            <div v-if="licenseCapTotals.noLicense.length" class="text-sm mb-12 lic-cap-note">NVR tanpa lesen direkod: {{licenseCapTotals.noLicense.map(x => x.site+' — '+x.name+' ('+x.cams+' kamera)').join('; ')}}</div>
             <div class="tbl-wrap">
               <table>
                 <thead><tr><th>#</th><th>Site</th><th>NVR / Server</th><th>Brand / Model</th><th>Lesen</th><th>Digunakan</th><th>Baki</th></tr></thead>
                 <tbody>
                   <tr v-for="(r,i) in licenseCapacityReport" :key="r.siteId+'|'+(r.uid||r.name)">
-                    <td>{{i+1}}</td><td>{{r.site}}</td><td>{{r.name}}</td><td>{{[r.brand,r.model].filter(Boolean).join(' ') || '-'}}</td>
+                    <td>{{i+1}}</td><td>{{r.site}}</td><td>{{r.label}}</td><td>{{[r.brand,r.model].filter(Boolean).join(' ') || '-'}}</td>
                     <td>{{r.lic}}</td><td>{{r.used}}</td>
                     <td><span class="lic-cap-chip" :class="'is-'+r.state" :title="licenseCapTitle(r)">{{licenseCapLabel(r)}}</span></td>
                   </tr>
@@ -10327,7 +10392,7 @@ createApp({
     // use `nota` for the inspector's problem notes, and loadPMEquip() copies
     // every camera field into the borang — it strips equipNota there.
     const nCam = reactive({name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''});
-    const nNVR = reactive({name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:'',channelLicense:''});
+    const nNVR = reactive({name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:'',channelLicense:'',licenseCovers:[]});
     const nHDD = reactive({brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''});
     const nSW  = reactive({name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''});
     const nRoom = reactive({name:'', nameCustom:'', system:'BCD', excludedGroups:[]});
@@ -11924,6 +11989,10 @@ createApp({
       if(!selSite.value || !equipWritable.value) return;
       try {
         localStorage.setItem(EQUIP_DRAFT_KEY, JSON.stringify({
+          // Owner — doLogout() wipes this key, but a session that ends any
+          // other way (token revoked, password changed elsewhere) doesn't
+          // run it; recovery only offers the draft back to the same account.
+          uid: authUser.value?.uid || null,
           siteId: selSite.value.id, project: currentProject.value,
           // system/roomUid let recovery restore into the EXACT same slot —
           // critical for Optager/VCS/SONY, all room-scoped: without knowing
@@ -11950,6 +12019,10 @@ createApp({
       if(!raw) return;
       let draft;
       try { draft = JSON.parse(raw); } catch(e) { clearEquipDraftLocal(); return; }
+      // Someone else's (or an unowned, pre-scoping) draft — it can hold
+      // equipment passwords, and restoring it would overwrite the site with
+      // another person's unsaved copy. Never offered; dropped.
+      if(!draft.uid || draft.uid !== authUser.value?.uid) { clearEquipDraftLocal(); return; }
       if(!draft.savedAt || Date.now() - draft.savedAt > 14*24*60*60*1000) { clearEquipDraftLocal(); return; }
       const hasContent = draft.data && Object.values(draft.data).some(arr => Array.isArray(arr) && arr.length);
       if(!hasContent) { clearEquipDraftLocal(); return; }
@@ -14020,9 +14093,11 @@ Teruskan tukar emel?`)) return;
     const CCTV_WARRANTY_VENDORS = ['MK Eratan Sdn Bhd','Data Karisma Sdn Bhd','VME Broadcast Sdn Bhd','Lain-lain'];
     const warranty = ref([]);
     const warrantyLoading = ref(false);
-    const warrantyModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{
+    // equipKey/bulk/bulkKeys drive the "pick from Urus Peralatan" UI and are
+    // never saved; data.equipRef ({kind, uid}) is — see warrantyEquipGroups.
+    const warrantyModal = reactive({ show:false, editing:false, err:'', _editId:null, equipKey:'', bulk:false, bulkKeys:[], data:{
       vendor:'', vendorCustom:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
-      warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'',
+      warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'', equipRef:null,
     } });
     const warrantyFilterVendor = ref('');
     // Custom "Lain-lain" vendor names (free-typed, see submitWarranty) so
@@ -14205,13 +14280,90 @@ Teruskan tukar emel?`)) return;
     function onWarrantySiteChange() {
       const s = SITES.find(x => x.id === warrantyModal.data.siteId);
       warrantyModal.data.siteName = s?.name || '';
+      // The picked unit(s) belonged to the previous site.
+      warrantyModal.equipKey = ''; warrantyModal.bulkKeys = []; warrantyModal.data.equipRef = null;
+    }
+
+    // ── Waranti ← Urus Peralatan Site (CCTV) ── Like Rekod RMA: pick a unit
+    // from the site's equipment to fill the form, or tick several to create
+    // one warranty each with the shared vendor/dates. data.equipRef {kind,
+    // uid} links a record to its row (🛡 badge in Urus Peralatan, auto-
+    // archive when the unit is removed); serial is the fallback link for
+    // records keyed in by hand.
+    const _WARRANTY_EQUIP_KINDS = [['cameras','Kamera'],['nvr','Server/NVR/SAN'],['hdd','Hard Disk'],['switches','POE/Network Switch'],['alarms','Alarm SMS'],['misc','Lain-lain']];
+    function _warrantyEquipName(kind, u) {
+      if(kind === 'cameras') return ('Kamera ' + (u.name || u.model || '')).trim();
+      if(kind === 'hdd') return ('Hard Disk ' + (u.capacity || u.model || '') + (u.nvrRef ? ' (' + u.nvrRef + ')' : '')).trim();
+      if(kind === 'misc') return u.name || u.category || u.model || '';
+      return u.name || u.model || '';
+    }
+    // Per-site lookup of warranty records: by linked row uid, and by serial
+    // (not for Lain-lain, whose "No. Siri / Kuantiti" often holds "2 unit").
+    // When a unit has several, the one ending last wins.
+    function _warrantyIndexFor(siteId, excludeId) {
+      const byUid = {}, bySerial = {};
+      const keep = (m, k, w) => { if(!m[k] || (w.endDate || '') > (m[k].endDate || '')) m[k] = w; };
+      warranty.value.forEach(w => {
+        if(w.siteId !== siteId || w.id === excludeId) return;
+        if(w.equipRef?.uid) keep(byUid, w.equipRef.uid, w);
+        const k = w.equipRef?.kind === 'misc' ? '' : _realSerialKey(w.serial);
+        if(k) keep(bySerial, k, w);
+      });
+      return { byUid, bySerial };
+    }
+    function _warrantyFromIndex(idx, kind, item) {
+      if(!item) return null;
+      if(item._uid && idx.byUid[item._uid]) return idx.byUid[item._uid];
+      const k = kind === 'misc' ? '' : _realSerialKey(_rmaUnitOf(item).serial);
+      return (k && idx.bySerial[k]) || null;
+    }
+    const warrantyEquipGroups = computed(() => {
+      const d = warrantyModal.data;
+      if(!warrantyModal.show || !d.siteId) return [];
+      const eq = siteEquip.value[d.siteId] || {};
+      const idx = _warrantyIndexFor(d.siteId, warrantyModal.editing ? warrantyModal._editId : null);
+      return _WARRANTY_EQUIP_KINDS.map(([kind, label]) => ({
+        kind, label,
+        items: (eq[kind] || []).map((it, i) => {
+          // A 🔁 stand-in row: the warranty belongs to the site's own unit.
+          const u = _rmaUnitOf(it);
+          const name = _warrantyEquipName(kind, u);
+          const has = _warrantyFromIndex(idx, kind, it);
+          return {
+            key: kind + '|' + (it._uid || 'i' + i), kind, uid: it._uid || null, unit: u, name,
+            label: `${name || '(tanpa nama)'}${u.serial ? ' — SN ' + u.serial : ''}${it._temp ? ' [unit asal]' : ''}${has ? ' 🛡' : ''}`,
+            existing: has,
+          };
+        }),
+      })).filter(g => g.items.length);
+    });
+    // Bulk only applies when adding, at a site that has equipment to tick —
+    // otherwise the form falls back to the single (manual) fields.
+    const warrantyBulkActive = computed(() => warrantyModal.bulk && !warrantyModal.editing && warrantyEquipGroups.value.length > 0);
+    const _warrantyEquipByKey = computed(() => Object.fromEntries(warrantyEquipGroups.value.flatMap(g => g.items.map(o => [o.key, o]))));
+    const warrantyPickedExisting = computed(() => _warrantyEquipByKey.value[warrantyModal.equipKey]?.existing || null);
+    function onWarrantyEquipPick() {
+      const d = warrantyModal.data, o = _warrantyEquipByKey.value[warrantyModal.equipKey];
+      if(!o) { d.equipRef = null; return; } // "Isi manual" — keep whatever is typed
+      d.equipRef = { kind: o.kind, uid: o.uid };
+      d.equipmentName = o.name; d.brand = o.unit.brand || ''; d.model = o.unit.model || ''; d.serial = o.unit.serial || '';
+      // Tarikh Mula defaults to the unit's Tarikh Pasang — replaced on the
+      // next pick too, but never over a date the user typed in.
+      if(!d.startDate || d.startDate === _warrantyAutoStart) { d.startDate = o.unit.installDate || ''; _warrantyAutoStart = d.startDate; }
+    }
+    let _warrantyAutoStart = '';
+    function toggleWarrantyBulkGroup(g) {
+      const keys = g.items.map(o => o.key);
+      const all = keys.every(k => warrantyModal.bulkKeys.includes(k));
+      warrantyModal.bulkKeys = all ? warrantyModal.bulkKeys.filter(k => !keys.includes(k)) : [...new Set([...warrantyModal.bulkKeys, ...keys])];
     }
     function openAddWarranty() {
       if(!canAddWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       warrantyModal.editing = false; warrantyModal.err = '';
+      warrantyModal.equipKey = ''; warrantyModal.bulk = false; warrantyModal.bulkKeys = []; _warrantyAutoStart = '';
       Object.assign(warrantyModal.data, {
         vendor:'', vendorCustom:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
-        warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'',
+        warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'', equipRef:null,
       });
       warrantyModal.show = true;
     }
@@ -14229,16 +14381,27 @@ Teruskan tukar emel?`)) return;
         siteId:w.siteId||'', siteName:w.siteName||'',
         equipmentName:w.equipmentName||'', brand:w.brand||'', model:w.model||'', serial:w.serial||'',
         warrantyType:w.warrantyType||'', startDate:w.startDate||'', endDate:w.endDate||'',
-        reminderDays:w.reminderDays||60, notes:w.notes||'',
+        reminderDays:w.reminderDays||60, notes:w.notes||'', equipRef:w.equipRef||null,
       });
       warrantyModal._editId = w.id;
-      warrantyModal.show = true;
+      warrantyModal.bulk = false; warrantyModal.bulkKeys = []; _warrantyAutoStart = '';
+      warrantyModal.show = true; // warrantyEquipGroups is only built while open
+      // Show the linked unit in the picker (by row uid, else by serial for a
+      // record keyed in by hand) — without overwriting the saved fields.
+      const opts = warrantyEquipGroups.value.flatMap(g => g.items);
+      const sk = _realSerialKey(w.serial);
+      const hit = (w.equipRef?.uid && opts.find(o => o.uid === w.equipRef.uid))
+        || (sk && opts.find(o => o.kind !== 'misc' && _realSerialKey(o.unit.serial) === sk));
+      warrantyModal.equipKey = hit ? hit.key : '';
+      // A hand-keyed record matched by serial gets linked on its next save.
+      if(hit?.uid && !warrantyModal.data.equipRef) warrantyModal.data.equipRef = { kind: hit.kind, uid: hit.uid };
     }
     async function submitWarranty() {
       const allowed = warrantyModal.editing ? canEditWarranty.value : canAddWarranty.value;
       if(!allowed){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       warrantyModal.err = '';
       const d = warrantyModal.data;
+      if(warrantyBulkActive.value) return _submitWarrantyBulk();
       d.equipmentName = (d.equipmentName||'').trim();
       if(!d.vendor || !d.siteId || !d.equipmentName || !d.startDate || !d.endDate) {
         warrantyModal.err = 'Vendor, site, nama peralatan, tarikh mula dan tarikh tamat wajib diisi.'; return;
@@ -14246,6 +14409,13 @@ Teruskan tukar emel?`)) return;
       if(d.endDate < d.startDate) {
         warrantyModal.err = 'Tarikh tamat mesti selepas tarikh mula.'; return;
       }
+      // Same unit already covered by another record (linked row, or same
+      // serial at this site) — usually a double entry, but a renewed/extended
+      // warranty is legitimate, so ask rather than block.
+      const idx = _warrantyIndexFor(d.siteId, warrantyModal.editing ? warrantyModal._editId : null);
+      const sk = d.equipRef?.kind === 'misc' ? '' : _realSerialKey(d.serial);
+      const dupe = (d.equipRef?.uid && idx.byUid[d.equipRef.uid]) || (sk && idx.bySerial[sk]);
+      if(dupe && !await askConfirm(`Peralatan ini sudah ada rekod waranti: "${dupe.equipmentName}" (${dupe.vendor || '-'}, tamat ${fmtDate(dupe.endDate)}).\n\nTeruskan tambah rekod lain untuk peralatan yang sama?`)) return;
       loading.value = true;
       try {
         const vendor = (d.vendor === 'Lain-lain' && d.vendorCustom.trim()) ? d.vendorCustom.trim() : d.vendor;
@@ -14269,6 +14439,58 @@ Teruskan tukar emel?`)) return;
       } catch(e) { warrantyModal.err = 'Ralat: ' + e.message; }
       loading.value = false;
     }
+    // "Pilih beberapa peralatan" — one warranty per ticked unit, sharing the
+    // form's vendor/dates/type/notes. Written as one batch (chunked only past
+    // Firestore's 500-write cap), so a normal selection saves all or nothing.
+    async function _submitWarrantyBulk() {
+      const d = warrantyModal.data;
+      const picked = warrantyModal.bulkKeys.map(k => _warrantyEquipByKey.value[k]).filter(Boolean);
+      if(!d.vendor || !d.siteId || !d.startDate || !d.endDate) {
+        warrantyModal.err = 'Vendor, site, tarikh mula dan tarikh tamat wajib diisi.'; return;
+      }
+      if(!picked.length) { warrantyModal.err = 'Sila tanda sekurang-kurangnya satu peralatan.'; return; }
+      if(d.endDate < d.startDate) { warrantyModal.err = 'Tarikh tamat mesti selepas tarikh mula.'; return; }
+      const covered = picked.filter(o => o.existing);
+      if(covered.length && !await askConfirm(`${covered.length} daripada ${picked.length} peralatan terpilih sudah ada rekod waranti (🛡):\n${covered.slice(0,5).map(o => '• ' + o.name).join('\n')}${covered.length > 5 ? `\n• … dan ${covered.length - 5} lagi` : ''}\n\nTeruskan tambah rekod baru untuk semua?`)) return;
+      loading.value = true;
+      try {
+        const vendor = (d.vendor === 'Lain-lain' && d.vendorCustom.trim()) ? d.vendorCustom.trim() : d.vendor;
+        const shared = { vendor, siteId: d.siteId, siteName: d.siteName, warrantyType: d.warrantyType || '',
+          startDate: d.startDate, endDate: d.endDate, reminderDays: d.reminderDays || 60, notes: d.notes || '' };
+        const rows = picked.map(o => ({ ...shared, equipmentName: o.name || '(tanpa nama)', brand: o.unit.brand || '', model: o.unit.model || '',
+          serial: o.unit.serial || '', equipRef: { kind: o.kind, uid: o.uid } }));
+        const CHUNK = 450, saved = [];
+        for(let i = 0; i < rows.length; i += CHUNK) {
+          const batch = db.batch();
+          rows.slice(i, i + CHUNK).forEach(r => {
+            const ref = db.collection('equipmentWarranty').doc();
+            batch.set(ref, { ...r, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+            saved.push([ref.id, r]);
+          });
+          await _fw(batch.commit());
+        }
+        const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
+        saved.forEach(([id, r]) => _localUpsert(warranty, id, { ...r, createdAt: _fakeServerTimestamp() }, sortByEnd));
+        logAudit('WARRANTY_ADD', `${rows.length} peralatan — ${d.siteName} (pukal)`);
+        showToast(`${rows.length} rekod waranti berjaya ditambah!`);
+        flashSavedCheckmark();
+        warrantyModal.show = false;
+      } catch(e) { warrantyModal.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    // 🛡 on Urus Peralatan rows (CCTV only) — the unit's warranty, if any.
+    // Internal reference only: never part of the PM/CM borang.
+    const _siteWarrantyIndex = computed(() => (currentProject.value === 'vir' || !selSite.value) ? null : _warrantyIndexFor(selSite.value.id, null));
+    function equipWarrantyOf(item, kind) {
+      const idx = _siteWarrantyIndex.value;
+      return idx ? _warrantyFromIndex(idx, kind, item) : null;
+    }
+    function equipWarrantyTitle(w) {
+      const st = warrantyStatus(w);
+      return (st === 'expired' ? 'Waranti TAMAT' : st === 'expiring' ? 'Waranti hampir tamat' : 'Waranti aktif')
+        + ` — ${fmtDate(w.endDate)} (${w.vendor || '-'})` + (canEditWarranty.value ? '. Klik untuk buka rekod waranti.' : '');
+    }
+    function openEquipWarranty(w) { if(w && canEditWarranty.value) openEditWarranty(w); }
     async function deleteWarranty(w) {
       if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!await askConfirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
@@ -15861,7 +16083,7 @@ tr.late td{background:#fff3e0}
     // ---- Reset defaults ----
     const FORM_DEFAULTS = {
       nCam:  {outOfScope:false,name:'',ip:'',camType:'',brand:'',brandCustom:'',model:'',modelCustom:'',accessory:'',accessoryCustom:'',serial:'',installDate:'',accessUser:'',accessPw:'',nvrRef:'',nvrRefCustom:'',hasRedundancy:false,redundantNvrRef:'',redundantNvrRefCustom:'',equipNota:''},
-      nNVR:  {outOfScope:false,name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:'',channelLicense:''},
+      nNVR:  {outOfScope:false,name:'',type:'',role:'Primary',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:'',channelLicense:'',licenseCovers:[]},
       nHDD:  {outOfScope:false,brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',capacity:'',capacityCustom:'',totalUnit:'',config:'',nvrRef:'',nvrRefCustom:'',installDate:''},
       nSW:   {outOfScope:false,name:'',brand:'',brandCustom:'',model:'',modelCustom:'',serial:'',ip:'',installDate:'',nota:'',accessUser:'',accessPw:''},
       nRoom: {name:'', nameCustom:'', system:'BCD', excludedGroups:[]},
@@ -20034,6 +20256,7 @@ tr.late td{background:#fff3e0}
     function resetForm(formName) {
       const refs = { nCam, nNVR, nHDD, nSW, nALM, nMISC, nServer, nTablet, nRoom };
       Object.assign(refs[formName], FORM_DEFAULTS[formName]);
+      if(formName === 'nNVR') nNVR.licenseCovers = []; // fresh array, not FORM_DEFAULTS' own
       delete refs[formName]._temp; delete refs[formName]._changes; // not form fields — never let one carry into the next item (see _equipEditTemp)
       // FORM_DEFAULTS.nServer's brand/model assume Optager (its only real
       // appliance) — VCS is a different vendor, so override to its own
@@ -22503,6 +22726,7 @@ Teruskan tukar emel?`)) return;
     function _finishOpenSiteEquipPage(site) {
       page.value = 'site-equip';
       ensureSite(site.id);
+      if(currentProject.value !== 'vir') loadWarranty(); // 🛡 status on CCTV rows (cached/live — see equipWarrantyOf)
       // Defensive fallback: for the VIR "rooms" view, equipVirRoomUid is
       // deliberately null (see openSiteEquip), so the Optager facade
       // resolves to undefined here — that's expected (the rooms view never
@@ -23037,41 +23261,78 @@ Teruskan tukar emel?`)) return;
     const hddGroupedByNvr = computed(() => _groupByNvr(equipView.value.hdd, selSiteEquip.value.nvr));
     const camerasGroupedByNvr = computed(() => _groupByNvr(equipView.value.cameras, selSiteEquip.value.nvr));
     // ---- Camera licence capacity per NVR/server (CCTV) ----
-    // Each NVR's licence caps how many cameras it may record (a lokap NVR
-    // has its own). Usage = cameras whose "NVR Berkaitan" is that NVR —
-    // out-of-scope and stand-in units included, since they still take a
-    // channel; a redundancy backup (redundantNvrRef) takes none.
+    // A licence caps how many cameras may be recorded. It sits on one NVR/
+    // server row (channelLicense) and covers that NVR's cameras plus any
+    // other NVRs ticked in licenseCovers (their _uids) — e.g. a BVMS licence
+    // that also takes the lokap NVR's cameras (Negeri Sembilan), vs one that
+    // doesn't (Johor, where the lokap NVR has no licence at all). Usage =
+    // cameras whose "NVR Berkaitan" is a covered NVR — out-of-scope and
+    // stand-in units included, since they still take a channel; a
+    // redundancy backup (redundantNvrRef) takes none.
     function nvrLicenseRows(eq) {
       const nvrs = eq?.nvr || [];
-      const names = new Set(nvrs.map(n => String(n?.name || '').trim()).filter(Boolean));
+      const nameOf = n => String(n?.name || '').trim();
+      const names = new Set(nvrs.map(nameOf).filter(Boolean));
+      const byUid = Object.fromEntries(nvrs.filter(n => n?._uid).map(n => [n._uid, n]));
       const used = {};
       let unlinked = 0;
       (eq?.cameras || []).forEach(c => {
         const ref = String(c?.nvrRef || '').trim();
         if(names.has(ref)) used[ref] = (used[ref] || 0) + 1; else unlinked++;
       });
+      const coverCount = {}; // NVR name → how many licences count its cameras
       const rows = nvrs.filter(n => +n?.channelLicense > 0).map(n => {
-        const name = String(n.name || '').trim(), lic = +n.channelLicense, u = used[name] || 0, left = lic - u;
+        const name = nameOf(n), lic = +n.channelLicense;
+        // Covered NVRs that still exist (a deleted one just drops out).
+        const others = [...new Set((n.licenseCovers || []).map(u => nameOf(byUid[u])).filter(x => x && x !== name))];
+        const covered = [name, ...others];
+        covered.forEach(x => { coverCount[x] = (coverCount[x] || 0) + 1; });
+        const u = covered.reduce((a, x) => a + (used[x] || 0), 0), left = lic - u;
         const state = left < 0 ? 'over' : left === 0 ? 'full' : left <= Math.max(2, Math.ceil(lic * 0.1)) ? 'low' : 'ok';
-        return { uid: n._uid || '', name, brand: n.brand || '', model: n.model || '', lic, used: u, left, state };
+        return { uid: n._uid || '', name, others, label: others.length ? `${name} (+ ${others.join(' + ')})` : name,
+          brand: n.brand || '', model: n.model || '', lic, used: u, left, state };
       });
-      return { rows, unlinked };
+      // Two licences counting the same NVR's cameras double-count them.
+      const overlap = Object.keys(coverCount).filter(x => coverCount[x] > 1 && used[x]);
+      // NVRs with cameras that no licence covers — shown as a quiet note so
+      // "no licence" reads as deliberate, not forgotten (only once the site
+      // has at least one licence recorded).
+      const noLicense = rows.length ? nvrs.map(nameOf).filter(x => x && !coverCount[x] && used[x]).map(x => ({ name: x, cams: used[x] })) : [];
+      return { rows, unlinked, overlap, noLicense };
     }
     function licenseCapLabel(r) {
       return r.state === 'over' ? `melebihi ${-r.left}` : r.state === 'full' ? 'penuh' : `baki ${r.left}`;
     }
     function licenseCapTitle(r) {
-      return `${r.name}: ${r.used} kamera disambung daripada ${r.lic} lesen` + (r.left > 0 ? ` — boleh tambah ${r.left} kamera lagi.` : r.left === 0 ? ' — lesen penuh.' : ` — melebihi lesen sebanyak ${-r.left}.`);
+      return `${r.label}: ${r.used} kamera disambung daripada ${r.lic} lesen` + (r.left > 0 ? ` — boleh tambah ${r.left} kamera lagi.` : r.left === 0 ? ' — lesen penuh.' : ` — melebihi lesen sebanyak ${-r.left}.`);
     }
     const equipLicenseSummary = computed(() => {
-      if(currentProject.value === 'vir') return { rows: [], unlinked: 0, byUid: {}, byName: {} };
+      if(currentProject.value === 'vir') return { rows: [], unlinked: 0, overlap: [], noLicense: [], byUid: {}, byName: {}, coveredBy: {} };
       const s = nvrLicenseRows(selSiteEquip.value);
-      return { ...s, byUid: Object.fromEntries(s.rows.filter(r => r.uid).map(r => [r.uid, r])), byName: Object.fromEntries(s.rows.map(r => [r.name, r])) };
+      // coveredBy: a covered NVR's name → the licence row that counts it
+      // (lets that NVR's own row/camera group show "dalam lesen X").
+      const coveredBy = {};
+      s.rows.forEach(r => r.others.forEach(x => { if(!coveredBy[x]) coveredBy[x] = r; }));
+      return { ...s, coveredBy, byUid: Object.fromEntries(s.rows.filter(r => r.uid).map(r => [r.uid, r])), byName: Object.fromEntries(s.rows.map(r => [r.name, r])) };
     });
     function nvrLicenseOf(n) {
       const m = equipLicenseSummary.value;
       return (n?._uid && m.byUid[n._uid]) || m.byName[String(n?.name || '').trim()] || null;
     }
+    // The licence counting an NVR's cameras: its own, else the one covering it.
+    function nvrLicenseCovering(name) {
+      const m = equipLicenseSummary.value, k = String(name || '').trim();
+      return m.byName[k] || m.coveredBy[k] || null;
+    }
+    // Other NVRs at this site a licence on the NVR being edited can cover.
+    const nvrCoverOptions = computed(() => {
+      if(currentProject.value === 'vir') return [];
+      const list = selSiteEquip.value.nvr || [];
+      const selfUid = equipEditIdx.nvr !== null ? list[equipEditIdx.nvr]?._uid : null;
+      const cams = {};
+      (selSiteEquip.value.cameras || []).forEach(c => { const k = String(c?.nvrRef || '').trim(); if(k) cams[k] = (cams[k] || 0) + 1; });
+      return list.filter(n => n?._uid && n._uid !== selfUid).map(n => ({ uid: n._uid, name: String(n.name || '').trim() || '(tanpa nama)', cams: cams[String(n.name || '').trim()] || 0 }));
+    });
     // "Senarai Bilik" filter — the list otherwise always shows every room
     // for the site regardless of system, which is correct for management
     // but can look like a bug when a room of the "wrong" system shows up
@@ -23384,6 +23645,9 @@ Teruskan tukar emel?`)) return;
       // keeps a log entry instead of vanishing with it.
       list.filter(it => sel.has(it._uid) && it._temp?.original).forEach(it =>
         _logEquipRemoval(selSite.value.id, kind, it._temp.original, 'rekod-asal', 'Rekod unit asal — dipadam bersama unit gantian sementara'));
+      // CCTV: their warranty records go to Tong Sampah too, same as a single
+      // delete (VIR left as it was — bulk delete never touched its warranties).
+      const removedUnits = currentProject.value !== 'vir' ? list.filter(it => sel.has(it._uid)).map(it => ({ ...it })) : [];
       for(let i=list.length-1; i>=0; i--) { if(sel.has(list[i]._uid)) list.splice(i,1); }
       fadeUids.forEach(u => equipFadingUids.delete(u));
       sel.clear();
@@ -23396,6 +23660,7 @@ Teruskan tukar emel?`)) return;
         else equipEditIdx[kind] = newIdx; // re-sync to its shifted position
       }
       showToast('Rekod terpilih berjaya dipadam! Jangan lupa klik "Simpan Semua".');
+      if(removedUnits.length) await _archiveWarrantiesFor(selSite.value.id, removedUnits);
     }
     // Bulk-edit: apply one field's value to every currently-selected row in
     // a single equipment list at once (reuses the same equipSelected Sets
@@ -23548,6 +23813,8 @@ Teruskan tukar emel?`)) return;
       // stored with the equipment, which more roles can read).
       if((before?.accessUser || '') !== (after?.accessUser || '') || (before?.accessPw || '') !== (after?.accessPw || ''))
         out.push({ f: 'Kelayakan akses', from: '', to: '(dikemas kini)' });
+      if(JSON.stringify(before?.licenseCovers || []) !== JSON.stringify(after?.licenseCovers || []))
+        out.push({ f: 'Liputan Lesen', from: '', to: '(dikemas kini)' });
       if(!!before?.outOfScope !== !!after?.outOfScope)
         out.push({ f: 'Skop', from: before?.outOfScope ? 'Luar skop' : 'Dalam skop', to: after?.outOfScope ? 'Luar skop' : 'Dalam skop' });
       return out;
@@ -23638,6 +23905,7 @@ Teruskan tukar emel?`)) return;
       if(m.key === 'nvr') {
         restored.name = cur.name;
         if(cur.channelLicense) restored.channelLicense = cur.channelLicense; else delete restored.channelLicense;
+        if(cur.licenseCovers?.length) restored.licenseCovers = [...cur.licenseCovers]; else delete restored.licenseCovers;
       }
       if(m.key === 'cameras' || m.key === 'hdd') restored.nvrRef = cur.nvrRef || '';
       if(m.key === 'cameras') restored.redundantNvrRef = cur.redundantNvrRef || '';
@@ -23897,6 +24165,7 @@ Teruskan tukar emel?`)) return;
       // no note would otherwise keep the PREVIOUS row's note in the form and
       // save it onto this one.
       if(key === 'cameras') nCam.equipNota = item.equipNota || '';
+      if(key === 'nvr') nNVR.licenseCovers = [...(item.licenseCovers || [])]; // own copy — never the saved row's array
       if(key === 'misc') nMISC.equipNota = item.equipNota || '';
       if(key === 'servers') nServer.lan2Ip = item.lan2Ip || ''; // older appliances have no lan2Ip — don't inherit the previous row's
       if(key === 'tablets') nTablet.imei = item.imei || '';   // same for tablets saved before the IMEI field existed
@@ -24228,6 +24497,11 @@ Teruskan tukar emel?`)) return;
       if(lic && !/^\d+$/.test(lic)) { showToast('Lesen Kamera mesti nombor bulat (cth: 68)','error'); return; }
       if(+lic > 0 && currentProject.value !== 'vir') resolved.channelLicense = +lic;
       else delete resolved.channelLicense;
+      // Other NVRs this licence also covers — only with a licence, only
+      // NVRs still at the site (and never itself); stored only when set.
+      const coverable = new Set(nvrCoverOptions.value.map(o => o.uid));
+      const covers = resolved.channelLicense ? [...new Set(nNVR.licenseCovers || [])].filter(u => coverable.has(u)) : [];
+      if(covers.length) resolved.licenseCovers = covers; else delete resolved.licenseCovers;
       ensureSite(selSite.value.id);
       const list = activeEquip()[selSite.value.id].nvr;
       const dup = _findDupConflict('nvr', list, resolved, equipEditIdx.nvr);
@@ -24673,27 +24947,44 @@ Teruskan tukar emel?`)) return;
       // carry the same placeholder (e.g. removing a Rack with serial "-"
       // archiving the UPS warranty also recorded with "-"). Case/whitespace
       // are normalised so a genuinely matching warranty isn't missed either.
-      const _serialKey = _realSerialKey(itemSnapshot.serial);
-      if(_serialKey) {
-        const isVirWty = currentProject.value === 'vir';
-        const warrantyList = isVirWty ? virWarranty.value : warranty.value;
-        const match = warrantyList.find(w => _realSerialKey(w.serial) === _serialKey && w.siteId === siteId);
-        if(match) {
-          if(isVirWty ? canEditVirWarranty.value : canEditWarranty.value) {
-            try {
-              const coll = isVirWty ? 'virEquipmentWarranty' : 'equipmentWarranty';
-              const delColl = isVirWty ? 'deletedVirEquipmentWarranty' : 'deletedEquipmentWarranty';
-              const localRef = isVirWty ? virWarranty : warranty;
-              const data = await _softDeleteToTrash(coll, delColl, match.id);
-              localRef.value = localRef.value.filter(x => x.id !== match.id);
-              await logAudit(isVirWty ? 'VIR_WARRANTY_DELETE' : 'WARRANTY_DELETE', `${match.equipmentName} — ${match.siteName} (auto: peralatan dibuang)`);
-              showUndoToast('Peralatan ini ada rekod waranti aktif — turut dipindah ke Tong Sampah.', () => _undoSoftDelete(coll, delColl, match.id, data, localRef));
-            } catch(e) { console.warn('Gagal arkibkan rekod waranti berkaitan:', e); }
-          } else {
-            showToast(`Peralatan ini ada rekod waranti aktif ("${match.equipmentName}") — sila maklumkan admin untuk kemaskini rekod tersebut.`, 'error');
-          }
-        }
+      await _archiveWarrantiesFor(siteId, [itemSnapshot]);
+    }
+    // The warranty records tied to removed units (see the note above).
+    // CCTV: every record linked to the row (equipRef.uid) or carrying the
+    // unit's serial — the stand-in's or its original's — at that site; a
+    // unit can hold more than one (renewal/extension, bulk entry), and
+    // archiving only the first left the rest "active" for gone hardware.
+    // VIR: unchanged — the first record with the unit's own serial.
+    async function _archiveWarrantiesFor(siteId, items) {
+      const isVirWty = currentProject.value === 'vir';
+      const uids = new Set(isVirWty ? [] : items.map(it => it?._uid).filter(Boolean));
+      const serials = new Set(items.flatMap(it => isVirWty ? [it?.serial] : [it?.serial, it?._temp?.original?.serial]).map(_realSerialKey).filter(Boolean));
+      if(!uids.size && !serials.size) return;
+      const localRef = isVirWty ? virWarranty : warranty;
+      let matches = localRef.value.filter(w => w.siteId === siteId
+        && ((w.equipRef?.uid && uids.has(w.equipRef.uid)) || (w.equipRef?.kind !== 'misc' && serials.has(_realSerialKey(w.serial)))));
+      if(isVirWty) matches = matches.slice(0, 1);
+      if(!matches.length) return;
+      if(!(isVirWty ? canEditVirWarranty.value : canEditWarranty.value)) {
+        showToast(matches.length > 1
+          ? `${matches.length} rekod waranti masih aktif untuk peralatan yang dibuang — sila maklumkan admin untuk kemaskini rekod tersebut.`
+          : `Peralatan ini ada rekod waranti aktif ("${matches[0].equipmentName}") — sila maklumkan admin untuk kemaskini rekod tersebut.`, 'error');
+        return;
       }
+      const coll = isVirWty ? 'virEquipmentWarranty' : 'equipmentWarranty';
+      const delColl = isVirWty ? 'deletedVirEquipmentWarranty' : 'deletedEquipmentWarranty';
+      const done = [];
+      for(const m of matches) {
+        try {
+          done.push([m.id, await _softDeleteToTrash(coll, delColl, m.id)]);
+          await logAudit(isVirWty ? 'VIR_WARRANTY_DELETE' : 'WARRANTY_DELETE', `${m.equipmentName} — ${m.siteName} (auto: peralatan dibuang)`);
+        } catch(e) { console.warn('Gagal arkibkan rekod waranti berkaitan:', e); }
+      }
+      if(!done.length) return;
+      const ids = new Set(done.map(([id]) => id));
+      localRef.value = localRef.value.filter(x => !ids.has(x.id));
+      showUndoToast(done.length > 1 ? `${done.length} rekod waranti peralatan yang dibuang turut dipindah ke Tong Sampah.` : 'Peralatan ini ada rekod waranti aktif — turut dipindah ke Tong Sampah.',
+        async () => { for(const [id, data] of done) await _undoSoftDelete(coll, delColl, id, data, localRef); });
     }
     // Concurrent-edit guard for equipment docs. Every save stamps the doc
     // with a fresh random `_rev` (+ _revBy/_revAt). _equipRev holds, per
@@ -25082,13 +25373,13 @@ Teruskan tukar emel?`)) return;
       const eq = {};
       Object.keys(OOS_KIND_LABEL).forEach(k => { eq[k] = (eqAll[k] || []).filter(x => !x?.outOfScope); });
       pm.outOfScope = Object.keys(OOS_KIND_LABEL).flatMap(k =>
-        _stripEquipCreds((eqAll[k] || []).filter(x => x?.outOfScope)).map(({ equipNota, channelLicense, ...x }) => ({ ...x, _kind:k, status:'Baik', nota:'' })));
+        _stripEquipCreds((eqAll[k] || []).filter(x => x?.outOfScope)).map(({ equipNota, channelLicense, licenseCovers, ...x }) => ({ ...x, _kind:k, status:'Baik', nota:'' })));
 
       // equipNota (Urus Peralatan's internal camera note) is stripped — it
       // must never reach the PM/CM borang or the saved record. Same for an
       // NVR's camera licence count (internal capacity record, see nvrLicenseRows).
       pm.cameras = _stripEquipCreds(eq.cameras).map(({equipNota, ...c})=>({...c,display:'Baik',icam:'Baik',nota:''}));
-      pm.nvr = _stripEquipCreds(eq.nvr).map(({channelLicense, ...n})=>({...n,asmOp:'Baik',status:'Baik'}));
+      pm.nvr = _stripEquipCreds(eq.nvr).map(({channelLicense, licenseCovers, ...n})=>({...n,asmOp:'Baik',status:'Baik'}));
       pm.hdd = _groupHddForPm(_stripEquipCreds(eq.hdd).map(h=>({...h,totalUnit:h.totalUnit||'1',raidType:['RAID 0','RAID 1','RAID 5'].includes(h.config)?h.config:'RAID 5',status:'Baik'})));
       pm.switches = _stripEquipCreds(eq.switches).map(s=>({...s,errNotif:'Tiada',portStatus:'Baik',status:'Baik'}));
       pm.alarms = _stripEquipCreds(eq.alarms).map(a=>({...a,func:'Baik',status:'Baik'}));
@@ -28957,24 +29248,26 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // recorded, with how many cameras it already carries (nvrLicenseRows). ──
     const licenseCapFilter = ref('all');
     const _licenseCapAll = computed(() => {
-      const rows = [], unlinkedSites = [];
+      const rows = [], unlinkedSites = [], noLicense = [], overlap = [];
       let noData = 0;
       SITES.forEach(s => {
         const r = nvrLicenseRows(siteEquip.value[s.id]);
         if(!r.rows.length) { noData++; return; }
         r.rows.forEach(x => rows.push({ ...x, siteId: s.id, site: s.name }));
         if(r.unlinked) unlinkedSites.push({ site: s.name, n: r.unlinked });
+        r.noLicense.forEach(x => noLicense.push({ site: s.name, ...x }));
+        if(r.overlap.length) overlap.push({ site: s.name, nvrs: r.overlap });
       });
-      return { rows, unlinkedSites, noData };
+      return { rows, unlinkedSites, noData, noLicense, overlap };
     });
     const licenseCapacityReport = computed(() => _licenseCapAll.value.rows.filter(r =>
       licenseCapFilter.value === 'all' || (licenseCapFilter.value === 'tight' ? r.state !== 'ok' : r.left > 0)));
     const licenseCapTotals = computed(() => {
-      const { rows, unlinkedSites, noData } = _licenseCapAll.value;
+      const { rows, unlinkedSites, noData, noLicense, overlap } = _licenseCapAll.value;
       const lic = rows.reduce((a, r) => a + r.lic, 0), used = rows.reduce((a, r) => a + r.used, 0);
       // Baki only sums the room left; an over-licence NVR doesn't cancel another's spare channels.
       const left = rows.reduce((a, r) => a + Math.max(0, r.left), 0);
-      return { nvrs: rows.length, sites: new Set(rows.map(r => r.siteId)).size, lic, used, left, noData, unlinkedSites };
+      return { nvrs: rows.length, sites: new Set(rows.map(r => r.siteId)).size, lic, used, left, noData, unlinkedSites, noLicense, overlap };
     });
 
     // ── Senarai Site (CCTV) — per-site counts + one total row. HDD counts
@@ -28984,13 +29277,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // cameras on another (e.g. the lokap NVR). ──
     const _LIC_STATE_RANK = { ok: 0, low: 1, full: 2, over: 3 };
     function _siteLicenseCell(eq) {
-      const { rows, unlinked } = nvrLicenseRows(eq);
+      const { rows, unlinked, noLicense } = nvrLicenseRows(eq);
       if(!rows.length) return null;
       const lic = rows.reduce((a, r) => a + r.lic, 0), used = rows.reduce((a, r) => a + r.used, 0);
       const left = rows.reduce((a, r) => a + Math.max(0, r.left), 0);
       const state = rows.reduce((w, r) => _LIC_STATE_RANK[r.state] > _LIC_STATE_RANK[w] ? r.state : w, 'ok');
       const label = left > 0 ? `baki ${left}` : state === 'over' ? 'melebihi' : 'penuh';
-      const title = rows.map(r => `${r.name}: ${r.used}/${r.lic} · ${licenseCapLabel(r)}`).join('\n')
+      const title = rows.map(r => `${r.label}: ${r.used}/${r.lic} · ${licenseCapLabel(r)}`).join('\n')
+        + noLicense.map(x => `\n${x.name}: ${x.cams} kamera (tiada lesen direkod)`).join('')
         + (unlinked ? `\n⚠ ${unlinked} kamera tidak dipautkan ke NVR site ini (tidak dikira)` : '');
       return { lic, used, left, state, label, title };
     }
@@ -28998,7 +29292,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const bySite = {}, tot = { cams: 0, nvr: 0, hdd: 0, sw: 0, lic: 0, used: 0, left: 0, licSites: 0 };
       SITES.forEach(s => {
         const eq = siteEquip.value[s.id] || {};
+        // Cameras per NVR (NVR order; links to an NVR not at the site count
+        // as "Tiada NVR") — only shown when the site splits across 2+.
+        const nvrNames = (eq.nvr || []).map(n => String(n?.name || '').trim()).filter(Boolean);
+        const perNvr = {};
+        (eq.cameras || []).forEach(c => { const k = String(c?.nvrRef || '').trim(); const key = nvrNames.includes(k) ? k : 'Tiada NVR'; perNvr[key] = (perNvr[key] || 0) + 1; });
+        const camsByNvr = [...new Set(nvrNames), 'Tiada NVR'].filter(k => perNvr[k]).map(k => ({ name: k, count: perNvr[k] }));
         const st = {
+          camsByNvr: camsByNvr.length > 1 ? camsByNvr : [],
           cams: (eq.cameras || []).length, nvr: (eq.nvr || []).length,
           hdd: (eq.hdd || []).reduce((a, h) => a + (parseInt(h.totalUnit, 10) || 1), 0),
           sw: (eq.switches || []).length, lic: _siteLicenseCell(eq),
@@ -29013,7 +29314,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       await _ensureXLSX();
       const rows = licenseCapacityReport.value.map((r, i) => ({
-        '#': i+1, Site: r.site, 'NVR / Server': r.name, Brand: r.brand, Model: r.model,
+        '#': i+1, Site: r.site, 'NVR / Server': r.label, Brand: r.brand, Model: r.model,
         Lesen: r.lic, Digunakan: r.used, Baki: r.left, Status: licenseCapLabel(r),
       }));
       const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
@@ -29027,7 +29328,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       if(!['superadmin','admin'].includes(authProfile.value?.role)){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const list = licenseCapacityReport.value, t = licenseCapTotals.value;
       const tableRows = list.map((r, i) => `<tr class="${r.state}">
-        <td>${i+1}</td><td>${esc(r.site)}</td><td>${esc(r.name)}</td><td>${esc([r.brand, r.model].filter(Boolean).join(' ') || '-')}</td>
+        <td>${i+1}</td><td>${esc(r.site)}</td><td>${esc(r.label)}</td><td>${esc([r.brand, r.model].filter(Boolean).join(' ') || '-')}</td>
         <td>${r.lic}</td><td>${r.used}</td><td><b>${esc(licenseCapLabel(r))}</b></td>
       </tr>`).join('') || '<tr><td colspan="7" style="text-align:center;color:#888">Tiada rekod lesen kamera.</td></tr>';
       const w = window.open('','_blank','width=1100,height=750');
@@ -29708,7 +30009,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       tvNow.value = new Date();
       tvMode.value = true;
       loadCmCases(); // lazily-loaded collection — feeds "Kes CM Aktif" + the ticker
-      clearInterval(_tvClock); _tvClock = setInterval(() => { tvNow.value = new Date(); }, 1000);
+      // A wall display has nobody moving the mouse — without this the 30-min
+      // idle logout (see _checkIdle) signed it out and closed TV mode. While
+      // TV mode is open it counts as activity, once a minute.
+      let tvKeepAlive = 0;
+      clearInterval(_tvClock); _tvClock = setInterval(() => {
+        tvNow.value = new Date();
+        if(Date.now() - tvKeepAlive >= 60000) { tvKeepAlive = Date.now(); _recordActivity(); }
+      }, 1000);
       _tvRestartRotation();
       // Never on Urus Peralatan — loadAll() would replace siteEquip in memory
       // underneath any edit the debounced autosave hasn't written yet.
@@ -29972,7 +30280,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       CCTV_WARRANTY_VENDORS, warranty, warrantyLoading, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors, expiryRingPct,
       warrantyStatTotalCount, warrantyStatActiveCount, warrantyStatExpiringCount, warrantyStatExpiredCount,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, warrantyUrgencyBySite, onWarrantySiteChange,
-      openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
+      openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty,
+      warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, onWarrantyEquipPick, toggleWarrantyBulkGroup,
+      equipWarrantyOf, equipWarrantyTitle, openEquipWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCategoryColor, letterMemoCustomCategories,
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
       onLetterMemoSiteChange, onLetterMemoProjectChange, openAddLetterMemo, openEditLetterMemo, submitLetterMemo, deleteLetterMemo,
@@ -30008,7 +30318,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       equipHideableCols, equipHiddenCols, equipColPickerOpen, isEquipColHidden, toggleEquipCol, resetEquipCols,
       equipSaveStatusHere, equipSaveStatusText, equipIpClash, equipFormIpClash, ipCellTitle, copyIp, equipSerialClash, equipFormSerialClash, serialCellTitle,
       licenseExpiryState, licenseExpiryNote, equipLicenseAlert,
-      equipLicenseSummary, nvrLicenseOf, licenseCapLabel, licenseCapTitle,
+      equipLicenseSummary, nvrLicenseOf, nvrLicenseCovering, nvrCoverOptions, licenseCapLabel, licenseCapTitle,
       licenseCapFilter, licenseCapacityReport, licenseCapTotals, exportLicenseCapExcel, exportLicenseCapPdf, cctvSiteStats, removeNvrLinked,
       brandOptionsFor, modelOptionsFor, isRecentEquip, equipAgeColor, equipAgeTitle,
       customEquipCleanup, customEquipCleanupBrandList, customEquipCleanupList, removeCustomModel, clearAllCustomModels,
