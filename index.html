@@ -1731,12 +1731,66 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .dark-mode .rma-type-pick label.active{border-color:#90caf9;background:#1a2230}
 .dark-mode .rma-type-badge.is-rma{background:#1a2a40;color:#90caf9}
 .dark-mode .rma-type-badge.is-servis{background:#1e3a24;color:#81c784}
+/* Waranti: Ringkasan Urgency Ikut Site (cards) */
+.wurg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.wurg-card{display:flex;flex-direction:column;gap:6px;text-align:left;padding:10px 12px;border:1px solid #dde2e9;border-left:4px solid #2e7d32;border-radius:8px;background:#fff;cursor:pointer;font:inherit;color:inherit;transition:border-color .15s,background .15s}
+.wurg-card:hover{background:#f6f8fb;border-color:#b9c4d3}
+.wurg-card:focus-visible{outline:2px solid #003366;outline-offset:2px}
+.wurg-card.is-urgent{border-left-color:#c62828}
+.wurg-card.is-watch{border-left-color:#f57c00}
+.wurg-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.wurg-name{font-weight:700;font-size:.92rem;color:#003366}
+.wurg-state{flex-shrink:0;padding:1px 8px;border-radius:9px;font-size:.68rem;font-weight:700;background:#e8f5e9;color:#2e7d32}
+.wurg-card.is-urgent .wurg-state{background:#fdecea;color:#c62828}
+.wurg-card.is-watch .wurg-state{background:#fff3e0;color:#b45309}
+.wurg-full{font-size:.72rem;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:-4px}
+.wurg-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:#e9edf3}
+.wurg-bar i{display:block;height:100%}
+.wurg-bar i.is-expired{background:#c62828}.wurg-bar i.is-expiring{background:#f57c00}.wurg-bar i.is-active{background:#2e7d32}
+.wurg-chips{display:flex;flex-wrap:wrap;gap:4px}
+.wurg-chip{padding:0 7px;border-radius:9px;font-size:.7rem;font-weight:600}
+.wurg-chip.is-expired{background:#fdecea;color:#c62828}
+.wurg-chip.is-expiring{background:#fff3e0;color:#b45309}
+.wurg-chip.is-active{background:#e8f5e9;color:#2e7d32}
+.wurg-ok{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;margin-top:10px;padding:8px 12px;border:1px dashed #c9d3e0;border-radius:8px;background:none;font:inherit;font-size:.8rem;color:#2e7d32;cursor:pointer;text-align:left}
+.wurg-ok:hover{background:#f6f8fb}
+.wurg-ok-names{color:#888}
+.wurg-ok-toggle{flex-shrink:0;font-weight:600;color:#003366}
+.warranty-site-group{scroll-margin-top:80px}
+.warranty-site-group.wurg-flash{animation:wurgFlash 2.4s ease-out}
+@keyframes wurgFlash{0%,35%{box-shadow:0 0 0 3px #f5b400;border-radius:8px}100%{box-shadow:0 0 0 3px transparent}}
+@media (prefers-reduced-motion:reduce){.warranty-site-group.wurg-flash{animation:none;outline:3px solid #f5b400}}
+@media (max-width:640px){.wurg-ok-names{display:none}}
+.dark-mode .wurg-card{background:#1a2230;border-color:#2c3a50}
+.dark-mode .wurg-card.is-ok{border-left-color:#81c784}
+.dark-mode .wurg-card.is-urgent{border-left-color:#ff8a80}
+.dark-mode .wurg-card.is-watch{border-left-color:#ffb74d}
+.dark-mode .wurg-card:hover,.dark-mode .wurg-ok:hover{background:#232c3a}
+.dark-mode .wurg-name{color:#90caf9}
+.dark-mode .wurg-full,.dark-mode .wurg-ok-names{color:#9aa4b2}
+.dark-mode .wurg-bar{background:#2c3a50}
+.dark-mode .wurg-bar i.is-expired{background:#ff8a80}.dark-mode .wurg-bar i.is-expiring{background:#ffb74d}.dark-mode .wurg-bar i.is-active{background:#81c784}
+.dark-mode .wurg-state,.dark-mode .wurg-chip.is-active{background:#1e3a24;color:#81c784}
+.dark-mode .wurg-card.is-urgent .wurg-state,.dark-mode .wurg-chip.is-expired{background:#4a1f1f;color:#ff8a80}
+.dark-mode .wurg-card.is-watch .wurg-state,.dark-mode .wurg-chip.is-expiring{background:#3d2a12;color:#ffcc80}
+.dark-mode .wurg-ok{border-color:#2c3a50;color:#81c784}
+.dark-mode .wurg-ok-toggle{color:#90caf9}
 /* Direktori Prinsipal */
 .principal-tags{display:flex;flex-wrap:wrap;gap:4px}
 .principal-tag{display:inline-block;padding:1px 8px;border-radius:9px;background:#eef2f8;color:#003366;font-size:.75rem;font-weight:600}
 .principal-contact+.principal-contact{margin-top:6px;padding-top:6px;border-top:1px dashed #dde2e9}
-.principal-contact-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.4fr auto;gap:6px;margin-bottom:6px}
-@media (max-width:640px){.principal-contact-row{grid-template-columns:1fr 1fr}}
+.principal-contact-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.4fr 1.1fr auto;gap:6px;margin-bottom:6px}
+@media (max-width:760px){.principal-contact-row{grid-template-columns:1fr 1fr}}
+.principal-brand-group+.principal-brand-group{margin-top:8px}
+.principal-brand-label{display:inline-block;margin-bottom:3px;padding:0 7px;border-radius:9px;background:#eef2f8;color:#003366;font-size:.68rem;font-weight:700}
+.principal-brand-label.is-all{background:#f1f3f6;color:#666}
+.dark-mode .principal-brand-label{background:#1a2a40;color:#90caf9}
+.dark-mode .principal-brand-label.is-all{background:#232c3a;color:#9aa4b2}
+.rma-pc-hint{margin-top:6px;padding:7px 10px;border:1px solid #cfe0f5;border-radius:8px;background:#f4f8fd;font-size:.78rem}
+.rma-pc-hint+.rma-pc-hint{margin-top:4px}
+.rma-pc-hint .rma-pc-line{margin-top:2px;color:#444}
+.dark-mode .rma-pc-hint{background:#1a2230;border-color:#2c3a50}
+.dark-mode .rma-pc-hint .rma-pc-line{color:#c5cdd8}
 .dark-mode .principal-tag{background:#232c3a;color:#90caf9}
 .dark-mode .principal-contact+.principal-contact{border-top-color:#2c3a50}
 /* Waranti Peralatan: selection bar + Edit Pukal fields */
@@ -3420,17 +3474,25 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         </div>
 
         <div v-if="warrantyUrgencyBySite.length" class="card" style="margin-bottom:18px">
-          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem">📍 Ringkasan Urgency Ikut Site</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <div v-for="s in warrantyUrgencyBySite" :key="s.siteId" class="flex items-center gap-8">
-              <span style="width:170px;font-size:.78rem;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="s.siteName">{{s.siteName}}</span>
-              <div class="progress-track" style="flex:1;height:14px;border-radius:4px;overflow:hidden;display:flex">
-                <div :style="'width:'+(s.expired/s.total*100)+'%;background:#c62828'" :title="s.expired+' tamat tempoh'"></div>
-                <div :style="'width:'+(s.expiring/s.total*100)+'%;background:#f57c00'" :title="s.expiring+' hampir tamat'"></div>
-                <div :style="'width:'+(s.active/s.total*100)+'%;background:#2e7d32'" :title="s.active+' aktif'"></div>
-              </div>
-              <span style="width:34px;text-align:right;font-size:.78rem;font-weight:700;flex-shrink:0">{{s.total}}</span>
-            </div>
+          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem">📍 Ringkasan Urgency Ikut Site <span class="text-muted" style="font-weight:400;font-size:.75rem">— klik kad untuk lihat rekod site</span></div>
+          <div v-if="warrantyUrgencyGroups.attention.length" class="wurg-grid">
+            <button v-for="s in warrantyUrgencyGroups.attention" :key="s.siteId" type="button" class="wurg-card" :class="'is-' + s.state" @click="jumpToWarrantySite(s.siteId)" :title="s.siteName + ' — klik untuk lihat rekod waranti site ini'">
+              <span class="wurg-head"><span class="wurg-name">{{s.short}}</span><span class="wurg-state">{{s.state==='urgent' ? 'Perlu tindakan' : 'Pantau'}}</span></span>
+              <span class="wurg-full">{{s.siteName}}</span>
+              <span class="wurg-bar"><i class="is-expired" :style="{width: s.expired/s.total*100 + '%'}"></i><i class="is-expiring" :style="{width: s.expiring/s.total*100 + '%'}"></i><i class="is-active" :style="{width: s.active/s.total*100 + '%'}"></i></span>
+              <span class="wurg-chips"><span v-if="s.expired" class="wurg-chip is-expired">{{s.expired}} tamat</span><span v-if="s.expiring" class="wurg-chip is-expiring">{{s.expiring}} hampir tamat</span><span v-if="s.active" class="wurg-chip is-active">{{s.active}} aktif</span></span>
+            </button>
+          </div>
+          <button v-if="warrantyUrgencyGroups.ok.length" type="button" class="wurg-ok" :aria-expanded="warrantyUrgencyShowOk" @click="warrantyUrgencyShowOk=!warrantyUrgencyShowOk">
+            <span>✅ <b>{{warrantyUrgencyGroups.attention.length ? warrantyUrgencyGroups.ok.length + ' site lain' : 'Semua ' + warrantyUrgencyGroups.ok.length + ' site'}}</b> — semua waranti aktif<span class="wurg-ok-names">: {{warrantyUrgencyGroups.ok.slice(0,4).map(s=>s.short).join(', ')}}{{warrantyUrgencyGroups.ok.length > 4 ? ', …' : ''}}</span></span>
+            <span class="wurg-ok-toggle">{{warrantyUrgencyShowOk ? 'Sembunyi ▴' : 'Lihat ▾'}}</span>
+          </button>
+          <div v-if="warrantyUrgencyShowOk && warrantyUrgencyGroups.ok.length" class="wurg-grid" style="margin-top:8px">
+            <button v-for="s in warrantyUrgencyGroups.ok" :key="s.siteId" type="button" class="wurg-card is-ok" @click="jumpToWarrantySite(s.siteId)" :title="s.siteName + ' — klik untuk lihat rekod waranti site ini'">
+              <span class="wurg-head"><span class="wurg-name">{{s.short}}</span><span class="wurg-state">OK</span></span>
+              <span class="wurg-full">{{s.siteName}}</span>
+              <span class="wurg-chips"><span class="wurg-chip is-active">{{s.active}} aktif</span></span>
+            </button>
           </div>
         </div>
 
@@ -3474,7 +3536,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} peralatan · {{grp.sites.length}} site)</span>
             <span v-if="vendorContracts[grp.vendor]" style="font-weight:400;font-size:.8rem" :style="{color: vendorContractStatus(vendorContracts[grp.vendor])==='expired'?'#c62828':vendorContractStatus(vendorContracts[grp.vendor])==='expiring'?'#f57c00':'#888'}">· Tempoh Jaminan Kontrak: {{fmtDate(vendorContracts[grp.vendor])}}<template v-if="vendorContractStatus(vendorContracts[grp.vendor])==='expired'"> ⚠️ TAMAT TEMPOH</template><template v-else-if="vendorContractStatus(vendorContracts[grp.vendor])==='expiring'"> ⚠️ Hampir Tamat</template></span>
           </div>
-          <div v-for="site in grp.sites" :key="site.siteId" class="warranty-site-group">
+          <div v-for="site in grp.sites" :key="site.siteId" class="warranty-site-group" :data-site="site.siteId">
             <div class="warranty-site-header">📍 {{site.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{site.items.length}} peralatan)</span></div>
             <div class="tbl-wrap">
               <table>
@@ -3557,10 +3619,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <span v-if="!(p.brands||[]).length && !(p.categories||[]).length" class="text-muted text-sm">-</span>
                   </td>
                   <td style="min-width:200px">
-                    <div v-for="c in (p.contacts||[])" :key="c.id || c.name" class="principal-contact">
-                      <b>{{c.name || '-'}}</b> <span v-if="c.position" class="text-muted text-sm">({{c.position}})</span>
-                      <div v-if="c.phone" class="text-sm">☎ <a :href="'tel:' + c.phone">{{c.phone}}</a></div>
-                      <div v-if="c.email" class="text-sm">✉ <a :href="'mailto:' + c.email">{{c.email}}</a></div>
+                    <div v-for="g in principalContactGroups(p)" :key="g.brand || '_all'" class="principal-brand-group">
+                      <span v-if="g.brand || principalContactGroups(p).length > 1" class="principal-brand-label" :class="{'is-all': !g.brand}">{{g.brand || 'Semua brand'}}</span>
+                      <div v-for="c in g.contacts" :key="c.id || c.name" class="principal-contact">
+                        <b>{{c.name || '-'}}</b> <span v-if="c.position" class="text-muted text-sm">({{c.position}})</span>
+                        <div v-if="c.phone" class="text-sm">☎ <a :href="'tel:' + c.phone">{{c.phone}}</a></div>
+                        <div v-if="c.email" class="text-sm">✉ <a :href="'mailto:' + c.email">{{c.email}}</a></div>
+                      </div>
                     </div>
                     <span v-if="!(p.contacts||[]).length" class="text-muted text-sm">-</span>
                   </td>
@@ -3602,12 +3667,18 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           </div>
           <div class="form-group"><label>Contact Person</label>
             <div v-for="(c, i) in principalModal.data.contacts" :key="c.id" class="principal-contact-row">
-              <input class="form-control" v-model="c.name" placeholder="Nama">
+              <input class="form-control" v-model="c.name" placeholder="Nama / Pasukan">
               <input class="form-control" v-model="c.position" placeholder="Jawatan">
               <input class="form-control" v-model="c.phone" placeholder="No. telefon">
               <input class="form-control" v-model="c.email" type="email" placeholder="Emel">
+              <select class="form-control" v-model="c.brand" :title="'Brand yang diuruskan contact ini'" aria-label="Untuk brand">
+                <option value="">Semua brand</option>
+                <option v-for="b in principalModalBrands" :key="b" :value="b">{{b}}</option>
+                <option v-if="c.brand && !principalModalBrands.some(b => b.toLowerCase() === c.brand.toLowerCase())" :value="c.brand">{{c.brand}} (tiada dalam Brand Dibekal)</option>
+              </select>
               <button type="button" class="btn btn-sm btn-outline btn-icon" @click="removePrincipalContact(i)" title="Buang contact ini">✕</button>
             </div>
+            <div class="text-muted text-sm" style="margin:-2px 0 6px">Pilih brand jika syarikat ada pasukan/emel berasingan ikut brand (cth: RMA Allied Telesis vs RMA H3C). Nama boleh diisi nama pasukan.</div>
             <button type="button" class="btn btn-sm btn-outline" @click="addPrincipalContact">+ Tambah contact person</button>
           </div>
           <div class="form-group"><label>Nota</label><textarea class="form-control" rows="2" v-model="principalModal.data.notes" placeholder="cth: Proses RMA melalui emel sahaja, waktu operasi 9 pg – 5 ptg"></textarea></div>
@@ -6544,6 +6615,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="form-group" style="grid-column:1/-1">
               <label>Anggota Team (pilih satu atau lebih) — {{teamModal.selectedUids.length}} dipilih</label>
+              <div v-if="teamModalInactiveMembers.length" class="text-sm" style="margin-bottom:6px;color:#b45309">
+                Staff tidak aktif dalam penugasan ini (dikekalkan untuk rekod):
+                <span v-for="m in teamModalInactiveMembers" :key="m.uid" class="badge" style="margin:2px 4px 2px 0;background:#fff3e0;color:#b45309">{{m.name}} <a href="#" @click.prevent="teamModal.selectedUids = teamModal.selectedUids.filter(x => x !== m.uid)" title="Buang daripada penugasan ini" style="color:inherit;text-decoration:none;margin-left:2px">✕</a></span>
+              </div>
               <div class="tbl-wrap" style="max-height:280px;overflow-y:auto;border:1px solid #e0e4ec;border-radius:6px">
                 <table class="equip-table">
                   <thead><tr>
@@ -7385,6 +7460,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="form-group"><label>Vendor / Prinsipal yang Servis *</label><input class="form-control" v-model="rmaModal.data.vendor" list="rma-vendor-list" placeholder="Pilih atau taip nama"><datalist id="rma-vendor-list"><option v-for="v in rmaVendorSuggestions" :key="v" :value="v"></option></datalist></div>
             <div class="form-group"><label>No. Laporan Servis / Tiket</label><input class="form-control" v-model="rmaModal.data.rmaNo"></div>
           </div>
+          <div v-if="rmaPrincipalHints.length" class="form-group" style="margin-top:-6px">
+            <div v-for="h in rmaPrincipalHints" :key="h.id" class="rma-pc-hint">
+              📧 <b>{{h.brand ? 'Contact ' + h.brand : 'Contact'}} — {{h.name}}</b>
+              <button v-if="!String(rmaModal.data.vendor || '').trim()" type="button" class="btn btn-sm btn-outline" style="padding:0 6px;font-size:.7rem;margin-left:6px" @click="rmaModal.data.vendor = h.name">Isi sebagai vendor</button>
+              <div v-for="c in h.contacts" :key="c.id || c.email" class="rma-pc-line">{{c.name || '-'}}<template v-if="c.position"> ({{c.position}})</template><template v-if="c.phone"> · ☎ <a :href="'tel:' + c.phone">{{c.phone}}</a></template><template v-if="c.email"> · ✉ <a :href="'mailto:' + c.email">{{c.email}}</a></template></div>
+            </div>
+          </div>
           <div class="form-row form-row-2">
             <div class="form-group"><label>Tarikh Servis *</label><input class="form-control" type="date" v-model="rmaModal.data.sendDate" @change="applyRmaWarranty"></div>
             <div class="form-group"><label>Staff Bertugas</label><input class="form-control" v-model="rmaModal.data.sentBy"></div>
@@ -7417,6 +7499,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <div class="form-row form-row-2">
             <div class="form-group"><label>Dihantar Kepada (Vendor/Supplier) *</label><input class="form-control" v-model="rmaModal.data.vendor" list="rma-vendor-list" placeholder="Pilih atau taip nama vendor"><datalist id="rma-vendor-list"><option v-for="v in rmaVendorSuggestions" :key="v" :value="v"></option></datalist></div>
             <div class="form-group"><label>No. RMA / Tiket Vendor</label><input class="form-control" v-model="rmaModal.data.rmaNo"></div>
+          </div>
+          <div v-if="rmaPrincipalHints.length" class="form-group" style="margin-top:-6px">
+            <div v-for="h in rmaPrincipalHints" :key="h.id" class="rma-pc-hint">
+              📧 <b>{{h.brand ? 'Contact ' + h.brand : 'Contact'}} — {{h.name}}</b>
+              <button v-if="!String(rmaModal.data.vendor || '').trim()" type="button" class="btn btn-sm btn-outline" style="padding:0 6px;font-size:.7rem;margin-left:6px" @click="rmaModal.data.vendor = h.name">Isi sebagai vendor</button>
+              <div v-for="c in h.contacts" :key="c.id || c.email" class="rma-pc-line">{{c.name || '-'}}<template v-if="c.position"> ({{c.position}})</template><template v-if="c.phone"> · ☎ <a :href="'tel:' + c.phone">{{c.phone}}</a></template><template v-if="c.email"> · ✉ <a :href="'mailto:' + c.email">{{c.email}}</a></template></div>
+            </div>
           </div>
           <div class="form-row form-row-2">
             <div class="form-group"><label>Tarikh Hantar *</label><input class="form-control" type="date" v-model="rmaModal.data.sendDate" @change="applyRmaWarranty"></div>
@@ -13124,6 +13213,13 @@ createApp({
       teamModal.show = true;
     }
 
+    // Members of the assignment being edited whose account is no longer
+    // active — not in the staff list, so shown (and removable) apart.
+    const teamModalInactiveMembers = computed(() => {
+      if(!teamModal.show || !teamModal.editing) return [];
+      const active = new Set(allStaff.value.map(u => u.id));
+      return (teamModal.current?.members || []).filter(m => !active.has(m.uid) && teamModal.selectedUids.includes(m.uid));
+    });
     function openEditTeam(t) {
       teamModal.editing = true;
       teamModal.current = t;
@@ -13159,6 +13255,7 @@ createApp({
         teamModal.err = 'Sila nyatakan site SPRM (Lain-Lain).'; return;
       }
       teamModal.err = '';
+      if(!teamModal.selectedUids.length && !await askConfirm('Tiada staff dipilih untuk penugasan ini.\n\nTeruskan simpan tanpa staff?', { danger:false })) return;
 
       // Double-booking check — same staff member assigned to a DIFFERENT
       // team on the same date (any project/site) had no detection at all
@@ -13235,9 +13332,15 @@ createApp({
             }
           }
         }
-        const members = allStaff.value
-          .filter(u => teamModal.selectedUids.includes(u.id))
-          .map(u => ({ uid: u.id, name: u.name||u.username }));
+        // allStaff leaves out disabled accounts — re-saving an older
+        // assignment (e.g. just its notes) dropped a since-disabled member
+        // from the record, and from the workload/history reports with it.
+        // Keep such a member as saved.
+        const prevMembers = new Map((teamModal.editing ? teamModal.current?.members || [] : []).map(m => [m.uid, m]));
+        const members = teamModal.selectedUids
+          .map(uid => { const u = allStaff.value.find(x => x.id === uid); return u ? { uid, name: u.name||u.username } : prevMembers.get(uid) || null; })
+          .filter(Boolean)
+          .sort((a, b) => (a.name||'').localeCompare(b.name||''));
 
         const data = {
           team: teamModal.data.team,
@@ -14598,9 +14701,34 @@ Teruskan tukar emel?`)) return;
         bySite[key][st]++;
       });
       return Object.values(bySite)
-        .map(s => ({ ...s, total: s.active+s.expiring+s.expired }))
-        .sort((a,b) => (b.expired*2+b.expiring) - (a.expired*2+a.expiring));
+        .map(s => ({ ...s, total: s.active+s.expiring+s.expired, short: _warrantySiteShort(s.siteName),
+          state: s.expired ? 'urgent' : s.expiring ? 'watch' : 'ok' }))
+        .sort((a,b) => (b.expired*2+b.expiring) - (a.expired*2+a.expiring) || a.short.localeCompare(b.short));
     });
+    // Ringkasan cards: sites needing action get a card; all-active sites
+    // fold into one line (opened with warrantyUrgencyShowOk).
+    const warrantyUrgencyShowOk = ref(false);
+    const warrantyUrgencyGroups = computed(() => ({
+      attention: warrantyUrgencyBySite.value.filter(s => s.state !== 'ok'),
+      ok: warrantyUrgencyBySite.value.filter(s => s.state === 'ok'),
+    }));
+    // "Kompleks Pejabat SPRM Johor" → "Johor", "Pejabat SPRM Cawangan
+    // Seberang Perai" → "Seberang Perai" ("Negeri Sembilan" keeps "Negeri").
+    function _warrantySiteShort(name) {
+      const s = String(name || '').replace(/^(Kompleks\s+)?(Pejabat\s+)?SPRM\s+(Cawangan\s+)?/i, '').replace(/^Negeri\s+(?!Sembilan\b)/i, '').trim();
+      return s || String(name || '—');
+    }
+    // Card click: scroll to that site's group(s) in the table below (a site
+    // can sit under more than one vendor) and flash them briefly.
+    function jumpToWarrantySite(siteId) {
+      const els = [...document.querySelectorAll('.warranty-site-group')].filter(el => el.dataset.site === String(siteId));
+      if(!els.length) return;
+      els[0].scrollIntoView({ behavior: 'smooth', block: 'start' });
+      els.forEach(el => {
+        el.classList.remove('wurg-flash'); void el.offsetWidth; el.classList.add('wurg-flash');
+        setTimeout(() => el.classList.remove('wurg-flash'), 2400);
+      });
+    }
     function onWarrantySiteChange() {
       const s = SITES.find(x => x.id === warrantyModal.data.siteId);
       warrantyModal.data.siteName = s?.name || '';
@@ -14979,11 +15107,42 @@ Teruskan tukar emel?`)) return;
       const q = _pKey(principalSearch.value);
       if(!q) return principals.value;
       return principals.value.filter(p => [p.name, p.phone, p.website, p.notes, ...(p.brands || []), ...(p.categories || []),
-        ...(p.contacts || []).flatMap(c => [c.name, c.position, c.phone, c.email])].filter(Boolean).join(' ').toLowerCase().includes(q));
+        ...(p.contacts || []).flatMap(c => [c.name, c.position, c.phone, c.email, c.brand])].filter(Boolean).join(' ').toLowerCase().includes(q));
     });
     const _PRINCIPAL_BLANK = () => ({ name:'', phone:'', address:'', website:'', brandsText:'', categories:[], contacts:[], notes:'' });
     const principalModal = reactive({ show:false, editId:null, err:'', data:_PRINCIPAL_BLANK() });
-    const _blankContact = () => ({ id:_genId(), name:'', position:'', phone:'', email:'' });
+    // brand: '' = every brand the company carries; otherwise one of its
+    // brands — e.g. Fortesys runs separate RMA teams for Allied Telesis and H3C.
+    const _blankContact = () => ({ id:_genId(), name:'', position:'', phone:'', email:'', brand:'' });
+    // "Bosch, bosch" is one brand — dedupe ignoring case, keep the first spelling.
+    function _parsePrincipalBrands(text) {
+      const keys = new Set();
+      return String(text || '').split(/[,;\n]/).map(b => b.trim().replace(/\s+/g, ' ')).filter(b => {
+        const k = b.toLowerCase();
+        if(!b || keys.has(k)) return false;
+        keys.add(k); return true;
+      });
+    }
+    // The modal's "Untuk Brand" choices follow Brand Dibekal as it's typed.
+    const principalModalBrands = computed(() => _parsePrincipalBrands(principalModal.data.brandsText));
+    // A principal's contacts grouped by brand (its brand order, then
+    // "Semua brand"). One unlabelled group when no contact is brand-specific.
+    function principalContactGroups(p) {
+      const contacts = p?.contacts || [];
+      if(!contacts.some(c => c.brand)) return contacts.length ? [{ brand: '', contacts }] : [];
+      const order = [...(p.brands || []), ...contacts.map(c => c.brand).filter(Boolean)];
+      const seen = new Set(), groups = [];
+      order.forEach(b => {
+        const k = _pKey(b);
+        if(!k || seen.has(k)) return;
+        seen.add(k);
+        const list = contacts.filter(c => _pKey(c.brand) === k);
+        if(list.length) groups.push({ brand: b, contacts: list });
+      });
+      const general = contacts.filter(c => !c.brand);
+      if(general.length) groups.push({ brand: '', contacts: general });
+      return groups;
+    }
     function openAddPrincipal(prefillName) {
       if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       principalModal.editId = null; principalModal.err = '';
@@ -15011,17 +15170,16 @@ Teruskan tukar emel?`)) return;
       if(!name) { m.err = 'Nama syarikat wajib diisi.'; return; }
       if(principals.value.some(p => p.id !== m.editId && _pKey(p.name) === _pKey(name))) { m.err = `"${name}" sudah ada dalam direktori.`; return; }
       const t = v => String(v ?? '').trim();
-      const contacts = d.contacts.map(c => ({ id: c.id || _genId(), name: t(c.name), position: t(c.position), phone: t(c.phone), email: t(c.email) }))
+      const brands = _parsePrincipalBrands(d.brandsText);
+      const contacts = d.contacts.map(c => ({ id: c.id || _genId(), name: t(c.name), position: t(c.position), phone: t(c.phone), email: t(c.email),
+        // Stored in Brand Dibekal's own spelling.
+        brand: brands.find(b => _pKey(b) === _pKey(c.brand)) || t(c.brand) }))
         .filter(c => c.name || c.phone || c.email);
       const badEmail = contacts.find(c => c.email && !isValidEmail(c.email));
       if(badEmail) { m.err = `Format emel tidak sah: ${badEmail.email}`; return; }
-      // "Bosch, bosch" is one brand — dedupe ignoring case, keep the first spelling.
-      const brandKeys = new Set();
-      const brands = String(d.brandsText || '').split(/[,;\n]/).map(b => b.trim().replace(/\s+/g, ' ')).filter(b => {
-        const k = b.toLowerCase();
-        if(!b || brandKeys.has(k)) return false;
-        brandKeys.add(k); return true;
-      });
+      // A brand taken out of Brand Dibekal while a contact still points at it.
+      const orphan = contacts.find(c => c.brand && !brands.some(b => _pKey(b) === _pKey(c.brand)));
+      if(orphan) { m.err = `Contact "${orphan.name || orphan.email || orphan.phone}" ditetapkan untuk brand "${orphan.brand}", tetapi brand itu tiada dalam Brand Dibekal. Tambah semula brand itu atau tukar kepada "Semua brand".`; return; }
       const data = { name, phone: t(d.phone), address: t(d.address), website: t(d.website), brands,
         categories: PRINCIPAL_CATEGORIES.filter(c => (d.categories || []).includes(c)), contacts, notes: t(d.notes),
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '' };
@@ -15086,7 +15244,7 @@ Teruskan tukar emel?`)) return;
         <td>${i + 1}</td>
         <td><b>${esc(p.name)}</b>${p.phone ? `<br><span class="sub">☎ ${esc(p.phone)}</span>` : ''}${p.website ? `<br><span class="sub">${esc(p.website)}</span>` : ''}${p.address ? `<br><span class="sub">${esc(p.address)}</span>` : ''}</td>
         <td>${esc((p.brands || []).join(', ') || '-')}${(p.categories || []).length ? `<br><span class="sub">${esc(p.categories.join(', '))}</span>` : ''}</td>
-        <td>${(p.contacts || []).map(c => `${esc(c.name || '-')}${c.position ? ` <span class="sub">(${esc(c.position)})</span>` : ''}${c.phone ? `<br><span class="sub">☎ ${esc(c.phone)}</span>` : ''}${c.email ? `<br><span class="sub">✉ ${esc(c.email)}</span>` : ''}`).join('<hr>') || '-'}</td>
+        <td>${(() => { const groups = principalContactGroups(p); return groups.map(g => `${g.brand || groups.length > 1 ? `<b class="grp">${esc(g.brand || 'Semua brand')}</b><br>` : ''}${g.contacts.map(c => `${esc(c.name || '-')}${c.position ? ` <span class="sub">(${esc(c.position)})</span>` : ''}${c.phone ? `<br><span class="sub">☎ ${esc(c.phone)}</span>` : ''}${c.email ? `<br><span class="sub">✉ ${esc(c.email)}</span>` : ''}`).join('<hr>')}`).join('<hr class="g">') || '-'; })()}</td>
         <td style="text-align:center">${principalWarrantyCountOf(p)}</td>
         <td>${esc(p.notes || '')}</td>
       </tr>`).join('');
@@ -15108,6 +15266,8 @@ Teruskan tukar emel?`)) return;
           td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt;vertical-align:top}
           tr:nth-child(even) td{background:#f7f9fc}
           .sub{color:#555;font-size:7.5pt}
+          .grp{color:#003366;font-size:7.5pt}
+          hr.g{border:0;border-top:1px solid #9fb3cc;margin:5px 0}
           hr{border:0;border-top:1px dashed #ddd;margin:4px 0}
         </style>
       </head><body>
@@ -15239,7 +15399,8 @@ Teruskan tukar emel?`)) return;
         const category = (d.category === 'lain' && d.categoryCustom.trim()) ? d.categoryCustom.trim() : d.category;
         // categoryCustom is form-only — the custom text is saved AS category.
         const { categoryCustom, ...fields } = d;
-        const data = { ...fields, category };
+        const t = v => String(v ?? '').trim();
+        const data = { ...fields, category, fromParty: t(d.fromParty), toParty: t(d.toParty), perihal: t(d.perihal), notes: t(d.notes) };
         const sortByLetterDateDesc = (a,b) => (b.letterDate||'').localeCompare(a.letterDate||'');
         if(!letterMemoModal.editing) {
           const ref = await _fw(db.collection('suratMemo').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' }));
@@ -15823,6 +15984,30 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       return { endDate: w.endDate, state: date <= w.endDate ? 'dalam' : 'tamat', vendor: w.vendor || w.purchasedFrom || '' };
     }
     const rmaWarrantyHint = computed(() => rmaModal.show ? rmaWarrantyLookup(rmaModal.data.serial, rmaModal.data.project, rmaModal.data.sendDate) : null);
+    // Direktori Prinsipal (CCTV) contacts for the unit's brand — the right
+    // RMA team/email when one company runs a team per brand (Fortesys:
+    // Allied Telesis vs H3C). Matched on brand, not only the vendor typed
+    // (often the main contractor); a principal named as vendor comes first.
+    const rmaPrincipalHints = computed(() => {
+      const d = rmaModal.data;
+      if(!rmaModal.show || d.project === 'vir') return [];
+      const bk = _pKey(d.brand), vk = _pKey(d.vendor);
+      if(!bk && !vk) return [];
+      const out = [];
+      principals.value.forEach(p => {
+        const all = (p.contacts || []).filter(c => c.name || c.phone || c.email);
+        const isVendor = !!vk && _pKey(p.name) === vk;
+        const forBrand = bk ? all.filter(c => _pKey(c.brand) === bk) : [];
+        const carries = forBrand.length || (bk && (p.brands || []).some(b => _pKey(b) === bk));
+        if(!carries && !isVendor) return;
+        // Brand team first; else the company's general contacts (all of
+        // them when no brand is filled in yet).
+        const contacts = forBrand.length ? forBrand : bk ? all.filter(c => !c.brand) : all;
+        if(!contacts.length) return;
+        out.push({ id: p.id, name: p.name, brand: forBrand.length ? forBrand[0].brand : '', isVendor, contacts: contacts.slice(0, 3) });
+      });
+      return out.sort((a, b) => b.isVendor - a.isVendor || a.name.localeCompare(b.name)).slice(0, 3);
+    });
     function applyRmaWarranty() {
       const d = rmaModal.data, hit = rmaWarrantyLookup(d.serial, d.project, d.sendDate);
       if(!hit) return;
@@ -15869,7 +16054,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     // contractor list (vendor suggestions) — loaded lazily, kontraktorLuar
     // only when still empty since its loader has no freshness cache.
     function _rmaLoadRefs() {
-      loadWarranty(); loadVirWarranty();
+      loadWarranty(); loadVirWarranty(); loadPrincipals();
       if(!kontraktorLuar.value.cctv?.length && !kontraktorLuar.value.vir?.length) loadKontraktorLuar();
     }
     function openAddRma(prefill) {
@@ -31049,7 +31234,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       mapSelectedDate, mapStateAssignments, mapDetailState, mapDetailList, mapPinClick, mapContainerEl, mapPopupPos, mapPopupAlign, mapLoading, mapNearestUpcomingDate, mapUnmappedToday,
       timelapseModal, timelapseMapEl, timelapseYearOptions, timelapseMonthCount, timelapseYearVisitedSites, timelapseYearTotalSites, openTimelapse, closeTimelapse, timelapseTogglePlay,
       teamsByDateForMonth, dayDetailModal, openDayDetail, dayDetailTeams, staffPhoto,
-      openAddTeam, openEditTeam, onTeamSiteChange, saveTeam, deleteTeam,
+      openAddTeam, openEditTeam, teamModalInactiveMembers, onTeamSiteChange, saveTeam, deleteTeam,
       ZONES, ROTATION_LIMIT, getSiteZone, staffZonePmCount, staffZoneVisits, teamModalZone, rotationDueMembers, dateHasRotationWarning, rotationMatrix,
       rotationRowStyle, zoneVisitBadgeStyle,
       teamModalStateHoliday, assignmentStateHoliday, stateHolidaysForDay,
@@ -31070,12 +31255,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openAddContract, openEditContract, submitContract, deleteContract,
       CCTV_WARRANTY_VENDORS, warranty, warrantyLoading, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors, expiryRingPct,
       warrantyStatTotalCount, warrantyStatActiveCount, warrantyStatExpiringCount, warrantyStatExpiredCount,
-      warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyVendorChips, warrantyByVendor, warrantyUrgencyBySite, onWarrantySiteChange,
+      warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyVendorChips, warrantyByVendor, warrantyUrgencyBySite, warrantyUrgencyGroups, warrantyUrgencyShowOk, jumpToWarrantySite, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, warrantyEffStatus,
       warrantySelected, warrantySelectedHidden, toggleWarrantySel, isWarrantyGroupAllSel, toggleWarrantyGroupSel,
       WARRANTY_BULK_FIELDS, warrantyBulkModal, openWarrantyBulkEdit, applyWarrantyBulkEdit, bulkDeleteWarranty,
       PRINCIPAL_CATEGORIES, principals, principalsLoading, principalSearch, principalsFiltered, principalWarrantyCountOf, loadPrincipals,
-      principalModal, openAddPrincipal, openEditPrincipal, addPrincipalContact, removePrincipalContact, savePrincipal, deletePrincipal,
+      principalModal, principalModalBrands, principalContactGroups, rmaPrincipalHints, openAddPrincipal, openEditPrincipal, addPrincipalContact, removePrincipalContact, savePrincipal, deletePrincipal,
       warrantyFilterPrincipal, openPrincipalWarranties, exportPrincipalsPdf,
       RMA_RECORD_TYPES, rmaIsServis, rmaFilterType, rmaFilterUnit, rmaUnitFilterLabel, onRmaTypeChange, warrantyServiceCount, openWarrantyServiceRecords,
       legacyServiceReportRecords, legacyServiceReportCount, migrateLegacyServiceReports,
