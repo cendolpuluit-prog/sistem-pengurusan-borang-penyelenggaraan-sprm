@@ -1696,8 +1696,21 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .lic-cover-list{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 10px;border:1px solid #dbe3ef;border-radius:6px;background:#f7f9fc}
 .lic-cover-list label{display:flex;align-items:center;gap:6px;margin:0;font-weight:400;cursor:pointer}
 .lic-cover-self{opacity:.7;cursor:default!important}
-.site-cam-split{font-size:.72rem;color:#78828f;white-space:normal;max-width:220px;line-height:1.3;margin-top:2px}
-.dark-mode .lic-cap-note,.dark-mode .site-cam-split{color:#9aa4b2}
+/* Site table: licence as "60/68" + a mini fill bar (colour = state) */
+.lic-mini{display:inline-flex;flex-direction:column;gap:3px;cursor:help}
+.lic-mini-over{color:#c62828;font-weight:600}
+.lic-bar{width:84px;height:6px;border-radius:3px;background:#e9edf3;overflow:hidden}
+.lic-bar i{display:block;height:100%;border-radius:3px;background:#2e7d32}
+.lic-bar i.is-low{background:#e08a00}
+.lic-bar i.is-full,.lic-bar i.is-over{background:#c62828}
+.lic-bar i.is-total{background:#003366}
+.dark-mode .lic-cap-note{color:#9aa4b2}
+.dark-mode .lic-mini-over{color:#ff8a80}
+.dark-mode .lic-bar{background:#2c3a50}
+.dark-mode .lic-bar i{background:#81c784}
+.dark-mode .lic-bar i.is-low{background:#ffb74d}
+.dark-mode .lic-bar i.is-full,.dark-mode .lic-bar i.is-over{background:#ff8a80}
+.dark-mode .lic-bar i.is-total{background:#90caf9}
 .dark-mode .lic-cap-chip.is-covered{background:#232c3a;color:#b0bac8}
 .dark-mode .lic-cover-list{background:#1a2230;border-color:#2c3a50}
 .dark-mode .lic-cap-card{background:#1a2230;border-color:#2c3a50}
@@ -1707,6 +1720,18 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .dark-mode .lic-cap-chip.is-full,.dark-mode .lic-cap-chip.is-over{background:#4a1f1f;color:#ff8a80}
 .dark-mode .lic-cap-warn{color:#ffb74d}
 .site-list-tbl td:nth-child(n+4):not(:last-child){white-space:nowrap}
+/* Waranti Peralatan: one-click vendor (company) filter chips */
+.vendor-chips{display:flex;flex-wrap:wrap;gap:6px}
+.vendor-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:16px;border:1px solid #c9d3e0;background:#fff;color:#33415a;font-size:.82rem;font-weight:600;cursor:pointer}
+.vendor-chip:hover{border-color:#003366}
+.vendor-chip.active{background:#003366;border-color:#003366;color:#fff}
+.vendor-chip-n{font-size:.72rem;font-weight:700;padding:0 6px;border-radius:9px;background:#eef2f8;color:#003366}
+.vendor-chip.active .vendor-chip-n{background:rgba(255,255,255,.2);color:#fff}
+.dark-mode .vendor-chip{background:#1a2230;border-color:#2c3a50;color:#c8d2e0}
+.dark-mode .vendor-chip:hover{border-color:#90caf9}
+.dark-mode .vendor-chip.active{background:#90caf9;border-color:#90caf9;color:#0d1520}
+.dark-mode .vendor-chip-n{background:#232c3a;color:#90caf9}
+.dark-mode .vendor-chip.active .vendor-chip-n{background:rgba(0,0,0,.15);color:#0d1520}
 /* Waranti ← Urus Peralatan picker, and the 🛡 status on equipment rows */
 .warr-pick{margin:4px 0 14px;padding:10px 12px;border:1px solid #dbe3ef;border-radius:8px;background:#f7f9fc}
 .warr-bulk-list{max-height:260px;overflow-y:auto;border:1px solid #dbe3ef;border-radius:6px;background:#fff;padding:6px 10px}
@@ -1815,6 +1840,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .dark-mode .expiry-badge.expired{background:#3d1f1f;color:#ff8a80;border-color:#5a2e2e}
 .dark-mode .expiry-badge.soon,.dark-mode .expiry-badge.expiring{background:#3d3418;color:#ffcc80;border-color:#5a4a20}
 .dark-mode .expiry-badge.active{background:#1a2e1c;color:#81c995;border-color:#2a4a2e}
+.dark-mode .expiry-badge.superseded{background:#232c3a;color:#9aa4b2;border-color:#2c3a50}
 .dark-mode .warranty-stat-card{background:#161b22}
 .dark-mode .warranty-stat-card .wsc-label{color:#8b949e}
 .dark-mode .warranty-stat-card.expired{background:#3d1f1f}
@@ -2051,6 +2077,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .expiry-badge.expired{background:#fdecea;color:#c62828;border:1px solid #ffcdd2}
 .expiry-badge.soon,.expiry-badge.expiring{background:#fff8e1;color:#e65100;border:1px solid #ffe082}
 .expiry-badge.active{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9}
+.expiry-badge.superseded{background:#f1f3f6;color:#66707d;border:1px solid #dde2e9;cursor:help}
 
 /* WARRANTY STAT CARDS */
 .warranty-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
@@ -3356,17 +3383,17 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           </div>
         </div>
 
-        <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
-          <select class="form-control" style="width:auto;min-width:200px" v-model="warrantyFilterVendor">
-            <option value="">Semua Vendor</option>
-            <option v-for="v in CCTV_WARRANTY_VENDORS.filter(x=>x!=='Lain-lain')" :key="v" :value="v">{{v}}</option>
-            <option v-for="v in warrantyCustomVendors" :key="v" :value="v">{{v}}</option>
-          </select>
-          <select class="form-control" style="width:auto;min-width:160px" v-model="warrantyFilterStatus">
+        <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
+          <div class="vendor-chips" role="group" aria-label="Tapis ikut vendor">
+            <button type="button" class="vendor-chip" :class="{active: !warrantyFilterVendor}" :aria-pressed="!warrantyFilterVendor" @click="warrantyFilterVendor=''">Semua <span class="vendor-chip-n">{{warrantyVendorChips.all}}</span></button>
+            <button v-for="c in warrantyVendorChips.vendors" :key="c.vendor" type="button" class="vendor-chip" :class="{active: warrantyFilterVendor===c.vendor}" :aria-pressed="warrantyFilterVendor===c.vendor" @click="warrantyFilterVendor = warrantyFilterVendor===c.vendor ? '' : c.vendor">{{c.vendor}} <span class="vendor-chip-n">{{c.count}}</span></button>
+          </div>
+          <select class="form-control" style="width:auto;min-width:160px;margin-left:auto" v-model="warrantyFilterStatus">
             <option value="">Semua Status</option>
             <option value="expired">🔴 Tamat Tempoh</option>
             <option value="expiring">🟡 Hampir Tamat</option>
             <option value="active">🟢 Aktif</option>
+            <option value="superseded">⏭ Disambung</option>
           </select>
         </div>
 
@@ -3440,11 +3467,12 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="warranty-site-header">📍 {{site.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{site.items.length}} peralatan)</span></div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Peralatan</th><th>Brand / Model</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th><th>Rekod Servis Vendor</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th>Peralatan</th><th>Brand / Model</th><th>Prinsipal</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th><th>Rekod Servis Vendor</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="w in site.items" :key="w.id">
                     <td>{{w.equipmentName||'-'}}</td>
                     <td>{{w.brand}} {{w.model}}</td>
+                    <td style="font-size:.8rem">{{w.principal||'-'}}</td>
                     <td class="mono-data">{{w.serial||'-'}}</td>
                     <td style="font-size:.8rem">{{w.warrantyType||'-'}}</td>
                     <td style="font-size:.8rem">{{fmtDate(w.startDate)}} — {{fmtDate(w.endDate)}}</td>
@@ -3452,15 +3480,16 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                       <svg width="18" height="18" viewBox="0 0 18 18" style="transform:rotate(-90deg);flex-shrink:0">
                         <circle class="gauge-track" cx="9" cy="9" r="7" fill="none" stroke="#e6e6e6" stroke-width="2.5"></circle>
                         <circle cx="9" cy="9" r="7" fill="none"
-                          :stroke="warrantyStatus(w)==='active'?'#2e7d32':warrantyStatus(w)==='expiring'?'#f57c00':'#c62828'"
+                          :stroke="warrantyEffStatus(w)==='active'?'#2e7d32':warrantyEffStatus(w)==='expiring'?'#f57c00':warrantyEffStatus(w)==='superseded'?'#9aa4b2':'#c62828'"
                           stroke-width="2.5" stroke-linecap="round"
                           :stroke-dasharray="2*Math.PI*7"
                           :stroke-dashoffset="2*Math.PI*7*(1-expiryRingPct(w)/100)"
                           style="transition:stroke-dashoffset .6s ease"></circle>
                       </svg>
-                      <span :class="['expiry-badge', warrantyStatus(w)]">
-                        <template v-if="warrantyStatus(w)==='expired'">🔴 Tamat</template>
-                        <template v-else-if="warrantyStatus(w)==='expiring'">🟡 Hampir Tamat</template>
+                      <span :class="['expiry-badge', warrantyEffStatus(w)]" :title="warrantyEffStatus(w)==='superseded' ? 'Waranti ini telah tamat, tetapi peralatan yang sama ada rekod waranti lain yang masih sah — tidak dikira dalam amaran Tamat Tempoh.' : ''">
+                        <template v-if="warrantyEffStatus(w)==='superseded'">⏭ Disambung</template>
+                        <template v-else-if="warrantyEffStatus(w)==='expired'">🔴 Tamat</template>
+                        <template v-else-if="warrantyEffStatus(w)==='expiring'">🟡 Hampir Tamat</template>
                         <template v-else>🟢 Aktif</template>
                       </span>
                     </td>
@@ -3799,9 +3828,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <td>{{i+1}}</td>
                   <td><span class="site-morph-name" :style="morphSiteId===s.id ? 'view-transition-name:site-hero' : ''">{{s.name}}</span> <span v-if="overdueMap[s.id]" class="badge badge-red badge-overdue-pulse" style="font-size:.7rem">⚠ Overdue</span></td>
                   <td><span class="badge badge-blue">{{s.code}}</span></td>
-                  <td>{{cctvSiteStats.bySite[s.id].cams}} unit<div v-if="cctvSiteStats.bySite[s.id].camsByNvr.length" class="site-cam-split">{{cctvSiteStats.bySite[s.id].camsByNvr.map(x => x.name + ' ' + x.count).join(' · ')}}</div></td>
+                  <td>{{cctvSiteStats.bySite[s.id].cams}} unit</td>
                   <td>{{cctvSiteStats.bySite[s.id].nvr}} unit</td>
-                  <td><span v-if="cctvSiteStats.bySite[s.id].lic" class="lic-cap-chip" :class="'is-'+cctvSiteStats.bySite[s.id].lic.state" :title="cctvSiteStats.bySite[s.id].lic.title">{{cctvSiteStats.bySite[s.id].lic.used}}/{{cctvSiteStats.bySite[s.id].lic.lic}} · {{cctvSiteStats.bySite[s.id].lic.label}}</span><span v-else class="text-muted text-sm" title="Lesen kamera belum diisi pada NVR site ini">–</span></td>
+                  <td><div v-if="cctvSiteStats.bySite[s.id].lic" class="lic-mini" :title="cctvSiteStats.bySite[s.id].lic.title"><span :class="{'lic-mini-over': cctvSiteStats.bySite[s.id].lic.state === 'over'}">{{cctvSiteStats.bySite[s.id].lic.used}}/{{cctvSiteStats.bySite[s.id].lic.lic}}</span><div class="lic-bar"><i :class="'is-' + cctvSiteStats.bySite[s.id].lic.state" :style="{ width: cctvSiteStats.bySite[s.id].lic.pct + '%' }"></i></div></div><span v-else class="text-muted text-sm" title="Lesen kamera belum diisi pada NVR site ini">–</span></td>
                   <td>{{cctvSiteStats.bySite[s.id].hdd}} unit</td>
                   <td>{{cctvSiteStats.bySite[s.id].sw}} unit</td>
                   <td><button class="btn btn-sm btn-primary" @click="openSiteEquip(s)">Urus Peralatan</button></td>
@@ -3811,7 +3840,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <td></td><td>JUMLAH ({{SITES.length}} site)</td><td></td>
                 <td>{{cctvSiteStats.tot.cams}} unit</td>
                 <td>{{cctvSiteStats.tot.nvr}} unit</td>
-                <td><span v-if="cctvSiteStats.tot.licSites" :title="cctvSiteStats.tot.licSites+' daripada '+SITES.length+' site ada maklumat lesen'">{{cctvSiteStats.tot.used}}/{{cctvSiteStats.tot.lic}} · baki {{cctvSiteStats.tot.left}}</span><span v-else class="text-muted text-sm">–</span></td>
+                <td><div v-if="cctvSiteStats.tot.licSites" class="lic-mini" :title="cctvSiteStats.tot.licSites + ' daripada ' + SITES.length + ' site ada maklumat lesen · baki ' + cctvSiteStats.tot.left"><span>{{cctvSiteStats.tot.used}}/{{cctvSiteStats.tot.lic}}</span><div class="lic-bar"><i class="is-total" :style="{ width: Math.min(100, Math.round(cctvSiteStats.tot.used / cctvSiteStats.tot.lic * 100)) + '%' }"></i></div></div><span v-else class="text-muted text-sm">–</span></td>
                 <td>{{cctvSiteStats.tot.hdd}} unit</td>
                 <td>{{cctvSiteStats.tot.sw}} unit</td>
                 <td></td>
@@ -7038,6 +7067,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="form-group"><label>Model</label><input class="form-control" v-model="warrantyModal.data.model" placeholder="cth: S5170-28S-HPWR-EI L2"></div>
               <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="warrantyModal.data.serial" placeholder="Serial No. / Service Tag"></div>
             </template>
+            <div class="form-group"><label>Prinsipal / Pembekal *</label><input class="form-control" v-model="warrantyModal.data.principal" list="warrantyPrincipalList" placeholder="Syarikat yang membekal peralatan ini kepada vendor" autocomplete="off"><datalist id="warrantyPrincipalList"><option v-for="p in warrantyPrincipalSuggestions" :key="p" :value="p"></option></datalist></div>
             <div class="form-group"><label>Jenis Waranti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="warrantyModal.data.warrantyType" placeholder="cth: Limited Lifetime Warranty with 10BD-Ship"></div>
             <div class="form-group"><label>Tarikh Mula Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.startDate"></div>
             <div class="form-group"><label>Tarikh Tamat Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.endDate"></div>
@@ -13128,7 +13158,9 @@ createApp({
         return;
       }
       if(row.action === 'cm') { filterMaintType.value = 'CM'; page.value = 'pm-list'; return; }
-      if(row.action === 'warranty') { loadWarranty(); page.value = 'warranty'; return; }
+      // The row counts every vendor — drop a leftover company/status filter
+      // so the list opened matches that number.
+      if(row.action === 'warranty') { warrantyFilterVendor.value = ''; warrantyFilterStatus.value = ''; loadWarranty(); page.value = 'warranty'; return; }
       if(row.action === 'jadual') { openJadual(); return; }
     }
 
@@ -14096,9 +14128,14 @@ Teruskan tukar emel?`)) return;
     // equipKey/bulk/bulkKeys drive the "pick from Urus Peralatan" UI and are
     // never saved; data.equipRef ({kind, uid}) is — see warrantyEquipGroups.
     const warrantyModal = reactive({ show:false, editing:false, err:'', _editId:null, equipKey:'', bulk:false, bulkKeys:[], data:{
-      vendor:'', vendorCustom:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
+      vendor:'', vendorCustom:'', principal:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
       warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'', equipRef:null,
     } });
+    // Prinsipal = the company the equipment was actually bought from (a
+    // distributor/reseller that supplied the main contractor, `vendor`).
+    // Names already used are offered as suggestions so one company isn't
+    // keyed in three different spellings.
+    const warrantyPrincipalSuggestions = computed(() => [...new Set(warranty.value.map(w => (w.principal || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)));
     const warrantyFilterVendor = ref('');
     // Custom "Lain-lain" vendor names (free-typed, see submitWarranty) so
     // the vendor filter dropdown can actually select them — otherwise those
@@ -14214,19 +14251,61 @@ Teruskan tukar emel?`)) return;
       if(daysLeft >= windowDays) return 100;
       return Math.max(0, Math.round((daysLeft / windowDays) * 100));
     }
+    // An expired record whose unit already has a later, still-valid record
+    // (an extension/renewal) needs no action — it stays listed as history
+    // ("⏭ Disambung") but out of every "Tamat Tempoh" alert, which otherwise
+    // never cleared. Same unit = same linked row (equipRef.uid) or same real
+    // serial at the same site (not Lain-lain, whose serial is often a qty).
+    // CCTV only: VIR keeps warrantyStatus via virWarrantyStatus.
+    function _warrantyUnitKeys(w) {
+      const keys = [];
+      if(w.equipRef?.uid) keys.push(w.siteId + '|u|' + w.equipRef.uid);
+      const sk = w.equipRef?.kind === 'misc' ? '' : _realSerialKey(w.serial);
+      if(sk) keys.push(w.siteId + '|s|' + sk);
+      return keys;
+    }
+    const _warrantySupersededIds = computed(() => {
+      void _dayKey.value; // statuses move with the date
+      const validUntil = {}; // unit key → latest endDate among records not yet expired
+      warranty.value.forEach(w => {
+        if(warrantyStatus(w) === 'expired') return;
+        _warrantyUnitKeys(w).forEach(k => { if(!validUntil[k] || w.endDate > validUntil[k]) validUntil[k] = w.endDate; });
+      });
+      return new Set(warranty.value.filter(w => warrantyStatus(w) === 'expired'
+        && _warrantyUnitKeys(w).some(k => validUntil[k] && validUntil[k] > (w.endDate || ''))).map(w => w.id));
+    });
+    function warrantyEffStatus(w) {
+      const s = warrantyStatus(w);
+      return s === 'expired' && _warrantySupersededIds.value.has(w.id) ? 'superseded' : s;
+    }
     const warrantyExpiringCount = computed(() =>
-      warranty.value.filter(w => warrantyStatus(w) !== 'active').length
+      warranty.value.filter(w => ['expiring', 'expired'].includes(warrantyEffStatus(w))).length
     );
     const warrantyFiltered = computed(() => warranty.value.filter(w =>
       (!warrantyFilterVendor.value || w.vendor === warrantyFilterVendor.value) &&
-      (!warrantyFilterStatus.value || warrantyStatus(w) === warrantyFilterStatus.value)
+      (!warrantyFilterStatus.value || warrantyEffStatus(w) === warrantyFilterStatus.value)
     ));
+    // One-click company chips above the list (was a small dropdown that was
+    // easy to miss). Counts follow the status filter, so each chip shows
+    // what clicking it will list. Known vendors first, then custom ones;
+    // a vendor with no records is left out unless it's the one selected.
+    const warrantyVendorChips = computed(() => {
+      const counts = {};
+      let all = 0;
+      warranty.value.forEach(w => {
+        if(warrantyFilterStatus.value && warrantyEffStatus(w) !== warrantyFilterStatus.value) return;
+        all++;
+        if(w.vendor) counts[w.vendor] = (counts[w.vendor] || 0) + 1; // same key the filter matches on
+      });
+      const names = [...new Set([...CCTV_WARRANTY_VENDORS.filter(v => v !== 'Lain-lain'), ...warrantyCustomVendors.value, 'Lain-lain'])];
+      return { all, vendors: names.filter(v => counts[v] || v === warrantyFilterVendor.value).map(v => ({ vendor: v, count: counts[v] || 0 })) };
+    });
     // Count-up animation for the 4 stat cards above the warranty table —
     // same countUpFrom() composable the Dashboard/Laporan cards already use.
     const warrantyStatTotalCount = countUpFrom(computed(() => warrantyFiltered.value.length));
-    const warrantyStatActiveCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyStatus(w)==='active').length));
-    const warrantyStatExpiringCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyStatus(w)==='expiring').length));
-    const warrantyStatExpiredCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyStatus(w)==='expired').length));
+    const warrantyStatActiveCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyEffStatus(w)==='active').length));
+    const warrantyStatExpiringCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyEffStatus(w)==='expiring').length));
+    const warrantyStatExpiredCount = countUpFrom(computed(() => warrantyFiltered.value.filter(w=>warrantyEffStatus(w)==='expired').length));
     // Nested Vendor > Site grouping — a site under the same vendor commonly
     // has many equipment items (e.g. 10 items all at "Kompleks SPRM Negeri
     // Pulau Pinang"), so flattening straight to one row per item repeated
@@ -14271,7 +14350,9 @@ Teruskan tukar emel?`)) return;
       warrantyFiltered.value.forEach(w => {
         const key = w.siteId || w.siteName || '—';
         if(!bySite[key]) bySite[key] = { siteId:key, siteName:w.siteName||'—', active:0, expiring:0, expired:0 };
-        bySite[key][warrantyStatus(w)]++;
+        const st = warrantyEffStatus(w);
+        if(st === 'superseded') return; // history, not exposure
+        bySite[key][st]++;
       });
       return Object.values(bySite)
         .map(s => ({ ...s, total: s.active+s.expiring+s.expired }))
@@ -14362,7 +14443,7 @@ Teruskan tukar emel?`)) return;
       warrantyModal.editing = false; warrantyModal.err = '';
       warrantyModal.equipKey = ''; warrantyModal.bulk = false; warrantyModal.bulkKeys = []; _warrantyAutoStart = '';
       Object.assign(warrantyModal.data, {
-        vendor:'', vendorCustom:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
+        vendor:'', vendorCustom:'', principal:'', siteId:'', siteName:'', equipmentName:'', brand:'', model:'', serial:'',
         warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'', equipRef:null,
       });
       warrantyModal.show = true;
@@ -14378,6 +14459,7 @@ Teruskan tukar emel?`)) return;
       Object.assign(warrantyModal.data, {
         vendor: isKnownVendor ? (w.vendor||'') : 'Lain-lain',
         vendorCustom: isKnownVendor ? '' : (w.vendor||''),
+        principal: w.principal || '',
         siteId:w.siteId||'', siteName:w.siteName||'',
         equipmentName:w.equipmentName||'', brand:w.brand||'', model:w.model||'', serial:w.serial||'',
         warrantyType:w.warrantyType||'', startDate:w.startDate||'', endDate:w.endDate||'',
@@ -14401,10 +14483,14 @@ Teruskan tukar emel?`)) return;
       if(!allowed){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       warrantyModal.err = '';
       const d = warrantyModal.data;
+      d.principal = (d.principal || '').trim();
+      // "Lain-lain" stands for a typed-in name — saved blank, the record
+      // got the literal "Lain-lain" as its vendor (and its own filter chip).
+      if(d.vendor === 'Lain-lain' && !(d.vendorCustom || '').trim()) { warrantyModal.err = 'Sila nyatakan nama vendor untuk "Lain-lain".'; return; }
       if(warrantyBulkActive.value) return _submitWarrantyBulk();
       d.equipmentName = (d.equipmentName||'').trim();
-      if(!d.vendor || !d.siteId || !d.equipmentName || !d.startDate || !d.endDate) {
-        warrantyModal.err = 'Vendor, site, nama peralatan, tarikh mula dan tarikh tamat wajib diisi.'; return;
+      if(!d.vendor || !d.principal || !d.siteId || !d.equipmentName || !d.startDate || !d.endDate) {
+        warrantyModal.err = 'Vendor, prinsipal, site, nama peralatan, tarikh mula dan tarikh tamat wajib diisi.'; return;
       }
       if(d.endDate < d.startDate) {
         warrantyModal.err = 'Tarikh tamat mesti selepas tarikh mula.'; return;
@@ -14445,8 +14531,8 @@ Teruskan tukar emel?`)) return;
     async function _submitWarrantyBulk() {
       const d = warrantyModal.data;
       const picked = warrantyModal.bulkKeys.map(k => _warrantyEquipByKey.value[k]).filter(Boolean);
-      if(!d.vendor || !d.siteId || !d.startDate || !d.endDate) {
-        warrantyModal.err = 'Vendor, site, tarikh mula dan tarikh tamat wajib diisi.'; return;
+      if(!d.vendor || !d.principal || !d.siteId || !d.startDate || !d.endDate) {
+        warrantyModal.err = 'Vendor, prinsipal, site, tarikh mula dan tarikh tamat wajib diisi.'; return;
       }
       if(!picked.length) { warrantyModal.err = 'Sila tanda sekurang-kurangnya satu peralatan.'; return; }
       if(d.endDate < d.startDate) { warrantyModal.err = 'Tarikh tamat mesti selepas tarikh mula.'; return; }
@@ -14455,7 +14541,7 @@ Teruskan tukar emel?`)) return;
       loading.value = true;
       try {
         const vendor = (d.vendor === 'Lain-lain' && d.vendorCustom.trim()) ? d.vendorCustom.trim() : d.vendor;
-        const shared = { vendor, siteId: d.siteId, siteName: d.siteName, warrantyType: d.warrantyType || '',
+        const shared = { vendor, principal: d.principal, siteId: d.siteId, siteName: d.siteName, warrantyType: d.warrantyType || '',
           startDate: d.startDate, endDate: d.endDate, reminderDays: d.reminderDays || 60, notes: d.notes || '' };
         const rows = picked.map(o => ({ ...shared, equipmentName: o.name || '(tanpa nama)', brand: o.unit.brand || '', model: o.unit.model || '',
           serial: o.unit.serial || '', equipRef: { kind: o.kind, uid: o.uid } }));
@@ -15160,9 +15246,17 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const key = _serialKey(serial);
       if(!key) return null;
       const list = project === 'vir' ? virWarranty.value : warranty.value;
-      const w = list.find(x => _serialKey(x.serial) === key && x.endDate);
-      if(!w) return null;
-      return { endDate: w.endDate, state: (onDate || _localDateStr()) <= w.endDate ? 'dalam' : 'tamat', vendor: w.vendor || w.purchasedFrom || '' };
+      const date = onDate || _localDateStr();
+      // A unit can carry several records (original + extension). The list
+      // is sorted by endDate ascending, so the first match was the EARLIEST
+      // — an expired original hid an active extension. Prefer a record that
+      // covers the date, else the one ending last.
+      const hits = list.filter(x => _serialKey(x.serial) === key && x.endDate);
+      if(!hits.length) return null;
+      const latest = arr => arr.reduce((a, b) => (b.endDate > a.endDate ? b : a));
+      const covering = hits.filter(x => (!(x.startDate || x.purchaseDate) || (x.startDate || x.purchaseDate) <= date) && date <= x.endDate);
+      const w = covering.length ? latest(covering) : latest(hits);
+      return { endDate: w.endDate, state: date <= w.endDate ? 'dalam' : 'tamat', vendor: w.vendor || w.purchasedFrom || '' };
     }
     const rmaWarrantyHint = computed(() => rmaModal.show ? rmaWarrantyLookup(rmaModal.data.serial, rmaModal.data.project, rmaModal.data.sendDate) : null);
     function applyRmaWarranty() {
@@ -15708,7 +15802,7 @@ tr.late td{background:#fff3e0}
       );
     });
 
-    const WARRANTY_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
+    const WARRANTY_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif', superseded:'⏭ Disambung' };
 
     // ── Waranti Peralatan (VIR only) ────────────────────────────────────
     // Beza konsep sepenuhnya dari waranti CCTV di atas: ini bukan waranti
@@ -15846,22 +15940,34 @@ tr.late td{background:#fff3e0}
     function exportComingSoon() {
       showToast('Fungsi ini masih diselenggara oleh admin.', 'error');
     }
+    // Every warranty export follows the page's company/status filter — and
+    // says so (header line + file name), so a one-company copy shared onward
+    // isn't mistaken for the full list.
+    function _warrantyFilterParts() {
+      const v = warrantyFilterVendor.value, s = warrantyFilterStatus.value;
+      return [v && `Vendor: ${v}`, s && `Status: ${WARRANTY_STATUS_LABEL[s] || s}`].filter(Boolean);
+    }
+    function _warrantyFileSlug() {
+      const v = warrantyFilterVendor.value, s = warrantyFilterStatus.value;
+      return [v, s && (WARRANTY_STATUS_LABEL[s] || s)].filter(Boolean)
+        .map(x => String(x).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')).filter(Boolean).map(x => x + '_').join('');
+    }
     async function exportWarrantyExcel() {
       await _ensureXLSX();
       const rows = warrantyFiltered.value.map((w,i) => ({
         '#': i+1, 'Vendor': w.vendor||'-',
         'Tempoh Jaminan Kontrak': vendorContracts.value[w.vendor] ? fmtDate(vendorContracts.value[w.vendor]) : '-',
         'Site': w.siteName||'-', 'Peralatan': w.equipmentName||'-',
-        'Brand': w.brand||'-', 'Model': w.model||'-', 'No. Siri': w.serial||'-', 'Jenis Waranti': w.warrantyType||'-',
+        'Brand': w.brand||'-', 'Model': w.model||'-', 'Prinsipal': w.principal||'-', 'No. Siri': w.serial||'-', 'Jenis Waranti': w.warrantyType||'-',
         'Tempoh Waranti': `${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}`,
-        'Status': WARRANTY_STATUS_LABEL[warrantyStatus(w)], 'Nota': w.notes||'-',
+        'Status': WARRANTY_STATUS_LABEL[warrantyEffStatus(w)], 'Nota': w.notes||'-',
       }));
       const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
       ws['!pageSetup'] = { orientation: 'landscape', fitToWidth: 1 };
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Waranti Peralatan CCTV');
-      XLSX.writeFile(wb, `waranti_peralatan_cctv_${_localDateStr()}.xlsx`);
+      XLSX.writeFile(wb, `waranti_peralatan_cctv_${_warrantyFileSlug()}${_localDateStr()}.xlsx`);
       await logAudit('WARRANTY_EXPORT_EXCEL', `${rows.length} rekod`);
     }
     async function exportWarrantyPdf() {
@@ -15871,18 +15977,21 @@ tr.late td{background:#fff3e0}
         <h3 style="color:#003366;margin:16px 0 4px">${esc(g.vendor)} — Tempoh Jaminan Kontrak : ${vendorContracts.value[g.vendor] ? fmtDate(vendorContracts.value[g.vendor]) : '-'}</h3>
         ${g.sites.map(site => `
           <h4 style="color:#333;margin:10px 0 2px;font-size:9.5pt">📍 ${esc(site.siteName||'-')} (${site.items.length} peralatan)</h4>
-          <table><thead><tr><th>Peralatan</th><th>Brand/Model</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th></tr></thead>
+          <table><thead><tr><th>Peralatan</th><th>Brand/Model</th><th>Prinsipal</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th></tr></thead>
           <tbody>${site.items.map(w => `<tr>
             <td>${esc(w.equipmentName||'-')}</td>
             <td>${esc(w.brand||'')} ${esc(w.model||'')}</td>
+            <td>${esc(w.principal||'-')}</td>
             <td>${esc(w.serial||'-')}</td>
             <td>${esc(w.warrantyType||'-')}</td>
-            <td>${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyStatus(w)]}</td>
+            <td>${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}</td><td>${WARRANTY_STATUS_LABEL[warrantyEffStatus(w)]}</td>
           </tr>`).join('')}</tbody></table>`).join('')}
       `).join('');
+      // Filter line + file name (the print dialog saves under <title>) — see _warrantyFilterParts.
+      const filterLine = _warrantyFilterParts().map(esc).join(' &nbsp;|&nbsp; ');
       const w2 = window.open('','_blank','width=1100,height=750');
       if(!w2) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
-      w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Waranti_Peralatan_CCTV_${_localDateStr()}</title>
+      w2.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Waranti_Peralatan_CCTV_${_warrantyFileSlug()}${_localDateStr()}</title>
         <style>
           @page{size:landscape;margin:12mm}
           body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
@@ -15903,6 +16012,7 @@ tr.late td{background:#fff3e0}
           <img src="LogoD1.svg" alt="Daya One" class="header-logo">
           <div class="header-mid">
             <h2>Ringkasan Waranti Peralatan Sistem CCTV</h2>
+            ${filterLine ? `<p style="font-weight:700;color:#003366;font-size:9.5pt;margin:2px 0 4px">${filterLine}</p>` : ''}
             <p style="font-weight:600;color:#333;font-size:8pt;line-height:1.3">TENDER BAGI PERKHIDMATAN PENYENGGARAAN PERKAKASAN SERTA PERISIAN KAMERA LITAR TERTUTUP (CCTV) UNTUK 17 PEJABAT SURUHANJAYA PENCEGAHAN RASUAH MALAYSIA (SPRM) BAGI TEMPOH 33 BULAN</p>
             <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
           </div>
@@ -16017,6 +16127,11 @@ tr.late td{background:#fff3e0}
         alignment: AlignmentType.CENTER,
         spacing: { before: 100, after: 100 },
       }));
+      if(_warrantyFilterParts().length) children.push(new Paragraph({
+        children: [new TextRun({ text: _warrantyFilterParts().join('  |  '), color: BLUE, bold: true, size: 18 })],
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 },
+      }));
 
       // ── Vendor groups (nested by site — a site commonly has many items,
       // so grouping avoids repeating the site name on every row) ──
@@ -16025,10 +16140,10 @@ tr.late td{background:#fff3e0}
         g.sites.forEach(site => {
           children.push(siteHdr(`📍 ${site.siteName||'-'} (${site.items.length} peralatan)`));
           children.push(makeTable(
-            ['Peralatan','Brand/Model','No. Siri','Jenis Waranti','Tempoh Waranti','Status'],
+            ['Peralatan','Brand/Model','Prinsipal','No. Siri','Jenis Waranti','Tempoh Waranti','Status'],
             site.items.map(w => [
-              w.equipmentName||'-', `${w.brand||''} ${w.model||''}`.trim()||'-', w.serial||'-', w.warrantyType||'-',
-              `${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}`, WARRANTY_STATUS_LABEL[warrantyStatus(w)],
+              w.equipmentName||'-', `${w.brand||''} ${w.model||''}`.trim()||'-', w.principal||'-', w.serial||'-', w.warrantyType||'-',
+              `${fmtDate(w.startDate)} — ${fmtDate(w.endDate)}`, WARRANTY_STATUS_LABEL[warrantyEffStatus(w)],
             ])
           ));
         });
@@ -16052,7 +16167,7 @@ tr.late td{background:#fff3e0}
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href = url;
-      a.download = `waranti_peralatan_cctv_${_localDateStr()}.docx`;
+      a.download = `waranti_peralatan_cctv_${_warrantyFileSlug()}${_localDateStr()}.docx`;
       a.click();
       URL.revokeObjectURL(url);
       await logAudit('WARRANTY_EXPORT_DOCX', `${list.length} rekod`);
@@ -29286,20 +29401,14 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const title = rows.map(r => `${r.label}: ${r.used}/${r.lic} · ${licenseCapLabel(r)}`).join('\n')
         + noLicense.map(x => `\n${x.name}: ${x.cams} kamera (tiada lesen direkod)`).join('')
         + (unlinked ? `\n⚠ ${unlinked} kamera tidak dipautkan ke NVR site ini (tidak dikira)` : '');
-      return { lic, used, left, state, label, title };
+      const pct = Math.min(100, Math.round(used / lic * 100)); // mini bar fill
+      return { lic, used, left, state, label, title, pct };
     }
     const cctvSiteStats = computed(() => {
       const bySite = {}, tot = { cams: 0, nvr: 0, hdd: 0, sw: 0, lic: 0, used: 0, left: 0, licSites: 0 };
       SITES.forEach(s => {
         const eq = siteEquip.value[s.id] || {};
-        // Cameras per NVR (NVR order; links to an NVR not at the site count
-        // as "Tiada NVR") — only shown when the site splits across 2+.
-        const nvrNames = (eq.nvr || []).map(n => String(n?.name || '').trim()).filter(Boolean);
-        const perNvr = {};
-        (eq.cameras || []).forEach(c => { const k = String(c?.nvrRef || '').trim(); const key = nvrNames.includes(k) ? k : 'Tiada NVR'; perNvr[key] = (perNvr[key] || 0) + 1; });
-        const camsByNvr = [...new Set(nvrNames), 'Tiada NVR'].filter(k => perNvr[k]).map(k => ({ name: k, count: perNvr[k] }));
         const st = {
-          camsByNvr: camsByNvr.length > 1 ? camsByNvr : [],
           cams: (eq.cameras || []).length, nvr: (eq.nvr || []).length,
           hdd: (eq.hdd || []).reduce((a, h) => a + (parseInt(h.totalUnit, 10) || 1), 0),
           sw: (eq.switches || []).length, lic: _siteLicenseCell(eq),
@@ -30279,9 +30388,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openAddContract, openEditContract, submitContract, deleteContract,
       CCTV_WARRANTY_VENDORS, warranty, warrantyLoading, warrantyModal, loadWarranty, warrantyStatus, warrantyExpiringCount, warrantyCustomVendors, expiryRingPct,
       warrantyStatTotalCount, warrantyStatActiveCount, warrantyStatExpiringCount, warrantyStatExpiredCount,
-      warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyByVendor, warrantyUrgencyBySite, onWarrantySiteChange,
-      openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty,
-      warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, onWarrantyEquipPick, toggleWarrantyBulkGroup,
+      warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyVendorChips, warrantyByVendor, warrantyUrgencyBySite, onWarrantySiteChange,
+      openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, warrantyEffStatus,
+      warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, onWarrantyEquipPick, toggleWarrantyBulkGroup, warrantyPrincipalSuggestions,
       equipWarrantyOf, equipWarrantyTitle, openEquipWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCategoryColor, letterMemoCustomCategories,
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
