@@ -1720,6 +1720,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .dark-mode .lic-cap-chip.is-full,.dark-mode .lic-cap-chip.is-over{background:#4a1f1f;color:#ff8a80}
 .dark-mode .lic-cap-warn{color:#ffb74d}
 .site-list-tbl td:nth-child(n+4):not(:last-child){white-space:nowrap}
+/* Waranti Peralatan: selection bar + Edit Pukal fields */
+.warr-sel-bar{position:sticky;top:8px;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#003366;color:#fff;box-shadow:0 4px 14px rgba(0,30,60,.18)}
+.warr-sel-bar .btn-outline{background:#fff}
+.warr-bulk-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 16px}
+.warr-bulk-field{display:flex;gap:8px;align-items:flex-start}
+.warr-bulk-field .form-group{flex:1;margin-bottom:10px}
+.warr-bulk-use{display:flex;align-items:center;gap:4px;margin:26px 0 0;font-size:.75rem;font-weight:600;white-space:nowrap;cursor:pointer}
+.dark-mode .warr-sel-bar{background:#1f3a5c}
 /* Waranti Peralatan: one-click vendor (company) filter chips */
 .vendor-chips{display:flex;flex-wrap:wrap;gap:6px}
 .vendor-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:16px;border:1px solid #c9d3e0;background:#fff;color:#33415a;font-size:.82rem;font-weight:600;cursor:pointer}
@@ -3458,6 +3466,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <div class="skel skel-line" style="width:85%;margin-bottom:0"></div>
         </div>
         <div v-else-if="!warrantyFiltered.length" class="empty">Tiada rekod waranti peralatan lagi.<br><button v-if="canAddWarranty" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddWarranty">+ Tambah Peralatan</button></div>
+        <div v-if="canEditWarranty && warrantySelected.length" class="warr-sel-bar" role="region" aria-label="Tindakan rekod terpilih">
+          <b>{{warrantySelected.length}} dipilih</b>
+          <span v-if="warrantySelectedHidden" class="text-sm" style="opacity:.85">({{warrantySelectedHidden}} tidak dipapar oleh penapis semasa)</span>
+          <button :disabled="loading" class="btn btn-sm btn-primary" @click="openWarrantyBulkEdit">✏️ Edit Pukal</button>
+          <button v-if="canDeleteWarranty" :disabled="loading" class="btn btn-sm btn-danger" @click="bulkDeleteWarranty">🗑 Padam Terpilih</button>
+          <button class="btn btn-sm btn-outline" @click="warrantySelected=[]">✕ Batal</button>
+        </div>
         <div v-for="grp in warrantyByVendor" :key="grp.vendor" class="warranty-vendor-group">
           <div class="warranty-vendor-header">🏢 {{grp.vendor}}
             <span style="font-weight:400;color:#888;font-size:.8rem">({{grp.items.length}} peralatan · {{grp.sites.length}} site)</span>
@@ -3467,9 +3482,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="warranty-site-header">📍 {{site.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{site.items.length}} peralatan)</span></div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>Peralatan</th><th>Brand / Model</th><th>Prinsipal</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th><th>Rekod Servis Vendor</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th v-if="canEditWarranty" style="width:30px"><input type="checkbox" :checked="isWarrantyGroupAllSel(site.items)" @change="toggleWarrantyGroupSel(site.items)" :aria-label="'Pilih semua rekod ' + site.siteName"></th><th>Peralatan</th><th>Brand / Model</th><th>Prinsipal</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th><th>Rekod Servis Vendor</th><th>Tindakan</th></tr></thead>
                 <tbody>
-                  <tr v-for="w in site.items" :key="w.id">
+                  <tr v-for="w in site.items" :key="w.id" :class="{'highlight-row': warrantySelected.includes(w.id)}">
+                    <td v-if="canEditWarranty"><input type="checkbox" :checked="warrantySelected.includes(w.id)" @change="toggleWarrantySel(w.id)" :aria-label="'Pilih ' + (w.equipmentName || 'rekod')"></td>
                     <td>{{w.equipmentName||'-'}}</td>
                     <td>{{w.brand}} {{w.model}}</td>
                     <td style="font-size:.8rem">{{w.principal||'-'}}</td>
@@ -3502,7 +3518,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <td class="flex gap-8">
                       <template v-if="canEditWarranty">
                         <button class="btn btn-sm btn-outline btn-icon" @click="openEditWarranty(w)" title="Edit">✏️</button>
-                        <button :disabled="loading" class="btn btn-sm btn-danger btn-icon" @click="deleteWarranty(w)" title="Padam">🗑</button>
+                        <button v-if="canDeleteWarranty" :disabled="loading" class="btn btn-sm btn-danger btn-icon" @click="deleteWarranty(w)" title="Padam">🗑</button>
                       </template>
                       <span v-else class="text-muted text-sm">—</span>
                     </td>
@@ -7010,6 +7026,57 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="contractModal.show=false">Batal</button>
             <button class="btn btn-primary" @click="submitContract" :disabled="loading">{{loading?'Menyimpan...':contractModal.editing?'Simpan Perubahan':'Tambah Kontrak'}}</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== EDIT PUKAL WARANTI (see applyWarrantyBulkEdit) ====== -->
+      <div v-if="warrantyBulkModal.show" class="modal-bg">
+        <div class="modal" style="position:relative">
+          <button aria-label="Tutup" @click="warrantyBulkModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
+          <h3>Edit Pukal — {{warrantySelected.length}} rekod waranti</h3>
+          <p class="text-sm text-muted mb-12">Tanda "Tukar" pada medan yang hendak diubah — medan lain kekal seperti asal pada setiap rekod. Nama peralatan, brand, model dan no. siri tidak diubah.</p>
+          <div class="warr-bulk-fields">
+            <div class="warr-bulk-field">
+              <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.vendor"> Tukar</label>
+              <div class="form-group"><label>Vendor / Kontraktor Asal</label>
+                <select class="form-control" v-model="warrantyBulkModal.data.vendor" :disabled="!warrantyBulkModal.use.vendor">
+                  <option value="">-- Pilih --</option>
+                  <option v-for="v in CCTV_WARRANTY_VENDORS" :key="v">{{v}}</option>
+                </select>
+                <input v-if="warrantyBulkModal.use.vendor && warrantyBulkModal.data.vendor==='Lain-lain'" class="form-control" v-model="warrantyBulkModal.data.vendorCustom" placeholder="Nyatakan vendor sebenar" style="margin-top:6px">
+              </div>
+            </div>
+            <div class="warr-bulk-field">
+              <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.principal"> Tukar</label>
+              <div class="form-group"><label>Prinsipal / Pembekal</label><input class="form-control" v-model="warrantyBulkModal.data.principal" list="warrantyPrincipalList" :disabled="!warrantyBulkModal.use.principal" autocomplete="off"></div>
+            </div>
+            <div class="warr-bulk-field">
+              <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.warrantyType"> Tukar</label>
+              <div class="form-group"><label>Jenis Waranti</label><input class="form-control" v-model="warrantyBulkModal.data.warrantyType" :disabled="!warrantyBulkModal.use.warrantyType"></div>
+            </div>
+            <div class="warr-bulk-field">
+              <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.startDate"> Tukar</label>
+              <div class="form-group"><label>Tarikh Mula Waranti</label><input class="form-control" type="date" v-model="warrantyBulkModal.data.startDate" :disabled="!warrantyBulkModal.use.startDate"></div>
+            </div>
+            <div class="warr-bulk-field">
+              <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.endDate"> Tukar</label>
+              <div class="form-group"><label>Tarikh Tamat Waranti</label><input class="form-control" type="date" v-model="warrantyBulkModal.data.endDate" :disabled="!warrantyBulkModal.use.endDate"></div>
+            </div>
+            <div class="warr-bulk-field">
+              <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.reminderDays"> Tukar</label>
+              <div class="form-group"><label>Reminder (hari sebelum tamat)</label><input class="form-control" type="number" min="1" v-model.number="warrantyBulkModal.data.reminderDays" :disabled="!warrantyBulkModal.use.reminderDays"></div>
+            </div>
+            <div class="warr-bulk-field">
+              <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.notes"> Tukar</label>
+              <div class="form-group"><label>Nota <span class="text-muted text-sm">(menggantikan nota sedia ada)</span></label><textarea class="form-control" rows="2" v-model="warrantyBulkModal.data.notes" :disabled="!warrantyBulkModal.use.notes"></textarea></div>
+            </div>
+          </div>
+          <datalist id="warrantyPrincipalList"><option v-for="p in warrantyPrincipalSuggestions" :key="p" :value="p"></option></datalist>
+          <p v-if="warrantyBulkModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{warrantyBulkModal.err}}</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="warrantyBulkModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="applyWarrantyBulkEdit" :disabled="loading">{{loading ? 'Menyimpan...' : 'Simpan Perubahan'}}</button>
           </div>
         </div>
       </div>
@@ -13451,15 +13518,17 @@ createApp({
     const canEditContract = computed(()=> isAdminRole());
     // Waranti Peralatan (CCTV) has its own finer-grained permission tier,
     // separate from canEditContract (which also gates the Kontrak page):
-    // superadmin/admin + Izwan (staff-level, one-off exception) get full
-    // add/edit/delete; every other staff account may only ADD new records,
-    // never edit or delete an existing one.
+    // superadmin/admin, Izwan (one-off exception), the editWarrantyCctv
+    // override and — since staff were opened up — every staff account get
+    // full add/edit/delete (single, Edit Pukal, Padam Terpilih). Kept as
+    // three names so a future split needs no call-site changes.
     const WARRANTY_EDIT_STAFF_OVERRIDE = ['izwan'];
-    const canEditWarranty = computed(()=>
+    const canDeleteWarranty = computed(()=>
       isAdminRole() || WARRANTY_EDIT_STAFF_OVERRIDE.includes((authProfile.value?.username||'').toLowerCase()) ||
-      hasPermOverride('editWarrantyCctv')
+      hasPermOverride('editWarrantyCctv') || authProfile.value?.role==='staff'
     );
-    const canAddWarranty = computed(()=> canEditWarranty.value || authProfile.value?.role==='staff');
+    const canEditWarranty = computed(()=> canDeleteWarranty.value);
+    const canAddWarranty = computed(()=> canEditWarranty.value);
     // Waranti Peralatan VIR (spare part dibeli Daya One sendiri) — admin+
     // only, no staff-add exception, mirrors canEditEquip's existing VIR
     // rule (VIR equipment stays admin+ only, unlike CCTV where staff can
@@ -13491,7 +13560,7 @@ createApp({
       if(collection === 'virEquipmentWarranty') return canEditVirWarranty.value;
       if(collection === 'suratMemo') return canEditLetterMemo.value;
       if(collection === 'rmaRecords') return canAddRma.value;
-      return canEditWarranty.value;
+      return canDeleteWarranty.value; // removing a service file is a delete
     }
     // Site equipment (both CCTV and VIR): staff may also add/edit/delete
     // records, same as admin+ — internship excluded (role check is strictly
@@ -14578,7 +14647,7 @@ Teruskan tukar emel?`)) return;
     }
     function openEquipWarranty(w) { if(w && canEditWarranty.value) openEditWarranty(w); }
     async function deleteWarranty(w) {
-      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!canDeleteWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!await askConfirm(`Padam rekod waranti "${w.equipmentName}" (${w.siteName})? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       loading.value = true; // see deleteContract
       try {
@@ -14588,6 +14657,111 @@ Teruskan tukar emel?`)) return;
         showUndoToast('Rekod waranti dipindah ke Tong Sampah.', () => _undoSoftDelete('equipmentWarranty', 'deletedEquipmentWarranty', w.id, data, warranty));
       } catch(e) { showToast('Gagal padam rekod waranti: ' + e.message, 'error'); }
       loading.value = false;
+    }
+
+    // ── Waranti: pilih beberapa rekod → Edit Pukal / Padam Terpilih ──
+    // Same roles as single edit (canEditWarranty — staff included) and
+    // single delete (canDeleteWarranty). The selection is
+    // kept by id across company/status filters; a record deleted elsewhere
+    // (live list) drops out of it.
+    const warrantySelected = ref([]);
+    watch(warranty, list => {
+      if(!warrantySelected.value.length) return;
+      const ids = new Set(list.map(w => w.id));
+      const kept = warrantySelected.value.filter(id => ids.has(id));
+      if(kept.length !== warrantySelected.value.length) warrantySelected.value = kept;
+    });
+    // Selected but not on screen under the current filters — said on the
+    // bar, since bulk actions apply to every selected record.
+    const warrantySelectedHidden = computed(() => {
+      const shown = new Set(warrantyFiltered.value.map(w => w.id));
+      return warrantySelected.value.filter(id => !shown.has(id)).length;
+    });
+    function toggleWarrantySel(id) {
+      const s = warrantySelected.value;
+      warrantySelected.value = s.includes(id) ? s.filter(x => x !== id) : [...s, id];
+    }
+    function isWarrantyGroupAllSel(items) { return items.length > 0 && items.every(w => warrantySelected.value.includes(w.id)); }
+    function toggleWarrantyGroupSel(items) {
+      const ids = items.map(w => w.id);
+      warrantySelected.value = isWarrantyGroupAllSel(items)
+        ? warrantySelected.value.filter(id => !ids.includes(id))
+        : [...new Set([...warrantySelected.value, ...ids])];
+    }
+    // Only fields a batch genuinely shares — name/brand/model/serial are per unit.
+    const WARRANTY_BULK_FIELDS = [['vendor','Vendor'],['principal','Prinsipal'],['warrantyType','Jenis Waranti'],['startDate','Tarikh Mula'],['endDate','Tarikh Tamat'],['reminderDays','Reminder'],['notes','Nota']];
+    const warrantyBulkModal = reactive({ show:false, err:'',
+      use: Object.fromEntries(WARRANTY_BULK_FIELDS.map(([k]) => [k, false])),
+      data: { vendor:'', vendorCustom:'', principal:'', warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'' } });
+    function openWarrantyBulkEdit() {
+      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      if(!warrantySelected.value.length) return;
+      Object.keys(warrantyBulkModal.use).forEach(k => { warrantyBulkModal.use[k] = false; });
+      Object.assign(warrantyBulkModal.data, { vendor:'', vendorCustom:'', principal:'', warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'' });
+      warrantyBulkModal.err = '';
+      warrantyBulkModal.show = true;
+    }
+    async function applyWarrantyBulkEdit() {
+      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const m = warrantyBulkModal, d = m.data, use = m.use;
+      m.err = '';
+      const recs = warranty.value.filter(w => warrantySelected.value.includes(w.id));
+      if(!recs.length) { m.err = 'Tiada rekod dipilih.'; return; }
+      const fields = WARRANTY_BULK_FIELDS.filter(([k]) => use[k]);
+      if(!fields.length) { m.err = 'Tanda sekurang-kurangnya satu medan untuk ditukar.'; return; }
+      const patch = {};
+      if(use.vendor) {
+        if(!d.vendor) { m.err = 'Sila pilih vendor.'; return; }
+        if(d.vendor === 'Lain-lain' && !d.vendorCustom.trim()) { m.err = 'Sila nyatakan nama vendor untuk "Lain-lain".'; return; }
+        patch.vendor = d.vendor === 'Lain-lain' ? d.vendorCustom.trim() : d.vendor;
+      }
+      if(use.principal) { if(!d.principal.trim()) { m.err = 'Prinsipal tidak boleh kosong.'; return; } patch.principal = d.principal.trim(); }
+      if(use.warrantyType) patch.warrantyType = d.warrantyType.trim();
+      if(use.startDate) { if(!d.startDate) { m.err = 'Sila isi Tarikh Mula.'; return; } patch.startDate = d.startDate; }
+      if(use.endDate) { if(!d.endDate) { m.err = 'Sila isi Tarikh Tamat.'; return; } patch.endDate = d.endDate; }
+      if(use.reminderDays) { const r = Number(d.reminderDays); if(!(r >= 1)) { m.err = 'Reminder mesti sekurang-kurangnya 1 hari.'; return; } patch.reminderDays = Math.round(r); }
+      if(use.notes) patch.notes = d.notes.trim();
+      // Each record keeps whichever date isn't being changed — check the pair per record.
+      const badDates = recs.filter(w => (patch.endDate ?? w.endDate) < (patch.startDate ?? w.startDate));
+      if(badDates.length) { m.err = `Tarikh tamat jadi lebih awal daripada tarikh mula untuk ${badDates.length} rekod (cth. "${badDates[0].equipmentName}"). Semak tarikh.`; return; }
+      const labels = fields.map(([, l]) => l).join(', ');
+      if(!await askConfirm(`Tukar ${labels} untuk ${recs.length} rekod waranti?`, { danger:false })) return;
+      loading.value = true;
+      try {
+        for(let i = 0; i < recs.length; i += 450) {
+          const batch = db.batch();
+          recs.slice(i, i + 450).forEach(w => batch.update(db.collection('equipmentWarranty').doc(w.id), patch));
+          await _fw(batch.commit());
+        }
+        const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
+        recs.forEach(w => _localUpsert(warranty, w.id, { ...w, ...patch }, sortByEnd));
+        logAudit('WARRANTY_BULK_EDIT', `${recs.length} rekod — ${labels}`);
+        showToast(`${recs.length} rekod waranti dikemaskini.`);
+        m.show = false;
+        warrantySelected.value = [];
+      } catch(e) { m.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    async function bulkDeleteWarranty() {
+      if(!canDeleteWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const recs = warranty.value.filter(w => warrantySelected.value.includes(w.id));
+      if(!recs.length) return;
+      if(!await askConfirm(`Padam ${recs.length} rekod waranti terpilih? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      loading.value = true;
+      const done = [];
+      for(const w of recs) {
+        try {
+          done.push([w.id, await _softDeleteToTrash('equipmentWarranty', 'deletedEquipmentWarranty', w.id)]);
+          logAudit('WARRANTY_DELETE', `${w.equipmentName} — ${w.siteName} (pukal)`);
+        } catch(e) { console.warn('Gagal padam rekod waranti:', e); }
+      }
+      const ids = new Set(done.map(([id]) => id));
+      warranty.value = warranty.value.filter(x => !ids.has(x.id));
+      warrantySelected.value = warrantySelected.value.filter(id => !ids.has(id));
+      loading.value = false;
+      if(done.length < recs.length) showToast(`${recs.length - done.length} rekod gagal dipadam — sila cuba lagi.`, 'error');
+      if(done.length) showUndoToast(`${done.length} rekod waranti dipindah ke Tong Sampah.`,
+        async () => { for(const [id, data] of done) await _undoSoftDelete('equipmentWarranty', 'deletedEquipmentWarranty', id, data, warranty); });
     }
     // ── Surat & Memo — general correspondence repository, NOT scoped to one
     // project or even a site: equipment handover memos (Daya One <-> SPRM),
@@ -25080,7 +25254,7 @@ Teruskan tukar emel?`)) return;
         && ((w.equipRef?.uid && uids.has(w.equipRef.uid)) || (w.equipRef?.kind !== 'misc' && serials.has(_realSerialKey(w.serial)))));
       if(isVirWty) matches = matches.slice(0, 1);
       if(!matches.length) return;
-      if(!(isVirWty ? canEditVirWarranty.value : canEditWarranty.value)) {
+      if(!(isVirWty ? canEditVirWarranty.value : canDeleteWarranty.value)) {
         showToast(matches.length > 1
           ? `${matches.length} rekod waranti masih aktif untuk peralatan yang dibuang — sila maklumkan admin untuk kemaskini rekod tersebut.`
           : `Peralatan ini ada rekod waranti aktif ("${matches[0].equipmentName}") — sila maklumkan admin untuk kemaskini rekod tersebut.`, 'error');
@@ -30380,7 +30554,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       WHATS_NEW_ITEMS, whatsNewModal, closeWhatsNew,
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS, PERMISSION_OVERRIDE_CAPABILITIES,
       userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
-      contracts, contractsLoading, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
+      contracts, contractsLoading, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canDeleteWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
       virWarranty, virWarrantyModal, virWarrantyFilterStatus, loadVirWarranty, virWarrantyStatus, virWarrantyExpiringCount, virWarrantyFiltered, virWarrantyBySite, virWarrantyUrgencyBySite,
       onVirWarrantySiteChange, openAddVirWarranty, openEditVirWarranty, submitVirWarranty, deleteVirWarranty, canEditVirWarranty, canAddWarrantyReportFor, canEditWarrantyReportFor,
       exportContractsExcel, exportContractsPdf,
@@ -30390,6 +30564,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       warrantyStatTotalCount, warrantyStatActiveCount, warrantyStatExpiringCount, warrantyStatExpiredCount,
       warrantyFilterVendor, warrantyFilterStatus, warrantyFiltered, warrantyVendorChips, warrantyByVendor, warrantyUrgencyBySite, onWarrantySiteChange,
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, warrantyEffStatus,
+      warrantySelected, warrantySelectedHidden, toggleWarrantySel, isWarrantyGroupAllSel, toggleWarrantyGroupSel,
+      WARRANTY_BULK_FIELDS, warrantyBulkModal, openWarrantyBulkEdit, applyWarrantyBulkEdit, bulkDeleteWarranty,
       warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, onWarrantyEquipPick, toggleWarrantyBulkGroup, warrantyPrincipalSuggestions,
       equipWarrantyOf, equipWarrantyTitle, openEquipWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCategoryColor, letterMemoCustomCategories,
