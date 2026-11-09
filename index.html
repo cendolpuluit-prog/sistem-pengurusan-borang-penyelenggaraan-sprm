@@ -1720,6 +1720,25 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
 .dark-mode .lic-cap-chip.is-full,.dark-mode .lic-cap-chip.is-over{background:#4a1f1f;color:#ff8a80}
 .dark-mode .lic-cap-warn{color:#ffb74d}
 .site-list-tbl td:nth-child(n+4):not(:last-child){white-space:nowrap}
+/* Servis & RMA: record kind picker + list badge */
+.rma-type-pick{display:flex;flex-wrap:wrap;gap:8px}
+.rma-type-pick label{display:flex;align-items:center;gap:6px;margin:0;padding:8px 12px;border:1.5px solid #c9d3e0;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem}
+.rma-type-pick label.active{border-color:#003366;background:#eef2f8}
+.rma-type-badge{display:inline-block;margin-bottom:3px;padding:0 7px;border-radius:9px;font-size:.68rem;font-weight:700}
+.rma-type-badge.is-rma{background:#e8f0fb;color:#0d4a8a}
+.rma-type-badge.is-servis{background:#e8f5e9;color:#2e7d32}
+.dark-mode .rma-type-pick label{border-color:#2c3a50}
+.dark-mode .rma-type-pick label.active{border-color:#90caf9;background:#1a2230}
+.dark-mode .rma-type-badge.is-rma{background:#1a2a40;color:#90caf9}
+.dark-mode .rma-type-badge.is-servis{background:#1e3a24;color:#81c784}
+/* Direktori Prinsipal */
+.principal-tags{display:flex;flex-wrap:wrap;gap:4px}
+.principal-tag{display:inline-block;padding:1px 8px;border-radius:9px;background:#eef2f8;color:#003366;font-size:.75rem;font-weight:600}
+.principal-contact+.principal-contact{margin-top:6px;padding-top:6px;border-top:1px dashed #dde2e9}
+.principal-contact-row{display:grid;grid-template-columns:1.3fr 1fr 1fr 1.4fr auto;gap:6px;margin-bottom:6px}
+@media (max-width:640px){.principal-contact-row{grid-template-columns:1fr 1fr}}
+.dark-mode .principal-tag{background:#232c3a;color:#90caf9}
+.dark-mode .principal-contact+.principal-contact{border-top-color:#2c3a50}
 /* Waranti Peralatan: selection bar + Edit Pukal fields */
 .warr-sel-bar{position:sticky;top:8px;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 14px;padding:10px 14px;border-radius:10px;background:#003366;color:#fff;box-shadow:0 4px 14px rgba(0,30,60,.18)}
 .warr-sel-bar .btn-outline{background:#fff}
@@ -2435,12 +2454,15 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <span class="icon">📜</span> Kontrak &amp; SLA
         <span v-if="contractsExpiringCountCctv>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{contractsExpiringCountCctv}}</span>
       </div>
-      <div class="nav-item" :class="{active:page==='warranty'}" @click="loadWarranty();page='warranty'" v-if="canViewCredentials">
+      <div class="nav-item" :class="{active:page==='warranty'}" @click="loadWarranty();loadRmaRecords();page='warranty'" v-if="canViewCredentials">
         <span class="icon">🛡️</span> Waranti Peralatan
         <span v-if="warrantyExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{warrantyExpiringCount}}</span>
       </div>
-      <div class="nav-item" :class="{active:page==='rma'&&currentProject==='cctv'}" @click="currentProject='cctv';rmaFilterStatus='';loadRmaRecords();page='rma'">
-        <span class="icon">📦</span> Rekod RMA
+      <div class="nav-item" :class="{active:page==='principals'}" @click="loadPrincipals();loadWarranty();page='principals'" v-if="canViewCredentials">
+        <span class="icon">🏭</span> Direktori Prinsipal
+      </div>
+      <div class="nav-item" :class="{active:page==='rma'&&currentProject==='cctv'}" @click="currentProject='cctv';rmaFilterStatus='';loadRmaRecords();loadWarranty();page='rma'">
+        <span class="icon">📦</span> Servis &amp; RMA
         <span v-if="rmaCountsByProject.cctv.open>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem" :title="rmaNavBadgeTitle('cctv')">{{rmaCountsByProject.cctv.open}}</span>
       </div>
       <div class="nav-section-label" style="margin-top:6px">PROJEK VIR</div>
@@ -2465,7 +2487,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <span v-if="virWarrantyExpiringCount>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem">{{virWarrantyExpiringCount}}</span>
       </div>
       <div class="nav-item" :class="{active:page==='rma'&&currentProject==='vir'}" @click="currentProject='vir';rmaFilterStatus='';loadRmaRecords();page='rma'">
-        <span class="icon">📦</span> Rekod RMA
+        <span class="icon">📦</span> Servis &amp; RMA
         <span v-if="rmaCountsByProject.vir.open>0" class="badge badge-red" style="margin-left:auto;font-size:.68rem" :title="rmaNavBadgeTitle('vir')">{{rmaCountsByProject.vir.open}}</span>
       </div>
       <div class="nav-section-label" style="margin-top:6px">JADUAL, LAPORAN &amp; SUPPORT</div>
@@ -3363,38 +3385,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         </div>
         <p class="text-sm text-muted mb-16">Tracking waranti peralatan yang diwarisi daripada 3 kontraktor pemasang asal SPRM (sebelum Daya One ambil alih penyelenggaraan). Data ini berasingan sepenuhnya daripada borang PM/CM — semata-mata untuk rujukan &amp; laporan dalaman.</p>
 
-        <div class="card" style="margin-bottom:18px">
-          <div class="card-title" style="margin:0 0 10px;border:none;padding:0;font-size:.85rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer" @click="showAllServiceReports=!showAllServiceReports">
-            <span>📎 Fail Servis Terkini (Semua Site) <span class="text-muted" style="font-weight:400">({{allServiceReports.length}})</span></span>
-            <span style="font-size:.8rem;color:#888">{{showAllServiceReports?'▲ Tutup':'▼ Buka'}}</span>
-          </div>
-          <div v-if="showAllServiceReports">
-            <input v-if="allServiceReports.length" class="form-control" style="margin-bottom:10px" v-model="serviceReportSearchQuery" placeholder="Cari ikut nama fail, peralatan, site, vendor, atau siapa upload...">
-            <div v-if="!allServiceReports.length" class="empty" style="padding:14px 0">Tiada fail servis dimuat naik lagi merentasi mana-mana site.</div>
-            <div v-else-if="!allServiceReportsFiltered.length" class="empty" style="padding:14px 0">Tiada fail sepadan carian.</div>
-            <div v-else class="tbl-wrap">
-              <table>
-                <thead><tr><th>Nama Fail</th><th>Peralatan</th><th>Site</th><th>Vendor</th><th>Tarikh Upload</th><th>Diupload Oleh</th><th>Saiz</th></tr></thead>
-                <tbody>
-                  <tr v-for="r in allServiceReportsFiltered" :key="r.path" style="cursor:pointer" @click="previewServiceReport(r)">
-                    <td style="font-weight:600;font-size:.82rem">{{r.name}}</td>
-                    <td style="font-size:.82rem">{{r.warranty?.equipmentName||'-'}}</td>
-                    <td style="font-size:.82rem">{{r.warranty?.siteName||'-'}}</td>
-                    <td style="font-size:.82rem">{{r.warranty?.vendor||'-'}}</td>
-                    <td style="font-size:.8rem;white-space:nowrap">{{fmtIsoDate(r.uploadedAt)}}</td>
-                    <td style="font-size:.82rem">{{r.uploadedBy||'-'}}</td>
-                    <td style="font-size:.8rem;white-space:nowrap">{{(r.size/1024/1024).toFixed(2)}}MB</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
         <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
           <div class="vendor-chips" role="group" aria-label="Tapis ikut vendor">
             <button type="button" class="vendor-chip" :class="{active: !warrantyFilterVendor}" :aria-pressed="!warrantyFilterVendor" @click="warrantyFilterVendor=''">Semua <span class="vendor-chip-n">{{warrantyVendorChips.all}}</span></button>
             <button v-for="c in warrantyVendorChips.vendors" :key="c.vendor" type="button" class="vendor-chip" :class="{active: warrantyFilterVendor===c.vendor}" :aria-pressed="warrantyFilterVendor===c.vendor" @click="warrantyFilterVendor = warrantyFilterVendor===c.vendor ? '' : c.vendor">{{c.vendor}} <span class="vendor-chip-n">{{c.count}}</span></button>
+            <button v-if="warrantyFilterPrincipal" type="button" class="vendor-chip active" @click="warrantyFilterPrincipal=''" title="Buang penapis prinsipal">🏭 Prinsipal: {{warrantyFilterPrincipal}} ✕</button>
           </div>
           <select class="form-control" style="width:auto;min-width:160px;margin-left:auto" v-model="warrantyFilterStatus">
             <option value="">Semua Status</option>
@@ -3465,6 +3460,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <div class="skel skel-line" style="width:78%"></div>
           <div class="skel skel-line" style="width:85%;margin-bottom:0"></div>
         </div>
+        <div v-else-if="!warrantyFiltered.length && warranty.length" class="empty">Tiada rekod waranti sepadan dengan tapisan. <a href="#" @click.prevent="warrantyFilterVendor='';warrantyFilterStatus='';warrantyFilterPrincipal=''">Kosongkan tapisan</a></div>
         <div v-else-if="!warrantyFiltered.length" class="empty">Tiada rekod waranti peralatan lagi.<br><button v-if="canAddWarranty" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddWarranty">+ Tambah Peralatan</button></div>
         <div v-if="canEditWarranty && warrantySelected.length" class="warr-sel-bar" role="region" aria-label="Tindakan rekod terpilih">
           <b>{{warrantySelected.length}} dipilih</b>
@@ -3482,7 +3478,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="warranty-site-header">📍 {{site.siteName}} <span style="font-weight:400;color:#888;font-size:.78rem">({{site.items.length}} peralatan)</span></div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th v-if="canEditWarranty" style="width:30px"><input type="checkbox" :checked="isWarrantyGroupAllSel(site.items)" @change="toggleWarrantyGroupSel(site.items)" :aria-label="'Pilih semua rekod ' + site.siteName"></th><th>Peralatan</th><th>Brand / Model</th><th>Prinsipal</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th><th>Rekod Servis Vendor</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th v-if="canEditWarranty" style="width:30px"><input type="checkbox" :checked="isWarrantyGroupAllSel(site.items)" @change="toggleWarrantyGroupSel(site.items)" :aria-label="'Pilih semua rekod ' + site.siteName"></th><th>Peralatan</th><th>Brand / Model</th><th>Prinsipal</th><th>No. Siri</th><th>Jenis Waranti</th><th>Tempoh Waranti</th><th>Status</th><th>Servis/RMA</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="w in site.items" :key="w.id" :class="{'highlight-row': warrantySelected.includes(w.id)}">
                     <td v-if="canEditWarranty"><input type="checkbox" :checked="warrantySelected.includes(w.id)" @change="toggleWarrantySel(w.id)" :aria-label="'Pilih ' + (w.equipmentName || 'rekod')"></td>
@@ -3509,11 +3505,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                         <template v-else>🟢 Aktif</template>
                       </span>
                     </td>
-                    <td>
-                      <!-- In-app only — deliberately excluded from
-                           exportWarrantyPdf/Excel/Docx, since service-report
-                           files aren't printable data, just attachments. -->
-                      <button class="btn btn-sm btn-outline btn-icon" @click="openServiceReports(w)" :title="`Fail Servis (${(w.serviceReports||[]).length})`">📎<span v-if="(w.serviceReports||[]).length" style="font-size:.7rem;margin-left:2px">{{(w.serviceReports||[]).length}}</span></button>
+                    <td style="text-align:center">
+                      <!-- Service history now lives in Servis & RMA (see warrantyServiceCount). -->
+                      <button v-if="warrantyServiceCount(w)" class="btn btn-sm btn-outline" @click="openWarrantyServiceRecords(w)" title="Lihat rekod servis/RMA peralatan ini">🔧 {{warrantyServiceCount(w)}}</button>
+                      <span v-else class="text-muted text-sm">-</span>
                     </td>
                     <td class="flex gap-8">
                       <template v-if="canEditWarranty">
@@ -3526,6 +3521,100 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== DIREKTORI PRINSIPAL (CCTV — see principals / savePrincipal) ====== -->
+      <div v-if="page==='principals' && canViewCredentials" class="page-view">
+        <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
+          <div class="card-title" style="margin:0;border:none;padding:0">🏭 Direktori Prinsipal — Projek CCTV</div>
+          <div class="flex gap-8">
+            <button :disabled="loading" v-if="principalsFiltered.length" class="btn btn-outline btn-sm" @click="exportPrincipalsPdf">🖨 PDF</button>
+            <button v-if="canEditWarranty" class="btn btn-primary btn-sm" @click="openAddPrincipal">+ Tambah Prinsipal</button>
+          </div>
+        </div>
+        <p class="text-sm text-muted mb-16">Syarikat prinsipal / pembekal yang membekal peralatan kepada vendor (main contractor) — maklumat syarikat, contact person dan brand/jenis peralatan di bawah mereka. Nama di sini dicadangkan dalam medan "Prinsipal" borang Waranti Peralatan.</p>
+        <input v-if="principals.length" class="form-control mb-16" v-model="principalSearch" placeholder="Cari nama syarikat, brand, jenis peralatan atau contact person…">
+        <div v-if="principalsLoading && !principals.length" class="card"><div class="skel skel-line" style="width:40%"></div><div class="skel skel-block" style="height:120px;margin-top:12px"></div></div>
+        <div v-else-if="!principals.length" class="empty">Belum ada prinsipal direkodkan.<br><button v-if="canEditWarranty" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddPrincipal">+ Tambah Prinsipal</button></div>
+        <div v-else-if="!principalsFiltered.length" class="empty">Tiada prinsipal sepadan dengan carian. <a href="#" @click.prevent="principalSearch=''">Kosongkan carian</a></div>
+        <div v-else class="card">
+          <div class="tbl-wrap">
+            <table>
+              <thead><tr><th>Syarikat</th><th>Brand / Jenis Peralatan</th><th>Contact Person</th><th>Rekod Waranti</th><th>Nota</th><th>Tindakan</th></tr></thead>
+              <tbody>
+                <tr v-for="p in principalsFiltered" :key="p.id">
+                  <td style="min-width:180px">
+                    <b>{{p.name}}</b>
+                    <div v-if="p.phone" class="text-sm">☎ <a :href="'tel:' + p.phone">{{p.phone}}</a></div>
+                    <div v-if="p.website" class="text-sm text-muted">{{p.website}}</div>
+                    <div v-if="p.address" class="text-sm text-muted" style="white-space:pre-wrap">{{p.address}}</div>
+                  </td>
+                  <td style="min-width:150px">
+                    <div v-if="(p.brands||[]).length" class="principal-tags"><span v-for="b in p.brands" :key="b" class="principal-tag">{{b}}</span></div>
+                    <div v-if="(p.categories||[]).length" class="text-sm text-muted" style="margin-top:4px">{{p.categories.join(', ')}}</div>
+                    <span v-if="!(p.brands||[]).length && !(p.categories||[]).length" class="text-muted text-sm">-</span>
+                  </td>
+                  <td style="min-width:200px">
+                    <div v-for="c in (p.contacts||[])" :key="c.id || c.name" class="principal-contact">
+                      <b>{{c.name || '-'}}</b> <span v-if="c.position" class="text-muted text-sm">({{c.position}})</span>
+                      <div v-if="c.phone" class="text-sm">☎ <a :href="'tel:' + c.phone">{{c.phone}}</a></div>
+                      <div v-if="c.email" class="text-sm">✉ <a :href="'mailto:' + c.email">{{c.email}}</a></div>
+                    </div>
+                    <span v-if="!(p.contacts||[]).length" class="text-muted text-sm">-</span>
+                  </td>
+                  <td style="text-align:center">
+                    <button v-if="principalWarrantyCountOf(p)" class="btn btn-sm btn-outline" @click="openPrincipalWarranties(p)" title="Lihat rekod waranti prinsipal ini">🛡️ {{principalWarrantyCountOf(p)}}</button>
+                    <span v-else class="text-muted text-sm">0</span>
+                  </td>
+                  <td style="max-width:220px;white-space:pre-wrap;font-size:.8rem">{{p.notes || '-'}}</td>
+                  <td class="flex gap-8">
+                    <template v-if="canEditWarranty">
+                      <button class="btn btn-sm btn-outline btn-icon" @click="openEditPrincipal(p)" title="Edit">✏️</button>
+                      <button :disabled="loading" class="btn btn-sm btn-danger btn-icon" @click="deletePrincipal(p)" title="Padam">🗑</button>
+                    </template>
+                    <span v-else class="text-muted text-sm">—</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====== TAMBAH / EDIT PRINSIPAL MODAL ====== -->
+      <div v-if="principalModal.show" class="modal-bg">
+        <div class="modal" style="position:relative;max-width:720px">
+          <button aria-label="Tutup" @click="principalModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
+          <h3>{{principalModal.editId ? 'Edit Prinsipal' : 'Tambah Prinsipal'}}</h3>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Nama Syarikat *</label><input class="form-control" v-model="principalModal.data.name" placeholder="cth: Ingram Micro Malaysia Sdn Bhd"></div>
+            <div class="form-group"><label>No. Telefon Pejabat</label><input class="form-control" v-model="principalModal.data.phone" placeholder="cth: 03-1234 5678"></div>
+            <div class="form-group"><label>Laman Web</label><input class="form-control" v-model="principalModal.data.website" placeholder="cth: www.syarikat.com.my"></div>
+            <div class="form-group"><label>Brand Dibekal <span class="text-muted text-sm">(asingkan dengan koma)</span></label><input class="form-control" v-model="principalModal.data.brandsText" placeholder="cth: Bosch, Hanwha, H3C"></div>
+          </div>
+          <div class="form-group"><label>Alamat</label><textarea class="form-control" rows="2" v-model="principalModal.data.address"></textarea></div>
+          <div class="form-group"><label>Jenis Peralatan</label>
+            <div class="lic-cover-list">
+              <label v-for="c in PRINCIPAL_CATEGORIES" :key="c"><input type="checkbox" :value="c" v-model="principalModal.data.categories"> {{c}}</label>
+            </div>
+          </div>
+          <div class="form-group"><label>Contact Person</label>
+            <div v-for="(c, i) in principalModal.data.contacts" :key="c.id" class="principal-contact-row">
+              <input class="form-control" v-model="c.name" placeholder="Nama">
+              <input class="form-control" v-model="c.position" placeholder="Jawatan">
+              <input class="form-control" v-model="c.phone" placeholder="No. telefon">
+              <input class="form-control" v-model="c.email" type="email" placeholder="Emel">
+              <button type="button" class="btn btn-sm btn-outline btn-icon" @click="removePrincipalContact(i)" title="Buang contact ini">✕</button>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline" @click="addPrincipalContact">+ Tambah contact person</button>
+          </div>
+          <div class="form-group"><label>Nota</label><textarea class="form-control" rows="2" v-model="principalModal.data.notes" placeholder="cth: Proses RMA melalui emel sahaja, waktu operasi 9 pg – 5 ptg"></textarea></div>
+          <p v-if="principalModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{principalModal.err}}</p>
+          <div class="flex gap-8">
+            <button class="btn btn-outline" @click="principalModal.show=false">Batal</button>
+            <button class="btn btn-primary" @click="savePrincipal" :disabled="loading">{{loading ? 'Menyimpan...' : principalModal.editId ? 'Simpan Perubahan' : 'Tambah Prinsipal'}}</button>
           </div>
         </div>
       </div>
@@ -3665,13 +3754,18 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       <!-- ====== REKOD RMA ====== -->
       <div v-if="page==='rma'" class="page-view">
         <div class="flex justify-between items-center mb-20" style="flex-wrap:wrap;gap:10px">
-          <div class="card-title" style="margin:0;border:none;padding:0">📦 Rekod RMA — Projek {{currentProject==='vir'?'VIR':'CCTV'}}</div>
+          <div class="card-title" style="margin:0;border:none;padding:0">📦 Servis &amp; RMA — Projek {{currentProject==='vir'?'VIR':'CCTV'}}</div>
           <div class="flex gap-8">
             <button :disabled="loading" v-if="canAddRma && rmaFiltered.length" class="btn btn-outline btn-sm" @click="exportRmaListPdf">📄 Export PDF</button>
+            <button v-if="canAddRma" class="btn btn-outline btn-sm" @click="openAddRma({ recordType:'servis' })">+ Servis di Site</button>
             <button v-if="canAddRma" class="btn btn-primary btn-sm" @click="openAddRma()">+ Rekod RMA Baru</button>
           </div>
         </div>
-        <p class="text-sm text-muted mb-16">Jejak peralatan yang dihantar ke vendor/supplier untuk dibaiki atau diganti (RMA) — bila dihantar, sebab kerosakan, bila dapat semula dan apa keputusan vendor. Berbeza dengan Waranti Peralatan (tempoh perlindungan waranti). Klik 📦 pada baris peralatan di Urus Peralatan untuk rekod terus dari site.</p>
+        <p class="text-sm text-muted mb-16">Rekod servis peralatan oleh vendor/prinsipal: <b>RMA</b> — peralatan dihantar ke vendor untuk dibaiki atau diganti (bila dihantar, bila dapat semula, keputusan vendor); <b>Servis di site</b> — vendor datang membaiki di site (masalah, tindakan diambil, laporan servis). Klik 📦 pada baris peralatan di Urus Peralatan untuk rekod RMA terus dari site.</p>
+        <div v-if="currentProject==='cctv' && canAddRma && legacyServiceReportCount" class="equip-load-warning" style="margin-bottom:16px">
+          📥 Terdapat <b>{{legacyServiceReportCount}} fail laporan servis lama</b> pada {{legacyServiceReportRecords.length}} rekod Waranti Peralatan (lajur "Rekod Servis Vendor" yang telah dibuang). Pindahkan ke sini sebagai rekod <b>Servis di site</b> — fail tidak dimuat naik semula, hanya rujukannya dipindah.
+          <div style="margin-top:8px"><button :disabled="loading" class="btn btn-sm btn-primary" @click="migrateLegacyServiceReports">Pindah sekarang</button></div>
+        </div>
 
         <div class="flex gap-8 mb-16" style="flex-wrap:wrap">
           <div class="card" style="flex:1;min-width:150px;margin:0;padding:12px 14px">
@@ -3687,13 +3781,22 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div style="font-size:1.4rem;font-weight:700">{{rmaStats.avgDays===null?'—':rmaStats.avgDays+' hari'}}</div>
             <div class="text-sm text-muted" v-if="rmaStats.closed">({{rmaStats.closed}} RMA selesai)</div>
           </div>
+          <div class="card" style="flex:1;min-width:150px;margin:0;padding:12px 14px">
+            <div class="text-sm text-muted">Servis di Site</div>
+            <div style="font-size:1.4rem;font-weight:700">{{rmaStats.servis}}</div>
+          </div>
         </div>
 
         <div class="flex gap-8 mb-16" style="flex-wrap:wrap;align-items:center">
+          <select class="form-control" style="width:auto;min-width:150px" v-model="rmaFilterType">
+            <option value="">Semua Jenis</option>
+            <option value="rma">📦 RMA</option>
+            <option value="servis">🔧 Servis di site</option>
+          </select>
           <select class="form-control" style="width:auto;min-width:160px" v-model="rmaFilterStatus">
             <option value="">Semua Status</option>
             <option value="open">🟡 Belum Pulang</option>
-            <option value="closed">✅ Sudah Pulang</option>
+            <option value="closed">✅ Sudah Pulang / Selesai</option>
           </select>
           <select class="form-control" style="width:auto;min-width:200px" v-model="rmaFilterSite">
             <option value="">Semua Site</option>
@@ -3701,14 +3804,18 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           </select>
           <input class="form-control" style="width:auto;min-width:220px;margin-left:auto" v-model="rmaSearch" placeholder="🔍 Cari No. Siri, vendor, No. RMA...">
         </div>
+        <div v-if="rmaFilterUnit" class="vendor-chips mb-16">
+          <button type="button" class="vendor-chip active" @click="rmaFilterUnit=null" title="Buang penapis peralatan">🛡 Peralatan: {{rmaUnitFilterLabel(rmaFilterUnit)}} ✕</button>
+        </div>
 
-        <div v-if="!rmaFiltered.length" class="empty">{{rmaStats.total ? 'Tiada rekod RMA sepadan dengan tapisan.' : 'Tiada rekod RMA untuk projek ini lagi.'}}<br><button v-if="canAddRma && !rmaStats.total" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddRma()">+ Rekod RMA Baru</button></div>
+        <div v-if="!rmaFiltered.length" class="empty">{{rmaStats.total ? 'Tiada rekod sepadan dengan tapisan.' : 'Tiada rekod servis/RMA untuk projek ini lagi.'}}<br><button v-if="canAddRma && !rmaStats.total" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddRma()">+ Rekod RMA Baru</button></div>
         <div v-else class="tbl-wrap">
           <table>
-            <thead><tr><th>Peralatan</th><th>Site</th><th>Vendor / No. RMA</th><th>Sebab Kerosakan</th><th>Hantar</th><th>Pulang</th><th>Status</th><th>Lampiran</th><th>Tindakan</th></tr></thead>
+            <thead><tr><th>Peralatan</th><th>Site</th><th>Vendor / No. Rujukan</th><th>Masalah / Kerosakan</th><th>Tarikh</th><th>Pulang</th><th>Status</th><th>Lampiran</th><th>Tindakan</th></tr></thead>
             <tbody>
               <tr v-for="r in rmaFiltered" :key="r.id">
                 <td style="max-width:220px">
+                  <span class="rma-type-badge" :class="rmaIsServis(r) ? 'is-servis' : 'is-rma'">{{rmaIsServis(r) ? '🔧 Servis di site' : '📦 RMA'}}</span>
                   <b>{{r.equipName || r.category || '-'}}</b>
                   <div class="text-muted" style="font-size:.78rem">{{[r.category && r.equipName ? r.category : '', r.brand, r.model].filter(Boolean).join(' · ')}}</div>
                   <div v-if="r.serial" class="mono-data" style="font-size:.76rem">SN: {{r.serial}}</div>
@@ -3717,21 +3824,24 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <td style="font-size:.82rem">{{r.siteName}}</td>
                 <td style="font-size:.82rem">
                   {{r.vendor||'-'}}
-                  <div v-if="r.rmaNo" class="mono-data" style="font-size:.76rem">RMA: {{r.rmaNo}}</div>
+                  <div v-if="r.rmaNo" class="mono-data" style="font-size:.76rem">{{rmaIsServis(r) ? 'No. Laporan' : 'RMA'}}: {{r.rmaNo}}</div>
                   <div v-if="r.trackingNo" class="text-muted" style="font-size:.76rem">🚚 {{rmaLabel(RMA_SHIP_METHODS, r.shipMethod) || 'Tracking'}}: {{r.trackingNo}}</div>
                   <div v-if="r.warrantyState" style="font-size:.74rem;margin-top:2px"><span :class="['expiry-badge', r.warrantyState==='dalam'?'active':r.warrantyState==='tamat'?'expired':'soon']">{{rmaLabel(RMA_WARRANTY_STATES, r.warrantyState)}}</span></div>
                 </td>
-                <td style="max-width:260px;white-space:pre-wrap;font-size:.82rem">{{r.fault||'-'}}<div v-if="r.cmRef" class="text-muted" style="font-size:.76rem;margin-top:3px">CM: {{r.cmRef}}</div><div v-if="r.notes" class="text-muted" style="font-size:.76rem;margin-top:3px">📝 {{r.notes}}</div></td>
+                <td style="max-width:260px;white-space:pre-wrap;font-size:.82rem">{{r.fault||'-'}}<div v-if="r.actionTaken" style="font-size:.78rem;margin-top:3px">🛠 {{r.actionTaken}}</div><div v-if="r.cmRef" class="text-muted" style="font-size:.76rem;margin-top:3px">CM: {{r.cmRef}}</div><div v-if="r.notes" class="text-muted" style="font-size:.76rem;margin-top:3px">📝 {{r.notes}}</div></td>
                 <td style="white-space:nowrap;font-size:.82rem">{{fmtDate(r.sendDate)}}<div v-if="r.sentBy" class="text-muted" style="font-size:.74rem">{{r.sentBy}}</div></td>
-                <td style="white-space:nowrap;font-size:.82rem">{{r.returnDate ? fmtDate(r.returnDate) : '-'}}</td>
+                <td style="white-space:nowrap;font-size:.82rem">{{!rmaIsServis(r) && r.returnDate ? fmtDate(r.returnDate) : '-'}}</td>
                 <td style="font-size:.8rem">
+                  <span v-if="rmaIsServis(r)" class="expiry-badge active">✅ Selesai</span>
+                  <template v-else>
                   <span :class="['expiry-badge', rmaIsOpen(r) ? (rmaOverdue(r) ? 'expired' : 'soon') : 'active']">{{rmaIsOpen(r) ? '🟡' : '✅'}} {{rmaLabel(RMA_STATUSES, r.status)}}</span>
                   <div style="margin-top:3px" :style="rmaOverdue(r)?'color:#e65100;font-weight:600':''">{{rmaDays(r)}} hari{{rmaIsOpen(r) ? ' di vendor' : ''}}</div>
+                  </template>
                   <div v-if="r.result" class="text-muted" style="font-size:.76rem">{{rmaLabel(RMA_RESULTS, r.result)}}</div>
                   <div v-if="r.cost!=='' && r.cost!=null" class="text-muted" style="font-size:.76rem">Kos: RM {{Number(r.cost).toFixed(2)}}</div>
                 </td>
                 <td>
-                  <button class="btn btn-sm btn-outline btn-icon" @click="openServiceReports(r,'rmaRecords','rmaReports')" :title="`Lampiran RMA (${(r.serviceReports||[]).length})`">📎<span v-if="(r.serviceReports||[]).length" style="font-size:.7rem;margin-left:2px">{{(r.serviceReports||[]).length}}</span></button>
+                  <button class="btn btn-sm btn-outline btn-icon" @click="openServiceReports(r,'rmaRecords','rmaReports')" :title="`Lampiran (${(r.serviceReports||[]).length})`">📎<span v-if="(r.serviceReports||[]).length" style="font-size:.7rem;margin-left:2px">{{(r.serviceReports||[]).length}}</span></button>
                 </td>
                 <td class="flex gap-8">
                   <button v-if="canAddRma" class="btn btn-sm btn-outline btn-icon" @click="openEditRma(r)" title="Edit / Kemas kini status">✏️</button>
@@ -7227,7 +7337,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       <div v-if="rmaModal.show" class="modal-bg">
         <div class="modal modal-wide" style="position:relative;--modal-max-width:780px">
           <button aria-label="Tutup" @click="rmaModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
-          <h3>{{rmaModal.editing?'Kemas Kini Rekod RMA':'Rekod RMA Baru'}}</h3>
+          <h3>{{rmaModal.data.recordType==='servis' ? (rmaModal.editing?'Kemas Kini Rekod Servis':'Rekod Servis di Site Baru') : (rmaModal.editing?'Kemas Kini Rekod RMA':'Rekod RMA Baru')}}</h3>
+
+          <div class="form-group"><label>Jenis Rekod *</label>
+            <div class="rma-type-pick">
+              <label v-for="t in RMA_RECORD_TYPES" :key="t[0]" :class="{active: rmaModal.data.recordType===t[0]}"><input type="radio" :value="t[0]" v-model="rmaModal.data.recordType" @change="onRmaTypeChange"> {{t[1]}}</label>
+            </div>
+          </div>
 
           <div class="text-sm" style="font-weight:700;margin:6px 0 8px">1. Peralatan</div>
           <div class="form-row form-row-2">
@@ -7261,6 +7377,41 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           </div>
           <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="rmaModal.data.serial" @change="applyRmaWarranty"></div>
 
+          <template v-if="rmaModal.data.recordType==='servis'">
+          <div class="text-sm" style="font-weight:700;margin:10px 0 8px">2. Servis di Site</div>
+          <div class="form-group"><label>Masalah / Sebab Servis *</label><textarea class="form-control" rows="2" v-model="rmaModal.data.fault" placeholder="cth: Kamera tiada paparan, NVR kerap restart"></textarea></div>
+          <div class="form-group"><label>Tindakan Diambil Vendor</label><textarea class="form-control" rows="2" v-model="rmaModal.data.actionTaken" placeholder="cth: Tukar power adapter, update firmware, cuci lensa"></textarea></div>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Vendor / Prinsipal yang Servis *</label><input class="form-control" v-model="rmaModal.data.vendor" list="rma-vendor-list" placeholder="Pilih atau taip nama"><datalist id="rma-vendor-list"><option v-for="v in rmaVendorSuggestions" :key="v" :value="v"></option></datalist></div>
+            <div class="form-group"><label>No. Laporan Servis / Tiket</label><input class="form-control" v-model="rmaModal.data.rmaNo"></div>
+          </div>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Tarikh Servis *</label><input class="form-control" type="date" v-model="rmaModal.data.sendDate" @change="applyRmaWarranty"></div>
+            <div class="form-group"><label>Staff Bertugas</label><input class="form-control" v-model="rmaModal.data.sentBy"></div>
+          </div>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Keputusan</label>
+              <select class="form-control" v-model="rmaModal.data.result">
+                <option value="">-- Pilih --</option>
+                <option v-for="x in RMA_RESULTS" :key="x[0]" :value="x[0]">{{x[1]}}</option>
+              </select>
+            </div>
+            <div class="form-group" v-if="rmaModal.data.result==='ganti-baru'"><label>No. Siri Unit Baru</label><input class="form-control" v-model="rmaModal.data.returnSerial">
+              <div v-if="rmaModal.data.equipRef && rmaModal.data.returnSerial" class="text-muted text-sm" style="margin-top:4px">Selepas simpan, sistem akan tanya sama ada mahu kemas kini No. Siri peralatan di site.</div>
+            </div>
+          </div>
+          <div class="form-row form-row-2">
+            <div class="form-group"><label>Status Waranti Semasa Servis</label>
+              <select class="form-control" v-model="rmaModal.data.warrantyState">
+                <option value="">-- Pilih --</option>
+                <option v-for="w in RMA_WARRANTY_STATES" :key="w[0]" :value="w[0]">{{w[1]}}</option>
+              </select>
+              <div v-if="rmaWarrantyHint" class="text-muted text-sm" style="margin-top:4px">🛡️ Rekod waranti dijumpai: tamat {{fmtDate(rmaWarrantyHint.endDate)}} → <b>{{rmaLabel(RMA_WARRANTY_STATES, rmaWarrantyHint.state)}}</b> pada tarikh servis</div>
+            </div>
+            <div class="form-group"><label>No. Rujukan Borang CM <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="rmaModal.data.cmRef"></div>
+          </div>
+          </template>
+          <template v-else>
           <div class="text-sm" style="font-weight:700;margin:10px 0 8px">2. Kerosakan &amp; Penghantaran</div>
           <div class="form-group"><label>Sebab Kerosakan / Simptom *</label><textarea class="form-control" rows="2" v-model="rmaModal.data.fault" placeholder="cth: Tiada paparan, IR tidak berfungsi, HDD bad sector"></textarea></div>
           <div class="form-row form-row-2">
@@ -7311,15 +7462,16 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div v-if="rmaModal.data.equipRef && rmaModal.data.returnSerial" class="text-muted text-sm" style="margin-top:4px">Selepas simpan, sistem akan tanya sama ada mahu kemas kini No. Siri peralatan di site.</div>
             </div>
           </div>
+          </template>
           <div class="form-row form-row-2">
             <div class="form-group"><label>Kos (RM) <span class="text-muted text-sm">(jika berbayar)</span></label><input class="form-control" type="number" min="0" step="0.01" v-model="rmaModal.data.cost"></div>
             <div class="form-group"><label>Catatan</label><input class="form-control" v-model="rmaModal.data.notes" placeholder="cth: Vendor maklumkan siap dalam 2 minggu"></div>
           </div>
-          <p class="text-muted text-sm" style="margin:0 0 10px">📎 Borang RMA vendor, DO atau gambar boleh dimuat naik melalui butang 📎 di senarai Rekod RMA selepas disimpan.</p>
+          <p class="text-muted text-sm" style="margin:0 0 10px">📎 {{rmaModal.data.recordType==='servis' ? 'Laporan servis vendor atau gambar' : 'Borang RMA vendor, DO atau gambar'}} boleh dimuat naik melalui butang 📎 di senarai Servis &amp; RMA selepas disimpan.</p>
           <p v-if="rmaModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{rmaModal.err}}</p>
           <div class="flex gap-8">
             <button class="btn btn-outline" @click="rmaModal.show=false">Batal</button>
-            <button class="btn btn-primary" @click="submitRma" :disabled="loading">{{loading?'Menyimpan...':rmaModal.editing?'Simpan Perubahan':'Simpan Rekod RMA'}}</button>
+            <button class="btn btn-primary" @click="submitRma" :disabled="loading">{{loading?'Menyimpan...':rmaModal.editing?'Simpan Perubahan':rmaModal.data.recordType==='servis'?'Simpan Rekod Servis':'Simpan Rekod RMA'}}</button>
           </div>
         </div>
       </div>
@@ -7417,8 +7569,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
       <div v-if="serviceReportModal.show" class="modal-bg">
         <div class="modal modal-wide" style="position:relative;--modal-max-width:820px">
           <button aria-label="Tutup" @click="serviceReportModal.show=false" title="Tutup" style="position:absolute;top:16px;right:16px;background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:#888">✕</button>
-          <h3>{{serviceReportModal.collection==='virEquipmentWarranty' ? '📎 Resit/Bukti Pembelian' : serviceReportModal.collection==='suratMemo' ? '📎 Lampiran Surat/Memo' : serviceReportModal.collection==='rmaRecords' ? '📎 Lampiran RMA (Borang RMA / DO / Gambar)' : '📎 Fail Servis Vendor'}}</h3>
-          <p class="text-muted text-sm" style="margin-top:-6px">{{serviceReportModal.collection==='suratMemo' ? fmtDate(serviceReportModal.warranty?.letterDate) : serviceReportModal.collection==='rmaRecords' ? ((serviceReportModal.warranty?.rmaNo ? 'RMA ' + serviceReportModal.warranty.rmaNo + ' · ' : '') + (serviceReportModal.warranty?.equipName || serviceReportModal.warranty?.model || '')) : serviceReportModal.warranty?.equipmentName}} — {{serviceReportModal.collection==='suratMemo' ? (serviceReportModal.warranty?.siteName||serviceReportModal.warranty?.perihal||'') : serviceReportModal.warranty?.siteName}}</p>
+          <h3>{{serviceReportModal.collection==='virEquipmentWarranty' ? '📎 Resit/Bukti Pembelian' : serviceReportModal.collection==='suratMemo' ? '📎 Lampiran Surat/Memo' : serviceReportModal.collection==='rmaRecords' ? (rmaIsServis(serviceReportModal.warranty) ? '📎 Lampiran Servis (Laporan Servis / Gambar)' : '📎 Lampiran RMA (Borang RMA / DO / Gambar)') : '📎 Fail Servis Vendor'}}</h3>
+          <p class="text-muted text-sm" style="margin-top:-6px">{{serviceReportModal.collection==='suratMemo' ? fmtDate(serviceReportModal.warranty?.letterDate) : serviceReportModal.collection==='rmaRecords' ? ((serviceReportModal.warranty?.rmaNo ? (rmaIsServis(serviceReportModal.warranty) ? 'No. Laporan ' : 'RMA ') + serviceReportModal.warranty.rmaNo + ' · ' : '') + (serviceReportModal.warranty?.equipName || serviceReportModal.warranty?.model || '')) : serviceReportModal.warranty?.equipmentName}} — {{serviceReportModal.collection==='suratMemo' ? (serviceReportModal.warranty?.siteName||serviceReportModal.warranty?.perihal||'') : serviceReportModal.warranty?.siteName}}</p>
 
           <div v-if="!(serviceReportModal.warranty?.serviceReports||[]).length" class="empty" style="padding:14px 0">Tiada fail dimuat naik lagi.</div>
           <div v-else class="tbl-wrap" style="margin:10px 0">
@@ -7730,14 +7882,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         </div>
 
         <div class="card">
-          <div class="card-title">🗑️ Tong Sampah — Rekod RMA Dipadam</div>
+          <div class="card-title">🗑️ Tong Sampah — Rekod Servis &amp; RMA Dipadam</div>
           <div v-if="!trashedRma.length" class="empty">Tong sampah kosong.</div>
           <div v-else class="tbl-wrap">
             <table>
               <thead><tr><th>Peralatan</th><th>Site</th><th>Vendor</th><th>Dipadam Pada</th><th>Oleh</th><th>Baki Hari</th><th>Tindakan</th></tr></thead>
               <tbody>
                 <tr v-for="r in trashedRma" :key="r.id">
-                  <td>{{r.equipName||r.model||'-'}}<div v-if="r.serial" class="mono-data" style="font-size:.76rem">SN: {{r.serial}}</div></td>
+                  <td><span class="rma-type-badge" :class="rmaIsServis(r) ? 'is-servis' : 'is-rma'">{{rmaIsServis(r) ? '🔧 Servis di site' : '📦 RMA'}}</span>{{r.equipName||r.model||'-'}}<div v-if="r.serial" class="mono-data" style="font-size:.76rem">SN: {{r.serial}}</div></td>
                   <td>{{r.siteName||'-'}}</td>
                   <td>{{r.vendor||'-'}}</td>
                   <td>{{trashDeletedAtLabel(r)}}</td>
@@ -13227,7 +13379,7 @@ createApp({
       if(row.action === 'cm') { filterMaintType.value = 'CM'; page.value = 'pm-list'; return; }
       // The row counts every vendor — drop a leftover company/status filter
       // so the list opened matches that number.
-      if(row.action === 'warranty') { warrantyFilterVendor.value = ''; warrantyFilterStatus.value = ''; loadWarranty(); page.value = 'warranty'; return; }
+      if(row.action === 'warranty') { warrantyFilterVendor.value = ''; warrantyFilterStatus.value = ''; warrantyFilterPrincipal.value = ''; loadWarranty(); page.value = 'warranty'; return; }
       if(row.action === 'jadual') { openJadual(); return; }
     }
 
@@ -14069,15 +14221,19 @@ Teruskan tukar emel?`)) return;
     async function submitContract() {
       if(!isAdminRole()){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       contractModal.err = '';
+      contractModal.data.title = String(contractModal.data.title || '').trim();
       if(!contractModal.data.title || !contractModal.data.startDate || !contractModal.data.endDate) {
         contractModal.err = 'Tajuk, tarikh mula dan tarikh tamat wajib diisi.'; return;
       }
       if(contractModal.data.endDate < contractModal.data.startDate) {
         contractModal.err = 'Tarikh tamat mesti selepas tarikh mula.'; return;
       }
+      // Same rule as Waranti: blank → 60, otherwise a whole number ≥ 1.
+      const rem = contractModal.data.reminderDays;
+      if(rem !== '' && rem != null && !(Number(rem) >= 1)) { contractModal.err = 'Reminder mesti sekurang-kurangnya 1 hari.'; return; }
       loading.value = true;
       try {
-        const data = { ...contractModal.data, reminderDays: contractModal.data.reminderDays || 60 };
+        const data = { ...contractModal.data, reminderDays: rem ? Math.round(Number(rem)) : 60 };
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!contractModal.editing) {
           const ref = await _fw(db.collection('contracts').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() }));
@@ -14202,10 +14358,20 @@ Teruskan tukar emel?`)) return;
     } });
     // Prinsipal = the company the equipment was actually bought from (a
     // distributor/reseller that supplied the main contractor, `vendor`).
-    // Names already used are offered as suggestions so one company isn't
-    // keyed in three different spellings.
-    const warrantyPrincipalSuggestions = computed(() => [...new Set(warranty.value.map(w => (w.principal || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)));
+    // Direktori Prinsipal's names (then any already used on a record) are
+    // offered as suggestions so one company isn't keyed in three spellings.
+    const warrantyPrincipalSuggestions = computed(() => {
+      const seen = new Set(), out = [];
+      [...principals.value.map(p => p.name), ...warranty.value.map(w => w.principal)].forEach(n => {
+        const v = String(n || '').trim(), k = v.toLowerCase();
+        if(v && !seen.has(k)) { seen.add(k); out.push(v); }
+      });
+      return out.sort((a, b) => a.localeCompare(b));
+    });
     const warrantyFilterVendor = ref('');
+    // Set from Direktori Prinsipal ("lihat rekod waranti") — shown as a
+    // removable chip on the warranty page; matched case/spacing-insensitively.
+    const warrantyFilterPrincipal = ref('');
     // Custom "Lain-lain" vendor names (free-typed, see submitWarranty) so
     // the vendor filter dropdown can actually select them — otherwise those
     // records were only reachable through "Semua Vendor".
@@ -14350,9 +14516,12 @@ Teruskan tukar emel?`)) return;
     const warrantyExpiringCount = computed(() =>
       warranty.value.filter(w => ['expiring', 'expired'].includes(warrantyEffStatus(w))).length
     );
+    const _principalMatch = w => !warrantyFilterPrincipal.value
+      || String(w.principal || '').trim().replace(/\s+/g, ' ').toLowerCase() === warrantyFilterPrincipal.value.trim().replace(/\s+/g, ' ').toLowerCase();
     const warrantyFiltered = computed(() => warranty.value.filter(w =>
       (!warrantyFilterVendor.value || w.vendor === warrantyFilterVendor.value) &&
-      (!warrantyFilterStatus.value || warrantyEffStatus(w) === warrantyFilterStatus.value)
+      (!warrantyFilterStatus.value || warrantyEffStatus(w) === warrantyFilterStatus.value) &&
+      _principalMatch(w)
     ));
     // One-click company chips above the list (was a small dropdown that was
     // easy to miss). Counts follow the status filter, so each chip shows
@@ -14363,6 +14532,7 @@ Teruskan tukar emel?`)) return;
       let all = 0;
       warranty.value.forEach(w => {
         if(warrantyFilterStatus.value && warrantyEffStatus(w) !== warrantyFilterStatus.value) return;
+        if(!_principalMatch(w)) return;
         all++;
         if(w.vendor) counts[w.vendor] = (counts[w.vendor] || 0) + 1; // same key the filter matches on
       });
@@ -14394,6 +14564,10 @@ Teruskan tukar emel?`)) return;
       // known vendors first, then any custom ones so records don't vanish.
       const knownVendors = CCTV_WARRANTY_VENDORS.filter(v => v !== 'Lain-lain' && groups[v]?.length);
       const customVendors = Object.keys(groups).filter(v => !CCTV_WARRANTY_VENDORS.includes(v));
+      // Older records saved with the literal "Lain-lain" (or no vendor) were
+      // in neither list — counted on the chips/stats but missing from the
+      // table and the exports.
+      if(groups['Lain-lain']?.length) customVendors.push('Lain-lain');
       return [...knownVendors, ...customVendors].map(v => {
         const items = groups[v];
         const siteGroups = {};
@@ -14509,6 +14683,7 @@ Teruskan tukar emel?`)) return;
     }
     function openAddWarranty() {
       if(!canAddWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      loadPrincipals(); // Direktori Prinsipal names for the Prinsipal suggestions
       warrantyModal.editing = false; warrantyModal.err = '';
       warrantyModal.equipKey = ''; warrantyModal.bulk = false; warrantyModal.bulkKeys = []; _warrantyAutoStart = '';
       Object.assign(warrantyModal.data, {
@@ -14519,6 +14694,7 @@ Teruskan tukar emel?`)) return;
     }
     function openEditWarranty(w) {
       if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      loadPrincipals();
       warrantyModal.editing = true; warrantyModal.err = '';
       // Custom "Lain-lain" vendors are saved with the free-typed name as
       // `vendor` (see submitWarranty), not the literal string 'Lain-lain' —
@@ -14556,6 +14732,10 @@ Teruskan tukar emel?`)) return;
       // "Lain-lain" stands for a typed-in name — saved blank, the record
       // got the literal "Lain-lain" as its vendor (and its own filter chip).
       if(d.vendor === 'Lain-lain' && !(d.vendorCustom || '').trim()) { warrantyModal.err = 'Sila nyatakan nama vendor untuk "Lain-lain".'; return; }
+      // Same rule as Edit Pukal: blank → 60, otherwise a whole number ≥ 1
+      // (a negative one put the warning window after the end date).
+      if(d.reminderDays !== '' && d.reminderDays != null && !(Number(d.reminderDays) >= 1)) { warrantyModal.err = 'Reminder mesti sekurang-kurangnya 1 hari.'; return; }
+      if(d.reminderDays) d.reminderDays = Math.round(Number(d.reminderDays));
       if(warrantyBulkActive.value) return _submitWarrantyBulk();
       d.equipmentName = (d.equipmentName||'').trim();
       if(!d.vendor || !d.principal || !d.siteId || !d.equipmentName || !d.startDate || !d.endDate) {
@@ -14696,6 +14876,7 @@ Teruskan tukar emel?`)) return;
     function openWarrantyBulkEdit() {
       if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!warrantySelected.value.length) return;
+      loadPrincipals();
       Object.keys(warrantyBulkModal.use).forEach(k => { warrantyBulkModal.use[k] = false; });
       Object.assign(warrantyBulkModal.data, { vendor:'', vendorCustom:'', principal:'', warrantyType:'', startDate:'', endDate:'', reminderDays:60, notes:'' });
       warrantyBulkModal.err = '';
@@ -14762,6 +14943,194 @@ Teruskan tukar emel?`)) return;
       if(done.length < recs.length) showToast(`${recs.length - done.length} rekod gagal dipadam — sila cuba lagi.`, 'error');
       if(done.length) showUndoToast(`${done.length} rekod waranti dipindah ke Tong Sampah.`,
         async () => { for(const [id, data] of done) await _undoSoftDelete('equipmentWarranty', 'deletedEquipmentWarranty', id, data, warranty); });
+    }
+
+    // ── Direktori Prinsipal (CCTV) ── The companies equipment was actually
+    // bought from (distributors/resellers behind the 3 main contractors),
+    // with their contact people and the brands / equipment types they
+    // carry. Linked to Waranti Peralatan by name (equipmentWarranty.principal):
+    // the warranty form suggests these names, each entry counts its
+    // warranty records, and a rename can carry over to those records.
+    // Same roles as Waranti Peralatan (canEditWarranty — staff included).
+    const PRINCIPAL_CATEGORIES = ['Kamera', 'NVR / Server', 'Hard Disk', 'Network Switch', 'Alarm', 'UPS / Kuasa', 'Lain-lain'];
+    const principals = ref([]);
+    const principalsLoading = ref(false);
+    const principalSearch = ref('');
+    async function loadPrincipals(force) {
+      if(!force && _collFresh('principals')) return;
+      principalsLoading.value = true;
+      try {
+        const snap = await db.collection('warrantyPrincipals').orderBy('name').get();
+        principals.value = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        _markCollLoaded('principals');
+        _startLive('principals', db.collection('warrantyPrincipals').orderBy('name'), s => { principals.value = s.docs.map(_liveDoc); });
+      } catch(e) { showToast('Gagal muat Direktori Prinsipal: ' + e.message, 'error'); }
+      principalsLoading.value = false;
+    }
+    const _pKey = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    // Warranty records per principal name (case/spacing-insensitive).
+    const principalWarrantyCount = computed(() => {
+      const m = {};
+      warranty.value.forEach(w => { const k = _pKey(w.principal); if(k) m[k] = (m[k] || 0) + 1; });
+      return m;
+    });
+    function principalWarrantyCountOf(p) { return principalWarrantyCount.value[_pKey(p?.name)] || 0; }
+    const principalsFiltered = computed(() => {
+      const q = _pKey(principalSearch.value);
+      if(!q) return principals.value;
+      return principals.value.filter(p => [p.name, p.phone, p.website, p.notes, ...(p.brands || []), ...(p.categories || []),
+        ...(p.contacts || []).flatMap(c => [c.name, c.position, c.phone, c.email])].filter(Boolean).join(' ').toLowerCase().includes(q));
+    });
+    const _PRINCIPAL_BLANK = () => ({ name:'', phone:'', address:'', website:'', brandsText:'', categories:[], contacts:[], notes:'' });
+    const principalModal = reactive({ show:false, editId:null, err:'', data:_PRINCIPAL_BLANK() });
+    const _blankContact = () => ({ id:_genId(), name:'', position:'', phone:'', email:'' });
+    function openAddPrincipal(prefillName) {
+      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      principalModal.editId = null; principalModal.err = '';
+      principalModal.data = { ..._PRINCIPAL_BLANK(), name: typeof prefillName === 'string' ? prefillName : '', contacts: [_blankContact()] };
+      principalModal.show = true;
+    }
+    function openEditPrincipal(p) {
+      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      principalModal.editId = p.id; principalModal.err = '';
+      principalModal.data = {
+        name: p.name || '', phone: p.phone || '', address: p.address || '', website: p.website || '',
+        brandsText: (p.brands || []).join(', '), categories: [...(p.categories || [])],
+        contacts: (p.contacts || []).length ? p.contacts.map(c => ({ ..._blankContact(), ...c, id: c.id || _genId() })) : [_blankContact()],
+        notes: p.notes || '',
+      };
+      principalModal.show = true;
+    }
+    function addPrincipalContact() { principalModal.data.contacts.push(_blankContact()); }
+    function removePrincipalContact(i) { principalModal.data.contacts.splice(i, 1); if(!principalModal.data.contacts.length) addPrincipalContact(); }
+    async function savePrincipal() {
+      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const m = principalModal, d = m.data;
+      m.err = '';
+      const name = String(d.name || '').trim().replace(/\s+/g, ' ');
+      if(!name) { m.err = 'Nama syarikat wajib diisi.'; return; }
+      if(principals.value.some(p => p.id !== m.editId && _pKey(p.name) === _pKey(name))) { m.err = `"${name}" sudah ada dalam direktori.`; return; }
+      const t = v => String(v ?? '').trim();
+      const contacts = d.contacts.map(c => ({ id: c.id || _genId(), name: t(c.name), position: t(c.position), phone: t(c.phone), email: t(c.email) }))
+        .filter(c => c.name || c.phone || c.email);
+      const badEmail = contacts.find(c => c.email && !isValidEmail(c.email));
+      if(badEmail) { m.err = `Format emel tidak sah: ${badEmail.email}`; return; }
+      // "Bosch, bosch" is one brand — dedupe ignoring case, keep the first spelling.
+      const brandKeys = new Set();
+      const brands = String(d.brandsText || '').split(/[,;\n]/).map(b => b.trim().replace(/\s+/g, ' ')).filter(b => {
+        const k = b.toLowerCase();
+        if(!b || brandKeys.has(k)) return false;
+        brandKeys.add(k); return true;
+      });
+      const data = { name, phone: t(d.phone), address: t(d.address), website: t(d.website), brands,
+        categories: PRINCIPAL_CATEGORIES.filter(c => (d.categories || []).includes(c)), contacts, notes: t(d.notes),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '' };
+      const old = m.editId ? principals.value.find(p => p.id === m.editId) : null;
+      // A renamed principal: its warranty records still carry the old name.
+      const renamed = old && _pKey(old.name) !== _pKey(name) ? warranty.value.filter(w => _pKey(w.principal) === _pKey(old.name)) : [];
+      const carryOver = renamed.length && await askConfirm(`${renamed.length} rekod waranti menggunakan nama lama "${old.name}".\n\nKemas kini rekod tersebut kepada "${name}" juga?`, { danger:false });
+      loading.value = true;
+      try {
+        const sortByName = (a, b) => (a.name || '').localeCompare(b.name || '');
+        if(m.editId) {
+          await _fw(db.collection('warrantyPrincipals').doc(m.editId).update(data));
+          _localUpsert(principals, m.editId, { ...data, updatedAt: _fakeServerTimestamp() }, sortByName);
+          logAudit('PRINCIPAL_EDIT', name);
+        } else {
+          const ref = await _fw(db.collection('warrantyPrincipals').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' }));
+          _localUpsert(principals, ref.id, { ...data, updatedAt: _fakeServerTimestamp(), createdAt: _fakeServerTimestamp() }, sortByName);
+          logAudit('PRINCIPAL_ADD', name);
+        }
+        if(carryOver) {
+          for(let i = 0; i < renamed.length; i += 450) {
+            const batch = db.batch();
+            renamed.slice(i, i + 450).forEach(w => batch.update(db.collection('equipmentWarranty').doc(w.id), { principal: name }));
+            await _fw(batch.commit());
+          }
+          const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
+          renamed.forEach(w => _localUpsert(warranty, w.id, { ...w, principal: name }, sortByEnd));
+          logAudit('WARRANTY_BULK_EDIT', `${renamed.length} rekod — Prinsipal "${old.name}" → "${name}"`);
+        }
+        showToast(m.editId ? `Prinsipal dikemaskini${carryOver ? ` (${renamed.length} rekod waranti turut dikemas kini)` : ''}.` : 'Prinsipal ditambah.');
+        m.show = false;
+      } catch(e) { m.err = 'Ralat: ' + e.message; }
+      loading.value = false;
+    }
+    async function deletePrincipal(p) {
+      if(!canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const used = principalWarrantyCount.value[_pKey(p.name)] || 0;
+      if(!await askConfirm(`Padam "${p.name}" daripada Direktori Prinsipal?${used ? `\n\n${used} rekod waranti masih menggunakan nama ini — nama itu kekal pada rekod tersebut.` : ''}`)) return;
+      loading.value = true;
+      try {
+        const { id, ...data } = p;
+        await _fw(db.collection('warrantyPrincipals').doc(id).delete());
+        principals.value = principals.value.filter(x => x.id !== id);
+        logAudit('PRINCIPAL_DELETE', p.name);
+        showUndoToast(`"${p.name}" dipadam daripada direktori.`, async () => {
+          await _fw(db.collection('warrantyPrincipals').doc(id).set(data));
+          if(!principals.value.some(x => x.id === id)) principals.value = [...principals.value, { id, ...data }].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        });
+      } catch(e) { showToast('Gagal padam prinsipal: ' + e.message, 'error'); }
+      loading.value = false;
+    }
+    // Opens Waranti Peralatan narrowed to this principal's records.
+    function openPrincipalWarranties(p) {
+      warrantyFilterVendor.value = ''; warrantyFilterStatus.value = '';
+      warrantyFilterPrincipal.value = p.name;
+      loadWarranty(); page.value = 'warranty';
+    }
+    async function exportPrincipalsPdf() {
+      const list = principalsFiltered.value;
+      if(!list.length) { showToast('Tiada rekod untuk dieksport.', 'error'); return; }
+      const rows = list.map((p, i) => `<tr>
+        <td>${i + 1}</td>
+        <td><b>${esc(p.name)}</b>${p.phone ? `<br><span class="sub">☎ ${esc(p.phone)}</span>` : ''}${p.website ? `<br><span class="sub">${esc(p.website)}</span>` : ''}${p.address ? `<br><span class="sub">${esc(p.address)}</span>` : ''}</td>
+        <td>${esc((p.brands || []).join(', ') || '-')}${(p.categories || []).length ? `<br><span class="sub">${esc(p.categories.join(', '))}</span>` : ''}</td>
+        <td>${(p.contacts || []).map(c => `${esc(c.name || '-')}${c.position ? ` <span class="sub">(${esc(c.position)})</span>` : ''}${c.phone ? `<br><span class="sub">☎ ${esc(c.phone)}</span>` : ''}${c.email ? `<br><span class="sub">✉ ${esc(c.email)}</span>` : ''}`).join('<hr>') || '-'}</td>
+        <td style="text-align:center">${principalWarrantyCountOf(p)}</td>
+        <td>${esc(p.notes || '')}</td>
+      </tr>`).join('');
+      const w = window.open('', '_blank', 'width=1100,height=750');
+      if(!w) { showToast('Popup disekat pelayar. Sila benarkan popup untuk laman ini.', 'error'); return; }
+      w.document.write(`<!DOCTYPE html><html lang="ms"><head><meta charset="UTF-8"><title>Direktori_Prinsipal_CCTV_${_localDateStr()}</title>
+        <style>
+          @page{size:landscape;margin:12mm}
+          body{font-family:Arial,sans-serif;font-size:9.5pt;color:#000;margin:16px}
+          h2{color:#003366;margin-bottom:2px}
+          p{color:#555;font-size:8.5pt;margin-top:0}
+          .header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:2px solid #003366;padding-bottom:10px;margin-bottom:14px}
+          .header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}
+          .header-mid{text-align:center;flex:1}
+          .header-side{flex-shrink:0;text-align:right}
+          .header-generated{font-style:italic;color:#888;font-size:7.5pt;margin:4px 0 0}
+          table{width:100%;border-collapse:collapse;margin-top:6px}
+          th{background:#003366;color:#fff;padding:6px 8px;text-align:left;font-size:8.5pt}
+          td{padding:5px 8px;border-bottom:1px solid #eee;font-size:8.5pt;vertical-align:top}
+          tr:nth-child(even) td{background:#f7f9fc}
+          .sub{color:#555;font-size:7.5pt}
+          hr{border:0;border-top:1px dashed #ddd;margin:4px 0}
+        </style>
+      </head><body>
+        <div class="header">
+          <img src="LogoD1.svg" alt="Daya One" class="header-logo">
+          <div class="header-mid">
+            <h2>Direktori Prinsipal — Projek CCTV</h2>
+            <p style="font-weight:600;color:#333">Daya One Resources Sdn. Bhd. &nbsp;|&nbsp; Suruhanjaya Pencegahan Rasuah Malaysia</p>
+          </div>
+          <div class="header-side">
+            <img src="Logo-SPRM.svg" alt="SPRM" class="header-logo">
+            <p class="header-generated">Dijana pada ${new Date().toLocaleString('ms-MY')}<br>${list.length} prinsipal</p>
+          </div>
+        </div>
+        <table><thead><tr><th>#</th><th>Syarikat</th><th>Brand / Jenis Peralatan</th><th>Contact Person</th><th>Rekod Waranti</th><th>Nota</th></tr></thead>
+        <tbody>${rows}</tbody></table>
+      </body></html>`);
+      w.document.close(); w.focus();
+      const imgs = [...w.document.images];
+      const imgsReady = Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.onload = img.onerror = res; })));
+      await Promise.race([imgsReady, new Promise(res => setTimeout(res, 3000))]);
+      setTimeout(() => { w.print(); w.close(); }, 200);
+      await logAudit('EXPORT_PRINCIPALS_PDF', `${list.length} prinsipal`);
     }
     // ── Surat & Memo — general correspondence repository, NOT scoped to one
     // project or even a site: equipment handover memos (Daya One <-> SPRM),
@@ -15007,6 +15376,9 @@ Teruskan tukar emel?`)) return;
       if(!d.siteId || !d.title.trim() || !d.openedDate) {
         cmCaseModal.err = 'Site, tajuk kes dan tarikh dibuka wajib diisi.'; return;
       }
+      // "Tandakan Selesai" stamps today — a future opened date made that
+      // negative days, and the case dropped out of the Masa Selesai stats.
+      if(d.openedDate > _localDateStr()) { cmCaseModal.err = 'Tarikh dibuka tidak boleh pada masa hadapan.'; return; }
       // A resolved case's opened date can't move past its resolution — the
       // Masa Selesai stats would quietly drop it (negative days).
       const resolvedDate = cmCaseModal.editing ? (cmCases.value.find(x => x.id === cmCaseModal._editId)?.resolvedDate || '') : '';
@@ -15257,7 +15629,18 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const RMA_WARRANTY_STATES = [['dalam','Dalam Waranti'],['tamat','Tamat Waranti'],['tiada','Tiada Rekod / Tidak Pasti']];
     // An RMA still out with the vendor after this many days raises a bell notification.
     const RMA_ALERT_DAYS = 30;
-    const _RMA_CLOSED = ['diterima','ditolak'];
+    // 'selesai' = a "Servis di site" record (vendor came to site) — done the
+    // day it's logged, so never "belum pulang" / overdue.
+    const _RMA_CLOSED = ['diterima','ditolak','selesai'];
+    // Servis & RMA: two record kinds in one list. Older docs have no
+    // recordType and are RMAs.
+    const RMA_RECORD_TYPES = [['rma','📦 RMA (hantar ke vendor)'],['servis','🔧 Servis di site (vendor datang)']];
+    function rmaIsServis(r) { return r?.recordType === 'servis'; }
+    const rmaFilterType = ref('');
+    // 🔧 from Waranti Peralatan: the warranty record whose unit's records are
+    // listed (see _warrantyServiceIds) — a serial search missed records
+    // linked only by row, so the list showed fewer than the 🔧 count.
+    const rmaFilterUnit = ref(null);
     const _RMA_EQUIP_FORMS = () => ({ cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet });
     const rmaRecords = ref([]);
     const rmaFilterStatus = ref('');
@@ -15266,6 +15649,7 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const canAddRma = computed(()=> isAdminRole() || authProfile.value?.role==='staff');
     const canDeleteRma = computed(()=> isAdminRole());
     const _RMA_BLANK = () => ({
+      recordType:'rma', actionTaken:'',
       project:'cctv', siteId:'', siteName:'', equipKey:'', equipRef:null,
       category:'', equipName:'', brand:'', model:'', serial:'',
       fault:'', cmRef:'', vendor:'', rmaNo:'', sendDate:'', shipMethod:'', trackingNo:'', sentBy:'',
@@ -15300,23 +15684,29 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
     const rmaProjectRecords = computed(() => rmaRecords.value.filter(r => _rmaProj(r) === currentProject.value));
     const rmaFiltered = computed(() => {
       const q = rmaSearch.value.trim().toLowerCase();
+      const unitIds = rmaFilterUnit.value ? _warrantyServiceIds(rmaFilterUnit.value) : null;
       return rmaProjectRecords.value.filter(r =>
+        (!unitIds || unitIds.has(r.id)) &&
+        (!rmaFilterType.value || (rmaFilterType.value === 'servis') === rmaIsServis(r)) &&
         (!rmaFilterStatus.value || (rmaFilterStatus.value === 'open' ? rmaIsOpen(r) : !rmaIsOpen(r))) &&
         (!rmaFilterSite.value || r.siteId === rmaFilterSite.value) &&
-        (!q || [r.equipName, r.category, r.brand, r.model, r.serial, r.returnSerial, r.vendor, r.rmaNo, r.trackingNo, r.fault, r.siteName, r.cmRef]
+        (!q || [r.equipName, r.category, r.brand, r.model, r.serial, r.returnSerial, r.vendor, r.rmaNo, r.trackingNo, r.fault, r.actionTaken, r.siteName, r.cmRef]
           .filter(Boolean).join(' ').toLowerCase().includes(q))
       );
     });
     const rmaStats = computed(() => {
       const list = rmaProjectRecords.value;
       const open = list.filter(rmaIsOpen);
-      const closedDays = list.filter(r => !rmaIsOpen(r)).map(rmaDays).filter(d => d !== null);
+      // Days at the vendor is an RMA measure — a servis-di-site visit is 0
+      // days by definition and would only drag the average down.
+      const closedDays = list.filter(r => !rmaIsOpen(r) && !rmaIsServis(r)).map(rmaDays).filter(d => d !== null);
       return {
         total: list.length,
         open: open.length,
         overdue: open.filter(rmaOverdue).length,
         avgDays: closedDays.length ? Math.round(closedDays.reduce((a,b)=>a+b,0) / closedDays.length) : null,
         closed: closedDays.length,
+        servis: list.filter(rmaIsServis).length,
       };
     });
     // Sidebar badges — one per project's Rekod RMA item.
@@ -15490,6 +15880,12 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       rmaModal.show = true;
       if(prefill?.equipKey) nextTick(onRmaEquipPick);
     }
+    // Switching a record's kind: a servis record's 'selesai' isn't an RMA
+    // status (the select would show blank) — start it as just sent.
+    function onRmaTypeChange() {
+      const d = rmaModal.data;
+      if(d.recordType !== 'servis' && d.status === 'selesai') { d.status = 'dihantar'; d.returnDate = ''; }
+    }
     function openEditRma(r) {
       if(!canAddRma.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       _rmaLoadRefs();
@@ -15523,31 +15919,40 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const d = rmaModal.data;
       const t = v => String(v || '').trim();
       if(!d.siteId) { rmaModal.err = 'Sila pilih site.'; return; }
+      const servis = d.recordType === 'servis';
       if(!t(d.equipName) && !t(d.brand) && !t(d.model)) { rmaModal.err = 'Sila pilih peralatan atau isi sekurang-kurangnya Nama/Brand/Model.'; return; }
-      if(!t(d.fault)) { rmaModal.err = 'Sebab kerosakan wajib diisi.'; return; }
-      if(!t(d.vendor)) { rmaModal.err = 'Sila nyatakan vendor/supplier yang menerima barang.'; return; }
-      if(!d.sendDate) { rmaModal.err = 'Tarikh hantar wajib diisi.'; return; }
-      const closed = _RMA_CLOSED.includes(d.status);
-      if(closed && !d.returnDate) { rmaModal.err = 'Sila isi Tarikh Dapat Semula untuk status ini.'; return; }
-      if(d.returnDate && d.returnDate < d.sendDate) { rmaModal.err = 'Tarikh dapat semula tidak boleh lebih awal daripada tarikh hantar.'; return; }
-      if(d.status === 'diterima' && !d.result) { rmaModal.err = 'Sila pilih Keputusan vendor.'; return; }
+      if(!t(d.fault)) { rmaModal.err = servis ? 'Masalah / sebab servis wajib diisi.' : 'Sebab kerosakan wajib diisi.'; return; }
+      if(!t(d.vendor)) { rmaModal.err = servis ? 'Sila nyatakan vendor/prinsipal yang membuat servis.' : 'Sila nyatakan vendor/supplier yang menerima barang.'; return; }
+      if(!d.sendDate) { rmaModal.err = servis ? 'Tarikh servis wajib diisi.' : 'Tarikh hantar wajib diisi.'; return; }
+      // Saved as already done (Selesai) — a future visit isn't one yet.
+      if(servis && d.sendDate > _localDateStr()) { rmaModal.err = 'Tarikh servis tidak boleh pada masa hadapan — rekod servis disimpan sebagai Selesai.'; return; }
+      // A servis-di-site visit is finished the day it happens: no shipping,
+      // no return date of its own, never "belum pulang".
+      const status = servis ? 'selesai' : d.status;
+      const returnDate = servis ? d.sendDate : (d.returnDate || '');
+      const closed = _RMA_CLOSED.includes(status);
+      if(!servis && closed && !returnDate) { rmaModal.err = 'Sila isi Tarikh Dapat Semula untuk status ini.'; return; }
+      if(returnDate && returnDate < d.sendDate) { rmaModal.err = 'Tarikh dapat semula tidak boleh lebih awal daripada tarikh hantar.'; return; }
+      if(!servis && status === 'diterima' && !d.result) { rmaModal.err = 'Sila pilih Keputusan vendor.'; return; }
       if(d.cost !== '' && d.cost != null && !(Number(d.cost) >= 0)) { rmaModal.err = 'Kos mesti nombor (RM).'; return; }
-      // Keputusan only applies once the unit is back (or refused).
-      const result = d.status === 'diterima' ? (d.result || '') : d.status === 'ditolak' ? (d.result || 'tidak-layak') : '';
+      // Keputusan only applies once the unit is back (or refused) — or, for
+      // servis, to the visit itself.
+      const result = servis ? (d.result || '') : status === 'diterima' ? (d.result || '') : status === 'ditolak' ? (d.result || 'tidak-layak') : '';
       const data = {
+        recordType: servis ? 'servis' : 'rma', actionTaken: servis ? t(d.actionTaken) : '',
         project: d.project, siteId: d.siteId, siteName: d.siteName,
         equipRef: d.equipRef?.kind ? { system: d.equipRef.system || '', roomUid: d.equipRef.roomUid || null, kind: d.equipRef.kind, uid: d.equipRef.uid || null } : null,
         category: t(d.category), equipName: t(d.equipName), brand: t(d.brand), model: t(d.model), serial: t(d.serial),
         fault: t(d.fault), cmRef: t(d.cmRef), vendor: t(d.vendor), rmaNo: t(d.rmaNo), sendDate: d.sendDate,
-        shipMethod: d.shipMethod || '', trackingNo: t(d.trackingNo), sentBy: t(d.sentBy), warrantyState: d.warrantyState || '',
-        status: d.status, returnDate: d.returnDate || '', result,
+        shipMethod: servis ? '' : (d.shipMethod || ''), trackingNo: servis ? '' : t(d.trackingNo), sentBy: t(d.sentBy), warrantyState: d.warrantyState || '',
+        status, returnDate, result,
         returnSerial: result === 'ganti-baru' ? t(d.returnSerial) : '', cost: d.cost === '' || d.cost == null ? '' : Number(d.cost),
         notes: t(d.notes), serialPromptedFor: d.serialPromptedFor || '',
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '',
       };
       // Vendor swapped the unit: offer once (per new serial) to carry the new
-      // serial onto the equipment row this RMA came from.
-      const offerSerial = data.status === 'diterima' && data.result === 'ganti-baru' && data.equipRef && data.returnSerial
+      // serial onto the equipment row this record came from.
+      const offerSerial = (data.status === 'diterima' || servis) && data.result === 'ganti-baru' && data.equipRef && data.returnSerial
         && _serialKey(data.returnSerial) !== _serialKey(data.serial) && data.serialPromptedFor !== data.returnSerial;
       if(offerSerial) data.serialPromptedFor = data.returnSerial;
       const label = `${data.equipName || data.model || '-'} — ${data.siteName} (${data.vendor})`;
@@ -15559,8 +15964,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           const ref = await _fw(db.collection('rmaRecords').add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: authUser.value?.email || '' }));
           savedId = ref.id;
           _localUpsert(rmaRecords, ref.id, { ...data, updatedAt: _fakeServerTimestamp(), createdAt: _fakeServerTimestamp(), createdBy: authUser.value?.email || '' }, sortBySendDesc);
-          logAudit('RMA_ADD', label);
-          showToast(data.equipRef ? 'Rekod RMA ditambah. Jika unit sementara dipasang, guna butang 🔁 pada peralatan tersebut.' : 'Rekod RMA ditambah!');
+          logAudit(servis ? 'SERVIS_ADD' : 'RMA_ADD', label);
+          showToast(servis ? 'Rekod servis di site ditambah!' : data.equipRef ? 'Rekod RMA ditambah. Jika unit sementara dipasang, guna butang 🔁 pada peralatan tersebut.' : 'Rekod RMA ditambah!');
         } else {
           // Two people can have the same RMA open. This update rewrites every
           // field from the modal's copy, so saving a stale copy put back the
@@ -15576,8 +15981,8 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
           }
           await _fw(db.collection('rmaRecords').doc(rmaModal._editId).update(data));
           _localUpsert(rmaRecords, rmaModal._editId, { ...data, updatedAt: _fakeServerTimestamp() }, sortBySendDesc);
-          logAudit('RMA_EDIT', `${label} — ${rmaLabel(RMA_STATUSES, data.status)}`);
-          showToast('Rekod RMA dikemaskini!');
+          logAudit(servis ? 'SERVIS_EDIT' : 'RMA_EDIT', `${label} — ${servis ? 'Servis di site' : rmaLabel(RMA_STATUSES, data.status)}`);
+          showToast(servis ? 'Rekod servis dikemaskini!' : 'Rekod RMA dikemaskini!');
         }
         rmaModal.show = false;
         _rmaRefreshLocal(savedId);
@@ -15624,17 +16029,108 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       if(form) form.serial = r.returnSerial;
       showToast('No. Siri baru telah diisi dalam borang edit — semak dan klik Simpan.');
     }
+    // ── Waranti ↔ Servis & RMA ── The warranty table's "Servis/RMA" column:
+    // CCTV service/RMA records for the same unit — linked row (equipRef.uid)
+    // or same serial at the same site (incl. the serial a vendor's
+    // replacement came back with).
+    const _warrantyServiceIndex = computed(() => {
+      const byUid = {}, bySerial = {};
+      rmaRecords.value.forEach(r => {
+        if(_rmaProj(r) !== 'cctv') return;
+        if(r.equipRef?.uid) (byUid[r.equipRef.uid] ||= new Set()).add(r.id);
+        // Lain-lain: "No. Siri / Kuantiti" often holds a qty ("2 unit") — uid only.
+        if(r.equipRef?.kind === 'misc') return;
+        [r.serial, r.returnSerial].map(_serialKey).filter(Boolean).forEach(k => (bySerial[r.siteId + '|' + k] ||= new Set()).add(r.id));
+      });
+      return { byUid, bySerial };
+    });
+    function _warrantyServiceIds(w) {
+      const idx = _warrantyServiceIndex.value, ids = new Set();
+      if(w?.equipRef?.uid) (idx.byUid[w.equipRef.uid] || []).forEach(id => ids.add(id));
+      const k = w?.equipRef?.kind === 'misc' ? '' : _serialKey(w?.serial);
+      if(k) (idx.bySerial[w.siteId + '|' + k] || []).forEach(id => ids.add(id));
+      return ids;
+    }
+    function warrantyServiceCount(w) { return _warrantyServiceIds(w).size; }
+    function openWarrantyServiceRecords(w) {
+      currentProject.value = 'cctv';
+      rmaFilterType.value = ''; rmaFilterStatus.value = '';
+      loadRmaRecords(); page.value = 'rma';
+      // After the project/page watchers (which clear these) have run.
+      nextTick(() => { rmaFilterSite.value = ''; rmaSearch.value = ''; rmaFilterUnit.value = w; });
+    }
+    function rmaUnitFilterLabel(w) {
+      return w ? [w.equipmentName || '-', w.serial && 'SN ' + w.serial, w.siteName].filter(Boolean).join(' · ') : '';
+    }
+    // One-time move of the old "Rekod Servis Vendor" files (serviceReports on
+    // equipmentWarranty docs) into Servis & RMA as "Servis di site" records.
+    // Files stay where they are in Storage — only their references move.
+    // Each record's id is fixed per warranty doc (svc_<id>), so running it
+    // twice (or two people at once) can't create duplicates.
+    const legacyServiceReportRecords = computed(() => warranty.value.filter(w => (w.serviceReports || []).length));
+    const legacyServiceReportCount = computed(() => legacyServiceReportRecords.value.reduce((a, w) => a + w.serviceReports.length, 0));
+    async function migrateLegacyServiceReports() {
+      if(!canAddRma.value || !canEditWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
+      const list = legacyServiceReportRecords.value;
+      if(!list.length) return;
+      if(!await askConfirm(`Pindah ${legacyServiceReportCount.value} fail laporan servis (${list.length} rekod waranti) ke Servis & RMA sebagai rekod "Servis di site"?\n\nSetiap rekod waranti yang ada fail jadi satu rekod servis, dengan semua failnya. Tarikh servis diambil dari tarikh fail terawal dimuat naik — boleh diedit selepas ini.`, { danger:false })) return;
+      loading.value = true;
+      const me = authUser.value?.email || '';
+      const moved = [];
+      try {
+        for(let i = 0; i < list.length; i += 200) { // 2 writes each, under the 500 cap
+          const batch = db.batch(), chunk = [];
+          list.slice(i, i + 200).forEach(w => {
+            const files = w.serviceReports;
+            const day = files.map(f => String(f.uploadedAt || '').slice(0, 10)).filter(x => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort()[0] || w.startDate || _localDateStr();
+            const rec = {
+              recordType:'servis', actionTaken:'', project:'cctv', siteId: w.siteId || '', siteName: w.siteName || '',
+              equipRef: w.equipRef?.kind ? { system:'', roomUid:null, kind: w.equipRef.kind, uid: w.equipRef.uid || null } : null,
+              category:'', equipName: w.equipmentName || '', brand: w.brand || '', model: w.model || '', serial: w.serial || '',
+              fault:'Laporan servis vendor (dipindah daripada Waranti Peralatan)', cmRef:'', vendor: w.principal || w.vendor || '-', rmaNo:'',
+              sendDate: day, shipMethod:'', trackingNo:'', sentBy:'', warrantyState:'', status:'selesai', returnDate: day,
+              result:'', returnSerial:'', cost:'', notes:'', serialPromptedFor:'', serviceReports: files,
+              updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: me,
+              createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdBy: me,
+            };
+            // Already moved once (files back on the warranty after a backup
+            // restore / Tong Sampah restore): add the files to that record
+            // rather than overwrite what was since edited on it.
+            const existing = rmaRecords.value.find(r => r.id === 'svc_' + w.id);
+            if(existing) batch.update(db.collection('rmaRecords').doc(existing.id), { serviceReports: firebase.firestore.FieldValue.arrayUnion(...files), updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: me });
+            else batch.set(db.collection('rmaRecords').doc('svc_' + w.id), rec);
+            batch.update(db.collection('equipmentWarranty').doc(w.id), { serviceReports: firebase.firestore.FieldValue.delete() });
+            chunk.push([w, existing
+              ? { serviceReports: [...(existing.serviceReports || []), ...files.filter(f => !(existing.serviceReports || []).some(x => x.path === f.path))] }
+              : rec]);
+          });
+          await _fw(batch.commit());
+          moved.push(...chunk); // only once this chunk is really written
+        }
+      } catch(e) { showToast('Gagal pindah sebahagian fail: ' + e.message + ' — cuba lagi (rekod yang sudah dipindah tidak akan berganda).', 'error'); }
+      const sortBySendDesc = (a,b) => (b.sendDate||'').localeCompare(a.sendDate||'');
+      const movedIds = new Set(moved.map(([w]) => w.id));
+      moved.forEach(([w, rec]) => _localUpsert(rmaRecords, 'svc_' + w.id, { ...rec, updatedAt: _fakeServerTimestamp(), ...(rec.createdBy !== undefined ? { createdAt: _fakeServerTimestamp() } : {}) }, sortBySendDesc));
+      // Replace (not merge — _localUpsert would keep serviceReports) the moved warranty rows.
+      warranty.value = warranty.value.map(w => { if(!movedIds.has(w.id)) return w; const { serviceReports, ...rest } = w; return rest; });
+      loading.value = false;
+      if(moved.length) {
+        logAudit('SERVIS_MIGRATE', `${moved.length} rekod waranti → Servis & RMA`);
+        showToast(`${moved.length} rekod servis dipindah ke Servis & RMA.`);
+      }
+    }
     async function deleteRma(r) {
       if(!canDeleteRma.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const label = `${r.equipName || r.model || '-'} — ${r.siteName} (${r.vendor || '-'})`;
-      if(!await askConfirm(`Padam rekod RMA "${label}"? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
+      const kind = rmaIsServis(r) ? 'rekod servis' : 'rekod RMA';
+      if(!await askConfirm(`Padam ${kind} "${label}"? Rekod akan dipindah ke Tong Sampah selama ${TRASH_RETENTION_DAYS} hari sebelum dipadam kekal.`)) return;
       loading.value = true;
       try {
         const data = await _softDeleteToTrash('rmaRecords', 'deletedRmaRecords', r.id);
         rmaRecords.value = rmaRecords.value.filter(x => x.id !== r.id);
-        await logAudit('RMA_DELETE', label);
-        showUndoToast('Rekod RMA dipindah ke Tong Sampah.', () => _undoSoftDelete('rmaRecords', 'deletedRmaRecords', r.id, data, rmaRecords));
-      } catch(e) { showToast('Gagal padam rekod RMA: ' + e.message, 'error'); }
+        await logAudit(rmaIsServis(r) ? 'SERVIS_DELETE' : 'RMA_DELETE', label);
+        showUndoToast(`${kind[0].toUpperCase() + kind.slice(1)} dipindah ke Tong Sampah.`, () => _undoSoftDelete('rmaRecords', 'deletedRmaRecords', r.id, data, rmaRecords));
+      } catch(e) { showToast(`Gagal padam ${kind}: ` + e.message, 'error'); }
       loading.value = false;
     }
     async function exportRmaListPdf() {
@@ -15642,20 +16138,27 @@ td:first-child{white-space:nowrap;font-weight:700;width:80px}
       const list = rmaFiltered.value;
       if(!list.length) { showToast('Tiada rekod untuk dieksport.', 'error'); return; }
       const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
-      const filterLabel = rmaFilterStatus.value === 'open' ? 'Belum Pulang' : rmaFilterStatus.value === 'closed' ? 'Sudah Pulang' : 'Semua';
+      const filterLabel = [
+        rmaFilterType.value === 'servis' ? 'Servis di site' : rmaFilterType.value === 'rma' ? 'RMA' : '',
+        rmaFilterStatus.value === 'open' ? 'Belum Pulang' : rmaFilterStatus.value === 'closed' ? 'Sudah Pulang / Selesai' : '',
+        rmaFilterSite.value ? (currentProject.value === 'vir' ? VIR_SITES : SITES).find(s => s.id === rmaFilterSite.value)?.name || '' : '',
+        rmaFilterUnit.value ? 'Peralatan: ' + rmaUnitFilterLabel(rmaFilterUnit.value) : '',
+        rmaSearch.value.trim() ? `Carian "${rmaSearch.value.trim()}"` : '',
+      ].filter(Boolean).join(' · ') || 'Semua';
       const projLabel = currentProject.value === 'vir' ? 'VIR' : 'CCTV';
       const rows = list.map((r, i) => `<tr${rmaOverdue(r) ? ' class="late"' : ''}>
 <td>${i+1}</td>
+<td>${rmaIsServis(r) ? 'Servis di site' : 'RMA'}</td>
 <td><b>${esc(r.equipName || r.category || '-')}</b><br>${esc([r.brand, r.model].filter(Boolean).join(' '))}${r.serial ? '<br>SN: ' + esc(r.serial) : ''}</td>
 <td>${esc(r.siteName || '-')}</td>
-<td>${esc(r.vendor || '-')}${r.rmaNo ? '<br>RMA: ' + esc(r.rmaNo) : ''}</td>
-<td>${esc(r.fault || '-').replace(/\n/g,'<br>')}</td>
+<td>${esc(r.vendor || '-')}${r.rmaNo ? '<br>' + (rmaIsServis(r) ? 'Rujukan: ' : 'RMA: ') + esc(r.rmaNo) : ''}</td>
+<td>${esc(r.fault || '-').replace(/\n/g,'<br>')}${r.actionTaken ? '<br><i>Tindakan: ' + esc(r.actionTaken).replace(/\n/g,'<br>') + '</i>' : ''}</td>
 <td>${esc(fmtDate(r.sendDate))}</td>
-<td>${r.returnDate ? esc(fmtDate(r.returnDate)) : '-'}</td>
-<td>${rmaDays(r) ?? '-'}</td>
-<td><b>${esc(rmaLabel(RMA_STATUSES, r.status))}</b>${r.result ? '<br>' + esc(rmaLabel(RMA_RESULTS, r.result)) : ''}${r.returnSerial ? '<br>SN baru: ' + esc(r.returnSerial) : ''}</td>
+<td>${!rmaIsServis(r) && r.returnDate ? esc(fmtDate(r.returnDate)) : '-'}</td>
+<td>${rmaIsServis(r) ? '-' : (rmaDays(r) ?? '-')}</td>
+<td><b>${rmaIsServis(r) ? 'Selesai' : esc(rmaLabel(RMA_STATUSES, r.status))}</b>${r.result ? '<br>' + esc(rmaLabel(RMA_RESULTS, r.result)) : ''}${r.returnSerial ? '<br>SN baru: ' + esc(r.returnSerial) : ''}</td>
 </tr>`).join('');
-      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Rekod RMA ${projLabel} - ${esc(filterLabel)}</title>
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Servis RMA ${projLabel} - ${esc(filterLabel)}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',Arial,sans-serif;font-size:10px;color:#1a1a1a;padding:22px 26px}
@@ -15673,8 +16176,8 @@ tr.late td{background:#fff3e0}
 .footer{margin-top:14px;padding-top:6px;border-top:1px solid #ddd;font-size:8px;color:#aaa;text-align:center}
 @media print{@page{margin:10mm;size:A4 landscape}}
 </style></head><body>
-<div class="hdr"><div class="hdr-logos"><img src="LogoD1.svg" alt="Daya One" class="hdr-logo"><img src="Logo-SPRM.svg" alt="SPRM" class="hdr-logo"></div><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>REKOD RMA PERALATAN — PROJEK ${projLabel}</h1><div class="sub">Status: ${esc(filterLabel)} · ${list.length} rekod · Dijana ${esc(genDate)}</div></div>
-<table><thead><tr><th>#</th><th>Peralatan</th><th>Site</th><th>Vendor / No. RMA</th><th>Sebab Kerosakan</th><th>Tarikh Hantar</th><th>Tarikh Pulang</th><th>Hari</th><th>Status / Keputusan</th></tr></thead>
+<div class="hdr"><div class="hdr-logos"><img src="LogoD1.svg" alt="Daya One" class="hdr-logo"><img src="Logo-SPRM.svg" alt="SPRM" class="hdr-logo"></div><div class="co">DAYA ONE RESOURCES SDN BHD</div><h1>REKOD SERVIS &amp; RMA PERALATAN — PROJEK ${projLabel}</h1><div class="sub">Tapisan: ${esc(filterLabel)} · ${list.length} rekod · Dijana ${esc(genDate)}</div></div>
+<table><thead><tr><th>#</th><th>Jenis</th><th>Peralatan</th><th>Site</th><th>Vendor / No. Rujukan</th><th>Masalah / Kerosakan</th><th>Tarikh Hantar / Servis</th><th>Tarikh Pulang</th><th>Hari</th><th>Status / Keputusan</th></tr></thead>
 <tbody>${rows}</tbody></table>
 <div class="footer">Baris berwarna = belum pulang lebih ${RMA_ALERT_DAYS} hari · Dijana automatik oleh Sistem PM-CCTV-SPRM pada ${new Date().toLocaleString('ms-MY')}</div>
 </body></html>`;
@@ -15790,7 +16293,7 @@ tr.late td{background:#fff3e0}
       // is meaningless on a letter — give the letter branch its own label.
       const letterTag = _sanitizeForFilename(w.perihal);
       const base = serviceReportModal.collection === 'rmaRecords'
-        ? `RMA_${_sanitizeForFilename(w.rmaNo || w.serial)}_${dd}${mm}${dt.getFullYear()}`
+        ? `${rmaIsServis(w) ? 'Servis' : 'RMA'}_${_sanitizeForFilename(w.rmaNo || w.serial)}_${dd}${mm}${dt.getFullYear()}`
         : isLetter
         ? `SuratMemo_${letterTag === 'NoSN' ? 'TanpaPerihal' : letterTag}_${dd}${mm}${dt.getFullYear()}`
         : `ServiceReport_${_sanitizeForFilename(w.serial)}_${dd}${mm}${dt.getFullYear()}`;
@@ -15953,29 +16456,6 @@ tr.late td{background:#fff3e0}
       </head><body><img src="${esc(filePreviewModal.url)}" onload="setTimeout(()=>{window.print();window.close();},200)"></body></html>`);
       w.document.close();
     }
-    // Agregat semua fail servis merentasi site/vendor — utk paparan ringkas
-    // kat Pelaporan tanpa perlu susur satu-satu rekod waranti.
-    const allServiceReports = computed(() => {
-      const rows = [];
-      warranty.value.forEach(w => (w.serviceReports||[]).forEach(r => rows.push({ ...r, warranty: w })));
-      return rows.sort((a,b) => (b.uploadedAt||'').localeCompare(a.uploadedAt||''));
-    });
-    // Toggle + carian untuk kad "Fail Servis Terkini (Semua Site)" — collapse
-    // default (senarai boleh jadi panjang lepas beberapa bulan penggunaan).
-    const showAllServiceReports = ref(false);
-    const serviceReportSearchQuery = ref('');
-    const allServiceReportsFiltered = computed(() => {
-      const q = serviceReportSearchQuery.value.trim().toLowerCase();
-      if(!q) return allServiceReports.value;
-      return allServiceReports.value.filter(r =>
-        (r.name||'').toLowerCase().includes(q) ||
-        (r.warranty?.equipmentName||'').toLowerCase().includes(q) ||
-        (r.warranty?.siteName||'').toLowerCase().includes(q) ||
-        (r.warranty?.vendor||'').toLowerCase().includes(q) ||
-        (r.uploadedBy||'').toLowerCase().includes(q)
-      );
-    });
-
     const WARRANTY_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif', superseded:'⏭ Disambung' };
 
     // ── Waranti Peralatan (VIR only) ────────────────────────────────────
@@ -16070,6 +16550,10 @@ tr.late td{background:#fff3e0}
       if(d.endDate < d.purchaseDate) {
         virWarrantyModal.err = 'Tarikh tamat mesti selepas tarikh beli.'; return;
       }
+      // Same rule as CCTV Waranti: blank → 60, otherwise a whole number ≥ 1
+      // (a negative one put the warning window after the end date).
+      const rem = d.reminderDays;
+      if(rem !== '' && rem != null && !(Number(rem) >= 1)) { virWarrantyModal.err = 'Reminder mesti sekurang-kurangnya 1 hari.'; return; }
       loading.value = true;
       try {
         const data = {
@@ -16077,7 +16561,7 @@ tr.late td{background:#fff3e0}
           equipmentName: d.partName, brand:d.brand, model:d.model, serial:d.serial,
           purchasedFrom:d.purchasedFrom, receiptNo:d.receiptNo,
           purchaseDate:d.purchaseDate, startDate:d.purchaseDate, endDate:d.endDate,
-          cost: d.cost || '', reminderDays: d.reminderDays || 60, notes:d.notes,
+          cost: d.cost || '', reminderDays: rem ? Math.round(Number(rem)) : 60, notes:d.notes,
         };
         const sortByEnd = (a,b) => (a.endDate||'').localeCompare(b.endDate||'');
         if(!virWarrantyModal.editing) {
@@ -16118,12 +16602,12 @@ tr.late td{background:#fff3e0}
     // says so (header line + file name), so a one-company copy shared onward
     // isn't mistaken for the full list.
     function _warrantyFilterParts() {
-      const v = warrantyFilterVendor.value, s = warrantyFilterStatus.value;
-      return [v && `Vendor: ${v}`, s && `Status: ${WARRANTY_STATUS_LABEL[s] || s}`].filter(Boolean);
+      const v = warrantyFilterVendor.value, s = warrantyFilterStatus.value, p = warrantyFilterPrincipal.value;
+      return [v && `Vendor: ${v}`, p && `Prinsipal: ${p}`, s && `Status: ${WARRANTY_STATUS_LABEL[s] || s}`].filter(Boolean);
     }
     function _warrantyFileSlug() {
-      const v = warrantyFilterVendor.value, s = warrantyFilterStatus.value;
-      return [v, s && (WARRANTY_STATUS_LABEL[s] || s)].filter(Boolean)
+      const v = warrantyFilterVendor.value, s = warrantyFilterStatus.value, p = warrantyFilterPrincipal.value;
+      return [v, p, s && (WARRANTY_STATUS_LABEL[s] || s)].filter(Boolean)
         .map(x => String(x).replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')).filter(Boolean).map(x => x + '_').join('');
     }
     async function exportWarrantyExcel() {
@@ -16894,7 +17378,7 @@ tr.late td{background:#fff3e0}
     // window (before auto-purge or a manual restore) doesn't lose that copy
     // — the backup itself is the last safety net if the trash entry expires
     // with no other record of it.
-    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','cmCases','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty','deletedCmCases','rmaRecords','deletedRmaRecords'];
+    const FULL_BACKUP_EXTRA_COLLECTIONS = ['users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','loginAttempts','kontraktorLuar','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','cmCases','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty','deletedCmCases','rmaRecords','deletedRmaRecords','warrantyPrincipals'];
     async function collectFullBackupData() {
       const data = collectBackupData();
       data.full = true;
@@ -16941,7 +17425,7 @@ tr.late td{background:#fff3e0}
     // on-demand via a button (not on every page load) since it reads every
     // document in every collection, which costs Firestore read quota.
     const FIRESTORE_FREE_TIER_BYTES = 1024*1024*1024; // 1 GiB
-    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','cmCases','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty','deletedCmCases','rmaRecords','deletedRmaRecords'];
+    const DB_COLLECTIONS_TO_MEASURE = ['pmRecords','siteEquipment','virSiteEquipment','siteEquipmentCredentials','virSiteEquipmentCredentials','users','contracts','contactPersons','teamAssignments','auditLogs','customEquipmentOptions','systemBackups','loginAttempts','equipmentWarranty','warrantyVendorContracts','virEquipmentWarranty','equipmentRemovalLog','suratMemo','cmCases','deletedPmRecords','deletedContracts','deletedEquipmentWarranty','deletedSuratMemo','deletedVirEquipmentWarranty','deletedCmCases','rmaRecords','deletedRmaRecords','warrantyPrincipals'];
     const DB_STORAGE_CACHE_KEY = 'pm_sprm_dbstorage_cache';
     const DB_STORAGE_CACHE_MAX_AGE_MS = 7*24*3600*1000; // re-check at most once a week automatically
     const dbStorage = reactive({ loading:false, total:0, breakdown:[], checkedAt:null });
@@ -17409,6 +17893,7 @@ tr.late td{background:#fff3e0}
         if(data.deletedCmCases?.length) { await _batchRestoreCollection('deletedCmCases', data.deletedCmCases); await loadTrashCmCases(); }
         if(data.rmaRecords?.length) { await _batchRestoreCollection('rmaRecords', data.rmaRecords); await loadRmaRecords(true); }
         if(data.deletedRmaRecords?.length) { await _batchRestoreCollection('deletedRmaRecords', data.deletedRmaRecords); await loadTrashRma(); }
+        if(data.warrantyPrincipals?.length) { await _batchRestoreCollection('warrantyPrincipals', data.warrantyPrincipals); await loadPrincipals(true); }
 
         // doAutoBackup() (pre-restore cloud checkpoint) was removed app-wide —
         // see the comment above — so this toast used to claim a safety net
@@ -17641,9 +18126,9 @@ tr.late td{background:#fff3e0}
       'audit-log':'Log Audit', 'laporan':'Laporan Penyelenggaraan', 'laporan-lanjutan':'Laporan Lanjutan', 'compare':'Perbandingan Borang',
       'contracts': 'Kontrak & SLA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
       'contact-person': 'Contact Person ' + (currentProject.value==='vir'?'VIR':'CCTV'),
-      'kontraktor-luar': 'Senarai Kontraktor/Supplier Luar', 'warranty': 'Waranti Peralatan (CCTV)', 'vir-warranty': 'Waranti Peralatan (VIR)',
+      'kontraktor-luar': 'Senarai Kontraktor/Supplier Luar', 'warranty': 'Waranti Peralatan (CCTV)', 'principals': 'Direktori Prinsipal (CCTV)', 'vir-warranty': 'Waranti Peralatan (VIR)',
       'log-cm': 'Log Kes CM', 'trash': 'Tong Sampah',
-      'surat-memo': 'Surat & Memo', 'rma': 'Rekod RMA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
+      'surat-memo': 'Surat & Memo', 'rma': 'Servis & RMA (' + (currentProject.value==='vir'?'VIR':'CCTV') + ')',
     }[page.value]||''));
 
     const today = computed(() => (void _dayKey.value, new Date().toLocaleDateString('ms-MY',{weekday:'long',year:'numeric',month:'long',day:'numeric'})));
@@ -18009,7 +18494,9 @@ tr.late td{background:#fff3e0}
         .slice(0, 5)
         .map(r => ({ _kind:'rma', id:'rma-'+r.id, rma:r, proj: r.project === 'vir' ? 'vir' : 'cctv',
           label: [r.equipName || r.model || r.category, r.serial && 'SN ' + r.serial].filter(Boolean).join(' · ') || '-',
-          detail: [r.siteName, r.vendor, r.rmaNo && 'RMA ' + r.rmaNo, rmaLabel(RMA_STATUSES, r.status)].filter(Boolean).join(' · ') }));
+          detail: rmaIsServis(r)
+            ? ['🔧 Servis di site', r.siteName, r.vendor, fmtDate(r.sendDate)].filter(Boolean).join(' · ')
+            : [r.siteName, r.vendor, r.rmaNo && 'RMA ' + r.rmaNo, rmaLabel(RMA_STATUSES, r.status)].filter(Boolean).join(' · ') }));
 
       return [...commandMatches, ...siteMatches, ...recordMatches, ...equipMatches, ...rmaMatches, ...kontraktorMatches];
     });
@@ -18064,11 +18551,13 @@ tr.late td{background:#fff3e0}
         }
       } else if(item._kind === 'rma') {
         const r = item.rma;
-        currentProject.value = item.proj; // its watcher clears the site filter
-        rmaFilterStatus.value = '';
-        rmaSearch.value = r.rmaNo || r.serial || r.equipName || '';
+        currentProject.value = item.proj;
+        rmaFilterStatus.value = ''; rmaFilterType.value = '';
         loadRmaRecords();
         page.value = 'rma';
+        // After the project watcher, which clears the site, search and unit
+        // filters — set before it, the search was wiped.
+        nextTick(() => { rmaFilterSite.value = ''; rmaFilterUnit.value = null; rmaSearch.value = r.rmaNo || r.serial || r.equipName || ''; });
       } else if(item._kind === 'kontraktor') {
         kontraktorLuarProject.value = item.proj;
         page.value = 'kontraktor-luar';
@@ -19464,7 +19953,7 @@ tr.late td{background:#fff3e0}
     function _hasUnsavedWork() {
       if(!authUser.value) return false;
       const formOpen = [userModal, contractModal, warrantyModal, virWarrantyModal, letterMemoModal, cmCaseModal,
-        rmaModal, teamModal, cpModal, kModal, removeReasonModal, tempReplaceModal, bulkEditModal].some(m => m?.show);
+        rmaModal, teamModal, cpModal, kModal, removeReasonModal, tempReplaceModal, bulkEditModal, warrantyBulkModal, principalModal].some(m => m?.show);
       const cmNoteTyped = cmCaseDetail.show && !!cmCaseDetail.newEntryNote.trim();
       const importing = importState.show && (importState.loading || (importState.rows || []).length > 0);
       return formOpen || cmNoteTyped || importing || serviceReportModal.uploading
@@ -20942,7 +21431,11 @@ tr.late td{background:#fff3e0}
       if(!store[targetSiteId]) store[targetSiteId] = {cameras:[],nvr:[],hdd:[],switches:[],alarms:[],misc:[],servers:[],tablets:[]};
       const list = store[targetSiteId][kind];
       const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
-      const seen = new Map(list.map(x => [String(x[dupField]||'').trim().toLowerCase(), x]).filter(([k])=>k));
+      // Same rule as _findDupConflict: a placeholder serial ("N/A", "-") is
+      // no identifier — every row after the first sharing one was skipped
+      // as a "duplicate".
+      const dupKey = v => { const k = String(v || '').trim().toLowerCase(); return dupField === 'serial' && _NON_UNIQUE_SERIAL_PLACEHOLDERS.has(k) ? '' : k; };
+      const seen = new Map(list.map(x => [dupKey(x[dupField]), x]).filter(([k])=>k));
       let added = 0;
       const duplicates = [];
       // NVR names must stay unique per site, same rule as addNVR — cameras/
@@ -20950,7 +21443,7 @@ tr.late td{background:#fff3e0}
       const _nm = s => String(s || '').trim().replace(/\s+/g, ' ').toLowerCase();
       const nvrNames = kind === 'nvr' ? new Map(list.map(n => [_nm(n.name), n]).filter(([k]) => k)) : null;
       rows.forEach(r => {
-        const key = String(r[dupField]||'').trim().toLowerCase();
+        const key = dupKey(r[dupField]);
         if(key && seen.has(key)) {
           const existing = seen.get(key);
           duplicates.push({ field: dupField, value: r[dupField], label: existing.name || existing.model || existing.serial || '(tiada nama)' });
@@ -23155,7 +23648,7 @@ Teruskan tukar emel?`)) return;
     // new-PM draft, the site-compare picker) can't be safely reconstructed
     // from just a page name, so those fall back to their parent list page
     // instead of silently landing on a broken/blank view.
-    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','trash','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','vir-warranty','surat-memo','log-cm','rma'];
+    const RESTORABLE_PAGES = ['dashboard','sites','pm-list','laporan','laporan-lanjutan','contracts','backup','trash','jadual','user-mgmt','audit-log','profile','contact-person','kontraktor-luar','warranty','principals','vir-warranty','surat-memo','log-cm','rma'];
     // Pages whose data is otherwise ONLY fetched by the nav item's own
     // @click handler (loadX();page='x') — landing on them via restore
     // bypasses that click entirely, so page.value flips but the underlying
@@ -23163,8 +23656,8 @@ Teruskan tukar emel?`)) return;
     // and back. Re-fire the same loader here so a refresh lands with data
     // already populated, not a blank page that "fixes itself" on next click.
     const RESTORE_PAGE_LOADERS = {
-      warranty: loadWarranty, 'vir-warranty': loadVirWarranty, 'surat-memo': loadLetterMemos,
-      contracts: loadContracts, 'audit-log': loadAuditLogs, 'log-cm': loadCmCases, rma: loadRmaRecords,
+      warranty: () => { loadWarranty(); loadRmaRecords(); }, principals: () => { loadPrincipals(); loadWarranty(); }, 'vir-warranty': loadVirWarranty, 'surat-memo': loadLetterMemos,
+      contracts: loadContracts, 'audit-log': loadAuditLogs, 'log-cm': loadCmCases, rma: () => { loadRmaRecords(); if(currentProject.value !== 'vir') loadWarranty(); },
       'contact-person': loadContactPersons,
       profile: initProfile, 'kontraktor-luar': loadKontraktorLuar,
       // openTrash() (not loadTrash alone) — it Promise.all's all 5 trash
@@ -23183,7 +23676,7 @@ Teruskan tukar emel?`)) return;
     // (e.g. an admin on Surat & Memo) dropped the next user straight onto
     // it. Pages absent from this map are open to every signed-in role.
     const RESTORE_PAGE_MIN_ROLE = {
-      laporan: 'staff', 'laporan-lanjutan': 'staff', warranty: 'staff',
+      laporan: 'staff', 'laporan-lanjutan': 'staff', warranty: 'staff', principals: 'staff',
       'vir-warranty': 'staff', 'surat-memo': 'staff', 'log-cm': 'staff',
       'audit-log': 'staff',
       trash: 'superadmin', 'user-mgmt': 'superadmin', backup: 'superadmin',
@@ -24642,6 +25135,15 @@ Teruskan tukar emel?`)) return;
         ((item._uid && r.equipRef?.uid === item._uid) ||
          (kind !== 'misc' && serialKeys.size && (serialKeys.has(_realSerialKey(r.serial)) || serialKeys.has(_realSerialKey(r.returnSerial))))))
         .forEach(r => {
+          // A vendor visit is one event — not a send + "0 hari di vendor" return.
+          if(rmaIsServis(r)) {
+            rows.push({ rawDate: r.sendDate || '', dateLabel: r.sendDate ? fmtDateDash(r.sendDate) : '-', ts: 0, isRma: true,
+              rmaBadge: '🔧 Servis di site',
+              rmaLine: [r.vendor, r.rmaNo && 'No. Laporan ' + r.rmaNo, r.fault, r.actionTaken && 'Tindakan: ' + r.actionTaken,
+                rmaLabel(RMA_RESULTS, r.result), r.returnSerial && 'SN baru ' + r.returnSerial].filter(Boolean).join(' — '),
+              unit: [r.brand, r.model].filter(Boolean).join(' ') + (r.serial ? ` (SN ${r.serial})` : '') });
+            return;
+          }
           rows.push({ rawDate: r.sendDate || '', dateLabel: r.sendDate ? fmtDateDash(r.sendDate) : '-', ts: 0, isRma: true,
             rmaBadge: '📦 Dihantar RMA',
             rmaLine: [r.vendor, r.rmaNo && 'No. RMA ' + r.rmaNo, r.fault].filter(Boolean).join(' — '),
@@ -27362,7 +27864,12 @@ Teruskan tukar emel?`)) return;
         currentProject.value = n.project;
       }
       if(n.type === 'temp') { reportTab.value = 'sementara'; tempEquipFilterProj.value = 'all'; }
-      if(n.type === 'rma') { currentProject.value = n.project === 'vir' ? 'vir' : 'cctv'; rmaFilterStatus.value = 'open'; loadRmaRecords(); }
+      if(n.type === 'rma') {
+        currentProject.value = n.project === 'vir' ? 'vir' : 'cctv';
+        rmaFilterStatus.value = 'open'; rmaFilterType.value = '';
+        rmaFilterSite.value = ''; rmaSearch.value = ''; rmaFilterUnit.value = null;
+        loadRmaRecords();
+      }
       showNotifPanel.value = false;
       if(n.action) page.value = n.action;
     }
@@ -27386,7 +27893,8 @@ Teruskan tukar emel?`)) return;
     watch(_contractNotifSignature, () => buildNotifications());
     const _rmaNotifSignature = computed(() => rmaRecords.value.map(r => `${r.id}:${r.status}:${r.sendDate}`).join('|'));
     watch(_rmaNotifSignature, () => buildNotifications());
-    watch(currentProject, () => { rmaFilterSite.value = ''; });
+    watch(currentProject, () => { rmaFilterSite.value = ''; rmaSearch.value = ''; rmaFilterUnit.value = null; });
+    watch(page, p => { if(p !== 'rma') rmaFilterUnit.value = null; });
 
     // ── Feature 2: Laporan ──
     const laporanTempoh = ref(6);
@@ -30566,6 +31074,11 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       openAddWarranty, openEditWarranty, submitWarranty, deleteWarranty, warrantyEffStatus,
       warrantySelected, warrantySelectedHidden, toggleWarrantySel, isWarrantyGroupAllSel, toggleWarrantyGroupSel,
       WARRANTY_BULK_FIELDS, warrantyBulkModal, openWarrantyBulkEdit, applyWarrantyBulkEdit, bulkDeleteWarranty,
+      PRINCIPAL_CATEGORIES, principals, principalsLoading, principalSearch, principalsFiltered, principalWarrantyCountOf, loadPrincipals,
+      principalModal, openAddPrincipal, openEditPrincipal, addPrincipalContact, removePrincipalContact, savePrincipal, deletePrincipal,
+      warrantyFilterPrincipal, openPrincipalWarranties, exportPrincipalsPdf,
+      RMA_RECORD_TYPES, rmaIsServis, rmaFilterType, rmaFilterUnit, rmaUnitFilterLabel, onRmaTypeChange, warrantyServiceCount, openWarrantyServiceRecords,
+      legacyServiceReportRecords, legacyServiceReportCount, migrateLegacyServiceReports,
       warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, onWarrantyEquipPick, toggleWarrantyBulkGroup, warrantyPrincipalSuggestions,
       equipWarrantyOf, equipWarrantyTitle, openEquipWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCategoryColor, letterMemoCustomCategories,
@@ -30575,8 +31088,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       cmCases, cmCaseFilterSite, cmCaseFilterProject, cmCaseFilterStatus, cmCasesFiltered, cmCaseResolutionStats, cmCaseModal, cmCaseDetail, cmCaseDetailCase,
       loadCmCases, onCmCaseProjectChange, onCmCaseSiteChange, openAddCmCase, openEditCmCase, submitCmCase, deleteCmCase, toggleCmCaseStatus,
       openCmCaseDetail, addCmCaseEntry, deleteCmCaseEntry, startEditCmCaseEntry, cancelEditCmCaseEntry, saveEditCmCaseEntry, exportCmCasePdf, canEditCmCase, canAddCmCase,
-      serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport, allServiceReports,
-      showAllServiceReports, serviceReportSearchQuery, allServiceReportsFiltered,
+      serviceReportModal, SERVICE_REPORT_MAX_MB, openServiceReports, uploadServiceReport, deleteServiceReport,
       filePreviewModal, previewServiceReport, printImagePreview, closeFilePreview,
       vendorContracts, vendorContractForm, loadVendorContracts, onVendorContractPick, saveVendorContract, vendorContractStatus,
       setExpiryPreset, userExpiryStatus,
