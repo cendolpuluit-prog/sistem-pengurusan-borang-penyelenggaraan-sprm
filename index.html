@@ -566,6 +566,13 @@ tr:hover td{background:#f9fbff;box-shadow:0 1px 6px rgba(0,40,100,.1)}
 .form-group{margin-bottom:14px}
 .form-group label{display:block;font-size:.82rem;font-weight:600;color:#555;margin-bottom:5px}
 .form-control{width:100%;padding:9px 12px;border:1px solid #d0d0d0;border-radius:6px;font-size:.88rem;transition:.15s}
+/* <date-dmy>: dd/mm/yyyy text field + 📅 that opens the browser calendar */
+.date-dmy{position:relative;display:flex;align-items:center}
+.date-dmy .form-control{padding-right:38px}
+.date-dmy-btn{position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:1rem;line-height:1;padding:4px 6px;border-radius:4px}
+.date-dmy-btn:hover:not(:disabled){background:rgba(0,0,0,.06)}
+.date-dmy-btn:disabled{cursor:not-allowed;opacity:.4}
+.date-dmy-native{position:absolute;right:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
 .form-control:focus{outline:none;border-color:#005599;box-shadow:0 0 0 3px rgba(0,85,153,.1)}
 details.form-control summary{list-style:none}
 details.form-control summary::-webkit-details-marker{display:none}
@@ -3136,7 +3143,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         <div class="card">
           <div class="flex justify-between items-center mb-16" style="flex-wrap:wrap;gap:8px">
             <div class="card-title" style="margin:0;border:none;padding:0">🗺️ Peta Penugasan</div>
-            <input type="date" class="form-control" style="width:auto" v-model="mapSelectedDate">
+            <date-dmy style="width:auto" v-model="mapSelectedDate"></date-dmy>
           </div>
           <div style="position:relative">
             <!-- Explicit loading feedback while initMapWidget() fetches/
@@ -3313,11 +3320,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="form-group" style="margin:0">
               <label style="font-size:.72rem">Dari Tarikh</label>
-              <input class="form-control" type="date" v-model="auditLogFilter.dateFrom" style="font-size:.82rem;padding:5px 8px">
+              <date-dmy v-model="auditLogFilter.dateFrom" input-style="font-size:.82rem;padding:5px 8px"></date-dmy>
             </div>
             <div class="form-group" style="margin:0">
               <label style="font-size:.72rem">Hingga Tarikh</label>
-              <input class="form-control" type="date" v-model="auditLogFilter.dateTo" style="font-size:.82rem;padding:5px 8px">
+              <date-dmy v-model="auditLogFilter.dateTo" input-style="font-size:.82rem;padding:5px 8px"></date-dmy>
             </div>
             <div class="form-group" style="margin:0;display:flex;align-items:flex-end">
               <button class="btn btn-outline btn-sm" @click="resetAuditLogFilter">✕ Kosongkan Filter</button>
@@ -3398,13 +3405,14 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
         </div>
         <div v-else-if="!contractsFiltered.length" class="empty">Tiada kontrak direkodkan lagi.<br><button v-if="canEditContract" class="btn btn-primary btn-sm" style="margin-top:10px" @click="openAddContract">+ Tambah Kontrak</button></div>
         <div v-for="c in contractsFiltered" :key="c.id" class="backup-card" style="align-items:flex-start">
-          <div class="bc-icon">{{contractStatus(c)==='expired'?'🔴':contractStatus(c)==='expiring'?'🟡':'🟢'}}</div>
+          <div class="bc-icon">{{contractStatus(c)==='expired'?'🔴':contractStatus(c)==='expiring'?'🟡':contractStatus(c)==='superseded'?'⏭':'🟢'}}</div>
           <div class="bc-info" style="flex:1">
             <div class="flex items-center gap-8" style="flex-wrap:wrap">
               <b>{{c.title}}</b>
               <span v-if="c.contractNo" class="badge badge-blue" style="font-size:.72rem">{{c.contractNo}}</span>
-              <span :class="['expiry-badge', contractStatus(c)]">
+              <span :class="['expiry-badge', contractStatus(c)]" :title="contractStatus(c)==='superseded' ? 'Kontrak ini telah tamat dan telah digantikan oleh kontrak yang lebih baru — tidak dikira dalam amaran Tamat Tempoh.' : ''">
                 <template v-if="contractStatus(c)==='expired'">🔴 Tamat {{fmtDate(c.endDate)}}</template>
+                <template v-else-if="contractStatus(c)==='superseded'">⏭ Disambung — tamat {{fmtDate(c.endDate)}}</template>
                 <template v-else-if="contractStatus(c)==='expiring'">🟡 Tamat {{fmtDate(c.endDate)}}</template>
                 <template v-else>🟢 Aktif sehingga {{fmtDate(c.endDate)}}</template>
               </span>
@@ -3508,7 +3516,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="form-group" style="margin:0">
               <label>Tarikh Tamat Kontrak</label>
-              <input class="form-control" type="date" v-model="vendorContractForm.contractEndDate">
+              <date-dmy v-model="vendorContractForm.contractEndDate"></date-dmy>
             </div>
             <button class="btn btn-primary btn-sm" @click="saveVendorContract">💾 Simpan</button>
           </div>
@@ -4303,7 +4311,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <input v-if="nCam.redundantNvrRef==='Lain-lain'" class="form-control" v-model="nCam.redundantNvrRefCustom" placeholder="Nyatakan server" style="margin-top:6px">
                 </template>
               </div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nCam.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nCam.installDate"></date-dmy></div>
               <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nCam.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nCam.accessUser" autocomplete="off"></div>
@@ -4399,7 +4407,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.serial"><div v-if="equipFormSerialClash('nvr',nNVR.serial).length" class="ip-clash-hint">⚠️ No. Siri ini sudah wujud: {{equipFormSerialClash('nvr',nNVR.serial).join(', ')}}</div></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nNVR.ip"><div v-if="equipFormIpClash('nvr',nNVR.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('nvr',nNVR.ip).join(', ')}}</div></div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nNVR.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nNVR.installDate"></date-dmy></div>
               <div v-if="currentProject!=='vir'" class="form-group"><label>Lesen Kamera (channel) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="number" min="1" step="1" v-model="nNVR.channelLicense" placeholder="cth: 68"><div class="text-muted text-sm">Jumlah kamera yang dibenarkan oleh lesen NVR/server ini. Penggunaan dikira automatik dari kamera yang "NVR Berkaitan"-nya NVR ini (dan NVR lain yang ditanda di bawah, jika ada).</div></div>
               <div v-if="currentProject!=='vir' && +nNVR.channelLicense > 0 && nvrCoverOptions.length" class="form-group" style="grid-column:1/-1"><label>Lesen ini turut meliputi kamera di <span class="text-muted text-sm">(pilihan)</span></label>
                 <div class="lic-cover-list">
@@ -4499,7 +4507,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 </select>
                 <input v-if="nHDD.nvrRef==='Lain-lain'" class="form-control" v-model="nHDD.nvrRefCustom" placeholder="Nyatakan NVR" style="margin-top:6px">
               </div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nHDD.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nHDD.installDate"></date-dmy></div>
               <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nHDD.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
             </div>
             <div class="flex gap-8">
@@ -4568,7 +4576,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
               <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.serial"><div v-if="equipFormSerialClash('switches',nSW.serial).length" class="ip-clash-hint">⚠️ No. Siri ini sudah wujud: {{equipFormSerialClash('switches',nSW.serial).join(', ')}}</div></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.ip" placeholder="cth: 192.168.1.10"><div v-if="equipFormIpClash('switches',nSW.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('switches',nSW.ip).join(', ')}}</div></div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nSW.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nSW.installDate"></date-dmy></div>
               <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nSW.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <div class="form-group"><label>Nota <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nSW.nota" placeholder="cth: Tingkat 2, Bilik Server"></div>
               <template v-if="canViewCredentials">
@@ -4655,7 +4663,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <input v-if="nALM.type==='Lain-lain'" class="form-control" v-model="nALM.typeCustom" placeholder="Nyatakan jenis sebenar" style="margin-top:6px">
               </div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.ip" placeholder="cth: 192.168.1.20"><div v-if="equipFormIpClash('alarms',nALM.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('alarms',nALM.ip).join(', ')}}</div></div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nALM.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nALM.installDate"></date-dmy></div>
               <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nALM.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nALM.accessUser" autocomplete="off"></div>
@@ -4788,7 +4796,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
               <div class="form-group"><label>OS Product Key <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nServer.osProductKey"></div>
               <div class="form-group"><label>Optager Machine ID</label><input class="form-control" v-model="nServer.optagerMachineId"></div>
-              <div class="form-group"><label>Optager License Key Expiry</label><input class="form-control" type="date" v-model="nServer.optagerLicenseExpiry"></div>
+              <div class="form-group"><label>Optager License Key Expiry</label><date-dmy v-model="nServer.optagerLicenseExpiry"></date-dmy></div>
               <div class="form-group">
                 <label>Fail Lesen (.lic) <span class="text-muted text-sm">(pilihan)</span></label>
                 <label class="btn btn-outline btn-sm" style="cursor:pointer;display:inline-flex">📎 Upload .lic<input type="file" accept=".lic" style="display:none" @change="uploadServerLicense">
@@ -4798,7 +4806,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <button aria-label="Buang" class="btn btn-outline btn-sm btn-icon" @click="removeServerLicenseFile" title="Buang">✕</button>
                 </div>
               </div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nServer.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nServer.installDate"></date-dmy></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addServer">{{equipEditIdx.servers!==null?'✓ Kemaskini Appliance':'+ Tambah Appliance'}}</button>
@@ -4874,7 +4882,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <button aria-label="Buang" class="btn btn-outline btn-sm btn-icon" @click="removeTabletLicenseFile" title="Buang">✕</button>
                 </div>
               </div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nTablet.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nTablet.installDate"></date-dmy></div>
             </div>
             <div class="flex gap-8">
               <button class="btn btn-primary" @click="addTablet">{{equipEditIdx.tablets!==null?'✓ Kemaskini Tablet':'+ Tambah Tablet'}}</button>
@@ -4954,7 +4962,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </div>
               <div class="form-group"><label>No. Siri / Kuantiti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.serial"></div>
               <div class="form-group"><label>IP Address <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="nMISC.ip" placeholder="cth: 192.168.1.30"><div v-if="equipFormIpClash('misc',nMISC.ip).length" class="ip-clash-hint">⚠️ IP ini sudah digunakan: {{equipFormIpClash('misc',nMISC.ip).join(', ')}}</div></div>
-              <div class="form-group"><label>Tarikh Pasang</label><input class="form-control" type="date" v-model="nMISC.installDate"></div>
+              <div class="form-group"><label>Tarikh Pasang</label><date-dmy v-model="nMISC.installDate"></date-dmy></div>
               <div v-if="currentProject!=='vir'" class="form-group"><label class="equip-oos-check"><input type="checkbox" v-model="nMISC.outOfScope"> Di luar skop penyelenggaraan</label><div class="text-muted text-sm">Rekod sahaja — dipapar dalam jadual berasingan di hujung borang PM/CM, tidak dikira dalam jumlah penyelenggaraan.</div></div>
               <template v-if="canViewCredentials">
                 <div class="form-group"><label>Username Akses <span class="text-muted text-sm">(pilihan, cth: PC)</span></label><input class="form-control" v-model="nMISC.accessUser" autocomplete="off"></div>
@@ -5094,7 +5102,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <div class="form-row form-row-2">
             <div class="form-group">
               <label>Site SPRM</label>
-              <select class="form-control" v-model="pm.siteId">
+              <select class="form-control" v-model="pm.siteId" @change="onPmSiteChange">
                 <option value="">-- Pilih Site --</option>
                 <option v-for="s in (currentProject==='vir'?VIR_SITES:SITES)" :key="s.id" :value="s.id">{{s.name}}</option>
               </select>
@@ -5180,7 +5188,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <option v-for="y in Array.from({length:16},(_,i)=>2020+i)" :key="y" :value="y">{{y}}</option>
               </select>
             </div>
-            <div class="form-group"><label>Tarikh Penyelenggaraan</label><input class="form-control" type="date" v-model="pm.visitDate"></div>
+            <div class="form-group"><label>Tarikh Penyelenggaraan</label><date-dmy v-model="pm.visitDate"></date-dmy></div>
           </div>
           <div class="flex gap-8">
             <button class="btn btn-primary" @click="loadPMEquip" :disabled="!pm.siteId">Seterusnya →</button>
@@ -5273,20 +5281,20 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <p class="fw-600 mb-12" style="color:#1A2332">Wakil Kontraktor</p>
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.contractorName"></div>
               <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.contractorJawatan"></div>
-              <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.contractorTarikh"></div>
+              <div class="form-group"><label>Tarikh</label><date-dmy v-model="pm.contractorTarikh"></date-dmy></div>
             </div>
             <div>
               <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Negeri/Cawangan)</p>
               <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.clientName"></div>
               <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.clientJawatan"></div>
-              <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.clientTarikh"></div>
+              <div class="form-group"><label>Tarikh</label><date-dmy v-model="pm.clientTarikh"></date-dmy></div>
             </div>
             <div style="grid-column:1/-1">
               <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Ibu Pejabat / HQ)</p>
               <div class="form-row form-row-2">
                 <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.client2Name"></div>
                 <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.client2Jawatan"></div>
-                <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.client2Tarikh"></div>
+                <div class="form-group"><label>Tarikh</label><date-dmy v-model="pm.client2Tarikh"></date-dmy></div>
               </div>
             </div>
           </div>
@@ -5297,7 +5305,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               <div class="form-group"><label>Syarikat</label><input class="form-control" v-model="pm[b.co]" :placeholder="b.defaultCo"></div>
               <div class="form-group"><label>Nama <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="pm[b.name]"></div>
               <div class="form-group"><label>Jawatan <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="pm[b.jawatan]"></div>
-              <div class="form-group"><label>Tarikh <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="date" v-model="pm[b.tarikh]"></div>
+              <div class="form-group"><label>Tarikh <span class="text-muted text-sm">(pilihan)</span></label><date-dmy v-model="pm[b.tarikh]"></date-dmy></div>
             </div>
             <p class="text-muted" style="grid-column:1/-1;font-size:.75rem;margin:0">Medan kosong akan dicetak sebagai ruang kosong untuk diisi tangan.</p>
           </div>
@@ -5558,20 +5566,20 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <p class="fw-600 mb-12" style="color:#1A2332">Wakil Kontraktor</p>
                 <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.contractorName"></div>
                 <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.contractorJawatan"></div>
-                <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.contractorTarikh"></div>
+                <div class="form-group"><label>Tarikh</label><date-dmy v-model="pm.contractorTarikh"></date-dmy></div>
               </div>
               <div>
                 <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Negeri/Cawangan)</p>
                 <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.clientName"></div>
                 <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.clientJawatan"></div>
-                <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.clientTarikh"></div>
+                <div class="form-group"><label>Tarikh</label><date-dmy v-model="pm.clientTarikh"></date-dmy></div>
               </div>
               <div style="grid-column:1/-1">
                 <p class="fw-600 mb-12" style="color:#1A2332">Wakil SPRM (Ibu Pejabat / HQ)</p>
                 <div class="form-row form-row-2">
                   <div class="form-group"><label>Nama</label><input class="form-control" v-model="pm.client2Name"></div>
                   <div class="form-group"><label>Jawatan</label><input class="form-control" v-model="pm.client2Jawatan"></div>
-                  <div class="form-group"><label>Tarikh</label><input class="form-control" type="date" v-model="pm.client2Tarikh"></div>
+                  <div class="form-group"><label>Tarikh</label><date-dmy v-model="pm.client2Tarikh"></date-dmy></div>
                 </div>
               </div>
             </div>
@@ -6546,7 +6554,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="form-group">
               <label>Tarikh *</label>
-              <input class="form-control" type="date" v-model="teamModal.data.date">
+              <date-dmy v-model="teamModal.data.date"></date-dmy>
             </div>
             <div class="form-group">
               <label>Jenis Projek</label>
@@ -7143,7 +7151,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <button type="button" class="btn btn-outline btn-sm" @click="setExpiryPreset(6)">+ 6 Bulan</button>
                 <button type="button" class="btn btn-outline btn-sm" @click="setExpiryPreset(12)">+ 1 Tahun</button>
               </div>
-              <input type="date" class="form-control" v-model="userModal.data.expiryDate" style="max-width:220px">
+              <date-dmy v-model="userModal.data.expiryDate" style="max-width:220px"></date-dmy>
               <div v-if="userModal.data.expiryDate" style="font-size:.78rem;color:#555;margin-top:6px">
                 📅 Akses akan tamat pada: <b>{{fmtDate(userModal.data.expiryDate)}}</b>
               </div>
@@ -7202,8 +7210,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <div class="form-row form-row-2">
             <div class="form-group"><label>Tajuk Kontrak *</label><input class="form-control" v-model="contractModal.data.title" placeholder="cth: Kontrak Penyelenggaraan CCTV SPRM 2026-2027"></div>
             <div class="form-group"><label>No. Kontrak</label><input class="form-control" v-model="contractModal.data.contractNo" placeholder="cth: SPRM/KTK/2026/01"></div>
-            <div class="form-group"><label>Tarikh Mula *</label><input class="form-control" type="date" v-model="contractModal.data.startDate"></div>
-            <div class="form-group"><label>Tarikh Tamat *</label><input class="form-control" type="date" v-model="contractModal.data.endDate"></div>
+            <div class="form-group"><label>Tarikh Mula *</label><date-dmy v-model="contractModal.data.startDate"></date-dmy></div>
+            <div class="form-group"><label>Tarikh Tamat *</label><date-dmy v-model="contractModal.data.endDate"></date-dmy></div>
             <div class="form-group"><label>Reminder (hari sebelum tamat)</label><input class="form-control" type="number" min="1" v-model.number="contractModal.data.reminderDays" placeholder="60"></div>
           </div>
           <div class="form-group"><label>Nota</label><textarea class="form-control" rows="3" v-model="contractModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
@@ -7242,11 +7250,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="warr-bulk-field">
               <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.startDate"> Tukar</label>
-              <div class="form-group"><label>Tarikh Mula Waranti</label><input class="form-control" type="date" v-model="warrantyBulkModal.data.startDate" :disabled="!warrantyBulkModal.use.startDate"></div>
+              <div class="form-group"><label>Tarikh Mula Waranti</label><date-dmy v-model="warrantyBulkModal.data.startDate" :disabled="!warrantyBulkModal.use.startDate"></date-dmy></div>
             </div>
             <div class="warr-bulk-field">
               <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.endDate"> Tukar</label>
-              <div class="form-group"><label>Tarikh Tamat Waranti</label><input class="form-control" type="date" v-model="warrantyBulkModal.data.endDate" :disabled="!warrantyBulkModal.use.endDate"></div>
+              <div class="form-group"><label>Tarikh Tamat Waranti</label><date-dmy v-model="warrantyBulkModal.data.endDate" :disabled="!warrantyBulkModal.use.endDate"></date-dmy></div>
             </div>
             <div class="warr-bulk-field">
               <label class="warr-bulk-use"><input type="checkbox" v-model="warrantyBulkModal.use.reminderDays"> Tukar</label>
@@ -7321,8 +7329,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </template>
             <div class="form-group"><label>Prinsipal / Pembekal *</label><input class="form-control" v-model="warrantyModal.data.principal" list="warrantyPrincipalList" placeholder="Syarikat yang membekal peralatan ini kepada vendor" autocomplete="off"><datalist id="warrantyPrincipalList"><option v-for="p in warrantyPrincipalSuggestions" :key="p" :value="p"></option></datalist></div>
             <div class="form-group"><label>Jenis Waranti <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="warrantyModal.data.warrantyType" placeholder="cth: Limited Lifetime Warranty with 10BD-Ship"></div>
-            <div class="form-group"><label>Tarikh Mula Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.startDate"></div>
-            <div class="form-group"><label>Tarikh Tamat Waranti *</label><input class="form-control" type="date" v-model="warrantyModal.data.endDate"></div>
+            <div class="form-group"><label>Tarikh Mula Waranti *</label><date-dmy v-model="warrantyModal.data.startDate"></date-dmy></div>
+            <div class="form-group"><label>Tarikh Tamat Waranti *</label><date-dmy v-model="warrantyModal.data.endDate"></date-dmy></div>
             <div class="form-group"><label>Reminder (hari sebelum tamat)</label><input class="form-control" type="number" min="1" v-model.number="warrantyModal.data.reminderDays" placeholder="60"></div>
           </div>
           <div class="form-group"><label>Nota</label><textarea class="form-control" rows="3" v-model="warrantyModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
@@ -7347,7 +7355,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </select>
               <input v-if="letterMemoModal.data.category==='lain'" class="form-control" v-model="letterMemoModal.data.categoryCustom" placeholder="Nyatakan kategori sebenar" style="margin-top:6px">
             </div>
-            <div class="form-group"><label>Tarikh Surat *</label><input class="form-control" type="date" v-model="letterMemoModal.data.letterDate"></div>
+            <div class="form-group"><label>Tarikh Surat *</label><date-dmy v-model="letterMemoModal.data.letterDate"></date-dmy></div>
           </div>
           <div class="form-row form-row-2">
             <div class="form-group"><label>Projek <span class="text-muted text-sm">(pilihan)</span></label>
@@ -7398,7 +7406,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
           </div>
           <div class="form-group"><label>Tajuk Kes *</label><input class="form-control" v-model="cmCaseModal.data.title" placeholder="cth: Claim Waranti PC — ACER Malaysia"></div>
-          <div class="form-group"><label>Tarikh Dibuka *</label><input class="form-control" type="date" v-model="cmCaseModal.data.openedDate"></div>
+          <div class="form-group"><label>Tarikh Dibuka *</label><date-dmy v-model="cmCaseModal.data.openedDate"></date-dmy></div>
           <div class="form-group" v-if="!cmCaseModal.editing"><label>Catatan Awal <span class="text-muted text-sm">(pilihan)</span></label><textarea class="form-control" rows="2" v-model="cmCaseModal.data.initialNote" placeholder="cth: PC dibawa balik ke office Daya One untuk claim waranti"></textarea></div>
           <p v-if="cmCaseModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{cmCaseModal.err}}</p>
           <div class="flex gap-8">
@@ -7468,7 +7476,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
           </div>
           <div class="form-row form-row-2">
-            <div class="form-group"><label>Tarikh Servis *</label><input class="form-control" type="date" v-model="rmaModal.data.sendDate" @change="applyRmaWarranty"></div>
+            <div class="form-group"><label>Tarikh Servis *</label><date-dmy v-model="rmaModal.data.sendDate" @change="applyRmaWarranty"></date-dmy></div>
             <div class="form-group"><label>Staff Bertugas</label><input class="form-control" v-model="rmaModal.data.sentBy"></div>
           </div>
           <div class="form-row form-row-2">
@@ -7508,7 +7516,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
           </div>
           <div class="form-row form-row-2">
-            <div class="form-group"><label>Tarikh Hantar *</label><input class="form-control" type="date" v-model="rmaModal.data.sendDate" @change="applyRmaWarranty"></div>
+            <div class="form-group"><label>Tarikh Hantar *</label><date-dmy v-model="rmaModal.data.sendDate" @change="applyRmaWarranty"></date-dmy></div>
             <div class="form-group"><label>Dihantar Oleh</label><input class="form-control" v-model="rmaModal.data.sentBy"></div>
           </div>
           <div class="form-row form-row-2">
@@ -7538,7 +7546,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <option v-for="s in RMA_STATUSES" :key="s[0]" :value="s[0]">{{s[1]}}</option>
               </select>
             </div>
-            <div class="form-group"><label>Tarikh Dapat Semula <span v-if="['diterima','ditolak'].includes(rmaModal.data.status)">*</span></label><input class="form-control" type="date" v-model="rmaModal.data.returnDate" :min="rmaModal.data.sendDate"></div>
+            <div class="form-group"><label>Tarikh Dapat Semula <span v-if="['diterima','ditolak'].includes(rmaModal.data.status)">*</span></label><date-dmy v-model="rmaModal.data.returnDate" :min="rmaModal.data.sendDate"></date-dmy></div>
           </div>
           <div class="form-row form-row-2" v-if="['diterima','ditolak'].includes(rmaModal.data.status)">
             <div class="form-group"><label>Keputusan Vendor <span v-if="rmaModal.data.status==='diterima'">*</span></label>
@@ -7594,7 +7602,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           </div>
 
           <div v-if="canAddCmCase" class="form-group"><label>{{cmCaseDetail.editingEntryId ? '✏️ Edit Catatan' : 'Tambah Catatan Baru'}}</label>
-            <input class="form-control" type="date" v-model="cmCaseDetail.newEntryDate" style="margin-bottom:6px">
+            <date-dmy v-model="cmCaseDetail.newEntryDate" style="margin-bottom:6px"></date-dmy>
             <input class="form-control" v-model="cmCaseDetail.newEntryStatus" placeholder="Status terkini (cth: Menunggu part dari ACER)" style="margin-bottom:6px">
             <textarea class="form-control" rows="2" v-model="cmCaseDetail.newEntryNote" placeholder="Tindakan/langkah yang diambil (cth: ACER datang, part tak ready, akan datang lagi minggu depan)"></textarea>
           </div>
@@ -7637,12 +7645,12 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="form-group"><label>Nama Part *</label><input class="form-control" v-model="virWarrantyModal.data.partName" placeholder="cth: Graphic Card, Sound Card, PSU"></div>
             <div class="form-group"><label>Brand</label><input class="form-control" v-model="virWarrantyModal.data.brand" placeholder="cth: ASUS, Corsair"></div>
             <div class="form-group"><label>Model</label><input class="form-control" v-model="virWarrantyModal.data.model"></div>
-            <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="virWarrantyModal.data.serial" placeholder="Serial No."></div>
+            <div class="form-group"><label>No. Siri <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="virWarrantyModal.data.serial" placeholder="Serial No."><div v-if="virWarrantySerialClash" class="ip-clash-hint">🛡 No. Siri ini sudah ada rekod waranti di site ini — {{virWarrantySerialClash.equipmentName}}, tamat {{fmtDate(virWarrantySerialClash.endDate)}}.</div></div>
             <div class="form-group"><label>Dibeli Dari <span class="text-muted text-sm">(kedai/supplier)</span></label><input class="form-control" v-model="virWarrantyModal.data.purchasedFrom" placeholder="cth: Tech Store Sdn Bhd"></div>
             <div class="form-group"><label>No. Resit/Invois <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" v-model="virWarrantyModal.data.receiptNo"></div>
             <div class="form-group"><label>Kos (RM) <span class="text-muted text-sm">(pilihan)</span></label><input class="form-control" type="number" min="0" step="0.01" v-model="virWarrantyModal.data.cost"></div>
-            <div class="form-group"><label>Tarikh Beli *</label><input class="form-control" type="date" v-model="virWarrantyModal.data.purchaseDate"></div>
-            <div class="form-group"><label>Tarikh Tamat Waranti *</label><input class="form-control" type="date" v-model="virWarrantyModal.data.endDate"></div>
+            <div class="form-group"><label>Tarikh Beli *</label><date-dmy v-model="virWarrantyModal.data.purchaseDate"></date-dmy></div>
+            <div class="form-group"><label>Tarikh Tamat Waranti *</label><date-dmy v-model="virWarrantyModal.data.endDate"></date-dmy></div>
             <div class="form-group"><label>Reminder (hari sebelum tamat)</label><input class="form-control" type="number" min="1" v-model.number="virWarrantyModal.data.reminderDays" placeholder="60"></div>
           </div>
           <div class="form-group"><label>Nota</label><textarea class="form-control" rows="3" v-model="virWarrantyModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
@@ -7762,7 +7770,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="form-group"><label>Model *</label><input class="form-control" v-model="tempReplaceModal.model" placeholder="cth: WV-S2131L" @input="tempReplaceModal.err=''"></div>
             <div class="form-group"><label>No. Siri</label><input class="form-control" v-model="tempReplaceModal.serial" @input="tempReplaceModal.err=''"></div>
             <div v-if="tempReplaceModal.hasIp" class="form-group"><label>IP Address</label><input class="form-control mono-data" v-model="tempReplaceModal.ip" @input="tempReplaceModal.err=''"></div>
-            <div class="form-group"><label>Tarikh Ganti *</label><input class="form-control" type="date" v-model="tempReplaceModal.date"></div>
+            <div class="form-group"><label>Tarikh Ganti *</label><date-dmy v-model="tempReplaceModal.date"></date-dmy></div>
             <div class="form-group"><label>Sebab Ganti Sementara *</label>
               <select class="form-control" v-model="tempReplaceModal.cause" @change="tempReplaceModal.err=''">
                 <option value="" disabled>-- Pilih sebab --</option>
@@ -9192,11 +9200,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="flex gap-8" style="flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
               <div class="form-group" style="margin:0">
                 <label>Dari</label>
-                <input type="date" class="form-control" style="width:160px" v-model="customRangeStart">
+                <date-dmy style="width:160px" v-model="customRangeStart"></date-dmy>
               </div>
               <div class="form-group" style="margin:0">
                 <label>Hingga</label>
-                <input type="date" class="form-control" style="width:160px" v-model="customRangeEnd">
+                <date-dmy style="width:160px" v-model="customRangeEnd"></date-dmy>
               </div>
               <div class="flex gap-6">
                 <button class="btn btn-outline btn-sm" @click="customRangeSetPreset(7)">7 Hari</button>
@@ -10329,8 +10337,102 @@ const LiveClock = {
   }
 };
 
+// <date-dmy v-model="x"> — a date field that always reads dd/mm/yyyy.
+// <input type="date"> shows whatever order the browser's own language uses
+// (mm/dd/yyyy on an English-US Chrome), which no page attribute can change.
+// The value stays YYYY-MM-DD like a native date input, so data, sorting and
+// every existing check are unchanged. Type the date (slashes are added as
+// you go) or pick it from the browser's calendar with 📅.
+const DateDmy = {
+  // inputStyle: styles for the text box itself (font size, padding) — a
+  // plain style/class on <date-dmy> lands on the wrapper (widths, margins).
+  props: { modelValue: { type: String, default: '' }, min: String, max: String, disabled: Boolean, inputStyle: String },
+  emits: ['update:modelValue', 'change'],
+  template: `<div class="date-dmy">
+    <input class="form-control" type="text" inputmode="numeric" maxlength="10" placeholder="dd/mm/yyyy" autocomplete="off"
+      :style="inputStyle" :value="text" :disabled="disabled" @input="onInput" @blur="onBlur">
+    <button type="button" class="date-dmy-btn" :disabled="disabled" @click="openPicker" title="Pilih dari kalendar" aria-label="Pilih dari kalendar">📅</button>
+    <input ref="nativeEl" type="date" class="date-dmy-native" tabindex="-1" aria-hidden="true"
+      :value="modelValue" :min="min" :max="max" @change="onNative">
+  </div>`,
+  setup(props, { emit }) {
+    const toDmy = iso => /^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? `${iso.slice(8,10)}/${iso.slice(5,7)}/${iso.slice(0,4)}` : '';
+    // Day/month may be one digit while typing (1/2/2026); blur pads it.
+    const toIso = dmy => {
+      const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(dmy || '');
+      if(!m) return null;
+      const [, d, mo, y] = m.map(Number);
+      const dt = new Date(y, mo - 1, d);
+      const p2 = n => String(n).padStart(2, '0');
+      return dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d ? `${m[3]}-${p2(mo)}-${p2(d)}` : null;
+    };
+    const text = ref(toDmy(props.modelValue));
+    const nativeEl = ref(null);
+    watch(() => props.modelValue, v => { if(toIso(text.value) !== v) text.value = toDmy(v); });
+    const set = iso => { emit('update:modelValue', iso); emit('change', iso); };
+    const SEP = /[\/.\-\s]/;
+    function onInput(e) {
+      const el = e.target, typed = el.value, caret = el.selectionStart ?? typed.length;
+      let raw = typed;
+      // pasted ISO (2026-11-01) → 01/11/2026 order
+      const pastedIso = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})\s*$/.exec(raw);
+      if(pastedIso) raw = `${pastedIso[3]}/${pastedIso[2]}/${pastedIso[1]}`;
+      let v;
+      if(SEP.test(raw)) {
+        // Day / month / year kept as typed, so a part can be retyped in the
+        // middle (select "15", type 2 then 5 → 25). The old digit-reflow
+        // padded the lone "2" to 02 at once, jumped the caret to the end,
+        // and the full box (maxlength) then refused the "5".
+        // "1/2/2026", "1-2-2026", "1.2.2026" all work; blur pads to 01/02/2026.
+        const parts = raw.split(/[\/.\-\s]+/).map(s => s.replace(/\D/g, ''));
+        const trailing = SEP.test(raw.slice(-1));
+        if(trailing && parts.length > 1 && parts[parts.length - 1] === '') parts.pop();
+        const MAX = [2, 2, 4];
+        for(let i = 0; i < parts.length && i < 3; i++) {
+          if(parts[i].length <= MAX[i]) continue;
+          // typing on past a full day/month flows into the next part: 01/022 → 01/02/2
+          if(i < 2 && i === parts.length - 1) parts.push(parts[i].slice(MAX[i]));
+          parts[i] = parts[i].slice(0, MAX[i]);
+        }
+        parts.length = Math.min(parts.length, 3);
+        v = parts.join('/') + (trailing && parts.length < 3 && parts[parts.length - 1] ? '/' : '');
+      } else {
+        // digits only: put the slashes in as you go — 01022026 → 01/02/2026
+        const digits = raw.replace(/\D/g, '').slice(0, 8);
+        v = digits.length > 4 ? `${digits.slice(0,2)}/${digits.slice(2,4)}/${digits.slice(4)}` : digits.length > 2 ? `${digits.slice(0,2)}/${digits.slice(2)}` : digits;
+      }
+      if(v !== typed) {
+        // Keep the caret after the same digit it followed (end, for a paste).
+        el.value = v;
+        let pos = v.length;
+        if(!pastedIso) {
+          const want = typed.slice(0, caret).replace(/\D/g, '').length;
+          let n = 0; pos = 0;
+          while(pos < v.length && n < want) { if(/\d/.test(v[pos])) n++; pos++; }
+          if(SEP.test(typed[caret - 1] || '') && v[pos] === '/') pos++;
+        }
+        try { el.setSelectionRange(pos, pos); } catch(err) {}
+      }
+      text.value = v;
+      if(!v) { if(props.modelValue) set(''); return; }
+      const iso = toIso(v);
+      if(iso && iso !== props.modelValue) set(iso);
+    }
+    // Leaving the box shows the stored date in full (1/2/2026 → 01/02/2026);
+    // an unfinished / impossible one (31/02/2026) snaps back to the last good date.
+    function onBlur() { if(text.value) text.value = toDmy(props.modelValue); }
+    function openPicker() {
+      const el = nativeEl.value;
+      if(!el) return;
+      try { el.showPicker(); } catch(e) { el.focus(); el.click(); }
+    }
+    function onNative(e) { const iso = e.target.value || ''; text.value = toDmy(iso); if(iso !== props.modelValue) set(iso); }
+    return { text, nativeEl, onInput, onBlur, openPicker, onNative };
+  }
+};
+
 createApp({
-  components: { LiveClock },
+  components: { LiveClock, DateDmy },
   setup() {
     // Today's local date (YYYY-MM-DD) as a reactive value. A computed that
     // reads "today" through new Date() alone has no reactive dependency on
@@ -12250,6 +12352,7 @@ createApp({
 
     // Called once after login/app load — offers to resume an unfinished
     // form left over from a session that never reached Submit/Save Draft.
+    let _pmRestoring = false; // see the pm.virSystem watcher
     async function checkPmDraftRecovery() {
       // A legacy un-scoped draft (saved before drafts were per-account) has
       // no known owner — never offer it to whoever happens to log in next.
@@ -12283,7 +12386,11 @@ createApp({
       const siteLabel = draft.pm.siteName || draft.pm.refNo || '(site belum dipilih)';
       if(await askConfirm(`Ada borang PM belum siap dari sesi lepas (${siteLabel}, disimpan ${when}) — kemungkinan tak sempat disubmit sebab sambungan/tab terputus.\n\nNak sambung borang ni semula?`, {danger:false})) {
         currentProject.value = draft.project || 'cctv';
+        // Watchers reacting to these fields (the VIR checklist regenerator)
+        // run after this tick — the flag tells them it's a restore, then clears.
+        _pmRestoring = true;
         Object.assign(pm, draft.pm);
+        nextTick(() => { _pmRestoring = false; });
         if(!Array.isArray(draft.pm.outOfScope)) pm.outOfScope = []; // draft saved before this list existed
         // Same localStorage-round-trip issue already handled for _createdAt
         // in savePM() (JSON strips the Timestamp class down to a plain
@@ -13377,7 +13484,9 @@ createApp({
           else teamAssignments.value.push({ id: teamModal.current.id, ...localData }); // re-saved after a delete elsewhere
         } else {
           const ref2 = await _fw(db.collection('teamAssignments').add(data));
-          teamAssignments.value.push({ id: ref2.id, ...localData });
+          // The live listener may already have put it in (its snapshot can
+          // land before add() resolves) — a plain push showed it twice.
+          if(!teamAssignments.value.some(t => t.id === ref2.id)) teamAssignments.value.push({ id: ref2.id, ...localData });
         }
         teamModal.show = false;
         await logAudit('TEAM_ASSIGN_SAVE', `Team ${data.team} — ${data.siteName} (${data.date})`);
@@ -14279,7 +14388,7 @@ Teruskan tukar emel?`)) return;
     const contractsTimelineRows = computed(() => {
       const today = new Date(_localDateStr());
       return contractsFiltered.value
-        .filter(c => c.endDate)
+        .filter(c => c.endDate && contractStatus(c) !== 'superseded') // renewed history would crowd out the live ones
         .map(c => ({ id:c.id, title:c.title, daysLeft: Math.round((new Date(c.endDate)-today)/86400000), status: contractStatus(c) }))
         .sort((a,b) => a.daysLeft - b.daysLeft)
         .slice(0, 8);
@@ -14288,24 +14397,35 @@ Teruskan tukar emel?`)) return;
       return Math.round(Math.max(0, Math.min(CONTRACT_TIMELINE_DAY_CAP, daysLeft)) / CONTRACT_TIMELINE_DAY_CAP * 100);
     }
 
+    // 'superseded': an expired contract the project has already renewed — a
+    // later contract (starts after it, ends after it) that hasn't expired.
+    // Shown as history ("⏭ Disambung") and left out of every "Tamat" alert,
+    // which otherwise stayed red for good (e.g. the VIR contract before
+    // 1 Ogos 2026) unless the old record was deleted. Same idea as Waranti.
     function contractStatus(c) {
       if(!c.endDate) return 'active';
       const today = _localDateStr();
-      if(c.endDate < today) return 'expired';
+      if(c.endDate < today) {
+        const proj = c.project || 'cctv';
+        const renewed = contracts.value.some(o => o.id !== c.id && (o.project || 'cctv') === proj
+          && o.endDate && o.endDate >= today && o.endDate > c.endDate && (o.startDate || '') > (c.startDate || ''));
+        return renewed ? 'superseded' : 'expired';
+      }
       const warn = new Date();
       warn.setDate(warn.getDate() + (c.reminderDays || 60));
       if(c.endDate <= _localDateStr(warn)) return 'expiring';
       return 'active';
     }
 
+    const _contractNeedsAction = c => ['expired', 'expiring'].includes(contractStatus(c));
     const contractsExpiringCount = computed(() =>
-      contracts.value.filter(c => contractStatus(c) !== 'active').length
+      contracts.value.filter(_contractNeedsAction).length
     );
     const contractsExpiringCountCctv = computed(() =>
-      contracts.value.filter(c => (c.project||'cctv')==='cctv' && contractStatus(c) !== 'active').length
+      contracts.value.filter(c => (c.project||'cctv')==='cctv' && _contractNeedsAction(c)).length
     );
     const contractsExpiringCountVir = computed(() =>
-      contracts.value.filter(c => (c.project||'cctv')==='vir' && contractStatus(c) !== 'active').length
+      contracts.value.filter(c => (c.project||'cctv')==='vir' && _contractNeedsAction(c)).length
     );
 
     function openAddContract() {
@@ -14386,7 +14506,7 @@ Teruskan tukar emel?`)) return;
         return safe;
       });
     }
-    const CONTRACT_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif' };
+    const CONTRACT_STATUS_LABEL = { expired:'🔴 Tamat Tempoh', expiring:'🟡 Hampir Tamat', active:'🟢 Aktif', superseded:'⏭ Disambung' };
     async function exportContractsExcel() {
       await _ensureXLSX();
       const rows = contractsFiltered.value.map((c,i) => ({
@@ -15185,7 +15305,11 @@ Teruskan tukar emel?`)) return;
         updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: authUser.value?.email || '' };
       const old = m.editId ? principals.value.find(p => p.id === m.editId) : null;
       // A renamed principal: its warranty records still carry the old name.
-      const renamed = old && _pKey(old.name) !== _pKey(name) ? warranty.value.filter(w => _pKey(w.principal) === _pKey(old.name)) : [];
+      // The page starts loadWarranty() without waiting — a quick rename
+      // before it finished found none, so they silently kept the old name.
+      const isRename = !!old && _pKey(old.name) !== _pKey(name);
+      if(isRename) await loadWarranty();
+      const renamed = isRename ? warranty.value.filter(w => _pKey(w.principal) === _pKey(old.name)) : [];
       const carryOver = renamed.length && await askConfirm(`${renamed.length} rekod waranti menggunakan nama lama "${old.name}".\n\nKemas kini rekod tersebut kepada "${name}" juga?`, { danger:false });
       loading.value = true;
       try {
@@ -16434,7 +16558,11 @@ tr.late td{background:#fff3e0}
           }
           const canvas = document.createElement('canvas');
           canvas.width = width; canvas.height = height;
-          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          const ctx = canvas.getContext('2d');
+          // JPEG has no transparency: a transparent PNG (screenshot, scan
+          // exported from an app) came out on black — dark text unreadable.
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
           canvas.toBlob(blob => {
             if(blob && blob.size < file.size) {
               const newName = file.name.replace(/\.(jpe?g|png)$/i, '') + '.jpg';
@@ -16703,6 +16831,19 @@ tr.late td{background:#fff3e0}
       const s = VIR_SITES.find(x => x.id === virWarrantyModal.data.siteId);
       virWarrantyModal.data.siteName = s?.name || '';
     }
+    // Same part already on record (same serial at this site) — like CCTV
+    // Waranti: usually a double entry, but a replacement part's warranty
+    // under the old serial is legitimate, so warn rather than block. When
+    // several match, the one ending last is shown.
+    const virWarrantySerialClash = computed(() => {
+      const d = virWarrantyModal.data;
+      const k = virWarrantyModal.show && d.siteId ? _realSerialKey(d.serial) : '';
+      if(!k) return null;
+      const exclude = virWarrantyModal.editing ? virWarrantyModal._editId : null;
+      return virWarranty.value
+        .filter(w => w.siteId === d.siteId && w.id !== exclude && _realSerialKey(w.serial) === k)
+        .reduce((best, w) => (!best || (w.endDate || '') > (best.endDate || '')) ? w : best, null);
+    });
     function openAddVirWarranty() {
       if(!canEditVirWarranty.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       virWarrantyModal.editing = false; virWarrantyModal.err = '';
@@ -16739,6 +16880,8 @@ tr.late td{background:#fff3e0}
       // (a negative one put the warning window after the end date).
       const rem = d.reminderDays;
       if(rem !== '' && rem != null && !(Number(rem) >= 1)) { virWarrantyModal.err = 'Reminder mesti sekurang-kurangnya 1 hari.'; return; }
+      const dupe = virWarrantySerialClash.value;
+      if(dupe && !await askConfirm(`Part dengan No. Siri ini sudah ada rekod waranti di site ini: "${dupe.equipmentName}"${dupe.system ? ' (' + dupe.system + ')' : ''}, tamat ${fmtDate(dupe.endDate)}.\n\nTeruskan simpan rekod lain untuk part yang sama?`)) return;
       loading.value = true;
       try {
         const data = {
@@ -17464,6 +17607,22 @@ tr.late td{background:#fff3e0}
         _loadPmOptagerEquipSnapshot();
       }
     }
+    // VIR, new borang: the room (and its system, excluded checklist groups
+    // and Optager/VCS/SONY equipment snapshot) was picked at the PREVIOUS
+    // site. Kept, a site-B borang went out with site A's room name and
+    // servers/cameras — even when site B has no room by that name (the
+    // dropdown just looked blank while pm.virRoomNo still passed the check).
+    // Back to startNewPM's state so the room is picked again for this site.
+    // Only on a user pick (@change), so draft recovery / editRecord / the
+    // overdue shortcut, which set pm.siteId themselves, are left alone.
+    function onPmSiteChange() {
+      if(currentProject.value !== 'vir' || pm._isEdit || !(pm.virRoomNo || pm.virRoomNoCustom)) return;
+      pm.virRoomNo = ''; pm.virRoomNoCustom = ''; pm._virRoomExcludedGroups = [];
+      pm.virSystem = 'BCD';
+      pm.virItems = virFilterExcluded(virChecklistFor('BCD'), []).map(t => ({...t, status:'ok', nota:''}));
+      _loadPmOptagerEquipSnapshot(); // BCD → clears the room-scoped equipment lists
+      showToast('Site ditukar — sila pilih No. Bilik VIR semula untuk site ini.');
+    }
     // Room-scoped-system (Optager HD4000 / VCS / SONY) equipment snapshot
     // for the printed borang — pulled from the SAME reactive store that
     // system's "Urus Peralatan Site" screen edits (virSiteEquipOptager /
@@ -17506,8 +17665,11 @@ tr.late td{background:#fff3e0}
     // the refNo-prefix/suffix watchers fixed earlier this session.
     // Also covers the no-room-registered fallback (manual "Jenis Sistem"
     // dropdown), where there's no room/excludedGroups to apply.
+    // Not while a local draft is being restored either (_pmRestoring): its
+    // virSystem goes '' → 'BCD'/'Optager HD4000' in that same assign, and
+    // this regenerated the checklist over the draft's own statuses and notes.
     watch(() => pm.virSystem, (sys) => {
-      if(pm._isEdit || currentProject.value !== 'vir' || !sys) return;
+      if(_pmRestoring || pm._isEdit || currentProject.value !== 'vir' || !sys) return;
       pm.virItems = virFilterExcluded(virChecklistFor(sys), pm._virRoomExcludedGroups||[]).map(t => ({...t, status:'ok', nota:''}));
       _loadPmOptagerEquipSnapshot();
     });
@@ -18027,6 +18189,7 @@ tr.late td{background:#fff3e0}
           if(data.virSiteEquip) virSiteEquip.value = restoredVirRooms;
           if(data.virSiteEquipBCD) virSiteEquipBCD.value = restoredVirBcd;
           if(data.virSiteEquipOptager) virSiteEquipOptager.value = restoredVirOptager;
+          _dropVirRoomMoves();
           if(data.virSiteEquipVCS) virSiteEquipVCS.value = restoredVirVcs;
           if(data.virSiteEquipSony) virSiteEquipSony.value = restoredVirSony;
           equipLoadState.vir = true;
@@ -18206,6 +18369,7 @@ tr.late td{background:#fff3e0}
           if(hasSys.rooms) virSiteEquip.value = { ...virSiteEquip.value, [id]: { rooms } };
           if(hasSys.BCD) virSiteEquipBCD.value = { ...virSiteEquipBCD.value, [id]: bcd };
           if(hasSys.Optager) virSiteEquipOptager.value = { ...virSiteEquipOptager.value, [id]: optager };
+          _dropVirRoomMoves(id);
           if(hasSys.VCS) virSiteEquipVCS.value = { ...virSiteEquipVCS.value, [id]: vcs };
           if(hasSys.SONY) virSiteEquipSony.value = { ...virSiteEquipSony.value, [id]: sony };
         } else {
@@ -21156,6 +21320,7 @@ tr.late td{background:#fff3e0}
       // loadAll()/the relevant load*() the moment the new session's
       // onAuthStateChanged fires, so clearing them here loses nothing.
       pmRecords.value = []; teamAssignments.value = [];
+      _dropVirRoomMoves();
       siteEquip.value = {}; virSiteEquip.value = {}; virSiteEquipBCD.value = {}; virSiteEquipOptager.value = {}; virSiteEquipVCS.value = {}; virSiteEquipSony.value = {};
       equipLoadState.cctv = false; equipLoadState.vir = false;
       _clearEquipConflict(); // a held conflict belongs to this session's unsaved edits — never the next user's
@@ -22003,6 +22168,16 @@ tr.late td{background:#fff3e0}
     function _noteVirRoomMove(siteId, system, roomUid) {
       ((_virRoomMoves[siteId] ||= {})[system] ||= new Set()).add(roomUid);
     }
+    // Called wherever a site's VIR data is REPLACED from outside (live
+    // update, full reload incl. the conflict banner's "muat semula", backup
+    // restore, logout): the in-memory move those entries describe went with
+    // the old copy. Kept, a stale entry would make the next save delete an
+    // old room bucket that — in the replacement — still holds its equipment.
+    // No siteId = every site.
+    function _dropVirRoomMoves(siteId) {
+      if(siteId) delete _virRoomMoves[siteId];
+      else Object.keys(_virRoomMoves).forEach(k => delete _virRoomMoves[k]);
+    }
     function _migrateOptagerRoomToUnassigned(siteId, roomUid) {
       if(roomUid === 'legacyUnassigned') return; // already there
       const siteRec = virSiteEquipOptager.value[siteId];
@@ -22271,6 +22446,7 @@ tr.late td{background:#fff3e0}
         virSiteEquipOptager.value[siteId] = b.optager;
         virSiteEquipVCS.value[siteId] = b.vcs;
         virSiteEquipSony.value[siteId] = b.sony;
+        _dropVirRoomMoves(siteId);
       } else {
         siteEquip.value[siteId] = _buildCctvSite(main, creds);
       }
@@ -22500,6 +22676,7 @@ tr.late td{background:#fff3e0}
           virSiteEquipOptager.value = veqOptager;
           virSiteEquipVCS.value = veqVcs;
           virSiteEquipSony.value = veqSony;
+          _dropVirRoomMoves();
           equipLoadState.vir = _virEquipOk;
         }
         if(_virEquipOk && equipConflict.key?.startsWith('virSiteEquipment:')) _clearEquipConflict(); // see the CCTV note above
@@ -23583,7 +23760,11 @@ Teruskan tukar emel?`)) return;
               let w = img.width, h = img.height;
               if(w > h){ h = Math.round(h * max/w); w = max; } else { w = Math.round(w * max/h); h = max; }
               canvas.width = w; canvas.height = h;
-              canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+              const ctx = canvas.getContext('2d');
+              // JPEG has no transparency — a transparent PNG's background
+              // came out black. Paint white under it first.
+              ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h);
+              ctx.drawImage(img, 0, 0, w, h);
               res(canvas.toDataURL('image/jpeg', 0.82));
             } catch(e){ rej(e); }
           };
@@ -23599,8 +23780,16 @@ Teruskan tukar emel?`)) return;
         const path = `profile-photos/${uid}/${Date.now()}_avatar.jpg`;
         await _ensureStorage();
         const snap = await storage.ref(path).put(blob, { contentType: 'image/jpeg' });
-        const url = await snap.ref.getDownloadURL();
-        await db.collection('users').doc(uid).update({ photoURL: url, photoPath: path });
+        let url;
+        try {
+          url = await snap.ref.getDownloadURL();
+          await db.collection('users').doc(uid).update({ photoURL: url, photoPath: path });
+        } catch(e) {
+          // Profile not updated — the file just uploaded would be referenced
+          // by nothing (same cleanup as uploadServiceReport).
+          storage.ref(path).delete().catch(()=>{});
+          throw e;
+        }
         if(isSelf) { authProfile.value.photoURL = url; authProfile.value.photoPath = path; }
         const idx = allUsers.value.findIndex(u => u.id === uid);
         if(idx > -1) { allUsers.value[idx].photoURL = url; allUsers.value[idx].photoPath = path; }
@@ -26384,8 +26573,12 @@ Teruskan tukar emel?`)) return;
       const isVir = VIR_SITES.some(v => v.id === siteId);
       if(!startNewPM(isVir ? 'vir' : 'cctv')) return; // blocked — see startNewPM's equipment-still-loading guard
       pm.siteId = siteId;
-      loadPMEquip();
       showNotifPanel.value = false;
+      // VIR still needs its room + system picked on step 1 — loadPMEquip()
+      // would only greet the click with "Sila pilih No. Bilik VIR". The site
+      // is pre-filled; the technician picks the room and continues.
+      if(isVir) { pm.siteName = VIR_SITES.find(s => s.id === siteId)?.name || ''; return; }
+      loadPMEquip();
     }
 
     // Equipment tables that have BOTH a Baik/Tidak-style status column and a
@@ -26687,11 +26880,12 @@ Teruskan tukar emel?`)) return;
     });
     // Bold-heading detection for the printed Nota box — matches the fixed
     // section labels _buildNotaCatatan() emits (PREVENTIVE/CORRECTIVE
-    // MAINTENANCE, MASALAH, TINDAKAN, STATUS, PENDING:). Exact-string match
+    // MAINTENANCE, MASALAH, TINDAKAN, STATUS, PENDING — and "PENDING:", as
+    // borangs saved before the label lost its colon still read). Exact-string match
     // only, so a Masalah/Tindakan sentence that happens to equal one of
     // these labels verbatim would also render bold — accepted as a rare
     // edge case per user's explicit ask.
-    const NOTA_HEADER_LINES = new Set(['PREVENTIVE MAINTENANCE (PM)','CORRECTIVE MAINTENANCE (CM)','MASALAH','TINDAKAN','STATUS','PENDING:']);
+    const NOTA_HEADER_LINES = new Set(['PREVENTIVE MAINTENANCE (PM)','CORRECTIVE MAINTENANCE (CM)','MASALAH','TINDAKAN','STATUS','PENDING','PENDING:']);
     function isNotaHeaderLine(line) { return NOTA_HEADER_LINES.has((line||'').trim()); }
 
     // Loads an already-submitted record back into the editable pm form so
@@ -27916,7 +28110,7 @@ Teruskan tukar emel?`)) return;
       // Contracts & SLA expiring/expired (any project)
       contracts.value.forEach(c => {
         const status = contractStatus(c);
-        if(status !== 'active') {
+        if(status === 'expired' || status === 'expiring') {
           list.push({ id:'contract-'+c.id, icon: status==='expired'?'🔴':'🟡', type:'contract', title:(status==='expired'?'Kontrak Tamat: ':'Kontrak Hampir Tamat: ')+c.title, body:'Tamat pada '+fmtDate(c.endDate), time: now, read:false, action:'contracts', project: c.project||'cctv' });
         }
       });
@@ -28071,12 +28265,15 @@ Teruskan tukar emel?`)) return;
     const _pmNotifSignature = computed(() =>
       pmRecords.value.map(r => `${r.id}:${r.maintType}:${r.cmStatus||''}:${r.status||''}`).join('|')
     );
+    // startDate/project too: an expired contract stops alerting once the same
+    // project has a later one (contractStatus 'superseded'). Title is shown.
     const _contractNotifSignature = computed(() =>
-      contracts.value.map(c => `${c.id}:${c.endDate||''}:${c.reminderDays||''}`).join('|')
+      contracts.value.map(c => `${c.id}:${c.endDate||''}:${c.reminderDays||''}:${c.startDate||''}:${c.project||''}:${c.title||''}`).join('|')
     );
     watch(_pmNotifSignature, () => buildNotifications());
     watch(_contractNotifSignature, () => buildNotifications());
-    const _rmaNotifSignature = computed(() => rmaRecords.value.map(r => `${r.id}:${r.status}:${r.sendDate}`).join('|'));
+    // + the fields the alert's title/body show (name, site, vendor, project)
+    const _rmaNotifSignature = computed(() => rmaRecords.value.map(r => `${r.id}:${r.status}:${r.sendDate}:${r.returnDate||''}:${r.equipName||r.model||''}:${r.siteName||''}:${r.vendor||''}:${r.project||''}`).join('|'));
     watch(_rmaNotifSignature, () => buildNotifications());
     watch(currentProject, () => { rmaFilterSite.value = ''; rmaSearch.value = ''; rmaFilterUnit.value = null; });
     watch(page, p => { if(p !== 'rma') rmaFilterUnit.value = null; });
@@ -28454,8 +28651,10 @@ Teruskan tukar emel?`)) return;
       if(pm.notaPendingEnabled) {
         const pendingFilled = (pm.notaPending||[]).filter(p => (p||'').trim());
         if(pendingFilled.length) {
-          lines.push('PENDING:');
-          pendingFilled.forEach((p,i) => lines.push(`${i+1}. ${p.trim()}`));
+          // Same "PENDING" / "1)" style as MASALAH and TINDAKAN above (it was
+          // "PENDING:" / "1." — older borangs keep that text until re-saved).
+          lines.push('PENDING');
+          pendingFilled.forEach((p,i) => lines.push(`${i+1}) ${p.trim()}`));
           lines.push('');
         }
       }
@@ -31264,7 +31463,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       warrantyFilterPrincipal, openPrincipalWarranties, exportPrincipalsPdf,
       RMA_RECORD_TYPES, rmaIsServis, rmaFilterType, rmaFilterUnit, rmaUnitFilterLabel, onRmaTypeChange, warrantyServiceCount, openWarrantyServiceRecords,
       legacyServiceReportRecords, legacyServiceReportCount, migrateLegacyServiceReports,
-      warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, onWarrantyEquipPick, toggleWarrantyBulkGroup, warrantyPrincipalSuggestions,
+      warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, virWarrantySerialClash, onPmSiteChange, onWarrantyEquipPick, toggleWarrantyBulkGroup, warrantyPrincipalSuggestions,
       equipWarrantyOf, equipWarrantyTitle, openEquipWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCategoryColor, letterMemoCustomCategories,
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
