@@ -8595,22 +8595,28 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <option value="Tablet">Tablet</option>
                 </select>
                 <input class="form-control search-bar" v-model="assetSearch" placeholder="🔍 Cari site/brand/model/serial">
+                <div class="flex items-center gap-8" title="Hanya peralatan yang ditambah pada/selepas tarikh ini — cth. tarikh eksport lepas, untuk lihat apa yang menambah jumlah. Peralatan yang ditambah sebelum log sejarah wujud tiada tarikh (—) dan tidak disenaraikan.">
+                  <span class="text-sm text-muted" style="white-space:nowrap">Ditambah sejak</span>
+                  <date-dmy style="width:auto" v-model="assetAddedSince"></date-dmy>
+                  <button v-if="assetAddedSince" class="btn btn-outline btn-sm" @click="assetAddedSince=''" title="Kosongkan">✕</button>
+                </div>
                 <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportAssetRegister">📊 Export Excel</button>
               </div>
             </div>
             <div class="tbl-wrap">
               <table>
-                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th><th>Waranti</th></tr></thead>
+                <thead><tr><th>#</th><th>Site</th><th>Projek</th><th>Kategori</th><th>Nama/Jenis</th><th>Brand</th><th>Model</th><th>No. Siri</th><th>Maklumat Tambahan</th><th>Tarikh Ditambah</th><th>Waranti</th></tr></thead>
                 <tbody>
                   <tr v-for="(r,i) in assetRegisterPagedList" :key="(assetRegisterPage-1)*20+i">
                     <td>{{(assetRegisterPage-1)*20+i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
                     <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td class="mono-data">{{r.serial}}</td><td>{{r.extra}}</td>
+                    <td style="white-space:nowrap" :title="r.addedBy ? 'Oleh ' + r.addedBy : ''">{{assetAddedLabel(r)}}</td>
                     <td>
                       <a v-if="warrantyCheckUrl(r)" :href="warrantyCheckUrl(r)" target="_blank" rel="noopener" class="btn btn-outline btn-sm">🔗 Semak Waranti</a>
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
                   </tr>
-                  <tr v-if="!assetRegister.length"><td colspan="10" class="empty">Tiada peralatan sepadan.</td></tr>
+                  <tr v-if="!assetRegister.length"><td colspan="11" class="empty">{{assetAddedSince ? 'Tiada peralatan ditambah sejak ' + fmtDate(assetAddedSince) + '.' : 'Tiada peralatan sepadan.'}}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -21496,6 +21502,8 @@ tr.late td{background:#fff3e0}
       name:     ['name','nama','lokasi','location','channel','device','desc'],
       ip:       ['ip','alamat ip','ip address','ipaddress'],
       camType:  ['type','jenis','category'],
+      // NVR / Alarm "Jenis" — the key had no hints, so that column never mapped
+      type:     ['type','jenis'],
       category: ['type','jenis','category','kategori'],
       brand:    ['brand','jenama','manufacturer','make'],
       model:    ['model','part no','part number'],
@@ -21576,15 +21584,22 @@ tr.late td{background:#fff3e0}
 
     // Header-based mapping for tabular data (xlsx/csv) — matches column
     // headers against known field-name synonyms (English/Malay).
+    // Header text compared without punctuation — this app's own label
+    // "No. Siri" never matched the 'no siri' hint, so the serial column was
+    // dropped from every Malay sheet. Short hints (ip, sn, ram, os…) must be
+    // whole words: "Equipment" / "Description" contain "ip".
+    function _headerHintMatch(hv, hint) {
+      return hint.length <= 3 ? new RegExp('(^|[^a-z0-9])' + hint.replace(/\//g, '\\/') + '($|[^a-z0-9])').test(hv) : hv.includes(hint);
+    }
     function _mapHeaderRow(headerRow, kind) {
       const map = {}; // colIndex -> fieldKey
       headerRow.forEach((h, i) => {
-        const hv = String(h||'').toLowerCase().trim();
+        const hv = String(h||'').toLowerCase().replace(/[^a-z0-9\/]+/g, ' ').trim();
         if(!hv) return;
         for(const key of IMPORT_FIELD_KEYS[kind]) {
           if(map[i]) break;
           const hints = IMPORT_HEADER_HINTS[key] || [];
-          if(hints.some(hint => hv.includes(hint))) { map[i] = key; break; }
+          if(hints.some(hint => _headerHintMatch(hv, hint))) { map[i] = key; break; }
         }
       });
       return map;
@@ -21683,9 +21698,17 @@ tr.late td{background:#fff3e0}
 
     function _rowsFromTable(aoa, kind) {
       if(!aoa.length) return [];
-      const headerMap = _mapHeaderRow(aoa[0], kind);
+      // The header row isn't always the first: sheets often open with a
+      // title ("SENARAI KAMERA SITE A") or a blank line. Using row 1 there
+      // fell back to guessing per row — the title became a "camera" and the
+      // serial landed in Model. Take the best-matching of the first rows.
+      let hdr = 0, headerMap = _mapHeaderRow(aoa[0], kind);
+      for(let i = 1; i < Math.min(aoa.length, 10); i++) {
+        const m = _mapHeaderRow(aoa[i], kind);
+        if(Object.keys(m).length > Object.keys(headerMap).length) { hdr = i; headerMap = m; }
+      }
       const mappedCols = Object.keys(headerMap).length;
-      const dataRows = aoa.slice(1).filter(r => r.some(c => String(c||'').trim()));
+      const dataRows = aoa.slice(hdr + 1).filter(r => r.some(c => String(c||'').trim()));
       if(mappedCols >= 2) {
         return dataRows.map(r => {
           const row = _emptyRow(kind);
@@ -22330,6 +22353,13 @@ tr.late td{background:#fff3e0}
     function _importSlotKey() {
       return [currentProject.value, selSite.value?.id || '', currentProject.value === 'vir' ? equipVirSystem.value : '', currentProject.value === 'vir' ? (equipVirRoomUid.value || '') : ''].join('|');
     }
+    // Row number as the preview table shows it (unticked rows included) +
+    // its name — counting only the ticked rows pointed at the wrong line.
+    function _importRowNo(r) {
+      const n = importState.rows.indexOf(r) + 1;
+      const label = r.name || r.serial || '';
+      return n + (label ? ` — ${label}` : '');
+    }
     function confirmImportRows() {
       const kind = importState.kind;
       if(importState._targetSlot && importState._targetSlot !== _importSlotKey()) {
@@ -22342,8 +22372,13 @@ tr.late td{background:#fff3e0}
       // land unchecked, then block every later edit of that tablet.
       if(kind === 'tablets') {
         const badIdx = rows.findIndex(r => { const v = String(r.imei||'').replace(/[\s-]/g, ''); return v && !_isValidImei(v); });
-        if(badIdx > -1) { showToast(`IMEI tidak sah pada baris ${badIdx+1} ("${rows[badIdx].imei}") — mesti 15 digit sah. Betulkan atau kosongkan sebelum import.`, 'error'); return; }
+        if(badIdx > -1) { showToast(`IMEI tidak sah pada baris ${_importRowNo(rows[badIdx])} ("${rows[badIdx].imei}") — mesti 15 digit sah. Betulkan atau kosongkan sebelum import.`, 'error'); return; }
       }
+      // Same for an IP the add form would refuse (an OCR "10.0.0.1l", a
+      // typo): it landed unchecked, then every later edit of that unit
+      // failed on it. Blank stays allowed, as in the form.
+      const badIp = rows.findIndex(r => ['ip', 'lan2Ip'].some(f => String(r[f] || '').trim() && !isValidIp(r[f])));
+      if(badIp > -1) { const r = rows[badIp]; showToast(`IP tidak sah pada baris ${_importRowNo(r)} ("${String(r.ip || r.lan2Ip).trim()}") — contoh format: 192.168.0.11. Betulkan atau kosongkan sebelum import.`, 'error'); return; }
       const result = _autoAddRows(rows, kind, importState._targetProj, importState._targetSiteId);
       importState.rows = [];
       importState.added = result.added;
@@ -25015,7 +25050,13 @@ Teruskan tukar emel?`)) return;
     }
     function _appendEquipChange(item, { note = '', diffs = [] } = {}) {
       const entry = { at: Date.now(), by: authProfile.value?.name || authProfile.value?.username || authUser.value?.email || '', note, diffs };
-      item._changes = [...(item._changes || []), entry].slice(-EQUIP_CHANGE_MAX);
+      const all = [...(item._changes || []), entry];
+      // The first "Ditambah" entry is the unit's added date (Inventori ▸
+      // Tarikh Ditambah) — kept when older entries roll off.
+      const added = all.find(x => String(x?.note || '').startsWith('Ditambah'));
+      item._changes = added && all.length > EQUIP_CHANGE_MAX && !all.slice(-EQUIP_CHANGE_MAX).includes(added)
+        ? [added, ...all.slice(-(EQUIP_CHANGE_MAX - 1))]
+        : all.slice(-EQUIP_CHANGE_MAX);
     }
     const _TEMP_ORIG_FIELDS = [['name','Nama / Lokasi'],['category','Kategori'],['type','Jenis'],['camType','Jenis'],['brand','Brand'],['model','Model'],['serial','No. Siri'],['imei','IMEI'],['ip','IP Address'],['lanIp','LAN 1 IP'],['lan2Ip','LAN 2 IP'],['wifiIp','WiFi IP'],['nvrRef','NVR Berkaitan'],['redundantNvrRef','Redundance'],['accessory','Aksesori'],['capacity','Kapasiti'],['config','Konfigurasi'],['installDate','Tarikh Pasang']];
     function tempOrigRows(orig) {
@@ -25401,10 +25442,15 @@ Teruskan tukar emel?`)) return;
       const k = String(s || '').trim().toLowerCase();
       return (k && !_NON_UNIQUE_SERIAL_PLACEHOLDERS.has(k)) ? k : '';
     }
+    // Lain-lain's "No. Siri / Kuantiti" box often holds a count ("2 unit",
+    // "1 set", "3") — two different items with the same count aren't a
+    // duplicate. Same reason equipSerialIndex leaves misc out.
+    const _QTY_RE = /^\d{1,3}\s*(unit|units|pcs?|set|sets|nos?|buah|biji|keping|ea)?\.?$/i;
     function _findDupConflict(kind, list, item, excludeIdx) {
       const dupField = IMPORT_FIELD_KEYS[kind].includes('ip') ? 'ip' : 'serial';
       const val = String(item[dupField]||'').trim().toLowerCase();
       if(!val || (dupField==='serial' && _NON_UNIQUE_SERIAL_PLACEHOLDERS.has(val))) return null;
+      if(kind === 'misc' && _QTY_RE.test(val)) return null;
       const idx = list.findIndex((it,i) => i!==excludeIdx && String(it[dupField]||'').trim().toLowerCase()===val);
       return idx>-1 ? { field:dupField, value:item[dupField], existing:list[idx] } : null;
     }
@@ -29229,20 +29275,31 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         });
       });
     }
+    // When a unit was added (and by whom): the "Ditambah" entry of its edit
+    // log. Units added before that log existed have none — shown as "—".
+    function _equipAddedInfo(it) {
+      const e = (it?._changes || []).find(x => String(x?.note || '').startsWith('Ditambah'));
+      return e?.at ? { addedAt: e.at, addedBy: e.by || '' } : { addedAt: null, addedBy: '' };
+    }
+    function assetAddedLabel(r) { return r.addedAt ? fmtDate(_localDateStr(new Date(r.addedAt))) : '—'; }
+    // "Ditambah sejak" (YYYY-MM-DD): only units added on/after that day —
+    // e.g. the date of the last export, to see what the total's rise is.
+    const assetAddedSince = ref('');
     const assetRegisterRaw = computed(() => {
       const rows = [];
+      const push = (it, row) => rows.push({ ...row, ..._equipAddedInfo(it) });
       const pushSite = (site, proj, eqSrc) => {
         const eq = eqSrc[site.id] || {};
-        (eq.cameras||[]).forEach(c => rows.push({ site:site.name, proj, cat:'Kamera'+_oosSfx(c), name:c.name||'-', brand:c.brand||'-', model:c.model||'-', serial:c.serial||'-', extra:c.ip||c.camType||'-' }));
-        (eq.nvr||[]).forEach(n => rows.push({ site:site.name, proj, cat:'NVR'+_oosSfx(n), name:n.name||'-', brand:n.brand||'-', model:n.model||'-', serial:n.serial||'-', extra:n.ip||n.type||'-' }));
-        (eq.hdd||[]).forEach(h => rows.push({ site:site.name, proj, cat:'HDD'+_oosSfx(h), name:h.nvrRef||'-', brand:h.brand||'-', model:h.model||'-', serial:h.serial||'-', extra:h.capacity||'-' }));
-        (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch'+_oosSfx(s), name:s.name||'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:'-' }));
-        (eq.alarms||[]).forEach(a => rows.push({ site:site.name, proj, cat:'Alarm'+_oosSfx(a), name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
-        (eq.misc||[]).forEach(m => rows.push({ site:site.name, proj, cat:'Lain-lain'+_oosSfx(m), name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
+        (eq.cameras||[]).forEach(c => push(c, { site:site.name, proj, cat:'Kamera'+_oosSfx(c), name:c.name||'-', brand:c.brand||'-', model:c.model||'-', serial:c.serial||'-', extra:c.ip||c.camType||'-' }));
+        (eq.nvr||[]).forEach(n => push(n, { site:site.name, proj, cat:'NVR'+_oosSfx(n), name:n.name||'-', brand:n.brand||'-', model:n.model||'-', serial:n.serial||'-', extra:n.ip||n.type||'-' }));
+        (eq.hdd||[]).forEach(h => push(h, { site:site.name, proj, cat:'HDD'+_oosSfx(h), name:h.nvrRef||'-', brand:h.brand||'-', model:h.model||'-', serial:h.serial||'-', extra:h.capacity||'-' }));
+        (eq.switches||[]).forEach(s => push(s, { site:site.name, proj, cat:'Switch'+_oosSfx(s), name:s.name||'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:'-' }));
+        (eq.alarms||[]).forEach(a => push(a, { site:site.name, proj, cat:'Alarm'+_oosSfx(a), name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
+        (eq.misc||[]).forEach(m => push(m, { site:site.name, proj, cat:'Lain-lain'+_oosSfx(m), name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
         // Optager/VCS rooms: the appliance (server) and the control tablet
         // were left out of the count. IMEI stays out (Urus Peralatan only).
-        (eq.servers||[]).forEach(v => rows.push({ site:site.name, proj, cat:'Server/Appliance'+_oosSfx(v), name:v.name||'-', brand:v.brand||'-', model:v.model||'-', serial:v.serial||'-', extra:v.lanIp||v.os||'-' }));
-        (eq.tablets||[]).forEach(t => rows.push({ site:site.name, proj, cat:'Tablet'+_oosSfx(t), name:t.name||'-', brand:t.brand||'-', model:t.model||'-', serial:t.serial||'-', extra:'-' }));
+        (eq.servers||[]).forEach(v => push(v, { site:site.name, proj, cat:'Server/Appliance'+_oosSfx(v), name:v.name||'-', brand:v.brand||'-', model:v.model||'-', serial:v.serial||'-', extra:v.lanIp||v.os||'-' }));
+        (eq.tablets||[]).forEach(t => push(t, { site:site.name, proj, cat:'Tablet'+_oosSfx(t), name:t.name||'-', brand:t.brand||'-', model:t.model||'-', serial:t.serial||'-', extra:'-' }));
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
       VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
@@ -29258,7 +29315,9 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     // dependencies; mixing an expensive build with a fast-changing filter
     // in one computed defeats that caching for both).
     const assetRegister = computed(() => {
-      return assetRegisterRaw.value.filter(r => {
+      const since = assetAddedSince.value ? _parseLocalDate(assetAddedSince.value).getTime() : null;
+      const list = assetRegisterRaw.value.filter(r => {
+        if(since !== null && !(r.addedAt >= since)) return false;
         if(assetFilterProj.value!=='all' && r.proj!==assetFilterProj.value) return false;
         // "Kamera" also lists the "Kamera (Luar Skop)" rows the total counts
         if(assetFilterCat.value!=='all' && r.cat.replace(' (Luar Skop)', '')!==assetFilterCat.value) return false;
@@ -29266,6 +29325,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         if(q && !(r.site.toLowerCase().includes(q)||r.brand.toLowerCase().includes(q)||r.model.toLowerCase().includes(q)||r.serial.toLowerCase().includes(q))) return false;
         return true;
       });
+      return since !== null ? list.sort((a, b) => b.addedAt - a.addedAt) : list;
     });
     // Paginated view of assetRegister — same fix as Log Audit/Rekod Borang/
     // Kontraktor Luar above: with 17+ CCTV sites and dozens of VIR
@@ -29338,12 +29398,14 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const rows = assetRegister.value.map((r,i) => ({
         '#': i+1, Site: r.site, Projek: r.proj, Kategori: r.cat, 'Nama/Jenis': r.name,
         Brand: r.brand, Model: r.model, 'No. Siri': r.serial, 'Maklumat Tambahan': r.extra,
+        'Tarikh Ditambah': assetAddedLabel(r), 'Ditambah Oleh': r.addedBy || '—',
       }));
       const ws = XLSX.utils.json_to_sheet(_xlsxSafeRows(rows));
       _autoFitExcelCols(ws, rows);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Inventori Peralatan');
-      XLSX.writeFile(wb, `inventori_peralatan_${_localDateStr()}.xlsx`);
+      // A "Ditambah sejak" export says so in its name — not the full list.
+      XLSX.writeFile(wb, `inventori_peralatan_${assetAddedSince.value ? 'ditambah_sejak_' + assetAddedSince.value + '_' : ''}${_localDateStr()}.xlsx`);
     }
 
     // ── Ringkasan Jumlah Inventori (CCTV only) — sub-view of the Inventori
@@ -31598,7 +31660,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       siteHealthScores, siteNextPmMap, approachingList, PM_INTERVAL, PM_PER_YEAR,
       healthCountCctv, healthCountVir, opsOverallHealthPct, siteLeaderboard, siteBadges, siteBadgesMap, generateSiteReportCard, favoriteSiteIds, toggleFavoriteSite, sitesForHealthGrid, overdueSortedCctv, overdueSortedVir, overdueExpandCctv, overdueExpandVir, OVERDUE_DASH_LIMIT, startNewPMForSite,
       compareList, compareMode, compareRecords, compareFields, fieldDiff, toggleCompare, startCompare,
-      reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, exportAssetRegister, warrantyCheckUrl,
+      reportTab, assetFilterProj, assetFilterCat, assetSearch, assetRegister, assetAddedSince, assetAddedLabel, exportAssetRegister, warrantyCheckUrl,
       inventorySubView, inventoryReportMode, inventoryTotalRows, inventoryGrandTotal, inventoryBySite, inventorySiteFilter, toggleInventorySiteFilter, inventoryBySiteGrandRows, inventoryBySiteGrandTotal, INVENTORY_JENIS_OPTIONS, inventoryJenisFilter, toggleInventoryJenisFilter, exportInventorySummaryPdf,
       assetRegisterPage, assetRegisterTotalPages, assetRegisterPagedList, assetRegisterGoToPage, assetRegisterPageNumbers,
       slaTrend, sparklinePoints, liveNarrativeSummary, printExecutiveSummary, printQuarterlyReport, failureByModel, isHighRiskEquip, highRiskEquipPct, recurringIssues, teamPerformance, teamPerformanceTrend, staffWorkload, staffWorkloadMax, staffStreaks,
