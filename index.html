@@ -2645,7 +2645,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </template>
             <template v-else>
               <div style="font-weight:700;font-size:.85rem;color:#002244">📋 <span v-html="highlightQuery(r.refNo||'-', globalSearch)"></span></div>
-              <div style="font-size:.75rem;color:#666">{{r.siteName}} &nbsp;·&nbsp; {{r.visitDate||(r.month?MONTHS[r.month-1]:'—')+' '+r.year}}</div>
+              <div style="font-size:.75rem;color:#666">{{r.siteName}} &nbsp;·&nbsp; {{r.visitDate?fmtDateLoose(r.visitDate):(r.month?MONTHS[r.month-1]:'—')+' '+r.year}}</div>
             </template>
           </div>
         </div>
@@ -4340,10 +4340,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <span v-if="nvrLicenseCovering(grp.name)" class="lic-cap-chip" :class="'is-'+nvrLicenseCovering(grp.name).state" :title="licenseCapTitle(nvrLicenseCovering(grp.name))">Lesen{{nvrLicenseCovering(grp.name).name !== grp.name ? ' ' + nvrLicenseCovering(grp.name).name : ''}} {{nvrLicenseCovering(grp.name).used}}/{{nvrLicenseCovering(grp.name).lic}} · {{licenseCapLabel(nvrLicenseCovering(grp.name))}}</span>
               </div>
               <table class="equip-table equip-table-sticky equip-tbl-cameras">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('cameras','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.cameras.key==='name'}">{{equipSortIcon('cameras','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.cameras.key==='ip'}">{{equipSortIcon('cameras','ip')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','camType')">Jenis<span class="sort-ind" :class="{on:equipSort.cameras.key==='camType'}">{{equipSortIcon('cameras','camType')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','brand')">Brand<span class="sort-ind" :class="{on:equipSort.cameras.key==='brand'}">{{equipSortIcon('cameras','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','model')">Model<span class="sort-ind" :class="{on:equipSort.cameras.key==='model'}">{{equipSortIcon('cameras','model')}}</span></th><th v-if="currentProject!=='vir'">Aksesori</th><th class="th-sort" @click="toggleEquipSort('cameras','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.cameras.key==='serial'}">{{equipSortIcon('cameras','serial')}}</span></th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipGroupAllSelected('cameras',grp.items)" @change="toggleEquipGroupSelectAll('cameras',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('cameras','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.cameras.key==='name'}">{{equipSortIcon('cameras','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.cameras.key==='ip'}">{{equipSortIcon('cameras','ip')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','camType')">Jenis<span class="sort-ind" :class="{on:equipSort.cameras.key==='camType'}">{{equipSortIcon('cameras','camType')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','brand')">Brand<span class="sort-ind" :class="{on:equipSort.cameras.key==='brand'}">{{equipSortIcon('cameras','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('cameras','model')">Model<span class="sort-ind" :class="{on:equipSort.cameras.key==='model'}">{{equipSortIcon('cameras','model')}}</span></th><th v-if="currentProject!=='vir'">Aksesori</th><th class="th-sort" @click="toggleEquipSort('cameras','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.cameras.key==='serial'}">{{equipSortIcon('cameras','serial')}}</span></th><th>Redundance</th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(c,gi) in grp.items" :key="c._uid||c._idx" :class="[{'highlight-row':equipEditIdx.cameras===c._idx}, equipRowFx(c)]" :data-equip-uid="c._uid">
-                    <td><input type="checkbox" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.cameras.has(c._uid)" @change="toggleEquipRow('cameras',c._uid)"></td>
                     <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(c.installDate)" :title="equipAgeTitle(c.installDate)"></span>{{c.name}} <span v-if="c.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(c)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(c,'cameras')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(c,'cameras'))" :title="equipWarrantyTitle(equipWarrantyOf(c,'cameras'))" @click="openEquipWarranty(equipWarrantyOf(c,'cameras'))">🛡</span> <span v-if="isHighRiskEquip(c.brand,c.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(c.brand,c.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="c.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(c.ip,'cameras',c._uid||c._idx).length}" :title="ipCellTitle(c.ip,'cameras',c._uid||c._idx)" @click="copyIp(c.ip)">{{c.ip}}</span></td><td>{{c.camType}}</td><td>{{c.brand}}</td><td>{{c.model}} <span v-if="c._temp" class="badge equip-temp-badge" @click="openTempReplace('cameras',c._idx)" :title="tempBadgeTitle(c)">🔁 Sementara</span></td><td v-if="currentProject!=='vir'">{{c.accessory||'-'}}</td><td class="mono-data"><span v-if="c.serial" :class="{'ip-dup':equipSerialClash(c.serial,'cameras',c._uid||c._idx).length}" :title="serialCellTitle(c.serial,'cameras',c._uid||c._idx)">{{c.serial}}</span></td>
                     <td><span v-if="c.redundantNvrRef" class="badge badge-blue" style="font-size:.7rem" :title="'Backup ke '+c.redundantNvrRef">🔁 {{c.redundantNvrRef}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="c.equipNota">{{c.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
@@ -4354,9 +4354,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     </td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('cameras',c)" title="Sejarah PM/CM">🕐</a>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('cameras',c._idx)" :title="c._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(c,'cameras')}" @click="openRmaFromEquip('cameras',c._idx)" :title="rmaBtnTitle(c,'cameras')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',c._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',c._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || c._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('cameras',c._idx)" :title="c._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(c,'cameras')}" @click="openRmaFromEquip('cameras',c._idx)" :title="rmaBtnTitle(c,'cameras')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('cameras',c._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'cameras',c._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                 </tbody>
@@ -4439,10 +4439,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table equip-table-sticky equip-tbl-nvr">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('nvr','name')">Nama<span class="sort-ind" :class="{on:equipSort.nvr.key==='name'}">{{equipSortIcon('nvr','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','type')">Jenis<span class="sort-ind" :class="{on:equipSort.nvr.key==='type'}">{{equipSortIcon('nvr','type')}}</span></th><th>Peranan</th><th class="th-sort" @click="toggleEquipSort('nvr','brand')">Brand<span class="sort-ind" :class="{on:equipSort.nvr.key==='brand'}">{{equipSortIcon('nvr','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','model')">Model<span class="sort-ind" :class="{on:equipSort.nvr.key==='model'}">{{equipSortIcon('nvr','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.nvr.key==='serial'}">{{equipSortIcon('nvr','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','ip')">IP<span class="sort-ind" :class="{on:equipSort.nvr.key==='ip'}">{{equipSortIcon('nvr','ip')}}</span></th><th v-if="currentProject!=='vir'">Lesen Kamera</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipAllSelected('nvr')" @change="toggleEquipSelectAll('nvr')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('nvr','name')">Nama<span class="sort-ind" :class="{on:equipSort.nvr.key==='name'}">{{equipSortIcon('nvr','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','type')">Jenis<span class="sort-ind" :class="{on:equipSort.nvr.key==='type'}">{{equipSortIcon('nvr','type')}}</span></th><th>Peranan</th><th class="th-sort" @click="toggleEquipSort('nvr','brand')">Brand<span class="sort-ind" :class="{on:equipSort.nvr.key==='brand'}">{{equipSortIcon('nvr','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','model')">Model<span class="sort-ind" :class="{on:equipSort.nvr.key==='model'}">{{equipSortIcon('nvr','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.nvr.key==='serial'}">{{equipSortIcon('nvr','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('nvr','ip')">IP<span class="sort-ind" :class="{on:equipSort.nvr.key==='ip'}">{{equipSortIcon('nvr','ip')}}</span></th><th v-if="currentProject!=='vir'">Lesen Kamera</th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(n,i) in equipView.nvr" :key="n._uid||n._idx" :class="[{'highlight-row':equipEditIdx.nvr===n._idx}, equipRowFx(n)]" :data-equip-uid="n._uid">
-                    <td><input type="checkbox" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.nvr.has(n._uid)" @change="toggleEquipRow('nvr',n._uid)"></td>
                     <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(n.installDate)" :title="equipAgeTitle(n.installDate)"></span>{{n.name}} <span v-if="n.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(n)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(n,'nvr')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(n,'nvr'))" :title="equipWarrantyTitle(equipWarrantyOf(n,'nvr'))" @click="openEquipWarranty(equipWarrantyOf(n,'nvr'))">🛡</span> <span v-if="isHighRiskEquip(n.brand,n.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(n.brand,n.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td>{{n.type}}</td><td><span v-if="n.role==='Redundant/Replicator'" class="badge badge-blue" style="font-size:.7rem">🔁 {{n.role}}</span><span v-else>{{n.role||'Primary'}}</span></td><td>{{n.brand}}</td><td>{{n.model}} <span v-if="n._temp" class="badge equip-temp-badge" @click="openTempReplace('nvr',n._idx)" :title="tempBadgeTitle(n)">🔁 Sementara</span></td><td class="mono-data"><span v-if="n.serial" :class="{'ip-dup':equipSerialClash(n.serial,'nvr',n._uid||n._idx).length}" :title="serialCellTitle(n.serial,'nvr',n._uid||n._idx)">{{n.serial}}</span></td><td class="mono-data"><span v-if="n.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(n.ip,'nvr',n._uid||n._idx).length}" :title="ipCellTitle(n.ip,'nvr',n._uid||n._idx)" @click="copyIp(n.ip)">{{n.ip}}</span></td><td v-if="currentProject!=='vir'"><span v-if="nvrLicenseOf(n)" class="lic-cap-chip" :class="'is-'+nvrLicenseOf(n).state" :title="licenseCapTitle(nvrLicenseOf(n))">{{nvrLicenseOf(n).used}}/{{nvrLicenseOf(n).lic}} · {{licenseCapLabel(nvrLicenseOf(n))}}<template v-if="nvrLicenseOf(n).others.length"> · + {{nvrLicenseOf(n).others.join(' + ')}}</template></span><span v-else-if="nvrLicenseCovering(n.name)" class="lic-cap-chip is-covered" :title="'Kamera NVR ini dikira dalam lesen '+nvrLicenseCovering(n.name).label">dalam lesen {{nvrLicenseCovering(n.name).name}}</span><span v-else class="text-muted text-sm">-</span></td><td>{{n.nota}}</td>
                     <td v-if="canViewCredentials">{{n.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -4451,9 +4451,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     </td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('nvr',n)" title="Sejarah PM/CM">🕐</a>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('nvr',n._idx)" :title="n._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(n,'nvr')}" @click="openRmaFromEquip('nvr',n._idx)" :title="rmaBtnTitle(n,'nvr')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',n._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',n._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || n._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('nvr',n._idx)" :title="n._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(n,'nvr')}" @click="openRmaFromEquip('nvr',n._idx)" :title="rmaBtnTitle(n,'nvr')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('nvr',n._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'nvr',n._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.nvr||[]).length"><td colspan="99" class="empty">Tiada NVR lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('nvr')">+ Tambah NVR</button></td></tr><tr v-if="(selSiteEquip.nvr||[]).length && !equipView.nvr.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('nvr')">Kosongkan penapis</a></td></tr>
@@ -4529,16 +4529,16 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <span class="badge">{{grp.items.length}} HDD</span>
               </div>
               <table class="equip-table equip-table-sticky equip-tbl-hdd">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipGroupAllSelected('hdd',grp.items)" @change="toggleEquipGroupSelectAll('hdd',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('hdd','brand')">Brand<span class="sort-ind" :class="{on:equipSort.hdd.key==='brand'}">{{equipSortIcon('hdd','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','model')">Model<span class="sort-ind" :class="{on:equipSort.hdd.key==='model'}">{{equipSortIcon('hdd','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.hdd.key==='serial'}">{{equipSortIcon('hdd','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','capacity')">Kapasiti<span class="sort-ind" :class="{on:equipSort.hdd.key==='capacity'}">{{equipSortIcon('hdd','capacity')}}</span></th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipGroupAllSelected('hdd',grp.items)" @change="toggleEquipGroupSelectAll('hdd',grp.items)"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('hdd','brand')">Brand<span class="sort-ind" :class="{on:equipSort.hdd.key==='brand'}">{{equipSortIcon('hdd','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','model')">Model<span class="sort-ind" :class="{on:equipSort.hdd.key==='model'}">{{equipSortIcon('hdd','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.hdd.key==='serial'}">{{equipSortIcon('hdd','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('hdd','capacity')">Kapasiti<span class="sort-ind" :class="{on:equipSort.hdd.key==='capacity'}">{{equipSortIcon('hdd','capacity')}}</span></th><th>Jumlah Unit</th><th>Config</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(h,gi) in grp.items" :key="h._uid||h._idx" :class="[{'highlight-row':equipEditIdx.hdd===h._idx}, equipRowFx(h)]" :data-equip-uid="h._uid">
-                    <td><input type="checkbox" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.hdd.has(h._uid)" @change="toggleEquipRow('hdd',h._uid)"></td>
                     <td>{{gi+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(h.installDate)" :title="equipAgeTitle(h.installDate)"></span>{{h.brand}} <span v-if="h.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{h.model}} <span v-if="h._temp" class="badge equip-temp-badge" @click="openTempReplace('hdd',h._idx)" :title="tempBadgeTitle(h)">🔁 Sementara</span> <span v-if="isRecentEquip(h)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(h,'hdd')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(h,'hdd'))" :title="equipWarrantyTitle(equipWarrantyOf(h,'hdd'))" @click="openEquipWarranty(equipWarrantyOf(h,'hdd'))">🛡</span> <span v-if="isHighRiskEquip(h.brand,h.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(h.brand,h.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="h.serial" :class="{'ip-dup':equipSerialClash(h.serial,'hdd',h._uid||h._idx).length}" :title="serialCellTitle(h.serial,'hdd',h._uid||h._idx)">{{h.serial}}</span></td><td>{{h.capacity}}</td><td>{{h.totalUnit||1}}</td><td>{{h.config}}</td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('hdd',h)" title="Sejarah PM/CM">🕐</a>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('hdd',h._idx)" :title="h._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(h,'hdd')}" @click="openRmaFromEquip('hdd',h._idx)" :title="rmaBtnTitle(h,'hdd')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',h._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || h._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('hdd',h._idx)" :title="h._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(h,'hdd')}" @click="openRmaFromEquip('hdd',h._idx)" :title="rmaBtnTitle(h,'hdd')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('hdd',h._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'hdd',h._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                 </tbody>
@@ -4600,10 +4600,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table equip-table-sticky equip-tbl-switches">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('switches','name')">Nama<span class="sort-ind" :class="{on:equipSort.switches.key==='name'}">{{equipSortIcon('switches','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','brand')">Brand<span class="sort-ind" :class="{on:equipSort.switches.key==='brand'}">{{equipSortIcon('switches','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','model')">Model<span class="sort-ind" :class="{on:equipSort.switches.key==='model'}">{{equipSortIcon('switches','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.switches.key==='serial'}">{{equipSortIcon('switches','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.switches.key==='ip'}">{{equipSortIcon('switches','ip')}}</span></th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipAllSelected('switches')" @change="toggleEquipSelectAll('switches')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('switches','name')">Nama<span class="sort-ind" :class="{on:equipSort.switches.key==='name'}">{{equipSortIcon('switches','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','brand')">Brand<span class="sort-ind" :class="{on:equipSort.switches.key==='brand'}">{{equipSortIcon('switches','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','model')">Model<span class="sort-ind" :class="{on:equipSort.switches.key==='model'}">{{equipSortIcon('switches','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.switches.key==='serial'}">{{equipSortIcon('switches','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('switches','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.switches.key==='ip'}">{{equipSortIcon('switches','ip')}}</span></th><th>Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in equipView.switches" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.switches===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
-                    <td><input type="checkbox" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.switches.has(s._uid)" @change="toggleEquipRow('switches',s._uid)"></td>
                     <td>{{i+1}}</td><td><span class="equip-age-dot" :style="'background:'+equipAgeColor(s.installDate)" :title="equipAgeTitle(s.installDate)"></span>{{s.name}} <span v-if="s.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span></td><td>{{s.brand}}</td><td>{{s.model}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('switches',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span> <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(s,'switches')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(s,'switches'))" :title="equipWarrantyTitle(equipWarrantyOf(s,'switches'))" @click="openEquipWarranty(equipWarrantyOf(s,'switches'))">🛡</span> <span v-if="isHighRiskEquip(s.brand,s.model)" class="badge badge-red badge-overdue-pulse" style="font-size:.65rem" :title="'Brand/model ini menyumbang '+highRiskEquipPct(s.brand,s.model)+'% daripada semua kegagalan CM direkodkan'">⚠️ Risiko Tinggi</span></td><td class="mono-data"><span v-if="s.serial" :class="{'ip-dup':equipSerialClash(s.serial,'switches',s._uid||s._idx).length}" :title="serialCellTitle(s.serial,'switches',s._uid||s._idx)">{{s.serial}}</span></td><td class="mono-data"><span v-if="s.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.ip,'switches',s._uid||s._idx).length}" :title="ipCellTitle(s.ip,'switches',s._uid||s._idx)" @click="copyIp(s.ip)">{{s.ip}}</span></td><td>{{s.nota}}</td>
                     <td v-if="canViewCredentials">{{s.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -4612,9 +4612,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     </td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('switches',s)" title="Sejarah PM/CM">🕐</a>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('switches',s._idx)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(s,'switches')}" @click="openRmaFromEquip('switches',s._idx)" :title="rmaBtnTitle(s,'switches')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',s._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',s._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || s._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('switches',s._idx)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(s,'switches')}" @click="openRmaFromEquip('switches',s._idx)" :title="rmaBtnTitle(s,'switches')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('switches',s._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'switches',s._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.switches||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada switch lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('switches')">+ Tambah Switch</button></td></tr><tr v-if="(selSiteEquip.switches||[]).length && !equipView.switches.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('switches')">Kosongkan penapis</a></td></tr>
@@ -4686,10 +4686,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table equip-table-sticky equip-tbl-alarms">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('alarms','name')">Nama<span class="sort-ind" :class="{on:equipSort.alarms.key==='name'}">{{equipSortIcon('alarms','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','type')">Jenis<span class="sort-ind" :class="{on:equipSort.alarms.key==='type'}">{{equipSortIcon('alarms','type')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','brand')">Brand<span class="sort-ind" :class="{on:equipSort.alarms.key==='brand'}">{{equipSortIcon('alarms','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','model')">Model<span class="sort-ind" :class="{on:equipSort.alarms.key==='model'}">{{equipSortIcon('alarms','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.alarms.key==='serial'}">{{equipSortIcon('alarms','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.alarms.key==='ip'}">{{equipSortIcon('alarms','ip')}}</span></th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipAllSelected('alarms')" @change="toggleEquipSelectAll('alarms')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('alarms','name')">Nama<span class="sort-ind" :class="{on:equipSort.alarms.key==='name'}">{{equipSortIcon('alarms','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','type')">Jenis<span class="sort-ind" :class="{on:equipSort.alarms.key==='type'}">{{equipSortIcon('alarms','type')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','brand')">Brand<span class="sort-ind" :class="{on:equipSort.alarms.key==='brand'}">{{equipSortIcon('alarms','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','model')">Model<span class="sort-ind" :class="{on:equipSort.alarms.key==='model'}">{{equipSortIcon('alarms','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.alarms.key==='serial'}">{{equipSortIcon('alarms','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('alarms','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.alarms.key==='ip'}">{{equipSortIcon('alarms','ip')}}</span></th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(a,i) in equipView.alarms" :key="a._uid||a._idx" :class="[{'highlight-row':equipEditIdx.alarms===a._idx}, equipRowFx(a)]" :data-equip-uid="a._uid">
-                    <td><input type="checkbox" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.alarms.has(a._uid)" @change="toggleEquipRow('alarms',a._uid)"></td>
                     <td>{{i+1}}</td><td>{{a.name}} <span v-if="a.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(a)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(a,'alarms')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(a,'alarms'))" :title="equipWarrantyTitle(equipWarrantyOf(a,'alarms'))" @click="openEquipWarranty(equipWarrantyOf(a,'alarms'))">🛡</span></td><td>{{a.type}}</td><td>{{a.brand}}</td><td>{{a.model}} <span v-if="a._temp" class="badge equip-temp-badge" @click="openTempReplace('alarms',a._idx)" :title="tempBadgeTitle(a)">🔁 Sementara</span></td><td><span v-if="a.serial" :class="{'ip-dup':equipSerialClash(a.serial,'alarms',a._uid||a._idx).length}" :title="serialCellTitle(a.serial,'alarms',a._uid||a._idx)">{{a.serial}}</span></td><td><span v-if="a.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(a.ip,'alarms',a._uid||a._idx).length}" :title="ipCellTitle(a.ip,'alarms',a._uid||a._idx)" @click="copyIp(a.ip)">{{a.ip}}</span></td>
                     <td v-if="canViewCredentials">{{a.accessUser||'-'}}</td>
                     <td v-if="canViewCredentials" class="flex items-center gap-8">
@@ -4698,9 +4698,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     </td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('alarms',a)" title="Sejarah PM/CM">🕐</a>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('alarms',a._idx)" :title="a._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(a,'alarms')}" @click="openRmaFromEquip('alarms',a._idx)" :title="rmaBtnTitle(a,'alarms')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',a._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',a._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || a._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('alarms',a._idx)" :title="a._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(a,'alarms')}" @click="openRmaFromEquip('alarms',a._idx)" :title="rmaBtnTitle(a,'alarms')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('alarms',a._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'alarms',a._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.alarms||[]).length"><td :colspan="canViewCredentials?11:9" class="empty">Tiada alarm lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('alarms')">+ Tambah Alarm</button></td></tr><tr v-if="(selSiteEquip.alarms||[]).length && !equipView.alarms.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('alarms')">Kosongkan penapis</a></td></tr>
@@ -4820,10 +4820,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table equip-table-sticky equip-tbl-servers">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('servers','name')">Nama<span class="sort-ind" :class="{on:equipSort.servers.key==='name'}">{{equipSortIcon('servers','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','brand')">Brand<span class="sort-ind" :class="{on:equipSort.servers.key==='brand'}">{{equipSortIcon('servers','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','model')">Model<span class="sort-ind" :class="{on:equipSort.servers.key==='model'}">{{equipSortIcon('servers','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.servers.key==='serial'}">{{equipSortIcon('servers','serial')}}</span></th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th class="th-sort" @click="toggleEquipSort('servers','lanIp')">LAN 1 IP<span class="sort-ind" :class="{on:equipSort.servers.key==='lanIp'}">{{equipSortIcon('servers','lanIp')}}</span></th><th>LAN 2 IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipAllSelected('servers')" @change="toggleEquipSelectAll('servers')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('servers','name')">Nama<span class="sort-ind" :class="{on:equipSort.servers.key==='name'}">{{equipSortIcon('servers','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','brand')">Brand<span class="sort-ind" :class="{on:equipSort.servers.key==='brand'}">{{equipSortIcon('servers','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','model')">Model<span class="sort-ind" :class="{on:equipSort.servers.key==='model'}">{{equipSortIcon('servers','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('servers','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.servers.key==='serial'}">{{equipSortIcon('servers','serial')}}</span></th><th>Processor</th><th>RAM</th><th>Storage</th><th>GPU</th><th>Motherboard</th><th>Motherboard Type</th><th class="th-sort" @click="toggleEquipSort('servers','lanIp')">LAN 1 IP<span class="sort-ind" :class="{on:equipSort.servers.key==='lanIp'}">{{equipSortIcon('servers','lanIp')}}</span></th><th>LAN 2 IP</th><th>WiFi IP</th><th>OS</th><th>OS Product Key</th><th>Optager Machine ID</th><th>License Expiry</th><th>Lesen (.lic)</th><th>Tarikh Pasang</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(s,i) in equipView.servers" :key="s._uid||s._idx" :class="[{'highlight-row':equipEditIdx.servers===s._idx}, equipRowFx(s)]" :data-equip-uid="s._uid">
-                    <td><input type="checkbox" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.servers.has(s._uid)" @change="toggleEquipRow('servers',s._uid)"></td>
                     <td>{{i+1}}</td><td>{{s.name}} <span v-if="isRecentEquip(s)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
                     <td>{{s.brand||(equipVirSystem==='VCS'?'VCS':'OPTAGER')}}</td><td>{{s.model||(equipVirSystem==='VCS'?'':'HD4000')}} <span v-if="s._temp" class="badge equip-temp-badge" @click="openTempReplace('servers',s._idx)" :title="tempBadgeTitle(s)">🔁 Sementara</span></td><td><span v-if="s.serial" :class="{'ip-dup':equipSerialClash(s.serial,'servers',s._uid||s._idx).length}" :title="serialCellTitle(s.serial,'servers',s._uid||s._idx)">{{s.serial}}</span></td>
                     <td>{{s.processor}}</td><td>{{s.ram}}</td><td>{{Array.isArray(s.storage)?s.storage.join(', '):(s.storage||'')}}</td><td>{{s.gpu}}</td><td>{{s.mobo}}</td><td>{{s.moboType}}</td><td><span v-if="s.lanIp" class="ip-copy" :class="{'ip-dup':equipIpClash(s.lanIp,'servers',s._uid||s._idx).length}" :title="ipCellTitle(s.lanIp,'servers',s._uid||s._idx)" @click="copyIp(s.lanIp)">{{s.lanIp}}</span></td><td><span v-if="s.lan2Ip" class="ip-copy" :class="{'ip-dup':equipIpClash(s.lan2Ip,'servers',s._uid||s._idx).length}" :title="ipCellTitle(s.lan2Ip,'servers',s._uid||s._idx)" @click="copyIp(s.lan2Ip)">{{s.lan2Ip}}</span><span v-else class="text-muted text-sm">-</span></td><td><span v-if="s.wifiIp" class="ip-copy" :class="{'ip-dup':equipIpClash(s.wifiIp,'servers',s._uid||s._idx).length}" :title="ipCellTitle(s.wifiIp,'servers',s._uid||s._idx)" @click="copyIp(s.wifiIp)">{{s.wifiIp}}</span></td><td>{{s.os}}</td><td>{{s.osProductKey}}</td><td>{{s.optagerMachineId}}</td><td><span v-if="s.optagerLicenseExpiry" :class="licenseExpiryState(s.optagerLicenseExpiry) && 'lic-'+licenseExpiryState(s.optagerLicenseExpiry)">{{fmtDate(s.optagerLicenseExpiry)}}<span v-if="licenseExpiryNote(s.optagerLicenseExpiry)" class="lic-note"> · {{licenseExpiryNote(s.optagerLicenseExpiry)}}</span></span></td>
@@ -4831,11 +4831,11 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                       <button v-if="s.optagerLicenseFile" class="btn btn-outline btn-sm" @click="downloadServerLicense(s)" title="Muat turun fail .lic">⬇ {{s.optagerLicenseFile.name}}</button>
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
-                    <td>{{s.installDate}}</td>
+                    <td>{{fmtDateLoose(s.installDate)}}</td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('servers',s._idx)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(s,'servers')}" @click="openRmaFromEquip('servers',s._idx)" :title="rmaBtnTitle(s,'servers')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('servers',s._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',s._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || s._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('servers',s._idx)" :title="s._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(s,'servers')}" @click="openRmaFromEquip('servers',s._idx)" :title="rmaBtnTitle(s,'servers')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('servers',s._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'servers',s._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.servers||[]).length"><td colspan="22" class="empty">Tiada appliance lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('servers')">+ Tambah Appliance</button></td></tr><tr v-if="(selSiteEquip.servers||[]).length && !equipView.servers.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('servers')">Kosongkan penapis</a></td></tr>
@@ -4896,10 +4896,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table equip-table-sticky equip-tbl-tablets">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('tablets','name')">Nama<span class="sort-ind" :class="{on:equipSort.tablets.key==='name'}">{{equipSortIcon('tablets','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','brand')">Brand<span class="sort-ind" :class="{on:equipSort.tablets.key==='brand'}">{{equipSortIcon('tablets','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','model')">Model<span class="sort-ind" :class="{on:equipSort.tablets.key==='model'}">{{equipSortIcon('tablets','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.tablets.key==='serial'}">{{equipSortIcon('tablets','serial')}}</span></th><th>IMEI</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipAllSelected('tablets')" @change="toggleEquipSelectAll('tablets')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('tablets','name')">Nama<span class="sort-ind" :class="{on:equipSort.tablets.key==='name'}">{{equipSortIcon('tablets','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','brand')">Brand<span class="sort-ind" :class="{on:equipSort.tablets.key==='brand'}">{{equipSortIcon('tablets','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','model')">Model<span class="sort-ind" :class="{on:equipSort.tablets.key==='model'}">{{equipSortIcon('tablets','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('tablets','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.tablets.key==='serial'}">{{equipSortIcon('tablets','serial')}}</span></th><th>IMEI</th><th>Machine ID</th><th>Lesen (.lic)</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(t,i) in equipView.tablets" :key="t._uid||t._idx" :class="[{'highlight-row':equipEditIdx.tablets===t._idx}, equipRowFx(t)]" :data-equip-uid="t._uid">
-                    <td><input type="checkbox" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.tablets.has(t._uid)" @change="toggleEquipRow('tablets',t._uid)"></td>
                     <td>{{i+1}}</td><td>{{t.name}} <span v-if="isRecentEquip(t)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span></td>
                     <td>{{t.brand}}</td><td>{{t.model}} <span v-if="t._temp" class="badge equip-temp-badge" @click="openTempReplace('tablets',t._idx)" :title="tempBadgeTitle(t)">🔁 Sementara</span></td><td><span v-if="t.serial" :class="{'ip-dup':equipSerialClash(t.serial,'tablets',t._uid||t._idx).length}" :title="serialCellTitle(t.serial,'tablets',t._uid||t._idx)">{{t.serial}}</span></td><td class="mono-data">{{t.imei||'-'}}</td><td>{{t.controlAppMachineId}}</td>
                     <td>
@@ -4907,9 +4907,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                       <span v-else class="text-muted text-sm">-</span>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('tablets',t._idx)" :title="t._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(t,'tablets')}" @click="openRmaFromEquip('tablets',t._idx)" :title="rmaBtnTitle(t,'tablets')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('tablets',t._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',t._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || t._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('tablets',t._idx)" :title="t._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(t,'tablets')}" @click="openRmaFromEquip('tablets',t._idx)" :title="rmaBtnTitle(t,'tablets')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('tablets',t._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'tablets',t._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.tablets||[]).length"><td colspan="10" class="empty">Tiada tablet lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('tablets')">+ Tambah Tablet</button></td></tr><tr v-if="(selSiteEquip.tablets||[]).length && !equipView.tablets.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('tablets')">Kosongkan penapis</a></td></tr>
@@ -4986,10 +4986,10 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             </div>
             <div class="tbl-wrap">
               <table class="equip-table equip-table-sticky equip-tbl-misc">
-                <thead><tr><th style="width:30px"><input type="checkbox" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('misc','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.misc.key==='name'}">{{equipSortIcon('misc','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','category')">Kategori<span class="sort-ind" :class="{on:equipSort.misc.key==='category'}">{{equipSortIcon('misc','category')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','brand')">Brand<span class="sort-ind" :class="{on:equipSort.misc.key==='brand'}">{{equipSortIcon('misc','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','model')">Model<span class="sort-ind" :class="{on:equipSort.misc.key==='model'}">{{equipSortIcon('misc','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.misc.key==='serial'}">{{equipSortIcon('misc','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.misc.key==='ip'}">{{equipSortIcon('misc','ip')}}</span></th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
+                <thead><tr><th style="width:30px"><input type="checkbox" :disabled="!canEditEquip" :checked="isEquipAllSelected('misc')" @change="toggleEquipSelectAll('misc')"></th><th>#</th><th class="th-sort" @click="toggleEquipSort('misc','name')">Nama/Lokasi<span class="sort-ind" :class="{on:equipSort.misc.key==='name'}">{{equipSortIcon('misc','name')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','category')">Kategori<span class="sort-ind" :class="{on:equipSort.misc.key==='category'}">{{equipSortIcon('misc','category')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','brand')">Brand<span class="sort-ind" :class="{on:equipSort.misc.key==='brand'}">{{equipSortIcon('misc','brand')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','model')">Model<span class="sort-ind" :class="{on:equipSort.misc.key==='model'}">{{equipSortIcon('misc','model')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','serial')">No. Siri<span class="sort-ind" :class="{on:equipSort.misc.key==='serial'}">{{equipSortIcon('misc','serial')}}</span></th><th class="th-sort" @click="toggleEquipSort('misc','ip')">IP Address<span class="sort-ind" :class="{on:equipSort.misc.key==='ip'}">{{equipSortIcon('misc','ip')}}</span></th><th v-if="currentProject!=='vir'">Nota</th><th v-if="canViewCredentials">Username</th><th v-if="canViewCredentials">Password</th><th>Tindakan</th></tr></thead>
                 <tbody>
                   <tr v-for="(m,i) in equipView.misc" :key="m._uid||m._idx" :class="[{'highlight-row':equipEditIdx.misc===m._idx}, equipRowFx(m)]" :data-equip-uid="m._uid">
-                    <td><input type="checkbox" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
+                    <td><input type="checkbox" :disabled="!canEditEquip" :checked="equipSelected.misc.has(m._uid)" @change="toggleEquipRow('misc',m._uid)"></td>
                     <td>{{i+1}}</td><td>{{m.name}} <span v-if="m.outOfScope" class="badge equip-oos-badge" title="Di luar skop penyelenggaraan kontrak — rekod sahaja">Luar Skop</span> <span v-if="isRecentEquip(m)" class="badge badge-green" style="font-size:.65rem">🆕 Baru</span> <span v-if="equipWarrantyOf(m,'misc')" class="warr-shield" :class="'is-'+warrantyStatus(equipWarrantyOf(m,'misc'))" :title="equipWarrantyTitle(equipWarrantyOf(m,'misc'))" @click="openEquipWarranty(equipWarrantyOf(m,'misc'))">🛡</span></td><td>{{m.category}}</td><td>{{m.brand}}</td><td>{{m.model}} <span v-if="m._temp" class="badge equip-temp-badge" @click="openTempReplace('misc',m._idx)" :title="tempBadgeTitle(m)">🔁 Sementara</span></td><td>{{m.serial}}</td><td><span v-if="m.ip" class="ip-copy" :class="{'ip-dup':equipIpClash(m.ip,'misc',m._uid||m._idx).length}" :title="ipCellTitle(m.ip,'misc',m._uid||m._idx)" @click="copyIp(m.ip)">{{m.ip}}</span></td>
                     <td v-if="currentProject!=='vir'" style="max-width:220px;white-space:pre-wrap;word-break:break-word;font-size:.8rem"><span v-if="m.equipNota">{{m.equipNota}}</span><span v-else class="text-muted text-sm">-</span></td>
                     <td v-if="canViewCredentials">{{m.accessUser||'-'}}</td>
@@ -4999,9 +4999,9 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     </td>
                     <td class="flex gap-8">
                       <a href="#" role="button" class="btn btn-outline btn-sm btn-icon" @click.prevent="openEquipHistory('misc',m)" title="Sejarah PM/CM">🕐</a>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('misc',m._idx)" :title="m._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(m,'misc')}" @click="openRmaFromEquip('misc',m._idx)" :title="rmaBtnTitle(m,'misc')">📦</button>
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',m._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',m._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip || m._temp" class="btn btn-outline btn-sm btn-icon" @click="openTempReplace('misc',m._idx)" :title="m._temp?'Unit asal / Pulihkan':'Ganti Sementara'">🔁</button><button v-if="canAddRma" class="btn btn-outline btn-sm btn-icon" :class="{'rma-open':rmaOpenFor(m,'misc')}" @click="openRmaFromEquip('misc',m._idx)" :title="rmaBtnTitle(m,'misc')">📦</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('misc',m._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'misc',m._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.misc||[]).length"><td :colspan="(canViewCredentials?11:9)+(currentProject!=='vir'?1:0)" class="empty">Tiada peralatan lain-lain lagi.<button v-if="canEditEquip" class="btn btn-primary btn-sm" style="margin-left:8px" @click="focusEquipForm('misc')">+ Tambah Peralatan</button><br> Contoh: Monitor, TV, PC, UPS, POE Injector, POE Extender, POE Media Converter.</td></tr><tr v-if="(selSiteEquip.misc||[]).length && !equipView.misc.length"><td colspan="99" class="empty">Tiada peralatan sepadan dengan penapis. <a href="#" @click.prevent="clearEquipFilter('misc')">Kosongkan penapis</a></td></tr>
@@ -5069,8 +5069,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                       <span v-else class="text-muted text-sm">Semua peralatan berkenaan</span>
                     </td>
                     <td class="flex gap-8">
-                      <button class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('rooms',r._idx)" title="Edit">✏️</button>
-                      <button class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'rooms',r._idx)" title="Padam">🗑</button>
+                      <button v-if="canEditEquip" class="btn btn-outline btn-sm btn-icon" @click="editEquipItem('rooms',r._idx)" title="Edit">✏️</button>
+                      <button v-if="canEditEquip" class="btn btn-danger btn-sm btn-icon" @click="removeItem(selSite.id,'rooms',r._idx)" title="Padam">🗑</button>
                     </td>
                   </tr>
                   <tr v-if="!(selSiteEquip.rooms||[]).length"><td colspan="5" class="empty">Tiada bilik didaftar. Borang PM VIR akan guna senarai bilik generik (NO.1-20) tanpa sistem sehingga bilik didaftar di sini.</td></tr>
@@ -5645,8 +5645,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <span v-for="chip in pmActiveFilterChips" :key="chip.key" class="filter-chip">{{chip.label}} <button type="button" @click="chip.clear()" :aria-label="'Buang tapisan '+chip.label">✕</button></span>
             <button v-if="pmActiveFilterChips.length>1" type="button" class="filter-chip-clear-all" @click="clearAllPmFilters">Kosongkan Semua</button>
           </div>
-          <!-- Bulk CM action bar -->
-          <div v-if="bulkCmSelected.length" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff8e1;border:1.5px solid #ffcc80;border-radius:8px;padding:10px 14px;margin-bottom:10px">
+          <!-- Bulk CM action bar — editors only, like each row's own Status CM dropdown -->
+          <div v-if="bulkCmSelected.length && canEditPmRecord()" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff8e1;border:1.5px solid #ffcc80;border-radius:8px;padding:10px 14px;margin-bottom:10px">
             <span style="font-size:.83rem;font-weight:700;color:#e65100">⚡ {{bulkCmSelected.length}} rekod CM dipilih</span>
             <select class="form-control" style="width:auto;min-width:160px;font-size:.82rem" v-model="bulkCmStatus">
               <option value="open">Terbuka</option>
@@ -8367,7 +8367,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <td style="font-size:.82rem">{{row.siteName}}</td>
                   <td style="font-size:.82rem">{{row.virRoomNo||'—'}}</td>
                   <td style="text-align:center"><span :class="['proj-badge', row.project==='vir'?'proj-vir':'proj-cctv']" style="font-size:.68rem;padding:2px 7px">{{row.project==='vir'?'VIR':'CCTV'}}</span></td>
-                  <td style="font-size:.82rem;white-space:nowrap">{{row.visitDate}}</td>
+                  <td style="font-size:.82rem;white-space:nowrap">{{fmtDateLoose(row.visitDate)}}</td>
                   <td><span :style="'padding:2px 7px;border-radius:4px;font-size:.72rem;font-weight:700;background:'+(row.maintType==='CM'?'#ffebee':'#e8f5e9')+';color:'+(row.maintType==='CM'?'#b71c1c':'#1b5e20')">{{row.maintType}}</span></td>
                   <td style="font-size:.82rem;color:#333">{{row.masalah||'—'}}</td>
                   <td style="font-size:.82rem;color:#333">{{row.tindakan||'—'}}</td>
@@ -8591,6 +8591,8 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <option value="Switch">Switch</option>
                   <option value="Alarm">Alarm</option>
                   <option value="Lain-lain">Lain-lain</option>
+                  <option value="Server/Appliance">Server/Appliance</option>
+                  <option value="Tablet">Tablet</option>
                 </select>
                 <input class="form-control search-bar" v-model="assetSearch" placeholder="🔍 Cari site/brand/model/serial">
                 <button :disabled="loading" v-if="['superadmin','admin'].includes(authProfile?.role)" class="btn btn-success" @click="exportAssetRegister">📊 Export Excel</button>
@@ -8811,7 +8813,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                   <tr v-for="t in teamPerformance" :key="t.team">
                     <td><span :class="['team-badge','badge-'+t.team]">{{t.team}}</span></td>
                     <td style="font-size:.78rem">{{t.members.join(', ')||'—'}}</td>
-                    <td>{{t.assigned}}<span v-if="t.pending" class="text-muted text-sm" :title="t.pending+' penugasan belum dinilai (akan datang / masih dalam tempoh 7 hari)'"> ({{t.pending}} belum dinilai)</span></td><td>{{t.completed}}</td>
+                    <td>{{t.assigned}}<span v-if="t.pending" class="text-muted text-sm" :title="t.pending+' penugasan belum dinilai (akan datang / masih dalam tempoh 7 hari)'"> ({{t.pending}} belum dinilai)</span><span v-if="t.na" class="text-muted text-sm" :title="t.na+' penugasan ke site Lain-Lain (bukan dalam senarai site) — tiada borang untuk disemak, tidak dikira dalam kadar siap'"> ({{t.na}} site Lain-Lain)</span></td><td>{{t.completed}}</td>
                     <td><span :class="'badge badge-'+(t.rate>=80?'green':t.rate>=50?'blue':'red')">{{t.rate}}%</span></td>
                     <td>
                       <div v-if="teamPerformanceTrend[t.team]" style="display:flex;align-items:center;gap:6px">
@@ -8848,7 +8850,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                     <td>{{s.total}}</td>
                     <td><span class="badge badge-blue">{{s.pm}}</span></td>
                     <td><span class="badge badge-red">{{s.cm}}</span></td>
-                    <td><span :class="'badge badge-'+(s.rate>=80?'green':s.rate>=50?'gray':'red')">{{s.completed}}/{{s.judged}} ({{s.rate}}%)</span><span v-if="s.total > s.judged" class="text-muted text-sm" :title="(s.total - s.judged)+' penugasan belum dinilai (akan datang / masih dalam tempoh 7 hari)'"> +{{s.total - s.judged}} belum dinilai</span></td>
+                    <td><span :class="'badge badge-'+(s.rate>=80?'green':s.rate>=50?'gray':'red')">{{s.completed}}/{{s.judged}} ({{s.rate}}%)</span><span v-if="s.total > s.judged" class="text-muted text-sm" :title="(s.total - s.judged)+' penugasan belum dinilai (akan datang / masih dalam tempoh 7 hari, atau site Lain-Lain yang tiada borang untuk disemak)'"> +{{s.total - s.judged}} belum dinilai</span></td>
                     <td>{{s.siteCount}}</td>
                     <td>
                       <span v-if="staffStreaks[s.name]>=3" class="badge badge-green" title="Bilangan PM berturut-turut tanpa CM susulan">🔥 {{staffStreaks[s.name]}}</span>
@@ -8944,7 +8946,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
                 <tbody>
                   <tr v-for="(r,i) in equipmentLifespan" :key="i" class="highlight-row">
                     <td>{{i+1}}</td><td>{{r.site}}</td><td><span :class="'proj-badge proj-'+r.proj.toLowerCase()">{{r.proj}}</span></td>
-                    <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{r.installDate}}</td>
+                    <td>{{r.cat}}</td><td>{{r.name}}</td><td>{{r.brand}}</td><td>{{r.model}}</td><td>{{fmtDateLoose(r.installDate)}}</td>
                     <td><span class="badge badge-red">{{r.ageYears}} tahun</span></td>
                     <td><span v-if="isHighRiskEquip(r.brand,r.model)" class="badge badge-red" title="Model ni antara punca kegagalan paling kerap direkod">⚠️ Tinggi ({{highRiskEquipPct(r.brand,r.model)}}%)</span><span v-else class="text-muted">—</span></td>
                   </tr>
@@ -9493,7 +9495,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
           <td style="border:1px solid #000;padding:4px 8px;width:25%"><b>No. Rujukan:</b></td>
           <td style="border:1px solid #000;padding:4px 8px">{{r.refNo||'—'}}</td>
           <td style="border:1px solid #000;padding:4px 8px;width:25%"><b>Tarikh:</b></td>
-          <td style="border:1px solid #000;padding:4px 8px">{{r.visitDate||'—'}}</td>
+          <td style="border:1px solid #000;padding:4px 8px">{{r.visitDate?fmtDateDash(r.visitDate):'—'}}</td>
         </tr>
         <tr>
           <td style="border:1px solid #000;padding:4px 8px"><b>Site:</b></td>
@@ -10509,14 +10511,21 @@ createApp({
     // depends on setting page to its own current value NOT re-triggering
     // watch(page,...) — see that function's own comment).
     function _usePageTransitionRef(initial) {
-      let val = initial;
+      // val = the page on screen; want = the page last asked for. The page
+      // only changes inside the transition callback (a frame or more later),
+      // so comparing a new request with `val` lost navigations made before
+      // that ran: A → B → A in one go (a guard sending the user straight
+      // back, two quick nav clicks) saw "A === val", dropped the return to A
+      // and left the user on B. Every callback now shows the LATEST request.
+      let val = initial, want = initial;
       return customRef((track, trigger) => ({
         get() {
           track();
           return val;
         },
         set(newVal) {
-          if (newVal === val) return;
+          if (newVal === want) return;
+          want = newVal;
           const supportsVT = typeof document.startViewTransition === 'function';
           const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
           if (!supportsVT || reduceMotion) {
@@ -10525,8 +10534,7 @@ createApp({
             return;
           }
           const vt = document.startViewTransition(() => {
-            val = newVal;
-            trigger();
+            if(val !== want) { val = want; trigger(); }
             return nextTick();
           });
           // A transition cut short (page switched again mid-transition, or
@@ -12099,6 +12107,7 @@ createApp({
       ],
       // VIR fields
       virRoomNo:'', virRoomNoCustom:'', virSystem:'', virItems:[], _virRoomExcludedGroups:[],
+      _equipSnapSite:null, // CCTV: site whose equipment the tables hold (loadPMEquip)
       // Optager HD4000-only equipment snapshot (BCD has no equivalent
       // hardware to snapshot) — captured at room/system-select time,
       // printed as its own tables gated strictly on virSystem==='Optager
@@ -12217,7 +12226,8 @@ createApp({
       // room/suffix instead of keeping the historical refNo that was just
       // correctly restored. Same class of bug as the year-preservation and
       // auto-suggest-suffix fixes above.
-      if(pm._isEdit) return;
+      // Nor while a local draft is restored: it carries its own ref no.
+      if(pm._isEdit || _pmRestoring) return;
       // An emptied running number used to save the bare prefix
       // ("…/PM/") as if it were an official ref no. — no number means no
       // ref no. Stray spaces ("001 ") are dropped too.
@@ -12277,7 +12287,7 @@ createApp({
       // numbers independently, and switching PM<->CM must refresh to that
       // type's own next-available suggestion instead of keeping the other
       // type's number.
-      if(pm.siteId && pm.maintType && !pm._isEdit) refNoSuffix.value = nextRefNoSuggestion.value;
+      if(pm.siteId && pm.maintType && !pm._isEdit && !_pmRestoring) refNoSuffix.value = nextRefNoSuggestion.value;
     });
     const refNoGapWarning = computed(() => {
       if(!refNoSuffix.value || refNoDuplicate.value) return false;
@@ -12390,6 +12400,12 @@ createApp({
         // run after this tick — the flag tells them it's a restore, then clears.
         _pmRestoring = true;
         Object.assign(pm, draft.pm);
+        // The running-number box isn't part of pm (its own ref) — refill it
+        // from the draft's ref no., as editRecord() does. It came back blank
+        // (edit drafts), or the next-number suggestion replaced the number
+        // the technician had typed (…/PM/007 → …/PM/001).
+        const refParts = (pm.refNo || '').split('/');
+        refNoSuffix.value = refParts.length > 1 ? refParts[refParts.length - 1] : '';
         nextTick(() => { _pmRestoring = false; });
         if(!Array.isArray(draft.pm.outOfScope)) pm.outOfScope = []; // draft saved before this list existed
         // Same localStorage-round-trip issue already handled for _createdAt
@@ -12446,6 +12462,9 @@ createApp({
           system: currentProject.value === 'vir' ? equipVirSystem.value : null,
           roomUid: (currentProject.value === 'vir' && (equipVirSystem.value === 'Optager HD4000' || equipVirSystem.value === 'VCS' || equipVirSystem.value === 'SONY')) ? equipVirRoomUid.value : null,
           data: activeEquip()[selSite.value.id], savedAt: Date.now(),
+          // The site's version (_rev) these edits were made on — recovery
+          // warns when the site has been saved again since (see below).
+          rev: _equipRev[(currentProject.value === 'vir' ? 'virSiteEquipment' : 'siteEquipment') + ':' + selSite.value.id] || null,
         }));
       } catch(e) {}
     }
@@ -12475,7 +12494,18 @@ createApp({
       const site = siteList.find(s => s.id === draft.siteId);
       const siteLabel = site?.name || draft.siteId;
       const when = new Date(draft.savedAt).toLocaleString('ms-MY');
-      if(await askConfirm(`Ada perubahan peralatan belum disimpan untuk site "${siteLabel}" dari sesi lepas (${when}) — kemungkinan tak sempat klik "Simpan" sebelum sambungan/tab terputus.\n\nNak pulihkan perubahan ni?`, {danger:false})) {
+      // Restoring REPLACES the site's whole list with the draft, and the
+      // autosave then writes it — its conflict check compares against the
+      // version loaded just now, so it can't see that the draft was made on
+      // an older one. Someone else's save in between (more cameras, an edit)
+      // vanished without a word. Drafts from before `rev` existed: no check.
+      const col = draft.project === 'vir' ? 'virSiteEquipment' : 'siteEquipment';
+      const changedSince = 'rev' in draft && (draft.rev || null) !== (_equipRev[col + ':' + draft.siteId] || null);
+      const savedBy = _liveEquipRaw[col]?.[draft.siteId]?._revBy; // known once the live listener has run
+      const staleNote = changedSince
+        ? `\n\n⚠️ AMARAN: peralatan site ini telah disimpan semula${savedBy ? ' oleh ' + savedBy : ''} SELEPAS draf ini dibuat. Memulihkan draf akan MENGGANTIKAN senarai terkini itu dengan salinan draf anda — perubahan yang dibuat selepas itu akan hilang.`
+        : '';
+      if(await askConfirm(`Ada perubahan peralatan belum disimpan untuk site "${siteLabel}" dari sesi lepas (${when}) — kemungkinan tak sempat klik "Simpan" sebelum sambungan/tab terputus.${staleNote}\n\nNak pulihkan perubahan ni?`, {danger: changedSince})) {
         currentProject.value = draft.project;
         if(!site) { clearEquipDraftLocal(); return; }
         if(draft.project === 'vir' && (draft.system === 'Optager HD4000' || draft.system === 'VCS' || draft.system === 'SONY')) {
@@ -13981,6 +14011,9 @@ createApp({
     // viewed, for no data reason).
     function _parseLocalDate(dateStr){ if(!dateStr) return null; const [y,m,d]=dateStr.split('-').map(Number); return new Date(y, m-1, d); }
     function fmtDate(dateStr){ if(!dateStr) return '—'; const [y,m,d]=dateStr.split('-'); return `${d}/${m}/${y}`; }
+    // For fields that may hold free text instead of YYYY-MM-DD (a Tarikh
+    // Pasang imported from Excel as "2020"): only a real date is reformatted.
+    function fmtDateLoose(v){ return /^\d{4}-\d{2}-\d{2}$/.test(v || '') ? fmtDate(v) : (v || '—'); }
     // For values stored as a full UTC ISO timestamp (e.g. a service report's
     // uploadedAt = new Date().toISOString()). Slicing that string's first 10
     // chars gives the UTC calendar date — a day behind for anything stamped
@@ -18757,7 +18790,8 @@ tr.late td{background:#fff3e0}
       const recordMatches = pmRecords.value.filter(r => {
         return (r.refNo||'').toLowerCase().includes(q)
           || (r.siteName||'').toLowerCase().includes(q)
-          || (r.visitDate||'').toLowerCase().includes(q);
+          || (r.visitDate||'').toLowerCase().includes(q)
+          || (r.visitDate && fmtDate(r.visitDate).includes(q)); // as shown: 01/11/2026
       }).slice(0, 8).map(r => ({ _kind:'record', ...r }));
 
       // Equipment — scan every site's cameras/nvr/hdd/switches/alarms/misc/
@@ -19580,7 +19614,7 @@ tr.late td{background:#fff3e0}
         Projek: (r.project||'cctv').toUpperCase(),
         Bulan: r.month?MONTHS[r.month-1]:'-',
         Tahun: r.year||'-',
-        'Tarikh Penyelenggaraan': r.visitDate||'-',
+        'Tarikh Penyelenggaraan': r.visitDate ? fmtDateLoose(r.visitDate) : '-',
         Jenis: maintTypeName(r.maintType),
         'Status CM': r.maintType==='CM' ? (r.cmStatus==='resolved'?'Selesai':r.cmStatus==='in-progress'?'Dalam Proses':'Terbuka') : '-',
         Status: r.status==='submitted'?'Submitted':'Draft',
@@ -21255,7 +21289,7 @@ tr.late td{background:#fff3e0}
        rmaModal, serviceReportModal, filePreviewModal, teamModal, cpModal, kModal, importState, removeReasonModal,
        tempReplaceModal, bulkEditModal, equipHistoryModal, resetPwModal, forcePwModal, virRoomPickerModal,
        migrateHanwhaModal, dayDetailModal, staffRotationModal, timelapseModal, infoModal, whatsNewModal,
-       tutorialModal, sessionWarning].forEach(m => { if(m) m.show = false; });
+       tutorialModal, sessionWarning, principalModal, warrantyBulkModal].forEach(m => { if(m) m.show = false; });
       mobileNavOpen.value = false; equipColPickerOpen.value = false;
       showNotifPanel.value = false; showSearchResults.value = false;
       // Selections and search text are the previous user's too — a kept
@@ -21350,6 +21384,7 @@ tr.late td{background:#fff3e0}
       // straight from a site-equip page with a password revealed leaves
       // that _uid's mask state sitting in memory across the auth boundary.
       EQUIP_KINDS.forEach(k => revealedPw[k]?.clear());
+      EQUIP_KINDS.forEach(k => equipSelected[k]?.clear()); // ticked rows → "Padam Terpilih", like batchSelected above
       // EQUIP_DRAFT_KEY is a plain global localStorage key — on a shared/
       // kiosk device the next person would otherwise be offered THIS
       // session's equipment draft (and it can hold access passwords), so it's
@@ -21924,7 +21959,7 @@ tr.late td{background:#fff3e0}
     // Same numeric-IP logic, applied to the already-saved equipment list
     // (Senarai Kamera / Senarai NVR) rather than the import-preview rows.
     function sortEquipListByIp(key) {
-      if(!selSite.value) return;
+      if(!selSite.value || !canEditEquip.value) return; // reorders the saved list
       const list = activeEquip()[selSite.value.id]?.[key];
       if(!list || list.length < 2) return;
       // Sorting shifts every index, so an in-progress edit-in-place
@@ -21945,7 +21980,7 @@ tr.late td{background:#fff3e0}
     // (added on every new add/edit/import) existed — those entries stay in
     // whatever order they were originally keyed in until this is clicked.
     function sortEquipListByName(key) {
-      if(!selSite.value) return;
+      if(!selSite.value || !canEditEquip.value) return;
       const list = activeEquip()[selSite.value.id]?.[key];
       if(!list || list.length < 2) return;
       // Same index-shift hazard as sortEquipListByIp — re-sync any
@@ -24754,7 +24789,7 @@ Teruskan tukar emel?`)) return;
       return new Promise(r => setTimeout(r, reduce ? 0 : 220));
     }
     function toggleEquipRow(kind, uid) {
-      if(!uid) return;
+      if(!uid || !canEditEquip.value) return; // selection only feeds Edit Pukal / Padam Terpilih
       equipSelected[kind].has(uid) ? equipSelected[kind].delete(uid) : equipSelected[kind].add(uid);
     }
     // "All" = all rows currently shown (see equipView's filter), never rows a filter hides.
@@ -24763,6 +24798,7 @@ Teruskan tukar emel?`)) return;
       return list.length>0 && list.every(it => equipSelected[kind].has(it._uid));
     }
     function toggleEquipSelectAll(kind) {
+      if(!canEditEquip.value) return;
       const list = equipView.value[kind] || selSiteEquip.value[kind] || [];
       if(isEquipAllSelected(kind)) equipSelected[kind].clear();
       // Mutate the existing reactive Set in place (clear + re-add) rather
@@ -24783,10 +24819,12 @@ Teruskan tukar emel?`)) return;
       return items.length>0 && items.every(it => equipSelected[kind].has(it._uid));
     }
     function toggleEquipGroupSelectAll(kind, items) {
+      if(!canEditEquip.value) return;
       if(isEquipGroupAllSelected(kind, items)) items.forEach(it => equipSelected[kind].delete(it._uid));
       else items.forEach(it => equipSelected[kind].add(it._uid));
     }
     async function bulkDeleteEquip(kind) {
+      if(!canEditEquip.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const sel = equipSelected[kind];
       if(!sel.size) return;
       const linked = kind === 'nvr'
@@ -25104,6 +25142,7 @@ Teruskan tukar emel?`)) return;
     }
     const bulkEditFieldOptions = computed(() => bulkEditFieldsFor(bulkEditModal.kind));
     function openBulkEdit(kind) {
+      if(!canEditEquip.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       if(!equipSelected[kind].size) return;
       bulkEditModal.kind = kind;
       bulkEditModal.field = 'installDate';
@@ -25303,6 +25342,7 @@ Teruskan tukar emel?`)) return;
     }
 
     async function editEquipItem(key, idx) {
+      if(!canEditEquip.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       const item = (selSiteEquip.value[key]||[])[idx];
       if(!item) return;
       const refs = { cameras:nCam, nvr:nNVR, hdd:nHDD, switches:nSW, alarms:nALM, misc:nMISC, servers:nServer, tablets:nTablet, rooms:nRoom };
@@ -25997,6 +26037,7 @@ Teruskan tukar emel?`)) return;
       a.click();
     }
     async function removeItem(siteId, key, idx) {
+      if(!canEditEquip.value){ showToast('Anda tiada kebenaran untuk tindakan ini.','error'); return; }
       // Deleting a room that still has recorded Optager equipment under its
       // uid would otherwise orphan that equipment forever — the room
       // picker only ever lists rooms currently present in
@@ -26059,6 +26100,7 @@ Teruskan tukar emel?`)) return;
     // always had) only after the user picks a reason in removeReasonModal —
     // called by the modal's "Padam" button.
     async function confirmRemoveItem() {
+      if(!canEditEquip.value){ removeReasonModal.show = false; return; }
       const { siteId, key, idx, itemSnapshot, reason, reasonCustom } = removeReasonModal;
       const list = activeEquip()[siteId]?.[key];
       if(!list) { removeReasonModal.show = false; return; }
@@ -26440,6 +26482,7 @@ Teruskan tukar emel?`)) return;
       pm.clientName=''; pm.clientJawatan=''; pm.clientTarikh='';
       pm.client2Name=''; pm.client2Jawatan=''; pm.client2Tarikh='';
       Object.assign(pm, _instSignDefaults());
+      pm._equipSnapSite = null; // see loadPMEquip
       pmStep.value=1;
       page.value='new-pm';
       return true;
@@ -26531,6 +26574,13 @@ Teruskan tukar emel?`)) return;
       }
       const site = SITES.find(s=>s.id===pm.siteId);
       pm.siteName = site?.name||'';
+      // The equipment tables already hold THIS site's units with what the
+      // technician recorded — an edited borang's saved results, or a new
+      // one's after "← Balik" to step 1. Taking a fresh snapshot here reset
+      // every status to "Baik" and wiped every nota: editing an old borang
+      // (it opens on step 1) and pressing Seterusnya erased its inspection
+      // results on save. Only a site not yet loaded (or changed) is fetched.
+      if(pm._equipSnapSite && pm._equipSnapSite === pm.siteId) { pmStep.value = 2; return; }
       const eqAll = siteEquip.value[pm.siteId] || {};
       // Items flagged "di luar skop" never enter the maintenance tables (or
       // their counts) — they go to pm.outOfScope, one combined table at the
@@ -26563,6 +26613,7 @@ Teruskan tukar emel?`)) return;
       _sortByName(pm.switches);
       _sortByName(pm.alarms);
       _sortByName(pm.misc);
+      pm._equipSnapSite = pm.siteId;
       pmStep.value=2;
     }
 
@@ -27021,6 +27072,7 @@ Teruskan tukar emel?`)) return;
           return 0;
         });
         _sortNvr(pm.nvr); _sortByName(pm.switches); _sortByName(pm.alarms); _sortByName(pm.misc);
+        pm._equipSnapSite = r.siteId || null; // the record's own results — loadPMEquip keeps them
         pm.support = r.support ? JSON.parse(JSON.stringify(r.support)) : [
           {key:'kebersihan',label:'Kebersihan (Konsol, Rack, Kabel)',status:'Baik',nota:''},
           {key:'konsol',label:'Konsol / Monitor',status:'Baik',nota:''},
@@ -27667,11 +27719,11 @@ Teruskan tukar emel?`)) return;
 
       // Signatures - Contractor
       setCell('G201', r.contractorName||'');
-      setCell('G202', r.contractorTarikh||'');
+      setCell('G202', r.contractorTarikh ? fmtDateDash(r.contractorTarikh) : ''); // dd-mm-yyyy, as on the printed borang
       setCell('G203', r.contractorJawatan||'');
       // Signatures - Client
       setCell('AF201', r.clientName||'');
-      setCell('AF202', r.clientTarikh||'');
+      setCell('AF202', r.clientTarikh ? fmtDateDash(r.clientTarikh) : '');
       setCell('AF203', r.clientJawatan||'');
 
       XLSX_TEMPLATE.writeFile(wb, 'PM-'+r.siteName.replace(/\s+/g,'-')+'-'+(r.month?MONTHS[r.month-1]:'NA')+'-'+r.year+'.xlsx');
@@ -27690,7 +27742,7 @@ Teruskan tukar emel?`)) return;
         const set = (ref, val) => { if(ws[ref]) ws[ref].v = val; else ws[ref] = {t:'s', v:val}; };
         set('I4', r.refNo||'');
         set('E8', r.siteName||'');
-        set('B9', r.visitDate||'');
+        set('B9', r.visitDate ? fmtDateDash(r.visitDate) : ''); // dd-mm-yyyy, as on the printed borang
         set('E10', r.virRoomNo||'');
         // Checklist items — okCell/nokCell now sit only on the group-header
         // rows (see VIR_CHECKLIST_TEMPLATE_BCD), since each original single
@@ -27720,7 +27772,7 @@ Teruskan tukar emel?`)) return;
         // Signatures
         set('B531', r.contractorName||'');
         set('B532', r.contractorJawatan||'');
-        set('B533', r.contractorTarikh||'');
+        set('B533', r.contractorTarikh ? fmtDateDash(r.contractorTarikh) : '');
       });
       // visitDate isn't required at submit (see savePM()) — fall back to
       // year like the DOCX export's filename does, so a blank visitDate
@@ -27971,7 +28023,7 @@ Teruskan tukar emel?`)) return;
             new Paragraph({ text: '', spacing: { after: 560 } }),
             new Paragraph({ children: [new TextRun({ text: `Nama: ${name||'..............................................'}`, size: 15 })], spacing: { after: 30 } }),
             new Paragraph({ children: [new TextRun({ text: `Jawatan: ${jawatan||'..............................................'}`, size: 15 })], spacing: { after: 30 } }),
-            new Paragraph({ children: [new TextRun({ text: `Tarikh: ${tarikh||'..............................................'}`, size: 15 }) ], spacing: { after: 30 } }),
+            new Paragraph({ children: [new TextRun({ text: `Tarikh: ${tarikh ? fmtDateDash(tarikh) : '..............................................'}`, size: 15 }) ], spacing: { after: 30 } }),
           ],
           borders: allBorders(BLUE),
           margins: { top: 80, bottom: 80, left: 100, right: 100 },
@@ -28501,7 +28553,7 @@ Teruskan tukar emel?`)) return;
       const notaHtml = notaRows.length ? notaRows.map((row,i)=>{
         const stBg = /selesai/i.test(row.status)?'#F4F7DC':/pending/i.test(row.status)?'#fff8e1':'#e3f2fd';
         const stColor = /selesai/i.test(row.status)?'#7A841A':/pending/i.test(row.status)?'#e65100':'#0d47a1';
-        return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.virRoomNo||'—')}</td><td>${esc(row.visitDate)}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#7A841A'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
+        return `<tr><td>${i+1}</td><td>${esc(row.siteName)}</td><td>${esc(row.virRoomNo||'—')}</td><td>${esc(fmtDateLoose(row.visitDate))}</td><td style="color:${row.maintType==='CM'?'#b71c1c':'#7A841A'};font-weight:700">${esc(row.maintType)}</td><td>${esc(row.masalah||'—')}</td><td>${esc(row.tindakan||'—')}</td><td><span style="background:${stBg};color:${stColor};padding:1px 6px;border-radius:8px;font-size:9px;font-weight:700">${esc(row.status||'—')}</span></td></tr>`;
       }).join('') : '<tr><td colspan="8" style="text-align:center;color:#aaa;padding:12px">Tiada data nota yang mengandungi format MASALAH/TINDAKAN/STATUS</td></tr>';
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Laporan Penyelenggaraan</title>
 <style>body{font-family:Arial,sans-serif;font-size:11px;color:#111;margin:20px}h1{font-size:14px;color:#003366;text-align:center;margin:0}h2{font-size:11px;color:#003366;margin:14px 0 4px;border-left:3px solid #003366;padding-left:6px}.header{display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:center;margin-bottom:16px;border-bottom:2px solid #003366;padding-bottom:10px}.header-logo{height:44px;max-width:140px;object-fit:contain;flex-shrink:0}.header-mid{flex:1}.co{font-size:13px;font-weight:800;color:#7A841A}.sub{font-size:10px;color:#555}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0}.stat{border:1px solid #ccc;border-radius:6px;padding:8px;text-align:center}.stat .n{font-size:18px;font-weight:700}.stat .l{font-size:9px;color:#666}.charts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}.chart-box{border:1px solid #ddd;border-radius:6px;padding:8px}.chart-box img{width:100%}table{width:100%;border-collapse:collapse;margin-top:6px}th{background:#003366;color:#fff;padding:5px;font-size:10px;text-align:left}td{padding:4px 5px;border-bottom:1px solid #eee;font-size:10px}tr:nth-child(even){background:#f9f9f9}.footer{margin-top:14px;font-size:9px;color:#aaa;text-align:center;border-top:1px solid #ddd;padding-top:8px}.nota-hint{font-size:8.5px;color:#999;margin-top:4px}@media print{body{margin:10px}}</style>
@@ -29161,6 +29213,22 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     // Builds every equipment row across all sites — deliberately does NOT
     // depend on assetFilterProj/assetFilterCat/assetSearch (see assetRegister
     // below, which layers cheap filtering on top of this cached result).
+    // Every room-scoped VIR equipment set (Optager HD4000, VCS, SONY), one
+    // callback per room with the room name folded into the site label —
+    // each room has its own equipment/serials. SONY used to be missing from
+    // both reports that walk these (Inventori, Jangka Hayat), so its units
+    // were never counted.
+    function _eachVirRoomEquip(cb) {
+      [virSiteEquipOptager.value, virSiteEquipVCS.value, virSiteEquipSony.value].forEach(store => {
+        VIR_SITES.forEach(s => {
+          Object.entries(store[s.id]?.byRoom || {}).forEach(([roomUid, roomEq]) => {
+            const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
+            const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
+            cb({ id:s.id, name:`${s.name} — ${roomLabel}` }, roomEq);
+          });
+        });
+      });
+    }
     const assetRegisterRaw = computed(() => {
       const rows = [];
       const pushSite = (site, proj, eqSrc) => {
@@ -29171,29 +29239,14 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
         (eq.switches||[]).forEach(s => rows.push({ site:site.name, proj, cat:'Switch'+_oosSfx(s), name:s.name||'-', brand:s.brand||'-', model:s.model||'-', serial:s.serial||'-', extra:'-' }));
         (eq.alarms||[]).forEach(a => rows.push({ site:site.name, proj, cat:'Alarm'+_oosSfx(a), name:a.name||'-', brand:a.brand||'-', model:a.model||'-', serial:a.serial||'-', extra:a.type||'-' }));
         (eq.misc||[]).forEach(m => rows.push({ site:site.name, proj, cat:'Lain-lain'+_oosSfx(m), name:m.name||'-', brand:m.brand||'-', model:m.model||'-', serial:m.serial||'-', extra:m.category||'-' }));
+        // Optager/VCS rooms: the appliance (server) and the control tablet
+        // were left out of the count. IMEI stays out (Urus Peralatan only).
+        (eq.servers||[]).forEach(v => rows.push({ site:site.name, proj, cat:'Server/Appliance'+_oosSfx(v), name:v.name||'-', brand:v.brand||'-', model:v.model||'-', serial:v.serial||'-', extra:v.lanIp||v.os||'-' }));
+        (eq.tablets||[]).forEach(t => rows.push({ site:site.name, proj, cat:'Tablet'+_oosSfx(t), name:t.name||'-', brand:t.brand||'-', model:t.model||'-', serial:t.serial||'-', extra:'-' }));
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
       VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
-      // Optager is room-scoped — each room has its own equipment/serials,
-      // so push each room separately (with the room name folded into the
-      // site label) instead of treating the whole site as one bucket.
-      VIR_SITES.forEach(s => {
-        const byRoom = virSiteEquipOptager.value[s.id]?.byRoom || {};
-        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
-          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
-          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
-          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
-        });
-      });
-      // VCS is room-scoped the same way as Optager — same push pattern.
-      VIR_SITES.forEach(s => {
-        const byRoom = virSiteEquipVCS.value[s.id]?.byRoom || {};
-        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
-          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
-          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
-          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
-        });
-      });
+      _eachVirRoomEquip((site, roomEq) => pushSite(site, 'VIR', { [site.id]: roomEq }));
       return rows;
     });
     // Split from the row-BUILDING step above (assetRegisterRaw) so typing in
@@ -29207,7 +29260,8 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
     const assetRegister = computed(() => {
       return assetRegisterRaw.value.filter(r => {
         if(assetFilterProj.value!=='all' && r.proj!==assetFilterProj.value) return false;
-        if(assetFilterCat.value!=='all' && r.cat!==assetFilterCat.value) return false;
+        // "Kamera" also lists the "Kamera (Luar Skop)" rows the total counts
+        if(assetFilterCat.value!=='all' && r.cat.replace(' (Luar Skop)', '')!==assetFilterCat.value) return false;
         const q = assetSearch.value.trim().toLowerCase();
         if(q && !(r.site.toLowerCase().includes(q)||r.brand.toLowerCase().includes(q)||r.model.toLowerCase().includes(q)||r.serial.toLowerCase().includes(q))) return false;
         return true;
@@ -29342,7 +29396,8 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       (eq.alarms||[]).forEach(a => push('🔔 Alarm'+_oosSfx(a), a.brand||'-', a.model||'-', 1));
       (eq.misc||[]).forEach(m => push(`📦 Lain-lain — ${m.category||'Lain-lain'}`+_oosSfx(m), m.brand||'-', m.model||'-', 1));
       const filtered = inventoryJenisFilter.value.length
-        ? rows.filter(r => inventoryJenisFilter.value.some(f => r.jenis === f || r.jenis.startsWith(f + ' —')))
+        // ' (' also keeps that kind's "(Luar Skop)" rows — they're in the total
+        ? rows.filter(r => inventoryJenisFilter.value.some(f => r.jenis === f || r.jenis.startsWith(f + ' —') || r.jenis.startsWith(f + ' (')))
         : rows;
       return filtered.sort((a,b) => a.jenis.localeCompare(b.jenis) || b.jumlah - a.jumlah);
     }
@@ -29605,7 +29660,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
       const totalOverdue = overdueSortedCctv.value.length + overdueSortedVir.value.length;
       const openCm = pmRecords.value.filter(r=>r.maintType==='CM' && (r.cmStatus==='open'||!r.cmStatus)).length;
-      const worst = slaTrend.value.slice(0,3);
+      const worst = slaTrend.value.filter(s => s.breachCount > 0).slice(0,3); // a site with 0 delays is no "worst"
       const topIssues = recurringIssues.value.slice(0,3);
       const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
       return _buildExecutiveNarrative({ genDate, cctvCompliance, virCompliance, totalOverdue, openCm, worst, topIssues });
@@ -29619,7 +29674,7 @@ ${issueHighlights.length?`<div class="section-title">SOROTAN ISU &amp; TINDAKAN 
       const virCompliance = VIR_SITES.length ? Math.round(VIR_SITES.reduce((s,x)=>s+(siteHealthScores.value[x.id]?.score||0),0)/VIR_SITES.length) : 0;
       const totalOverdue = overdueSortedCctv.value.length + overdueSortedVir.value.length;
       const openCm = pmRecords.value.filter(r=>r.maintType==='CM' && (r.cmStatus==='open'||!r.cmStatus)).length;
-      const worst = slaTrend.value.slice(0,3);
+      const worst = slaTrend.value.filter(s => s.breachCount > 0).slice(0,3); // a site with 0 delays is no "worst"
       const topIssues = recurringIssues.value.slice(0,3);
       const genDate = new Date().toLocaleDateString('ms-MY',{day:'2-digit',month:'long',year:'numeric'});
       const narrative = _buildExecutiveNarrative({ yr, genDate, cctvCompliance, virCompliance, totalOverdue, openCm, worst, topIssues });
@@ -29656,7 +29711,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
 </div>
 <div class="section-title">⚠ Site Paling Kerap Lewat (Trend Keterlambatan)</div>
 <table><thead><tr><th>Site</th><th>Projek</th><th>Bil. Lewat</th><th>Purata Selang (hari)</th></tr></thead>
-<tbody>${worst.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.proj}</td><td>${s.breachCount}</td><td>${s.avgGap??'—'}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:#aaa">Tiada data</td></tr>'}</tbody></table>
+<tbody>${worst.map(s=>`<tr><td>${esc(s.name)}</td><td>${s.proj}</td><td>${s.breachCount}</td><td>${s.avgGap??'—'}</td></tr>`).join('')||'<tr><td colspan="4" style="text-align:center;color:#aaa">Tiada kelewatan direkodkan</td></tr>'}</tbody></table>
 <div class="section-title">🔁 Isu Paling Kerap Berulang</div>
 <table><thead><tr><th>Isu</th><th>Kekerapan</th><th>Bil. Site Terjejas</th></tr></thead>
 <tbody>${topIssues.map(x=>`<tr><td>${esc(x.text)}</td><td>${x.count}</td><td>${x.sites.length}</td></tr>`).join('')||'<tr><td colspan="3" style="text-align:center;color:#aaa">Tiada data</td></tr>'}</tbody></table>
@@ -29698,7 +29753,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       const qIssueMap = {};
       qRecs.filter(r => r.maintType === 'CM').forEach(r => {
         _getNotaItems(r).forEach(item => {
-          const key = (item.masalah||'').trim().toLowerCase();
+          const key = _issueKey(item.masalah);
           if(!key || key.length < 4 || NO_ISSUE_PHRASES.includes(key)) return;
           if(!qIssueMap[key]) qIssueMap[key] = { text: item.masalah.trim(), count:0, sites:new Set() };
           qIssueMap[key].count++;
@@ -29834,6 +29889,9 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
     // these mean the opposite of an issue, so they must never count as one
     // no matter how often they repeat across records.
     const NO_ISSUE_PHRASES = ['tiada','tiada masalah','tiada isu','xda','x ada','tak ada','tiada apa-apa','nil','n/a','na','-','none'];
+    // Grouping key for "Isu Berulang": spacing and a trailing full stop vary
+    // between borangs ("Kamera rosak." / "Kamera  rosak") — same issue.
+    function _issueKey(masalah) { return String(masalah || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/[\s.,;:!]+$/, ''); }
     const recurringIssues = computed(() => {
       const map = {};
       // Scoped to CM (Corrective Maintenance) only — "isu" logically means
@@ -29842,7 +29900,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       // with non-issues.
       pmRecords.value.filter(r => r.maintType === 'CM').forEach(r => {
         _getNotaItems(r).forEach(item => {
-          const key = (item.masalah||'').trim().toLowerCase();
+          const key = _issueKey(item.masalah);
           if(!key || key.length < 4 || NO_ISSUE_PHRASES.includes(key)) return;
           if(!map[key]) map[key] = { text: item.masalah.trim(), count:0, sites:new Set() };
           map[key].count++;
@@ -29984,6 +30042,12 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       // midnight (08:00 MYT), skewing the window by 8h: a record exactly 7
       // days BEFORE the assignment fell outside it, 7 days after didn't.
       const tDate = t.date ? _parseLocalDate(t.date) : null;
+      // 'na' — can't be judged: a "Lain-Lain" site (typed in, not one of
+      // SITES/VIR_SITES) or no site at all never has a borang to match, so
+      // every such visit turned into 'missed' a week later and pulled the
+      // team's / staff member's completion rate down for work they did.
+      // Still counted as assigned; left out of every rate, like 'pending'.
+      if(!t.siteId || t.siteId === '__lain__') return 'na';
       // _recDate(r) falls back to month/year when visitDate is blank
       // (visitDate isn't required at submit — see savePM()) — without
       // this fallback, a submitted record missing just that one field
@@ -30002,15 +30066,16 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       teamAssignments.value.filter(t => !NON_SPRM_PROJECTS.includes(t.project) && t.maintType !== 'INST').forEach(t => {
         const team = t.team;
         if(!team) return;
-        if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, pending:0, members:new Set() };
+        if(!perTeam[team]) perTeam[team] = { team, assigned:0, completed:0, pending:0, na:0, members:new Set() };
         perTeam[team].assigned++;
         (t.members||[]).forEach(m => perTeam[team].members.add(m.name));
         const o = _assignOutcome(t);
         if(o === 'done') perTeam[team].completed++;
         else if(o === 'pending') perTeam[team].pending++;
+        else if(o === 'na') perTeam[team].na++; // "Lain-Lain" site — see _assignOutcome
       });
       return Object.values(perTeam)
-        .map(x => { const judged = x.assigned - x.pending; return { ...x, members:[...x.members], rate: judged ? Math.round(x.completed/judged*100) : 0 }; })
+        .map(x => { const judged = x.assigned - x.pending - x.na; return { ...x, members:[...x.members], rate: judged ? Math.round(x.completed/judged*100) : 0 }; })
         .sort((a,b) => b.assigned - a.assigned);
     });
     // Last-6-calendar-months completion rate per team — teamPerformance above
@@ -30029,7 +30094,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         const mk = _monthKeyOf(tDate);
         if(!months.includes(mk)) return;
         const o = _assignOutcome(t);
-        if(o === 'pending') return; // not judged yet — see _assignOutcome
+        if(o === 'pending' || o === 'na') return; // not judged (yet) — see _assignOutcome
         if(!perTeamMonth[t.team]) perTeamMonth[t.team] = {};
         if(!perTeamMonth[t.team][mk]) perTeamMonth[t.team][mk] = { assigned:0, completed:0 };
         perTeamMonth[t.team][mk].assigned++;
@@ -30074,7 +30139,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
           if(!per[m.uid]) per[m.uid] = { uid:m.uid, name:m.name||'?', total:0, pm:0, cm:0, completed:0, judged:0, sites:new Set() };
           per[m.uid].total++;
           if(isCm) per[m.uid].cm++; else per[m.uid].pm++;
-          if(o !== 'pending') per[m.uid].judged++;
+          if(o === 'done' || o === 'missed') per[m.uid].judged++; // not pending / "Lain-Lain"
           if(o === 'done') per[m.uid].completed++;
           if(t.siteId) per[m.uid].sites.add(t.siteId);
         });
@@ -30271,6 +30336,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
         const eq = eqSrc[site.id] || {};
         const cats = [
           ['cameras','Kamera'],['nvr','NVR'],['hdd','HDD'],['switches','Switch'],['alarms','Alarm'],['misc','Lain-lain'],
+          ['servers','Server/Appliance'],['tablets','Tablet'], // Optager/VCS rooms
         ];
         cats.forEach(([key,label]) => {
           (eq[key]||[]).forEach(item => {
@@ -30284,24 +30350,8 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       };
       SITES.forEach(s => pushSite(s, 'CCTV', siteEquip.value));
       VIR_SITES.forEach(s => pushSite(s, 'VIR', virSiteEquipBCD.value));
-      // Optager is room-scoped — push each room separately (see assetRegister above).
-      VIR_SITES.forEach(s => {
-        const byRoom = virSiteEquipOptager.value[s.id]?.byRoom || {};
-        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
-          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
-          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
-          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
-        });
-      });
-      // VCS is room-scoped the same way as Optager — same push pattern.
-      VIR_SITES.forEach(s => {
-        const byRoom = virSiteEquipVCS.value[s.id]?.byRoom || {};
-        Object.entries(byRoom).forEach(([roomUid, roomEq]) => {
-          const room = (virSiteEquip.value[s.id]?.rooms||[]).find(r=>r._uid===roomUid);
-          const roomLabel = roomUid==='legacyUnassigned' ? 'Data Lama (Belum Diagihkan)' : (room?.name||roomUid);
-          pushSite({ id:s.id, name:`${s.name} — ${roomLabel}` }, 'VIR', { [s.id]: roomEq });
-        });
-      });
+      // Room-scoped Optager / VCS / SONY — see _eachVirRoomEquip.
+      _eachVirRoomEquip((site, roomEq) => pushSite(site, 'VIR', { [site.id]: roomEq }));
       return rows.sort((a,b) => b.ageYears - a.ageYears);
     });
 
@@ -31463,7 +31513,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       warrantyFilterPrincipal, openPrincipalWarranties, exportPrincipalsPdf,
       RMA_RECORD_TYPES, rmaIsServis, rmaFilterType, rmaFilterUnit, rmaUnitFilterLabel, onRmaTypeChange, warrantyServiceCount, openWarrantyServiceRecords,
       legacyServiceReportRecords, legacyServiceReportCount, migrateLegacyServiceReports,
-      warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, virWarrantySerialClash, onPmSiteChange, onWarrantyEquipPick, toggleWarrantyBulkGroup, warrantyPrincipalSuggestions,
+      warrantyEquipGroups, warrantyBulkActive, warrantyPickedExisting, virWarrantySerialClash, onPmSiteChange, fmtDateLoose, onWarrantyEquipPick, toggleWarrantyBulkGroup, warrantyPrincipalSuggestions,
       equipWarrantyOf, equipWarrantyTitle, openEquipWarranty, exportWarrantyExcel, exportWarrantyPdf, exportWarrantyDocx, exportComingSoon,
       LETTER_MEMO_CATEGORIES, letterMemoCategoryLabel, letterMemoCategoryColor, letterMemoCustomCategories,
       letterMemos, letterMemoModal, letterMemoFilterSite, letterMemoFilterCategory, letterMemoFilterProject, letterMemosFiltered, loadLetterMemos,
