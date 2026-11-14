@@ -3418,6 +3418,7 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
               </span>
             </div>
             <p style="font-size:.82rem;color:#666;margin-top:4px">Tempoh: {{fmtDate(c.startDate)}} — {{fmtDate(c.endDate)}} &nbsp;·&nbsp; Reminder: {{c.reminderDays||60}} hari sebelum tamat</p>
+            <p v-if="contractPredecessor(c)" style="font-size:.8rem;color:#666;margin-top:4px">⏭ Sambungan kepada: {{contractPredecessor(c).title}} (tamat {{fmtDate(contractPredecessor(c).endDate)}})</p>
             <p v-if="c.notes" style="font-size:.8rem;color:#888;margin-top:4px">{{c.notes}}</p>
           </div>
           <div v-if="canEditContract" class="flex gap-8">
@@ -7213,6 +7214,13 @@ tr.row-search-hit td{animation:equipSearchHit 1.2s ease-in-out 2}
             <div class="form-group"><label>Tarikh Mula *</label><date-dmy v-model="contractModal.data.startDate"></date-dmy></div>
             <div class="form-group"><label>Tarikh Tamat *</label><date-dmy v-model="contractModal.data.endDate"></date-dmy></div>
             <div class="form-group"><label>Reminder (hari sebelum tamat)</label><input class="form-control" type="number" min="1" v-model.number="contractModal.data.reminderDays" placeholder="60"></div>
+            <div class="form-group" title="Kontrak lama yang disambung oleh kontrak ini — kontrak lama itu ditanda '⏭ Disambung' dan tidak lagi dikira dalam amaran Tamat Tempoh. Pilih 'Tiada' untuk kontrak berasingan (cth. lesen/sokongan yang berjalan serentak).">
+              <label>Sambungan kepada</label>
+              <select class="form-control" v-model="contractModal.data.supersedes" @change="contractModal._renewalTouched=true">
+                <option value="">Tiada (kontrak berasingan)</option>
+                <option v-for="o in contractRenewalOptions" :key="o.id" :value="o.id">{{o.title}}{{o.contractNo ? ' (' + o.contractNo + ')' : ''}} — tamat {{fmtDate(o.endDate)}}</option>
+              </select>
+            </div>
           </div>
           <div class="form-group"><label>Nota</label><textarea class="form-control" rows="3" v-model="contractModal.data.notes" placeholder="Catatan tambahan (pilihan)"></textarea></div>
           <p v-if="contractModal.err" style="color:red;font-size:.82rem;margin-bottom:10px">{{contractModal.err}}</p>
@@ -14397,7 +14405,7 @@ Teruskan tukar emel?`)) return;
     // Kontrak page had no way to distinguish "still loading" from "no
     // contracts recorded", jumping straight to the empty-state message.
     const contractsLoading = ref(false);
-    const contractModal = reactive({ show:false, editing:false, err:'', _editId:null, data:{ title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'',project:'cctv' } });
+    const contractModal = reactive({ show:false, editing:false, err:'', _editId:null, _renewalTouched:false, data:{ title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'',project:'cctv',supersedes:'' } });
 
     async function loadContracts(force) {
       if(!force && _collFresh('contracts')) return;
@@ -14436,20 +14444,55 @@ Teruskan tukar emel?`)) return;
       return Math.round(Math.max(0, Math.min(CONTRACT_TIMELINE_DAY_CAP, daysLeft)) / CONTRACT_TIMELINE_DAY_CAP * 100);
     }
 
-    // 'superseded': an expired contract the project has already renewed — a
-    // later contract (starts after it, ends after it) that hasn't expired.
-    // Shown as history ("⏭ Disambung") and left out of every "Tamat" alert,
-    // which otherwise stayed red for good (e.g. the VIR contract before
-    // 1 Ogos 2026) unless the old record was deleted. Same idea as Waranti.
+    // 'superseded': an expired contract that has been renewed. Shown as
+    // history ("⏭ Disambung") and left out of every "Tamat" alert, which
+    // otherwise stayed red for good (e.g. the VIR contract before 1 Ogos
+    // 2026) unless the old record was deleted. Same idea as Waranti.
+    // The renewal is named on the NEW contract ("Sambungan kepada", field
+    // `supersedes`; '' = a separate contract). Guessing it from "any later
+    // contract of the same project" hid a genuinely expired contract as soon
+    // as an unrelated one (licence, support) ran alongside it. Records saved
+    // before the field existed fall back to _contractRenewalGuess.
+    const CONTRACT_RENEWAL_GAP_DAYS = 31;
+    // The contract `c` most plausibly continues: same project, ended before
+    // it, and `c` starts within a month of that end (a back-to-back renewal,
+    // not a contract that merely started later).
+    function _contractRenewalGuess(c, list = contracts.value) {
+      if(!c?.startDate) return null;
+      const proj = c.project || 'cctv';
+      const start = _parseLocalDate(c.startDate).getTime();
+      return list.filter(o => o.id !== c.id && (o.project || 'cctv') === proj && o.endDate
+          && o.endDate < (c.endDate || '') && (o.startDate || '') < c.startDate
+          && Math.abs(start - _parseLocalDate(o.endDate).getTime()) <= CONTRACT_RENEWAL_GAP_DAYS * 86400000)
+        .reduce((best, o) => (!best || o.endDate > best.endDate) ? o : best, null);
+    }
+    const _contractSupersededIds = computed(() => {
+      const ids = new Set();
+      contracts.value.forEach(o => {
+        const prev = ('supersedes' in o) ? o.supersedes : _contractRenewalGuess(o)?.id;
+        if(prev && prev !== o.id) ids.add(prev);
+      });
+      return ids;
+    });
+    // "Sambungan kepada" choices: the project's other contracts that end
+    // before this one.
+    const contractRenewalOptions = computed(() => {
+      const d = contractModal.data;
+      const proj = d.project || 'cctv';
+      const exclude = contractModal.editing ? contractModal._editId : null;
+      return contracts.value
+        .filter(o => o.id !== exclude && (o.project || 'cctv') === proj && o.endDate && (!d.endDate || o.endDate < d.endDate))
+        .sort((a, b) => b.endDate.localeCompare(a.endDate));
+    });
+    // The contract `c` renews (shown on its card), if any.
+    function contractPredecessor(c) {
+      const id = ('supersedes' in c) ? c.supersedes : _contractRenewalGuess(c)?.id;
+      return id ? contracts.value.find(o => o.id === id) || null : null;
+    }
     function contractStatus(c) {
       if(!c.endDate) return 'active';
       const today = _localDateStr();
-      if(c.endDate < today) {
-        const proj = c.project || 'cctv';
-        const renewed = contracts.value.some(o => o.id !== c.id && (o.project || 'cctv') === proj
-          && o.endDate && o.endDate >= today && o.endDate > c.endDate && (o.startDate || '') > (c.startDate || ''));
-        return renewed ? 'superseded' : 'expired';
-      }
+      if(c.endDate < today) return _contractSupersededIds.value.has(c.id) ? 'superseded' : 'expired';
       const warn = new Date();
       warn.setDate(warn.getDate() + (c.reminderDays || 60));
       if(c.endDate <= _localDateStr(warn)) return 'expiring';
@@ -14469,13 +14512,25 @@ Teruskan tukar emel?`)) return;
 
     function openAddContract() {
       contractModal.editing = false; contractModal.err = '';
-      Object.assign(contractModal.data, { title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'', project: currentProject.value });
+      Object.assign(contractModal.data, { title:'',contractNo:'',startDate:'',endDate:'',reminderDays:60,notes:'', project: currentProject.value, supersedes:'' });
+      contractModal._renewalTouched = false;
       contractModal.show = true;
     }
+    // New contract: pre-pick the back-to-back predecessor once both dates
+    // are in — the admin confirms or changes it. Left alone after they pick.
+    watch(() => [contractModal.show, contractModal.data.startDate, contractModal.data.endDate], () => {
+      if(!contractModal.show || contractModal.editing || contractModal._renewalTouched) return;
+      const d = contractModal.data;
+      contractModal.data.supersedes = (d.startDate && d.endDate && _contractRenewalGuess({ ...d, id: null })?.id) || '';
+    });
 
     function openEditContract(c) {
       contractModal.editing = true; contractModal.err = '';
-      Object.assign(contractModal.data, { title:c.title||'',contractNo:c.contractNo||'',startDate:c.startDate||'',endDate:c.endDate||'',reminderDays:c.reminderDays||60,notes:c.notes||'', project:c.project||'cctv' });
+      // Saved before the field existed: start from the same guess its
+      // status used, so saving the edit doesn't change it unasked.
+      const supersedes = ('supersedes' in c) ? (c.supersedes || '') : (_contractRenewalGuess(c)?.id || '');
+      Object.assign(contractModal.data, { title:c.title||'',contractNo:c.contractNo||'',startDate:c.startDate||'',endDate:c.endDate||'',reminderDays:c.reminderDays||60,notes:c.notes||'', project:c.project||'cctv', supersedes });
+      contractModal._renewalTouched = true;
       contractModal._editId = c.id;
       contractModal.show = true;
     }
@@ -14493,6 +14548,10 @@ Teruskan tukar emel?`)) return;
       // Same rule as Waranti: blank → 60, otherwise a whole number ≥ 1.
       const rem = contractModal.data.reminderDays;
       if(rem !== '' && rem != null && !(Number(rem) >= 1)) { contractModal.err = 'Reminder mesti sekurang-kurangnya 1 hari.'; return; }
+      // The dates may have changed since the renewal was picked.
+      if(contractModal.data.supersedes && !contractRenewalOptions.value.some(o => o.id === contractModal.data.supersedes)) {
+        contractModal.err = '"Sambungan kepada" mesti kontrak projek yang sama yang tamat sebelum kontrak ini — pilih semula atau pilih "Tiada".'; return;
+      }
       loading.value = true;
       try {
         const data = { ...contractModal.data, reminderDays: rem ? Math.round(Number(rem)) : 60 };
@@ -28372,7 +28431,7 @@ Teruskan tukar emel?`)) return;
     // startDate/project too: an expired contract stops alerting once the same
     // project has a later one (contractStatus 'superseded'). Title is shown.
     const _contractNotifSignature = computed(() =>
-      contracts.value.map(c => `${c.id}:${c.endDate||''}:${c.reminderDays||''}:${c.startDate||''}:${c.project||''}:${c.title||''}`).join('|')
+      contracts.value.map(c => `${c.id}:${c.endDate||''}:${c.reminderDays||''}:${c.startDate||''}:${c.project||''}:${c.title||''}:${'supersedes' in c ? c.supersedes || '-' : ''}`).join('|')
     );
     watch(_pmNotifSignature, () => buildNotifications());
     watch(_contractNotifSignature, () => buildNotifications());
@@ -31564,7 +31623,7 @@ td{padding:5px 8px;border-bottom:1px solid #eaecf2}
       WHATS_NEW_ITEMS, whatsNewModal, closeWhatsNew,
       allUsers, sortedUsers, userModal, openAddUser, openEditUser, submitUser, toggleFreeze, deleteUser, JABATAN_OPTIONS, PERMISSION_OVERRIDE_CAPABILITIES,
       userSearchQuery, userStatusFilter, filteredSortedUsers, usernameAvailability, viewUserAuditLog,
-      contracts, contractsLoading, contractModal, loadContracts, contractStatus, contractsExpiringCount, canEditContract, canEditWarranty, canDeleteWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
+      contracts, contractsLoading, contractModal, loadContracts, contractStatus, contractRenewalOptions, contractPredecessor, contractsExpiringCount, canEditContract, canEditWarranty, canDeleteWarranty, canAddWarranty, canViewCredentials, canEditEquip, canEditPmRecord,
       virWarranty, virWarrantyModal, virWarrantyFilterStatus, loadVirWarranty, virWarrantyStatus, virWarrantyExpiringCount, virWarrantyFiltered, virWarrantyBySite, virWarrantyUrgencyBySite,
       onVirWarrantySiteChange, openAddVirWarranty, openEditVirWarranty, submitVirWarranty, deleteVirWarranty, canEditVirWarranty, canAddWarrantyReportFor, canEditWarrantyReportFor,
       exportContractsExcel, exportContractsPdf,
