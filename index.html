@@ -21591,15 +21591,21 @@ tr.late td{background:#fff3e0}
     function _headerHintMatch(hv, hint) {
       return hint.length <= 3 ? new RegExp('(^|[^a-z0-9])' + hint.replace(/\//g, '\\/') + '($|[^a-z0-9])').test(hv) : hv.includes(hint);
     }
+    // The LONGEST matching hint wins (ties: IMPORT_FIELD_KEYS order). First
+    // key with any hit used to win, and name's short 'nama'/'name' hints sit
+    // inside other headers: "Jenama" (brand), "Username" / "User Name" /
+    // "Nama Pengguna" (access user) all became the name column — and the
+    // later column overwrote the real name, so every row was named after
+    // its brand or login.
     function _mapHeaderRow(headerRow, kind) {
       const map = {}; // colIndex -> fieldKey
       headerRow.forEach((h, i) => {
         const hv = String(h||'').toLowerCase().replace(/[^a-z0-9\/]+/g, ' ').trim();
         if(!hv) return;
+        let best = 0;
         for(const key of IMPORT_FIELD_KEYS[kind]) {
-          if(map[i]) break;
-          const hints = IMPORT_HEADER_HINTS[key] || [];
-          if(hints.some(hint => _headerHintMatch(hv, hint))) { map[i] = key; break; }
+          const len = Math.max(0, ...(IMPORT_HEADER_HINTS[key] || []).filter(hint => _headerHintMatch(hv, hint)).map(hint => hint.length));
+          if(len > best) { best = len; map[i] = key; }
         }
       });
       return map;
